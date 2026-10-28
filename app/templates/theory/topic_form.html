@@ -201,6 +201,31 @@
                     </div>
                 </div>
 
+                <!-- Links -->
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold" for="related_drills">{{ form.related_drills.label.text }}</label>
+                                <select multiple class="form-select" id="related_drills" name="related_drills" size="7">
+                                    {% for d in form.drill_rows %}
+                                    <option value="{{ d.id }}" {% if form.related_drills.data and d.id in form.related_drills.data %}selected{% endif %}>{{ d.title }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold" for="clips">{{ form.clips.label.text }}</label>
+                                <select multiple class="form-select" id="clips" name="clips" size="7">
+                                    {% for c in form.clip_rows %}
+                                    <option value="{{ c.id }}" {% if form.clips.data and c.id in form.clips.data %}selected{% endif %}>{{ c.title or 'Clip ' ~ c.id }}{% if c.game %} (vs {{ c.game.opponent }}){% endif %}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <small class="text-muted d-block mt-2">Hold Ctrl (⌘ on a Mac) to pick more than one. They show at the end of the topic.</small>
+                    </div>
+                </div>
+
                 <!-- Order -->
                 <div class="card mb-4">
                     <div class="card-body">

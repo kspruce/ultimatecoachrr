@@ -1,8 +1,13 @@
 # app/routes/theory.py
-from flask import current_app, Blueprint, render_template, redirect, url_for, flash
+import re
+
+from flask import Blueprint, render_template, redirect, request, url_for, flash
 from flask_login import login_required, current_user
 from app import db
+from app.models.clip import Clip
+from app.models.drill import SavedDrill
 from app.models.theory import TheorySection, TheoryTopic
+from app.routes.clip.helpers import sees_hidden_clips
 from app.forms.theory import TheorySectionForm, TheoryTopicForm
 from app.utils.utils import coach_required
 from app.utils.team_filter import get_current_team_id
@@ -10,64 +15,82 @@ from app.utils.team_filter import get_current_team_id
 bp = Blueprint('theory', __name__, url_prefix='/theory')
 
 
-# Main Routes
+def team_sections(team_id):
+    return (TheorySection.query.filter_by(team_organization_id=team_id)
+            .order_by(db.func.coalesce(TheorySection.order, 999999), TheorySection.name).all())
+
+
+def section_topics(section, team_id):
+    return (section.topics.filter_by(team_organization_id=team_id)
+            .order_by(db.func.coalesce(TheoryTopic.order, 999999), TheoryTopic.name).all())
+
+
+def contents(team_id):
+    """[(section, [topics])] in reading order."""
+    return [(s, section_topics(s, team_id)) for s in team_sections(team_id)]
+
+
+def plain(markdown_text):
+    """Roughly the words of some Markdown, for searching and snippets."""
+    text = re.sub(r'!\[[^\]]*\]\([^)]*\)', ' ', markdown_text or '')  # images
+    text = re.sub(r'\[([^\]]*)\]\([^)]*\)', r'\1', text)            # links keep their words
+    text = re.sub(r'[#>*_`|~-]+', ' ', text)
+    return re.sub(r'\s+', ' ', text).strip()
+
+
+def search(groups, q):
+    """Topics matching every word of q, best first (title over text)."""
+    words = q.lower().split()
+    scored = []
+    for section, topics in groups:
+        for t in topics:
+            title, body, where = t.name.lower(), plain(t.content).lower(), section.name.lower()
+            if all(w in title or w in body or w in where for w in words):
+                score = sum(5 * (w in title) + 2 * (w in where) + (w in body) for w in words)
+                scored.append((-score, t.name.lower(), t, section))
+    return [(t, section) for _, _, t, section in sorted(scored, key=lambda r: r[:2])]
+
+
 @bp.route('/')
 @login_required
 def index():
-    sections = TheorySection.query.filter_by(
-        team_organization_id=get_current_team_id()
-    ).order_by(TheorySection.order).all()
-    
-    return render_template('theory/index.html', sections=sections)
+    team_id = get_current_team_id()
+    groups = contents(team_id)
+    q = (request.args.get('q') or '').strip()
+    results = search(groups, q) if q else None
+    first = next((topics[0] for _, topics in groups if topics), None)
+    return render_template('theory/index.html', groups=groups, q=q, results=results, first=first,
+                           snippet=lambda t: plain(t.content)[:160])
+
 
 @bp.route('/section/<string:slug>')
 @login_required
 def section(slug):
-    section = TheorySection.query.filter_by(
-        slug=slug,
-        team_organization_id=get_current_team_id()
-    ).first_or_404()
+    team_id = get_current_team_id()
+    section = TheorySection.query.filter_by(slug=slug, team_organization_id=team_id).first_or_404()
+    groups = contents(team_id)
+    topics = next(topics for s, topics in groups if s.id == section.id)
+    return render_template('theory/section.html', section=section, topics=topics, groups=groups,
+                           snippet=lambda t: plain(t.content)[:160])
 
-    topics = section.topics.filter_by(
-        team_organization_id=get_current_team_id()
-    ).order_by(TheoryTopic.order).all()
-
-    # All sections (for sidebar navigation)
-    all_sections = TheorySection.query.filter_by(
-        team_organization_id=get_current_team_id()
-    ).order_by(TheorySection.order).all()
-
-    return render_template('theory/section.html', section=section, topics=topics, all_sections=all_sections)
 
 @bp.route('/topic/<int:topic_id>')
 @login_required
 def topic(topic_id):
-    try:
-        topic = TheoryTopic.query.filter_by(
-            id=topic_id,
-            team_organization_id=get_current_team_id()
-        ).first_or_404()
+    team_id = get_current_team_id()
+    topic = TheoryTopic.query.filter_by(id=topic_id, team_organization_id=team_id).first_or_404()
+    groups = contents(team_id)
+    # Previous / next run through the whole guide, section by section
+    reading = [t for _, topics in groups for t in topics]
+    i = next((n for n, t in enumerate(reading) if t.id == topic.id), 0)
+    clips = [c for c in topic.clips if c.team_organization_id == team_id
+             and (sees_hidden_clips() or not c.is_hidden)]
+    drills = [d for d in topic.related_drills if d.team_organization_id == team_id]
+    return render_template('theory/topic.html', topic=topic, groups=groups, title=topic.name,
+                           prev_topic=reading[i - 1] if i > 0 else None,
+                           next_topic=reading[i + 1] if i + 1 < len(reading) else None,
+                           clips=clips, drills=drills)
 
-        # Build ordered topic list for prev/next navigation
-        section_topics = topic.section.topics.filter_by(
-            team_organization_id=get_current_team_id()
-        ).order_by(TheoryTopic.order).all()
-
-        current_idx = next((i for i, t in enumerate(section_topics) if t.id == topic_id), 0)
-        prev_topic = section_topics[current_idx - 1] if current_idx > 0 else None
-        next_topic = section_topics[current_idx + 1] if current_idx < len(section_topics) - 1 else None
-
-        return render_template('theory/topic.html',
-                             topic=topic,
-                             section_topics=section_topics,
-                             prev_topic=prev_topic,
-                             next_topic=next_topic,
-                             current_idx=current_idx,
-                             title=topic.name)
-    except Exception as e:
-        current_app.logger.error(f"Error viewing topic {topic_id}: {str(e)}")
-        flash('Error loading topic content.', 'danger')
-        return redirect(url_for('theory.index'))
 
 # Section Management
 @bp.route('/add_section', methods=['GET', 'POST'])
@@ -143,12 +166,30 @@ def delete_section(section_id):
     return redirect(url_for('theory.index'))
 
 # Topic Management
+def _offer_links(form):
+    """The team's drills and clips to link a topic to."""
+    team_id = get_current_team_id()
+    form.drill_rows = SavedDrill.query.filter_by(team_organization_id=team_id).order_by(SavedDrill.title).all()
+    form.clip_rows = Clip.query.filter_by(team_organization_id=team_id).order_by(Clip.created_at.desc()).all()
+    form.related_drills.choices = [(d.id, d.title) for d in form.drill_rows]
+    form.clips.choices = [(c.id, c.title or f'Clip {c.id}') for c in form.clip_rows]
+
+
+def _save_links(topic, form):
+    drills, clips = set(form.related_drills.data or []), set(form.clips.data or [])
+    topic.related_drills = [d for d in form.drill_rows if d.id in drills]
+    topic.clips = [c for c in form.clip_rows if c.id in clips]
+
+
 @bp.route('/add_topic', methods=['GET', 'POST'])
 @login_required
 @coach_required
 def add_topic():
     form = TheoryTopicForm()
-    
+    _offer_links(form)
+    if request.method == 'GET' and request.args.get('section', type=int):
+        form.section_id.data = request.args.get('section', type=int)
+
     # Only show sections from current team
     form.section_id.choices = [(s.id, s.name) for s in TheorySection.query.filter_by(
         team_organization_id=get_current_team_id()
@@ -175,7 +216,8 @@ def add_topic():
             image_url=form.image_url.data,  # Use the URL directly
             team_organization_id=get_current_team_id()  # Add team organization ID
         )
-        
+        _save_links(topic, form)
+
         db.session.add(topic)
         try:
             db.session.commit()
@@ -197,7 +239,11 @@ def edit_topic(topic_id):
     ).first_or_404()
     
     form = TheoryTopicForm(obj=topic)
-    
+    _offer_links(form)
+    if request.method == 'GET':
+        form.related_drills.data = [d.id for d in topic.related_drills]
+        form.clips.data = [c.id for c in topic.clips]
+
     # Only show sections from current team
     form.section_id.choices = [(s.id, s.name) for s in TheorySection.query.filter_by(
         team_organization_id=get_current_team_id()
@@ -220,9 +266,8 @@ def edit_topic(topic_id):
         topic.order = form.order.data
         topic.image_url = form.image_url.data  # Update the URL directly
         
-        if form.related_drills.data:
-            topic.related_drills = [form.related_drills.data]
-            
+        _save_links(topic, form)
+
         try:
             db.session.commit()
             flash(f'Topic "{topic.name}" has been updated!', 'success')

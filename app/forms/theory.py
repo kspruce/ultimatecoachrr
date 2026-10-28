@@ -28,7 +28,9 @@ class TheoryTopicForm(FlaskForm):
         Optional(),
         URL(message="Please enter a valid URL")
     ])
-    related_drills = SelectMultipleField('Related Drills', coerce=int, validators=[Optional()])
+    related_drills = SelectMultipleField('Drills that practise it', coerce=int, validate_choice=False,
+                                         validators=[Optional()])
+    clips = SelectMultipleField('Clips that show it', coerce=int, validate_choice=False, validators=[Optional()])
     
     tags = SelectMultipleField('Tags',
                               coerce=int,

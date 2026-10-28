@@ -1,459 +1,79 @@
-{# templates/theory/topic.html #}
-{% extends "base.html" %}
+{% extends "theory/_layout.html" %}
 
-{% block styles %}
-{{ super() }}
-<style>
-/* ── Reading progress bar (top of page) ──────────────── */
-#reading-progress {
-    position: fixed; top: 0; left: 0; z-index: 9999;
-    height: 3px; width: 0%; background: var(--uc-blue);
-    transition: width .1s linear;
-    box-shadow: 0 0 6px color-mix(in srgb, var(--club-ink) 40%, transparent);
-}
+{% block title %}{{ topic.name }} - Theory{% endblock %}
 
-/* ── Topic content typography ──────────────────────── */
-.topic-content h2 {
-    font-size: 1.15rem; font-weight: 700; color: var(--uc-gray-800);
-    border-bottom: 1px solid var(--uc-gray-200);
-    padding-bottom: .45rem; margin-top: 2.25rem; margin-bottom: .9rem;
-    scroll-margin-top: 1.5rem;
-}
-.topic-content h3 {
-    font-size: 1rem; font-weight: 700; color: var(--uc-blue);
-    margin-top: 1.75rem; margin-bottom: .6rem;
-    scroll-margin-top: 1.5rem;
-}
-.topic-content p  { font-size: .925rem; line-height: 1.8; color: var(--uc-gray-800); margin-bottom: 1rem; }
-.topic-content ul,
-.topic-content ol { padding-left: 1.4rem; margin-bottom: 1rem; }
-.topic-content li { margin-bottom: .4rem; font-size: .925rem; line-height: 1.65; }
-.topic-content blockquote {
-    border-left: 3px solid var(--uc-blue); padding: .75rem 1.1rem;
-    background: color-mix(in srgb, var(--club-ink) 4%, transparent); border-radius: 0 10px 10px 0;
-    margin: 1.25rem 0; color: var(--uc-gray-600); font-style: italic;
-}
-.topic-content code {
-    background: var(--uc-gray-100); padding: .15rem .4rem;
-    border-radius: 5px; font-size: .85em; color: var(--uc-indigo);
-}
-.topic-content pre {
-    background: var(--uc-gray-50); border: 1px solid var(--uc-gray-200);
-    border-radius: var(--uc-radius); padding: 1rem 1.25rem; overflow-x: auto;
-}
-.topic-content pre code { background: none; padding: 0; }
-/* Content images — !important overrides any inline width/height attrs from imgbb */
-.topic-content img {
-    max-width: 100% !important;
-    width: auto !important;
-    height: auto !important;
-    display: block;
-    margin: 1.5rem auto;
-    border-radius: var(--uc-radius);
-    box-shadow: var(--uc-shadow-md);
-    cursor: zoom-in;
-}
-.topic-content a { color: var(--uc-blue); }
+{% block th_content %}
+<div class="hb-reader">
+  <aside class="hb-rail d-none d-lg-block">{{ contents(groups, current=topic, open=True) }}</aside>
+  <div class="hb-main">
+    <div class="d-lg-none">{{ contents(groups, current=topic) }}</div>
+    <article class="hb-card hb-page">
+      <div class="hb-crumbs">
+        <a href="{{ url_for('theory.index') }}">Theory</a> <span aria-hidden="true">›</span>
+        <a href="{{ url_for('theory.section', slug=topic.section.slug) }}">{{ topic.section.name }}</a>
+      </div>
+      <header>
+        <div class="hb-label">{{ topic.section.name }}</div>
+        <h1>{{ topic.name }}</h1>
+        {% if topic.tags %}<div class="th-tags">{% for tag in topic.tags %}<span>{{ tag.name }}</span>{% endfor %}</div>{% endif %}
+      </header>
+      {% if topic.image_url %}
+      <a href="{{ topic.image_url }}" target="_blank" rel="noopener"><img class="th-hero-img" src="{{ topic.image_url }}" alt="{{ topic.name }}"></a>
+      {% endif %}
+      <div class="th-body">{{ topic.content|markdown }}</div>
 
-/* ── Hero image wrapper ───────────────────────── */
-.theory-img-wrap {
-    background: var(--uc-gray-50);
-    border-radius: var(--uc-radius);
-    box-shadow: var(--uc-shadow-md);
-    overflow: hidden;
-    cursor: zoom-in;
-    text-align: center;
-}
-.theory-hero-img {
-    max-width: 100%;
-    width: auto;
-    height: auto;
-    max-height: 500px;
-    object-fit: contain;
-    display: block;
-    margin: 0 auto;
-}
+      {% if clips %}
+      <section class="th-links">
+        <h2>See it in a game</h2>
+        {% for clip in clips %}
+        <a class="th-link" href="{{ url_for('clip.view_clip', clip_id=clip.id) }}">
+          <i class="bi bi-camera-video"></i> {{ clip.title or 'Clip' }}
+          {% if clip.game %}<small>vs {{ clip.game.opponent }}</small>{% endif %}
+        </a>
+        {% endfor %}
+      </section>
+      {% endif %}
 
-/* ── Lightbox ─────────────────────────────────── */
-#img-lightbox {
-    display: none; position: fixed; inset: 0; z-index: 10000;
-    background: rgba(0,0,0,.9); align-items: center; justify-content: center;
-    padding: 1.5rem; cursor: zoom-out;
-}
-#img-lightbox.open { display: flex; }
-#img-lightbox-img {
-    max-width: min(100%, 1100px);
-    max-height: 88vh;
-    width: auto; height: auto;
-    object-fit: contain;
-    border-radius: 10px;
-    box-shadow: 0 12px 60px rgba(0,0,0,.6);
-    cursor: default;
-}
-#img-lightbox-close {
-    position: fixed; top: 1rem; right: 1.5rem;
-    color: rgba(255,255,255,.65); font-size: 2rem; cursor: pointer;
-    line-height: 1; font-weight: 300; transition: color .15s;
-    z-index: 10001;
-}
-#img-lightbox-close:hover { color: #fff; }
-#img-lightbox-caption {
-    position: fixed; bottom: 1.25rem; left: 50%; transform: translateX(-50%);
-    color: rgba(255,255,255,.45); font-size: .78rem;
-    max-width: 80vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.topic-content a:hover { text-decoration: underline; }
-.topic-content table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; font-size: .875rem; }
-.topic-content th,
-.topic-content td { padding: .5rem .75rem; border: 1px solid var(--uc-gray-200); }
-.topic-content th { background: var(--uc-gray-50); font-weight: 600; }
+      {% if drills %}
+      <section class="th-links">
+        <h2>Practise it</h2>
+        {% for drill in drills %}
+        <a class="th-link" href="{{ url_for('session.drill_detail', drill_id=drill.id) }}">
+          <i class="bi bi-clipboard2-check"></i> {{ drill.title }}
+          {% if drill.recommended_duration %}<small>{{ drill.recommended_duration }} min</small>{% endif %}
+        </a>
+        {% endfor %}
+      </section>
+      {% endif %}
 
-/* ── Sidebar ───────────────────────────────────────── */
-@media (min-width: 992px) { .theory-sidebar { position: sticky; top: 1.5rem; } }
-
-/* ── TOC links ─────────────────────────────────────── */
-.toc-link {
-    display: block; padding: .3rem 0; font-size: .8rem; font-weight: 500;
-    color: var(--uc-gray-500); text-decoration: none;
-    border-left: 2px solid transparent; padding-left: .75rem;
-    transition: color .15s, border-color .15s;
-}
-.toc-link:hover { color: var(--uc-blue); }
-.toc-link.active { color: var(--uc-blue); border-left-color: var(--uc-blue); font-weight: 600; }
-.toc-link.h3 { padding-left: 1.5rem; font-size: .78rem; }
-
-/* ── Section nav ────────────────────────────────────── */
-.section-nav-link {
-    display: flex; align-items: center; gap: .6rem;
-    padding: .45rem .75rem; font-size: .82rem; font-weight: 500;
-    color: var(--uc-gray-600); text-decoration: none;
-    border-radius: 8px; transition: background .15s, color .15s;
-}
-.section-nav-link:hover { background: var(--uc-gray-50); color: var(--uc-gray-800); }
-.section-nav-link.active {
-    background: color-mix(in srgb, var(--club-ink) 8%, transparent); color: var(--uc-blue); font-weight: 600;
-}
-.section-nav-num {
-    width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center;
-    font-size: .68rem; font-weight: 700; background: var(--uc-gray-100);
-    color: var(--uc-gray-400);
-}
-.section-nav-link.active .section-nav-num {
-    background: var(--uc-blue); color: #fff;
-}
-
-/* ── Prev/Next nav ──────────────────────────────────── */
-.topic-nav-btn {
-    display: flex; align-items: center; gap: .75rem;
-    padding: 1rem 1.25rem; border-radius: var(--uc-radius);
-    border: 1px solid var(--uc-gray-200); text-decoration: none;
-    background: var(--uc-white); transition: border-color .15s, box-shadow .15s, transform .15s;
-    min-width: 0; flex: 1;
-}
-.topic-nav-btn:hover {
-    border-color: var(--uc-blue); box-shadow: var(--uc-shadow-sm);
-    transform: translateY(-1px);
-}
-.topic-nav-btn.next { flex-direction: row-reverse; text-align: right; }
-.topic-nav-label { font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--uc-gray-400); }
-.topic-nav-title { font-size: .875rem; font-weight: 600; color: var(--uc-gray-800); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.topic-nav-arrow { font-size: 1.1rem; color: var(--uc-gray-300); flex-shrink: 0; }
-.topic-nav-btn:hover .topic-nav-arrow { color: var(--uc-blue); }
-</style>
-{% endblock %}
-
-{% block content %}
-<!-- Reading progress bar -->
-<div id="reading-progress"></div>
-
-<div class="container py-4">
-
-    <!-- Breadcrumb + position indicator -->
-    <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-0" style="font-size:.82rem">
-                <li class="breadcrumb-item"><a href="{{ url_for('theory.index') }}" style="color:var(--uc-blue)">Theory</a></li>
-                <li class="breadcrumb-item"><a href="{{ url_for('theory.section', slug=topic.section.slug) }}" style="color:var(--uc-blue)">{{ topic.section.name }}</a></li>
-                <li class="breadcrumb-item active" style="color:var(--uc-gray-400)">{{ topic.name }}</li>
-            </ol>
-        </nav>
-        {% if section_topics %}
-        <span style="font-size:.78rem;color:var(--uc-gray-400);font-weight:600;white-space:nowrap">
-            {{ current_idx + 1 }} of {{ section_topics|length }}
-        </span>
-        {% endif %}
-    </div>
-
-    <div class="row g-4">
-
-        <!-- ── Main content ─────────────────────────────── -->
-        <div class="col-lg-8" id="article-body">
-
-            <!-- Topic header -->
-            <div class="mb-4">
-                <div class="d-flex align-items-start justify-content-between gap-3 mb-2">
-                    <h1 style="font-size:1.65rem;font-weight:800;color:var(--uc-gray-900);line-height:1.25;margin:0">{{ topic.name }}</h1>
-                    {% if current_user.is_admin %}
-                    <a href="{{ url_for('theory.edit_topic', topic_id=topic.id) }}"
-                       class="btn btn-sm btn-outline-secondary flex-shrink-0">
-                        <i class="bi bi-pencil me-1"></i>Edit
-                    </a>
-                    {% endif %}
-                </div>
-                <!-- Tags -->
-                {% if topic.tags %}
-                <div class="d-flex flex-wrap gap-1 mt-2">
-                    {% for tag in topic.tags %}
-                    <span class="badge" style="background:var(--uc-gray-100);color:var(--uc-gray-600);font-size:.72rem;font-weight:600">{{ tag.name }}</span>
-                    {% endfor %}
-                </div>
-                {% endif %}
-            </div>
-
-            <!-- Hero image -->
-            {% if topic.image_url %}
-            <div class="mb-4">
-                <div class="theory-img-wrap"
-                     onclick="openLightbox('{{ topic.image_url|e }}','{{ topic.name|e }}')">
-                    <img src="{{ topic.image_url }}" alt="{{ topic.name }}"
-                         class="theory-hero-img">
-                </div>
-                <div class="text-center mt-1">
-                    <span style="font-size:.7rem;color:var(--uc-gray-300)">
-                        <i class="bi bi-zoom-in me-1"></i>Click to enlarge
-                    </span>
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- Article content -->
-            <div class="card mb-4">
-                <div class="card-body p-4 p-md-5">
-                    <div class="topic-content">
-                        {{ topic.content|markdown|safe }}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Related videos -->
-            {% if topic.related_videos %}
-            <div class="card mb-4">
-                <div class="card-body p-0">
-                    <div class="px-4 pt-4 pb-3" style="border-bottom:1px solid var(--uc-gray-100)">
-                        <h5 class="mb-0" style="font-weight:700;font-size:1rem">
-                            <i class="bi bi-camera-video me-2" style="color:var(--uc-sky)"></i>Related Videos
-                        </h5>
-                    </div>
-                    <div class="p-4">
-                        {% for video in topic.related_videos %}
-                        <div class="{% if not loop.last %}mb-4 pb-4{% endif %}"
-                             {% if not loop.last %}style="border-bottom:1px solid var(--uc-gray-100)"{% endif %}>
-                            <div class="ratio ratio-16x9" style="border-radius:10px;overflow:hidden;background:var(--uc-gray-900)">
-                                <iframe src="{{ video.url }}" allowfullscreen loading="lazy"></iframe>
-                            </div>
-                            <h6 class="mt-3 mb-0" style="font-weight:700">{{ video.title }}</h6>
-                            {% if video.description %}
-                            <p class="text-muted mt-1 mb-0" style="font-size:.85rem">{{ video.description }}</p>
-                            {% endif %}
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- Prev / Next navigation -->
-            {% if prev_topic or next_topic %}
-            <div class="d-flex gap-3 mt-2">
-                {% if prev_topic %}
-                <a href="{{ url_for('theory.topic', topic_id=prev_topic.id) }}" class="topic-nav-btn">
-                    <i class="bi bi-arrow-left topic-nav-arrow"></i>
-                    <div style="min-width:0">
-                        <div class="topic-nav-label">Previous</div>
-                        <div class="topic-nav-title">{{ prev_topic.name }}</div>
-                    </div>
-                </a>
-                {% else %}
-                <div style="flex:1"></div>
-                {% endif %}
-
-                {% if next_topic %}
-                <a href="{{ url_for('theory.topic', topic_id=next_topic.id) }}" class="topic-nav-btn next">
-                    <i class="bi bi-arrow-right topic-nav-arrow"></i>
-                    <div style="min-width:0">
-                        <div class="topic-nav-label">Next</div>
-                        <div class="topic-nav-title">{{ next_topic.name }}</div>
-                    </div>
-                </a>
-                {% else %}
-                <a href="{{ url_for('theory.section', slug=topic.section.slug) }}" class="topic-nav-btn next">
-                    <i class="bi bi-check-circle topic-nav-arrow" style="color:var(--uc-green)"></i>
-                    <div style="min-width:0">
-                        <div class="topic-nav-label">Section complete</div>
-                        <div class="topic-nav-title">Back to {{ topic.section.name }}</div>
-                    </div>
-                </a>
-                {% endif %}
-            </div>
-            {% endif %}
-
+      {% if topic.related_videos %}
+      <section class="th-links">
+        <h2>Videos</h2>
+        {% for video in topic.related_videos if video.url.startswith('https://') %}
+        <div>
+          <iframe class="th-video" src="{{ video.url }}" allowfullscreen loading="lazy" title="{{ video.title }}"></iframe>
+          <div class="fw-semibold mt-1">{{ video.title }}</div>
+          {% if video.description %}<div class="hb-muted small">{{ video.description }}</div>{% endif %}
         </div>
+        {% endfor %}
+      </section>
+      {% endif %}
 
-        <!-- ── Sidebar ───────────────────────────────────── -->
-        <div class="col-lg-4">
-            <div class="theory-sidebar">
-
-                <!-- Table of contents (populated by JS) -->
-                <div class="card mb-3 d-none" id="toc-card">
-                    <div class="card-body p-0">
-                        <div class="px-4 pt-3 pb-2" style="border-bottom:1px solid var(--uc-gray-100)">
-                            <div style="font-size:.72rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--uc-gray-400)">
-                                On this page
-                            </div>
-                        </div>
-                        <div class="px-3 py-2" id="toc-list"></div>
-                    </div>
-                </div>
-
-                <!-- Section progress + topics -->
-                <div class="card mb-3">
-                    <div class="card-body p-0">
-                        <!-- Section header link -->
-                        <a href="{{ url_for('theory.section', slug=topic.section.slug) }}"
-                           class="d-flex align-items-center justify-content-between px-4 pt-3 pb-3 text-decoration-none"
-                           style="border-bottom:1px solid var(--uc-gray-100)">
-                            <div style="font-size:.75rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--uc-gray-400)">
-                                {{ topic.section.name }}
-                            </div>
-                            {% if section_topics %}
-                            <span style="font-size:.7rem;font-weight:700;color:var(--uc-blue);background:color-mix(in srgb, var(--club-ink) 8%, transparent);padding:.15rem .5rem;border-radius:20px">
-                                {{ current_idx + 1 }}/{{ section_topics|length }}
-                            </span>
-                            {% endif %}
-                        </a>
-                        <!-- Progress bar -->
-                        {% if section_topics|length > 1 %}
-                        <div style="height:3px;background:var(--uc-gray-100)">
-                            <div style="height:100%;background:var(--uc-blue);width:{{ ((current_idx + 1) / section_topics|length * 100)|round|int }}%;transition:width .4s"></div>
-                        </div>
-                        {% endif %}
-                        <!-- Topic list -->
-                        <div class="py-2">
-                            {% for t in section_topics %}
-                            <a href="{{ url_for('theory.topic', topic_id=t.id) }}"
-                               class="section-nav-link {% if t.id == topic.id %}active{% endif %}">
-                                <span class="section-nav-num">{{ loop.index }}</span>
-                                <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ t.name }}</span>
-                            </a>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Related drills -->
-                {% if topic.related_drills %}
-                <div class="card">
-                    <div class="card-body p-0">
-                        <div class="px-4 pt-3 pb-2" style="border-bottom:1px solid var(--uc-gray-100)">
-                            <div style="font-size:.72rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--uc-gray-400)">
-                                <i class="bi bi-list-check me-1" style="color:var(--uc-green)"></i>Related Drills
-                            </div>
-                        </div>
-                        <div class="py-2">
-                            {% for drill in topic.related_drills %}
-                            <a href="{{ url_for('session.drill_detail', drill_id=drill.id) }}"
-                               class="section-nav-link">
-                                <i class="bi bi-arrow-right-short" style="color:var(--uc-gray-300);font-size:1rem;flex-shrink:0"></i>
-                                {{ drill.title }}
-                            </a>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
-
-            </div>
-        </div>
-    </div>
+      {% if current_user.is_coach %}
+      <div class="hb-edit th-actions">
+        <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('theory.edit_topic', topic_id=topic.id) }}"><i class="bi bi-pencil"></i> Edit topic</a>
+        <form method="POST" action="{{ url_for('theory.delete_topic', topic_id=topic.id) }}"
+              data-confirm="Delete {{ topic.name }}?" onsubmit="return confirm(this.dataset.confirm);">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-outline-danger btn-sm" type="submit"><i class="bi bi-trash"></i> Delete</button>
+        </form>
+      </div>
+      {% endif %}
+    </article>
+    <nav class="hb-pager" aria-label="Previous and next">
+      {% if prev_topic %}<a class="prev" href="{{ url_for('theory.topic', topic_id=prev_topic.id) }}"><small>← Previous</small><span>{{ prev_topic.name }}</span></a>{% endif %}
+      {% if next_topic %}<a class="next" href="{{ url_for('theory.topic', topic_id=next_topic.id) }}"><small>Next →</small><span>{{ next_topic.name }}</span></a>{% endif %}
+    </nav>
+  </div>
 </div>
-
-<!-- Lightbox overlay -->
-<div id="img-lightbox" onclick="closeLightbox(event)">
-    <span id="img-lightbox-close" onclick="closeLightbox()">&times;</span>
-    <img id="img-lightbox-img" src="" alt="">
-    <div id="img-lightbox-caption"></div>
-</div>
-{% endblock %}
-
-{% block scripts %}
-{{ super() }}
-<script>
-(function () {
-    /* ── Reading progress bar ─────────────────────── */
-    const bar     = document.getElementById('reading-progress');
-    const article = document.getElementById('article-body');
-    function updateProgress() {
-        if (!article || !bar) return;
-        const rect  = article.getBoundingClientRect();
-        const total = article.offsetHeight - window.innerHeight;
-        const scrolled = Math.max(0, -rect.top);
-        bar.style.width = Math.min(100, total > 0 ? (scrolled / total) * 100 : 100) + '%';
-    }
-    window.addEventListener('scroll', updateProgress, { passive: true });
-    updateProgress();
-
-    /* ── Lightbox ────────────────────────────────── */
-    function openLightbox(src, alt) {
-        document.getElementById('img-lightbox-img').src = src;
-        document.getElementById('img-lightbox-caption').textContent = alt || '';
-        document.getElementById('img-lightbox').classList.add('open');
-        document.body.style.overflow = 'hidden';
-    }
-    function closeLightbox(e) {
-        // Clicking the image itself shouldn't close the box
-        if (e && e.target.id === 'img-lightbox-img') return;
-        document.getElementById('img-lightbox').classList.remove('open');
-        document.getElementById('img-lightbox-img').src = '';
-        document.body.style.overflow = '';
-    }
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
-
-    // Make every image inside the article content clickable
-    document.querySelectorAll('.topic-content img').forEach(img => {
-        img.addEventListener('click', () => openLightbox(img.src, img.alt));
-    });
-
-    /* ── Table of contents ────────────────────────── */
-    const content = document.querySelector('.topic-content');
-    const tocCard = document.getElementById('toc-card');
-    const tocList = document.getElementById('toc-list');
-    if (content && tocCard && tocList) {
-        const headings = Array.from(content.querySelectorAll('h2, h3'));
-        if (headings.length >= 2) {
-            headings.forEach((h, i) => {
-                if (!h.id) h.id = 'h-' + i;
-                const a = document.createElement('a');
-                a.href        = '#' + h.id;
-                a.textContent = h.textContent;
-                a.className   = 'toc-link' + (h.tagName === 'H3' ? ' h3' : '');
-                a.dataset.id  = h.id;
-                tocList.appendChild(a);
-            });
-            tocCard.classList.remove('d-none');
-
-            /* Active TOC link on scroll */
-            const tocLinks = tocList.querySelectorAll('.toc-link');
-            const observer = new IntersectionObserver(entries => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        tocLinks.forEach(l => l.classList.toggle('active', l.dataset.id === entry.target.id));
-                    }
-                });
-            }, { rootMargin: '0px 0px -60% 0px', threshold: 0 });
-            headings.forEach(h => observer.observe(h));
-        }
-    }
-})();
-</script>
 {% endblock %}

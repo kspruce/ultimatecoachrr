@@ -69,6 +69,9 @@ class TheoryTopic(db.Model):
     tags = db.relationship('TheoryTag', 
                           secondary='topic_tag_association',
                           backref=db.backref('topics', lazy='dynamic'))
+    # Clips from the clip library that show it in a real game
+    clips = db.relationship('Clip', secondary='topic_clip_association',
+                            backref=db.backref('theory_topics', lazy='dynamic'))
 
     def generate_slug(self):
         if not self.slug:
@@ -117,6 +120,11 @@ class TheoryTag(db.Model):
 topic_drill_association = db.Table('topic_drill_association',
     db.Column('topic_id', db.Integer, db.ForeignKey('theory_topic.id', ondelete='CASCADE')),
     db.Column('drill_id', db.Integer, db.ForeignKey('saved_drill.id', ondelete='CASCADE'))
+)
+
+topic_clip_association = db.Table('topic_clip_association',
+    db.Column('topic_id', db.Integer, db.ForeignKey('theory_topic.id', ondelete='CASCADE'), primary_key=True),
+    db.Column('clip_id', db.Integer, db.ForeignKey('clip.id', ondelete='CASCADE'), primary_key=True)
 )
 
 topic_tag_association = db.Table('topic_tag_association',
