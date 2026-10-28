@@ -4,8 +4,8 @@ save, then play the animation on the drill page.
 Needs Playwright and its Chromium (CI installs them); skipped otherwise.
 DRILL_TEST_CHROMIUM points at a Chromium to use instead of Playwright's own.
 DRILL_TEST_CDN_DIR serves cdn.jsdelivr.net files from a local folder laid out
-like the CDN (e.g. fabric@5.3.0/dist/fabric.min.js), for machines without
-internet access.
+like the CDN (e.g. fabric@5.3.0/dist/fabric.min.js, and jquery@3.6.0/dist/
+jquery.min.js for code.jquery.com), for machines without internet access.
 """
 import json
 import mimetypes
@@ -22,6 +22,7 @@ from tests.test_teams import make_user
 sync_api = pytest.importorskip('playwright.sync_api')
 
 CDN = 'https://cdn.jsdelivr.net/npm/'
+JQUERY = 'https://code.jquery.com/jquery-3.6.0.min.js'
 
 
 @pytest.fixture
@@ -58,9 +59,18 @@ def serve_cdn_locally(context):
         else:
             route.abort()
 
+    def jquery(route):
+        path = os.path.join(folder, 'jquery@3.6.0', 'dist', 'jquery.min.js')
+        if os.path.isfile(path):
+            with open(path, 'rb') as f:
+                route.fulfill(body=f.read(), content_type='text/javascript')
+        else:
+            route.abort()
+
     context.route(CDN + '**', handle)
-    # Anything else external (icon fonts, jQuery) isn't needed here
-    context.route(lambda url: not url.startswith('http://127.0.0.1') and not url.startswith(CDN),
+    context.route(JQUERY, jquery)
+    # Anything else external (icon fonts) isn't needed here
+    context.route(lambda url: not url.startswith('http://127.0.0.1') and not url.startswith((CDN, JQUERY)),
                   lambda route: route.abort())
 
 
@@ -212,4 +222,37 @@ def test_phone_portrait_touch(app, team, live_server, browser):
     assert cut['herdFrom'] == o1['herdId']
     moved = next(o for o in second if o.get('herdId') == o1['herdId'])
     assert abs(moved['left'] - 950) < 3 and abs(moved['top'] - 120) < 3
+    db.session.remove()
+
+
+def test_draw_a_play(app, team, live_server, browser):
+    """The same editor draws a playbook play: saved as a play, with its
+    stages, and played back on the play's page."""
+    from app.models.playbook import Play
+    admin = make_user(team, 'browseradmin', role='admin')
+    page = logged_in_page(app, browser, live_server, admin, team)
+    page.goto(live_server + '/playbook/plays/draw?type=defense')
+    page.wait_for_selector('.upper-canvas')
+    at = field_mapper(page)
+
+    page.fill('#drill-title', 'Cup on the swing')
+    page.click('.tool-btn[data-tool="player-d"]')
+    page.mouse.click(*at(400, 200))
+    page.click('#add-stage')
+    page.wait_for_function("document.querySelector('#stage-count').textContent.startsWith('2 /')")
+    page.click('#save-drill')
+    page.wait_for_selector('.alert-success')
+    assert 'Play saved' in page.inner_text('.alert-success')
+    assert page.errors == []
+
+    play = Play.query.filter_by(name='Cup on the swing').one()
+    assert play.type == 'defense' and play.stage_count == 2
+    assert '/playbook/plays/' in page.url and page.url.endswith('/draw')
+
+    page.goto(live_server + f'/playbook/plays/{play.id}')
+    page.wait_for_selector('#drill-animation canvas')
+    page.click('[data-animation="play"]')
+    page.wait_for_function(
+        "document.querySelector('.animation-caption strong').textContent.startsWith('2/2')", timeout=10000)
+    assert page.errors == []
     db.session.remove()

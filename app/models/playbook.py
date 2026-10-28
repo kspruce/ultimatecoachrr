@@ -47,6 +47,22 @@ class Play(db.Model):
     # Relationships
     formation = db.relationship('Formation', backref='plays')
     tags = db.relationship('PlayTag', secondary=play_tag_association)
+    # Drawn in the drill editor: one per stage, the first holding the drawing
+    diagrams = db.relationship('DrillDiagram', back_populates='play',
+                               order_by='DrillDiagram.order',
+                               cascade='all, delete-orphan')
+
+    @property
+    def editor_diagram(self):
+        return next((d for d in self.diagrams if d.editor_json), None)
+
+    @property
+    def editor_diagrams(self):
+        return [d for d in self.diagrams if d.editor_json]
+
+    @property
+    def stage_count(self):
+        return len(self.editor_diagrams)
     
     session_components = db.relationship('SessionComponent', 
                                         secondary='play_session_component',

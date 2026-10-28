@@ -1,4 +1,5 @@
 from flask_wtf import FlaskForm
+from sqlalchemy import func
 from wtforms import (BooleanField, DateField, Field, SelectField, SelectMultipleField,
                      StringField, SubmitField, TextAreaField)
 from wtforms.validators import DataRequired, Length, Optional, URL, ValidationError
@@ -6,6 +7,7 @@ from wtforms.widgets import CheckboxInput, ListWidget, TextInput
 
 from app.models.game import Game
 from app.models.player import Player
+from app.models.playbook import Play
 from app.models.scouting import (DEFENSE_TAGS, OFFENSE_TAGS, POSITIONS, THREAT_ROLES, defender_label, extract_youtube_id, format_time,
                                  parse_moments, parse_time)
 from app.models.tournament import Tournament
@@ -25,7 +27,7 @@ class ModelForm(FlaskForm):
 
     def populate_obj(self, obj):
         for name, field in self._fields.items():
-            if name not in ('submit', 'csrf_token'):
+            if name not in ('submit', 'csrf_token', 'play_ids'):
                 field.populate_obj(obj, name)
 
 
@@ -83,6 +85,8 @@ class ScoutingReportForm(ModelForm):
     game_plan = TextAreaField('How we beat them', validators=[Optional()])
     o_line_plan = TextAreaField('O-line plan', validators=[Optional()])
     d_line_plan = TextAreaField('D-line plan', validators=[Optional()])
+    # Ids that aren't the team's plays are dropped by the routes, not refused
+    play_ids = SelectMultipleField('Plays to run', coerce=int, validate_choice=False, validators=[Optional()])
     submit = SubmitField('Save Scouting Report')
 
     def __init__(self, *args, **kwargs):
@@ -95,6 +99,9 @@ class ScoutingReportForm(ModelForm):
                       .order_by(Game.date.desc()).all())
         self.tournament_id.choices = [(0, 'None')] + [(t.id, t.name) for t in self.tournaments]
         self.game_id.choices = [(0, 'None')] + [(g.id, game_label(g)) for g in self.games]
+        self.plays = (Play.query.filter_by(team_organization_id=team_id)
+                      .order_by(Play.type.desc(), func.coalesce(Play.sort_order, 999999), Play.name).all())
+        self.play_ids.choices = [(p.id, p.name) for p in self.plays]
         if self.tournament_id.data is None:
             self.tournament_id.data = 0
         if self.game_id.data is None:

@@ -25,9 +25,11 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav">
                     <li class="nav-item">
+                        {% block back_link %}
                         <a class="nav-link" href="{{ url_for('session.drills') }}">
                             <i class="bi bi-arrow-left"></i> Back to Drills
                         </a>
+                        {% endblock %}
                     </li>
                 </ul>
             </div>

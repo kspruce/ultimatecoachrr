@@ -1,0 +1,38 @@
+{# Plays a drawing's stages (drill_viewer.js). Needs `animation`, the
+   editor's saved state, and the page to load fabric, drill_diagram.js and
+   drill_viewer.js. #}
+<div class="card mb-4" id="drill-animation">
+    <div class="card-header">
+        <h4 class="mb-0">Animation</h4>
+    </div>
+    <div class="card-body">
+        <div class="animation-canvas border rounded overflow-hidden mb-2"></div>
+        <div class="anim-controls">
+            <div class="btn-group btn-group-sm anim-buttons" role="group" aria-label="Animation controls">
+                <button type="button" class="btn btn-outline-secondary" data-animation="prev" title="Previous stage"><i class="bi bi-skip-start-fill"></i></button>
+                <button type="button" class="btn btn-success" data-animation="play"><i class="bi bi-play-fill"></i> Play</button>
+                <button type="button" class="btn btn-outline-secondary" data-animation="next" title="Next stage"><i class="bi bi-skip-end-fill"></i></button>
+            </div>
+            <input type="range" class="form-range anim-scrubber"
+                   data-animation="scrubber" min="0" max="1000" step="1" value="0" aria-label="Animation position">
+            <select class="form-select form-select-sm w-auto" data-animation="speed" aria-label="Speed">
+                <option value="0.5">½×</option>
+                <option value="1" selected>1×</option>
+                <option value="2">2×</option>
+            </select>
+        </div>
+        <div class="animation-caption small mt-2"><strong></strong><span class="text-muted"></span></div>
+    </div>
+</div>
+<script id="drill-animation-data" type="application/json">{{ animation|tojson }}</script>
+<style>
+    #drill-animation .anim-controls { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+    /* session_styles.css stacks button groups on phones; not these */
+    #drill-animation .anim-buttons { display: inline-flex; flex-direction: row; flex-wrap: nowrap; flex: 0 0 auto; }
+    #drill-animation .anim-buttons .btn { flex: 0 0 auto; margin-bottom: 0; }
+    #drill-animation .anim-scrubber { flex: 1 1 120px; width: auto; min-width: 0; }
+    @media (max-width: 767.98px) {
+        #drill-animation .btn { padding: 0.45rem 0.8rem; }
+        #drill-animation .form-range { height: 1.75rem; }
+    }
+</style>
