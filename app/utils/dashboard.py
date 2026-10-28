@@ -256,18 +256,29 @@ def my_numbers(team_id, today, player, season):
     }
 
 
-def to_read_and_watch(team_id, settings, sees_hidden=False):
-    """The newest theory topics and clip playlists from the coaches."""
+def to_read_and_watch(team_id, settings, sees_hidden=False, user=None):
+    """Theory the coaches have asked this person to read and hasn't yet,
+    then the newest theory topics and clip playlists from the coaches."""
     from app.models.clip_playlist import ClipPlaylist
     from app.models.theory import TheorySection, TheoryTopic
 
-    items = []
+    items, assigned = [], []
     if _enabled(settings, 'theory_enabled'):
+        if user is not None:
+            from app.utils.theory import assigned_unread
+            for a in assigned_unread(user.id, team_id):
+                due = f' · read by {a.due_date.strftime("%a %-d %b")}' if a.due_date else ''
+                assigned.append({'kind': 'theory', 'title': a.topic.name, 'meta': f'Assigned reading{due}',
+                                 'when': None, 'pill': 'To read',
+                                 'url': url_for('theory.topic', topic_id=a.topic_id)})
         topics = (TheoryTopic.query.join(TheorySection, TheorySection.id == TheoryTopic.section_id)
-                  .filter(TheoryTopic.team_organization_id == team_id)
+                  .filter(TheoryTopic.team_organization_id == team_id, TheoryTopic.published.is_(True))
                   .order_by(db.func.coalesce(TheoryTopic.updated_at, TheoryTopic.created_at).desc())
                   .limit(3).all())
+        assigned_urls = {a['url'] for a in assigned}
         for t in topics:
+            if url_for('theory.topic', topic_id=t.id) in assigned_urls:
+                continue
             items.append({'kind': 'theory', 'title': t.name, 'meta': t.section.name if t.section else 'Theory',
                           'when': t.updated_at or t.created_at,
                           'url': url_for('theory.topic', topic_id=t.id)})
@@ -284,7 +295,7 @@ def to_read_and_watch(team_id, settings, sees_hidden=False):
                           'when': p.updated_at or p.created_at,
                           'url': url_for('clip.view_playlist', playlist_id=p.id)})
     items.sort(key=lambda i: i['when'] or date.min, reverse=True)
-    return items[:4]
+    return (assigned + items)[:max(4, len(assigned))]
 
 
 # ── What a coach needs to deal with ────────────────────────────────────────
@@ -395,5 +406,5 @@ def build(user, team_id, settings=None, roster_signup=None, today=None):
         data['next_session_counts'] = next((r['counts'] for r in coming if r['type'] == 'session'), None)
         data['attention'] = needs_attention(team_id, today, coming, settings, roster_signup)
     else:
-        data['learn'] = to_read_and_watch(team_id, settings)
+        data['learn'] = to_read_and_watch(team_id, settings, user=user)
     return data

@@ -16,7 +16,9 @@ from app.models.session import (
 )
 from app.models.schedule import TrainingSchedule, ScheduleAvailability, SessionTemplate, SessionReminder
 from app.models.playbook import Play, Formation, PlayTag, PlayerPosition, PlayAssignment
-from app.models.theory import TheorySection, TheoryTopic, TheoryVideo, TheoryTag
+from app.models.theory import (
+    TheorySection, TheoryTopic, TheoryVideo, TheoryTag, TheoryImage, TheoryRead, TheoryAssignment,
+)
 from app.models.season_plan import (
     SeasonPlan, SeasonPhase, SeasonWeek, SeasonPage, SeasonMilestone,
     ClassroomSession, ClassroomResource,
@@ -94,7 +96,8 @@ __all__ = [
     # Playbook
     'Play', 'Formation', 'PlayTag', 'PlayerPosition', 'PlayAssignment',
     # Theory
-    'TheorySection', 'TheoryTopic', 'TheoryVideo', 'TheoryTag',
+    'TheorySection', 'TheoryTopic', 'TheoryVideo', 'TheoryTag', 'TheoryImage', 'TheoryRead',
+    'TheoryAssignment',
     # Tournaments & Games
     'Tournament', 'TournamentRSVP', 'Game', 'Point', 'LineUp',
     # Events & Actions
