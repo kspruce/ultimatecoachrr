@@ -167,7 +167,7 @@
       {% if can_edit %}
       <div class="th-row-end">
         {{ move_buttons(url_for('theory.move_section', section_id=section.id), section.name, loop.first, loop.last) }}
-        {{ section_menu(section, topics|length) }}
+        {{ section_menu(section, topics|length, loop.first, loop.last) }}
       </div>
       {% endif %}
     </div>

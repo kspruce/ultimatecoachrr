@@ -73,7 +73,7 @@
           {% if can_edit %}
           <div class="th-row-end">
             {{ move_buttons(url_for('theory.move_topic', topic_id=topic.id), topic.name, loop.first, loop.last) }}
-            {{ topic_menu(topic) }}
+            {{ topic_menu(topic, show_move=topics|length > 1, first=loop.first, last=loop.last, move_class='d-sm-none') }}
           </div>
           {% endif %}
         </div>
