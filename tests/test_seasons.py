@@ -312,3 +312,24 @@ def test_players_added_any_way_join_the_current_roster(club):
     db.session.expire_all()
     assert Player.query.filter_by(name='Imported Player').one().active
     assert Player.query.filter_by(name='Form Player').one().active
+
+
+def test_game_day_summary_counts_the_season_being_viewed(club):
+    from app.models.gameday import GameDayPlayerStats
+    team, regular = club['team'], club['regular']
+    old = Game.query.filter_by(opponent='Old rivals').one()
+    new = Game.query.filter_by(opponent='New rivals').one()
+    db.session.add_all([
+        GameDayPlayerStats(player_id=regular.id, game_id=old.id, goals=5, team_organization_id=team.id),
+        GameDayPlayerStats(player_id=regular.id, game_id=new.id, goals=2, team_organization_id=team.id),
+        Game(opponent='Not played yet', date=date(THIS_YEAR, 12, 30), team_organization_id=team.id),
+    ])
+    db.session.commit()
+    client = club['client']
+    page = client.get('/gameday/team-stats').get_data(as_text=True)
+    assert 'New rivals' in page and 'Old rivals' not in page and 'Not played yet' not in page
+    assert 'By tournament:' not in page  # last year's tournament is in last year
+
+    client.get('/team/seasons/view?season=all')
+    page = client.get('/gameday/team-stats').get_data(as_text=True)
+    assert 'All seasons' in page and 'Old rivals' in page and 'Old open' in page
