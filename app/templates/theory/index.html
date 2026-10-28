@@ -1,63 +1,213 @@
-{% extends "theory/_layout.html" %}
+{# templates/theory/index.html #}
+{% extends "base.html" %}
+{% from "theory/_macros.html" import move_buttons, section_menu %}
 
-{% block title %}Theory{% endblock %}
+{% block styles %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/theory.css') }}">
+{% endblock %}
 
-{% block th_content %}
-{% if results is not none %}
-<div class="uc-page-header">
-  <div>
-    <h1>Search</h1>
-    <p>{{ results|length }} topic{{ '' if results|length == 1 else 's' }} matching “{{ q }}”</p>
+{% block content %}
+<div class="container th-page">
+
+  <div class="th-head">
+    <div>
+      <h1>Theory</h1>
+      <p>Guides from the coaches: how we play and why.</p>
+    </div>
+    {% if can_edit %}
+    <div class="dropdown flex-shrink-0">
+      <button class="btn btn-primary th-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="bi bi-plus-lg"></i><span>New</span>
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        <li><a class="dropdown-item" href="{{ url_for('theory.add_topic') }}"><i class="bi bi-file-earmark-text me-2"></i>Topic</a></li>
+        <li><a class="dropdown-item" href="{{ url_for('theory.add_section') }}"><i class="bi bi-folder-plus me-2"></i>Section</a></li>
+      </ul>
+    </div>
+    {% endif %}
   </div>
-</div>
-<div class="hb-results">
-  {% for t, s in results %}
-  <a class="hb-result" href="{{ url_for('theory.topic', topic_id=t.id) }}">
-    <span class="hb-label">{{ s.name }}</span>
-    <span class="hb-result-title">{{ t.name }}</span>
-    <span class="hb-muted">{{ snippet(t) }}{% if snippet(t)|length == 160 %}…{% endif %}</span>
-  </a>
+
+  {% if sections %}
+
+  {% if total_published %}
+  <div class="mb-3">
+    <div class="d-flex justify-content-between mb-1" style="font-size:.86rem;color:var(--ink-2)">
+      <span>You've read <strong>{{ total_read }}</strong> of {{ total_published }} topic{{ 's' if total_published != 1 }}</span>
+      <span>{{ (total_read / total_published * 100)|round|int }}%</span>
+    </div>
+    <div class="th-progress" role="progressbar" aria-valuemin="0" aria-valuemax="{{ total_published }}" aria-valuenow="{{ total_read }}"
+         aria-label="Topics read"><span style="width:{{ (total_read / total_published * 100)|round|int }}%"></span></div>
+  </div>
+  {% endif %}
+
+  <form method="GET" action="{{ url_for('theory.index') }}" role="search" class="th-search">
+    <i class="bi bi-search" aria-hidden="true"></i>
+    <input type="search" name="q" value="{{ q }}" class="form-control" placeholder="Search topics" aria-label="Search topics"
+           enterkeyhint="search" autocomplete="off">
+    {% if tag %}<input type="hidden" name="tag" value="{{ tag }}">{% endif %}
+  </form>
+  {% if tag_names %}
+  <div class="th-chips" aria-label="Filter by tag">
+    {% for name in tag_names %}
+    <a class="th-chip {% if tag|lower == name|lower %}active{% endif %}"
+       href="{{ url_for('theory.index', q=q or None, tag=None if tag|lower == name|lower else name) }}"
+       {% if tag|lower == name|lower %}aria-current="true"{% endif %}>{{ name }}</a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if results is not none %}
+  {# ── Search results ───────────────────────────────────────── #}
+  <div class="d-flex align-items-center justify-content-between mt-2 mb-2">
+    <div style="font-size:.9rem;color:var(--ink-2)">
+      {{ results|length }} result{{ 's' if results|length != 1 }}{% if q %} for “{{ q }}”{% endif %}{% if tag %} tagged <strong>{{ tag }}</strong>{% endif %}
+    </div>
+    <a href="{{ url_for('theory.index') }}" class="btn btn-link btn-sm">Clear</a>
+  </div>
+  {% if results %}
+  <div class="th-list">
+    {% for t in results %}
+    <a class="th-row" href="{{ url_for('theory.topic', topic_id=t.id) }}">
+      <div class="th-row-text">
+        <div class="th-row-title">{{ t.name }}</div>
+        <div class="th-row-sub">{{ t.section.name }}{% if q %} · {{ snippet(t, q) }}{% endif %}</div>
+        <div class="th-row-meta">
+          {% if not t.published %}<span class="th-badge draft">Draft</span>{% endif %}
+          {% if t.id in read %}<span class="th-badge read"><i class="bi bi-check2"></i>Read</span>{% endif %}
+          {% for x in t.tags %}<span class="th-badge">{{ x.name }}</span>{% endfor %}
+        </div>
+      </div>
+      <i class="bi bi-chevron-right th-chev" aria-hidden="true"></i>
+    </a>
+    {% endfor %}
+  </div>
   {% else %}
-  <p class="hb-muted">Nothing matches. Try a single word, like “zone” or “force”.</p>
-  {% endfor %}
-</div>
-{% else %}
-<div class="hb-hero">
-  <div class="hb-label">For everyone on the team</div>
-  <h1>The ideas behind how we play</h1>
-  <p>Offence, defence and the reads in between, written down so everyone learns the same game. Each topic links the drills that practise it and clips that show it.</p>
-  <div class="hb-start th-actions">
-    {% if first %}<a class="btn btn-primary" href="{{ url_for('theory.topic', topic_id=first.id) }}">Start with {{ first.name }}</a>{% endif %}
-    {% if current_user.is_coach %}
-    <a class="btn btn-outline-secondary" href="{{ url_for('theory.add_topic') }}"><i class="bi bi-plus-lg"></i> Add a topic</a>
-    <a class="btn btn-outline-secondary" href="{{ url_for('theory.add_section') }}"><i class="bi bi-plus-lg"></i> Add a section</a>
+  <div class="th-list th-empty"><i class="bi bi-search"></i>Nothing matches. Try fewer or different words.</div>
+  {% endif %}
+
+  {% else %}
+
+  {# ── Assigned reading ─────────────────────────────────────── #}
+  {% if assigned %}
+  <div class="th-label">{{ 'Assigned reading' if can_edit else 'Assigned to you' }}</div>
+  <div class="th-list">
+    {% for a in assigned %}
+    {% set done = a.topic_id in read %}
+    <a class="th-row" href="{{ url_for('theory.readers', topic_id=a.topic_id) if can_edit else url_for('theory.topic', topic_id=a.topic_id) }}">
+      <span class="th-row-num {% if done %}done{% endif %}" aria-hidden="true"><i class="bi {{ 'bi-check-lg' if done else 'bi-bookmark' }}"></i></span>
+      <div class="th-row-text">
+        <div class="th-row-title">{{ a.topic.name }}</div>
+        <div class="th-row-sub">{{ a.topic.section.name }}{% if a.note %} · {{ a.note }}{% endif %}</div>
+        <div class="th-row-meta">
+          {% if a.due_date %}<span class="th-badge due"><i class="bi bi-calendar-event"></i>Read by {{ a.due_date.strftime('%a %-d %b') }}</span>{% endif %}
+          {% if can_edit %}<span class="th-badge">{{ read_counts.get(a.topic_id, 0) }} of {{ readers_count }} read</span>{% endif %}
+          {% if not a.topic.published %}<span class="th-badge draft">Draft: players can't see it yet</span>{% endif %}
+          {% if done and not can_edit %}<span class="th-badge read">Done</span>{% endif %}
+        </div>
+      </div>
+      <i class="bi bi-chevron-right th-chev" aria-hidden="true"></i>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {# ── Continue reading ─────────────────────────────────────── #}
+  {% if continue_topic %}
+  <div class="th-label">Continue reading</div>
+  <a class="th-card d-flex align-items-center gap-3" href="{{ url_for('theory.topic', topic_id=continue_topic.id) }}">
+    <div class="flex-grow-1" style="min-width:0">
+      <div class="th-card-kicker">{{ continue_topic.section.name }}</div>
+      <div class="th-card-title">{{ continue_topic.name }}</div>
+    </div>
+    <i class="bi bi-arrow-right-circle-fill" style="font-size:1.8rem;color:var(--club-ink)" aria-hidden="true"></i>
+  </a>
+  {% endif %}
+
+  {# ── Drafts (coaches) ─────────────────────────────────────── #}
+  {% if can_edit and drafts %}
+  <div class="th-label">Your team's drafts</div>
+  <div class="th-list">
+    {% for t in drafts %}
+    <a class="th-row" href="{{ url_for('theory.topic', topic_id=t.id) }}">
+      <div class="th-row-text">
+        <div class="th-row-title">{{ t.name }}</div>
+        <div class="th-row-sub">{{ t.section.name }}{% if t.last_edited_at %} · edited {{ t.last_edited_at.strftime('%-d %b') }}{% endif %}</div>
+      </div>
+      <span class="th-badge draft">Draft</span>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {# ── Sections ─────────────────────────────────────────────── #}
+  <div class="th-label">Sections</div>
+  <div class="th-list">
+    {% for section in sections %}
+    {% set topics = by_section.get(section.id, []) %}
+    {% set live = topics|selectattr('published')|list %}
+    {% set done = live|selectattr('id', 'in', read)|list|length %}
+    <div class="th-row">
+      <a class="th-row-main" href="{{ url_for('theory.section', slug=section.slug) }}">
+        <div class="th-row-text">
+          <div class="th-row-title">{{ section.name }}</div>
+          {% if section.description %}<div class="th-row-sub">{{ section.description }}</div>{% endif %}
+          <div class="d-flex align-items-center gap-2 mt-2">
+            {% if live %}
+            <div class="th-progress flex-grow-1" style="max-width:160px" aria-hidden="true"><span style="width:{{ (done / live|length * 100)|round|int }}%"></span></div>
+            <span style="font-size:.8rem;color:var(--ink-3);white-space:nowrap">{{ done }}/{{ live|length }} read</span>
+            {% else %}
+            <span style="font-size:.8rem;color:var(--ink-3)">No topics yet</span>
+            {% endif %}
+            {% if can_edit and topics|length > live|length %}<span class="th-badge draft">{{ topics|length - live|length }} draft{{ 's' if topics|length - live|length != 1 }}</span>{% endif %}
+          </div>
+        </div>
+        {% if not can_edit %}<i class="bi bi-chevron-right th-chev" aria-hidden="true"></i>{% endif %}
+      </a>
+      {% if can_edit %}
+      <div class="th-row-end">
+        {{ move_buttons(url_for('theory.move_section', section_id=section.id), section.name, loop.first, loop.last) }}
+        {{ section_menu(section, topics|length, loop.first, loop.last) }}
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  {# ── Recently updated ─────────────────────────────────────── #}
+  {% if recent %}
+  <div class="th-label">Recently updated</div>
+  <div class="th-list">
+    {% for t in recent %}
+    <a class="th-row" href="{{ url_for('theory.topic', topic_id=t.id) }}">
+      <div class="th-row-text">
+        <div class="th-row-title">{{ t.name }}</div>
+        <div class="th-row-sub">{{ t.section.name }}{% if t.last_edited_at %} · {{ t.last_edited_at.strftime('%-d %b') }}{% endif %}</div>
+      </div>
+      {% if t.id in read %}<span class="th-badge read"><i class="bi bi-check2"></i>Read</span>{% else %}<i class="bi bi-chevron-right th-chev" aria-hidden="true"></i>{% endif %}
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% endif %}{# results #}
+
+  {% else %}
+  <div class="th-list th-empty">
+    <i class="bi bi-mortarboard"></i>
+    {% if can_edit %}
+    <p class="mb-3">Start with a section (e.g. Offence, Defence, Throwing), then add topics to it.</p>
+    <a href="{{ url_for('theory.add_section') }}" class="btn btn-primary th-btn"><i class="bi bi-folder-plus"></i>Create the first section</a>
+    {% else %}
+    <p class="mb-0">Nothing here yet. Your coaches' guides will show up here.</p>
     {% endif %}
   </div>
-</div>
+  {% endif %}
 
-{% if not groups %}
-<div class="hb-card"><p class="m-0 hb-muted">No theory yet.{% if current_user.is_coach %} Start with a section, such as “Defence”, then add topics to it.{% else %} Your coaches haven't written any yet.{% endif %}</p></div>
-{% endif %}
-
-<div class="hb-sections">
-  {% for s, topics in groups %}
-  <section class="hb-card hb-section">
-    <header>
-      <h2><a href="{{ url_for('theory.section', slug=s.slug) }}">{{ s.name }}</a></h2>
-      <span class="hb-muted small">{{ topics|length }} topic{{ '' if topics|length == 1 else 's' }}</span>
-    </header>
-    {% if s.description %}<p>{{ s.description }}</p>{% endif %}
-    {% if topics %}
-    <ul>
-      {% for t in topics %}
-      <li><a href="{{ url_for('theory.topic', topic_id=t.id) }}">{{ t.name }}</a></li>
-      {% endfor %}
-    </ul>
-    {% elif current_user.is_coach %}
-    <a class="small" href="{{ url_for('theory.add_topic', section=s.id) }}">Add the first topic</a>
-    {% endif %}
-  </section>
-  {% endfor %}
 </div>
-{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/theory.js') }}"></script>
 {% endblock %}

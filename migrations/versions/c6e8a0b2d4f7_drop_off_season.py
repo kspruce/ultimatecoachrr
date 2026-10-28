@@ -1,7 +1,7 @@
 """Drop the off-season tables
 
 Revision ID: c6e8a0b2d4f7
-Revises: b5d7f9a1c3e6
+Revises: c6e8a0b2d4f6
 Create Date: 2026-10-24 12:00:00.000000
 
 Programmes replaced the off-season section (phases, schedules, workouts,
@@ -14,7 +14,7 @@ from alembic import op
 
 
 revision = 'c6e8a0b2d4f7'
-down_revision = 'b5d7f9a1c3e6'
+down_revision = 'c6e8a0b2d4f6'
 branch_labels = None
 depends_on = None
 

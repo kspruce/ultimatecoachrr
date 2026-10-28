@@ -1,11 +1,12 @@
-"""Theory section slugs and theory/play tag names are unique per team
+"""Play tag names are unique per team
 
 Revision ID: d8f0b2c4e6a9
 Revises: c6e8a0b2d4f7
 Create Date: 2026-10-24 12:30:00.000000
 
-They were unique across the whole site, so a second team couldn't add a
-"Defence" section or an "Endzone" tag once another team had one.
+They were unique across the whole site, so a second team couldn't add an
+"Endzone" tag once another team had one. (Theory section slugs and tag
+names got the same change in c6e8a0b2d4f6.)
 """
 from alembic import op
 import sqlalchemy as sa
@@ -19,8 +20,6 @@ depends_on = None
 
 # (table, column, new constraint)
 CHANGES = [
-    ('theory_section', 'slug', 'uq_theory_section_team_slug'),
-    ('theory_tag', 'name', 'uq_theory_tag_team_name'),
     ('play_tag', 'name', 'uq_play_tag_team_name'),
 ]
 

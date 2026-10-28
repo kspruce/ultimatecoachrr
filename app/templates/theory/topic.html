@@ -1,79 +1,202 @@
-{% extends "theory/_layout.html" %}
+{# templates/theory/topic.html #}
+{% extends "base.html" %}
+{% from "theory/_macros.html" import topic_menu %}
 
-{% block title %}{{ topic.name }} - Theory{% endblock %}
+{% block styles %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/theory.css') }}">
+{% endblock %}
 
-{% block th_content %}
-<div class="hb-reader">
-  <aside class="hb-rail d-none d-lg-block">{{ contents(groups, current=topic, open=True) }}</aside>
-  <div class="hb-main">
-    <div class="d-lg-none">{{ contents(groups, current=topic) }}</div>
-    <article class="hb-card hb-page">
-      <div class="hb-crumbs">
-        <a href="{{ url_for('theory.index') }}">Theory</a> <span aria-hidden="true">›</span>
-        <a href="{{ url_for('theory.section', slug=topic.section.slug) }}">{{ topic.section.name }}</a>
+{% macro read_form(extra_class='') %}
+<form method="POST" action="{{ url_for('theory.mark_read', topic_id=topic.id) }}" data-read-form class="th-read-btn {{ extra_class }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="read" value="{{ '0' if is_read else '1' }}">
+  <button type="submit" class="btn th-btn w-100 {{ 'btn-outline-secondary is-read' if is_read else 'btn-primary' }}" aria-pressed="{{ 'true' if is_read else 'false' }}">
+    {% if is_read %}<i class="bi bi-check-circle-fill"></i> Read{% else %}<i class="bi bi-check-circle"></i> Mark as read{% endif %}
+  </button>
+</form>
+{% endmacro %}
+
+{% block content %}
+<div id="th-progress-bar" aria-hidden="true"></div>
+{% if request.args.get('saved') %}<div hidden data-clear-drafts="theory-draft:{{ topic.id }} theory-draft:new"></div>{% endif %}
+
+<div class="container th-page">
+
+  {# Compact header once the title has scrolled away (phones) #}
+  <div class="th-sticky-head" aria-hidden="true">
+    <a class="th-icon-btn sm" href="{{ url_for('theory.section', slug=topic.section.slug) }}" tabindex="-1" aria-label="Back to {{ topic.section.name }}"><i class="bi bi-arrow-left"></i></a>
+    <div class="title">{{ topic.name }}</div>
+    <button type="button" class="btn btn-outline-secondary btn-sm th-btn" data-toc hidden tabindex="-1"
+            data-bs-toggle="offcanvas" data-bs-target="#th-toc-sheet"><i class="bi bi-list-ul"></i>Contents</button>
+  </div>
+
+  <nav class="th-crumbs" aria-label="Breadcrumb">
+    <a href="{{ url_for('theory.index') }}">Theory</a><span aria-hidden="true">›</span>
+    <a href="{{ url_for('theory.section', slug=topic.section.slug) }}">{{ topic.section.name }}</a>
+    {% if section_topics|length > 1 %}<span aria-hidden="true">·</span><span>{{ current_idx + 1 }} of {{ section_topics|length }}</span>{% endif %}
+  </nav>
+
+  {% if not topic.published %}
+  <div class="th-draft-banner">
+    <i class="bi bi-eye-slash" aria-hidden="true"></i>
+    <div class="flex-grow-1">Draft: only coaches can see this.</div>
+    <form method="POST" action="{{ url_for('theory.publish', topic_id=topic.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn btn-sm btn-primary">Publish</button>
+    </form>
+  </div>
+  {% endif %}
+
+  <div class="row g-4">
+    <article class="col-lg-8" id="th-article">
+
+      <div class="th-head mb-2">
+        <h1 id="th-title">{{ topic.name }}</h1>
+        {% if can_edit %}
+        <div class="d-flex gap-2 flex-shrink-0">
+          <a href="{{ url_for('theory.edit_topic', topic_id=topic.id) }}" class="th-icon-btn sm" aria-label="Edit {{ topic.name }}"><i class="bi bi-pencil"></i></a>
+          {{ topic_menu(topic, next=url_for('theory.topic', topic_id=topic.id), show_move=True,
+                        first=current_idx == 0, last=current_idx + 1 >= section_topics|length) }}
+        </div>
+        {% endif %}
       </div>
-      <header>
-        <div class="hb-label">{{ topic.section.name }}</div>
-        <h1>{{ topic.name }}</h1>
-        {% if topic.tags %}<div class="th-tags">{% for tag in topic.tags %}<span>{{ tag.name }}</span>{% endfor %}</div>{% endif %}
-      </header>
+      <div class="th-meta mb-3">
+        <button type="button" class="th-badge border-0 d-lg-none" data-toc hidden data-bs-toggle="offcanvas" data-bs-target="#th-toc-sheet"><i class="bi bi-list-ul"></i>Contents</button>
+        {% if topic.last_edited_by %}<span>Updated {{ topic.last_edited_at.strftime('%-d %b %Y') }} by {{ topic.last_edited_by.username }}</span>{% endif %}
+        {% if readers %}<a href="{{ url_for('theory.readers', topic_id=topic.id) }}" class="th-badge"><i class="bi bi-people"></i>{{ readers[0] }} of {{ readers[1] }} read</a>{% endif %}
+        {% if topic.assignment and topic.assignment.due_date %}<span class="th-badge due"><i class="bi bi-calendar-event"></i>Read by {{ topic.assignment.due_date.strftime('%a %-d %b') }}</span>{% endif %}
+        {% for tag in topic.tags %}<a href="{{ url_for('theory.index', tag=tag.name) }}" class="th-badge">{{ tag.name }}</a>{% endfor %}
+      </div>
+
       {% if topic.image_url %}
-      <a href="{{ topic.image_url }}" target="_blank" rel="noopener"><img class="th-hero-img" src="{{ topic.image_url }}" alt="{{ topic.name }}"></a>
-      {% endif %}
-      <div class="th-body">{{ topic.content|markdown }}</div>
-
-      {% if clips %}
-      <section class="th-links">
-        <h2>See it in a game</h2>
-        {% for clip in clips %}
-        <a class="th-link" href="{{ url_for('clip.view_clip', clip_id=clip.id) }}">
-          <i class="bi bi-camera-video"></i> {{ clip.title or 'Clip' }}
-          {% if clip.game %}<small>vs {{ clip.game.opponent }}</small>{% endif %}
-        </a>
-        {% endfor %}
-      </section>
+      <button type="button" class="th-hero d-block border-0 p-0" data-lightbox="{{ topic.image_url }}" data-caption="{{ topic.name }}"
+              aria-label="Enlarge the photo">
+        <img src="{{ topic.image_url }}" alt="">
+      </button>
       {% endif %}
 
-      {% if drills %}
-      <section class="th-links">
-        <h2>Practise it</h2>
-        {% for drill in drills %}
-        <a class="th-link" href="{{ url_for('session.drill_detail', drill_id=drill.id) }}">
-          <i class="bi bi-clipboard2-check"></i> {{ drill.title }}
-          {% if drill.recommended_duration %}<small>{{ drill.recommended_duration }} min</small>{% endif %}
-        </a>
-        {% endfor %}
-      </section>
-      {% endif %}
+      <div class="th-article">
+        <div class="topic-content">
+          {% if topic.content %}{{ topic.content|markdown }}{% else %}<p class="text-muted">Nothing written yet.</p>{% endif %}
+        </div>
+      </div>
 
       {% if topic.related_videos %}
-      <section class="th-links">
-        <h2>Videos</h2>
-        {% for video in topic.related_videos if video.url.startswith('https://') %}
-        <div>
-          <iframe class="th-video" src="{{ video.url }}" allowfullscreen loading="lazy" title="{{ video.title }}"></iframe>
-          <div class="fw-semibold mt-1">{{ video.title }}</div>
-          {% if video.description %}<div class="hb-muted small">{{ video.description }}</div>{% endif %}
+      <h2 class="th-label">Watch</h2>
+      {% for video in topic.related_videos %}
+      <div class="th-video">
+        {% if video.embed_url %}
+        <div class="ratio ratio-16x9">
+          <iframe src="{{ video.embed_url }}" title="{{ video.title }}" loading="lazy" allowfullscreen
+                  allow="accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                  referrerpolicy="strict-origin-when-cross-origin"></iframe>
         </div>
-        {% endfor %}
-      </section>
+        {% endif %}
+        <h3>{{ video.title }}</h3>
+        {% if video.description %}<p class="text-muted mb-0" style="font-size:.9rem">{{ video.description }}</p>{% endif %}
+      </div>
+      {% endfor %}
       {% endif %}
 
-      {% if current_user.is_coach %}
-      <div class="hb-edit th-actions">
-        <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('theory.edit_topic', topic_id=topic.id) }}"><i class="bi bi-pencil"></i> Edit topic</a>
-        <form method="POST" action="{{ url_for('theory.delete_topic', topic_id=topic.id) }}"
-              data-confirm="Delete {{ topic.name }}?" onsubmit="return confirm(this.dataset.confirm);">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button class="btn btn-outline-danger btn-sm" type="submit"><i class="bi bi-trash"></i> Delete</button>
-        </form>
+      {% if topic.related_drills %}
+      <h2 class="th-label">Drills for this</h2>
+      <div class="th-list mb-3">
+        {% for drill in topic.related_drills %}
+        <a class="th-row" href="{{ url_for('session.drill_detail', drill_id=drill.id) }}">
+          <i class="bi bi-list-check" style="color:var(--ok);font-size:1.2rem" aria-hidden="true"></i>
+          <div class="th-row-text">
+            <div class="th-row-title">{{ drill.title }}</div>
+            {% if drill.focus_area or drill.recommended_duration %}<div class="th-row-sub">{{ drill.focus_area or '' }}{% if drill.focus_area and drill.recommended_duration %} · {% endif %}{% if drill.recommended_duration %}{{ drill.recommended_duration }} min{% endif %}</div>{% endif %}
+          </div>
+          <i class="bi bi-chevron-right th-chev" aria-hidden="true"></i>
+        </a>
+        {% endfor %}
       </div>
       {% endif %}
+
+      {% if clips %}
+      <h2 class="th-label">See it in a game</h2>
+      <div class="th-list mb-3">
+        {% for clip in clips %}
+        <a class="th-row" href="{{ url_for('clip.view_clip', clip_id=clip.id) }}">
+          <i class="bi bi-camera-video" style="color:var(--club-ink);font-size:1.2rem" aria-hidden="true"></i>
+          <div class="th-row-text">
+            <div class="th-row-title">{{ clip.title or 'Clip' }}</div>
+            {% if clip.game %}<div class="th-row-sub">vs {{ clip.game.opponent }}</div>{% endif %}
+          </div>
+          <i class="bi bi-chevron-right th-chev" aria-hidden="true"></i>
+        </a>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {# Previous / mark as read / next: pinned to the bottom on phones #}
+      <div class="th-readbar">
+        {% if prev_topic %}
+        <a href="{{ url_for('theory.topic', topic_id=prev_topic.id) }}" class="th-icon-btn d-lg-none" aria-label="Previous: {{ prev_topic.name }}"><i class="bi bi-arrow-left"></i></a>
+        {% else %}
+        <a href="{{ url_for('theory.section', slug=topic.section.slug) }}" class="th-icon-btn d-lg-none" aria-label="Back to {{ topic.section.name }}"><i class="bi bi-grid"></i></a>
+        {% endif %}
+        {{ read_form() }}
+        {% if next_topic %}
+        <a href="{{ url_for('theory.topic', topic_id=next_topic.id) }}" class="th-icon-btn d-lg-none" data-next-topic aria-label="Next: {{ next_topic.name }}"><i class="bi bi-arrow-right"></i></a>
+        {% else %}
+        <a href="{{ url_for('theory.section', slug=topic.section.slug) }}" class="th-icon-btn d-lg-none" aria-label="Back to {{ topic.section.name }}"><i class="bi bi-check2-all"></i></a>
+        {% endif %}
+      </div>
+
+      <div class="d-none d-lg-flex gap-3">
+        {% if prev_topic %}
+        <a href="{{ url_for('theory.topic', topic_id=prev_topic.id) }}" class="th-nav-btn">
+          <i class="bi bi-arrow-left" aria-hidden="true"></i><div style="min-width:0"><small>Previous</small><span>{{ prev_topic.name }}</span></div>
+        </a>
+        {% else %}<div style="flex:1"></div>{% endif %}
+        {% if next_topic %}
+        <a href="{{ url_for('theory.topic', topic_id=next_topic.id) }}" class="th-nav-btn next">
+          <i class="bi bi-arrow-right" aria-hidden="true"></i><div style="min-width:0"><small>Next</small><span>{{ next_topic.name }}</span></div>
+        </a>
+        {% else %}
+        <a href="{{ url_for('theory.section', slug=topic.section.slug) }}" class="th-nav-btn next">
+          <i class="bi bi-check2-all" aria-hidden="true" style="color:var(--ok)"></i><div style="min-width:0"><small>End of section</small><span>Back to {{ topic.section.name }}</span></div>
+        </a>
+        {% endif %}
+      </div>
+      <div class="th-readbar-spacer"></div>
     </article>
-    <nav class="hb-pager" aria-label="Previous and next">
-      {% if prev_topic %}<a class="prev" href="{{ url_for('theory.topic', topic_id=prev_topic.id) }}"><small>← Previous</small><span>{{ prev_topic.name }}</span></a>{% endif %}
-      {% if next_topic %}<a class="next" href="{{ url_for('theory.topic', topic_id=next_topic.id) }}"><small>Next →</small><span>{{ next_topic.name }}</span></a>{% endif %}
-    </nav>
+
+    <aside class="col-lg-4 d-none d-lg-block">
+      <div class="th-sidebar">
+        <div data-toc hidden>
+          <div class="th-label mt-0">On this page</div>
+          <nav data-toc-list aria-label="On this page" class="mb-3"></nav>
+        </div>
+        <div class="th-label mt-0">{{ topic.section.name }}</div>
+        <div class="th-list">
+          {% for t in section_topics %}
+          <a class="th-row" href="{{ url_for('theory.topic', topic_id=t.id) }}" style="min-height:48px;padding:.5rem .75rem" {% if t.id == topic.id %}aria-current="page"{% endif %}>
+            <span class="th-row-num {% if t.id in read %}done{% endif %}" style="width:24px;height:24px;font-size:.7rem">{% if t.id in read %}<i class="bi bi-check-lg"></i>{% else %}{{ loop.index }}{% endif %}</span>
+            <div class="th-row-text"><div class="th-row-title" style="font-size:.88rem;{% if t.id == topic.id %}color:var(--club-ink){% endif %}">{{ t.name }}{% if not t.published %} <span class="th-badge draft">Draft</span>{% endif %}</div></div>
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+    </aside>
   </div>
 </div>
+
+{# Contents sheet (phones) #}
+<div class="offcanvas offcanvas-bottom th-sheet" tabindex="-1" id="th-toc-sheet" aria-labelledby="th-toc-title">
+  <div class="th-sheet-grip" aria-hidden="true"></div>
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title" id="th-toc-title">Contents</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+  </div>
+  <div class="offcanvas-body pt-0"><nav data-toc-list aria-label="Contents"></nav></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/theory.js') }}"></script>
 {% endblock %}

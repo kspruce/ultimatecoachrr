@@ -1,48 +1,120 @@
-{% extends "theory/_layout.html" %}
+{# templates/theory/section.html #}
+{% extends "base.html" %}
+{% from "theory/_macros.html" import move_buttons, section_menu, topic_menu %}
 
-{% block title %}{{ section.name }} - Theory{% endblock %}
+{% block styles %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/theory.css') }}">
+{% endblock %}
 
-{% block th_content %}
-<div class="hb-reader">
-  <aside class="hb-rail d-none d-lg-block">{{ contents(groups, open=True) }}</aside>
-  <div class="hb-main">
-    <div class="d-lg-none">{{ contents(groups) }}</div>
-    <article class="hb-card hb-page">
-      <div class="hb-crumbs"><a href="{{ url_for('theory.index') }}">Theory</a></div>
-      <header>
-        <div class="hb-label">Section</div>
-        <h1>{{ section.name }}</h1>
-        {% if section.description %}<p class="lead">{{ section.description }}</p>{% endif %}
-      </header>
-      <div class="th-topics">
-        {% for t in topics %}
-        <a class="th-topic" href="{{ url_for('theory.topic', topic_id=t.id) }}">
-          <b>{{ loop.index }}. {{ t.name }}</b>
-          {% set words = snippet(t) %}
-          {% if words %}<span>{{ words }}{% if words|length == 160 %}…{% endif %}</span>{% endif %}
-        </a>
-        {% else %}
-        <p class="hb-muted m-0">No topics in {{ section.name }} yet.</p>
-        {% endfor %}
-      </div>
-      {% if current_user.is_coach %}
-      <div class="hb-edit th-actions">
-        <a class="btn btn-primary btn-sm" href="{{ url_for('theory.add_topic', section=section.id) }}"><i class="bi bi-plus-lg"></i> Add a topic</a>
-        <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('theory.edit_section', section_id=section.id) }}"><i class="bi bi-pencil"></i> Edit section</a>
-        <form method="POST" action="{{ url_for('theory.delete_section', section_id=section.id) }}"
-              data-confirm="Delete {{ section.name }} and its {{ topics|length }} topic{{ '' if topics|length == 1 else 's' }}?"
-              onsubmit="return confirm(this.dataset.confirm);">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button class="btn btn-outline-danger btn-sm" type="submit"><i class="bi bi-trash"></i> Delete</button>
-        </form>
-      </div>
-      {% endif %}
-    </article>
-    {% if topics %}
-    <nav class="hb-pager" aria-label="Start reading">
-      <a class="next" href="{{ url_for('theory.topic', topic_id=topics[0].id) }}"><small>Start →</small><span>{{ topics[0].name }}</span></a>
-    </nav>
+{% block content %}
+<div class="container th-page">
+
+  <nav class="th-crumbs" aria-label="Breadcrumb"><a href="{{ url_for('theory.index') }}">Theory</a></nav>
+
+  {# Other sections, one swipe away on phones (the sidebar has them on desktop) #}
+  {% if all_sections|length > 1 %}
+  <div class="th-chips d-lg-none" aria-label="Sections">
+    {% for s in all_sections %}
+    <a class="th-chip {% if s.id == section.id %}active{% endif %}" href="{{ url_for('theory.section', slug=s.slug) }}"
+       {% if s.id == section.id %}aria-current="page"{% endif %}>{{ s.name }}</a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="th-head">
+    <div style="min-width:0">
+      <h1>{{ section.name }}</h1>
+      {% if section.description %}<p>{{ section.description }}</p>{% endif %}
+    </div>
+    {% if can_edit %}
+    <div class="d-flex gap-2 flex-shrink-0">
+      <a href="{{ url_for('theory.add_topic', section_id=section.id) }}" class="btn btn-primary th-btn" aria-label="Add a topic to {{ section.name }}">
+        <i class="bi bi-plus-lg"></i><span class="d-none d-sm-inline">Add topic</span>
+      </a>
+      {{ section_menu(section, topics|length) }}
+    </div>
     {% endif %}
   </div>
+
+  <div class="row g-4">
+    <div class="col-lg-8">
+      {% if topics %}
+      {% set unread = topics|rejectattr('id', 'in', read)|selectattr('published')|list %}
+      {% set live = topics|selectattr('published')|list %}
+      {% if live %}
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <div class="th-progress flex-grow-1" aria-hidden="true"><span style="width:{{ ((live|length - unread|length) / live|length * 100)|round|int }}%"></span></div>
+        <span style="font-size:.85rem;color:var(--ink-2);white-space:nowrap">{{ live|length - unread|length }} of {{ live|length }} read</span>
+      </div>
+      {% endif %}
+
+      <div class="th-list">
+        {% for topic in topics %}
+        {% set done = topic.id in read %}
+        <div class="th-row">
+          <a class="th-row-main" href="{{ url_for('theory.topic', topic_id=topic.id) }}">
+            <span class="th-row-num {% if done %}done{% endif %}">{% if done %}<i class="bi bi-check-lg" aria-label="Read"></i>{% else %}{{ loop.index }}{% endif %}</span>
+            {% if topic.image_url %}<img src="{{ topic.image_url }}" alt="" class="th-row-thumb" loading="lazy">{% endif %}
+            <div class="th-row-text">
+              <div class="th-row-title">{{ topic.name }}</div>
+              {% if topic.content %}<div class="th-row-sub">{{ plain_text(topic.content)|truncate(140) }}</div>{% endif %}
+              {% if not topic.published or topic.related_videos or topic.related_drills or topic.assignment %}
+              <div class="th-row-meta">
+                {% if not topic.published %}<span class="th-badge draft">Draft</span>{% endif %}
+                {% if topic.assignment and topic.published %}<span class="th-badge due"><i class="bi bi-bookmark"></i>Assigned{% if topic.assignment.due_date %} · {{ topic.assignment.due_date.strftime('%-d %b') }}{% endif %}</span>{% endif %}
+                {% if topic.related_videos %}<span class="th-badge"><i class="bi bi-play-btn"></i>{{ topic.related_videos|length }}</span>{% endif %}
+                {% if topic.related_drills %}<span class="th-badge"><i class="bi bi-list-check"></i>{{ topic.related_drills|length }} drill{{ 's' if topic.related_drills|length != 1 }}</span>{% endif %}
+              </div>
+              {% endif %}
+            </div>
+            {% if not can_edit %}<i class="bi bi-chevron-right th-chev" aria-hidden="true"></i>{% endif %}
+          </a>
+          {% if can_edit %}
+          <div class="th-row-end">
+            {{ move_buttons(url_for('theory.move_topic', topic_id=topic.id), topic.name, loop.first, loop.last) }}
+            {{ topic_menu(topic, show_move=topics|length > 1, first=loop.first, last=loop.last, move_class='d-sm-none') }}
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+
+      {% if unread %}
+      <a href="{{ url_for('theory.topic', topic_id=unread[0].id) }}" class="btn btn-primary th-btn w-100 mt-3">
+        <i class="bi bi-book"></i>{{ 'Start reading' if unread|length == live|length else 'Continue: ' ~ unread[0].name }}
+      </a>
+      {% endif %}
+
+      {% else %}
+      <div class="th-list th-empty">
+        <i class="bi bi-file-earmark-text"></i>
+        <p class="mb-3">No topics in this section yet.</p>
+        {% if can_edit %}
+        <a href="{{ url_for('theory.add_topic', section_id=section.id) }}" class="btn btn-primary th-btn"><i class="bi bi-plus-lg"></i>Write the first topic</a>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+
+    <aside class="col-lg-4 d-none d-lg-block">
+      <div class="th-sidebar">
+        <div class="th-label mt-0">Sections</div>
+        <div class="th-list">
+          {% for s in all_sections %}
+          <a class="th-row" href="{{ url_for('theory.section', slug=s.slug) }}" style="min-height:48px" {% if s.id == section.id %}aria-current="page"{% endif %}>
+            <div class="th-row-text"><div class="th-row-title" {% if s.id == section.id %}style="color:var(--club-ink)"{% endif %}>{{ s.name }}</div></div>
+            <span style="font-size:.8rem;color:var(--ink-3)">{{ counts.get(s.id, 0) }}</span>
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+    </aside>
+  </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/theory.js') }}"></script>
 {% endblock %}
