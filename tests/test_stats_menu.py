@@ -1,6 +1,7 @@
 """The Stats menu: one Game Day entry for those who can open it (each
 tournament's numbers are on its page), and cutting skills are recorded
-through the stats blueprint by stat takers only."""
+through the stats blueprint by stat takers only. Also: the How to Use
+guide, and throws knowing their opponent."""
 import pytest
 
 from app import db
@@ -57,3 +58,18 @@ def test_cutting_skills_go_through_the_stats_blueprint(app, club):
     bad = club['coach'].post(f"/stats/record_cutting_skill/{club['point']}", json={**body, 'outcome': 'caught'})
     assert bad.status_code == 400 and 'Invalid outcome' in bad.get_json()['error']
     assert CuttingSkill.query.count() == 1
+
+
+def test_how_to_use_covers_whats_on_the_site(app, club):
+    coach = club['coach'].get('/how-to-use').get_data(as_text=True)
+    assert 'Draw a Play' in coach and 'Player Feedback' in coach and 'Seasons &amp; Squads' in coach
+    player = club['player'].get('/how-to-use').get_data(as_text=True)
+    assert 'Game-day cards' in player and 'Seasons &amp; Squads' not in player
+
+
+def test_throws_know_their_opponent(app, club):
+    from app.models.throws import Throw
+    db.session.add(Throw(point_id=club['point'], thrower_id=club['player_id'], receiver_id=club['player_id'],
+                         team_organization_id=Point.query.get(club['point']).team_organization_id))
+    db.session.commit()
+    assert Throw.query.one().opposition_team == 'Ka-Pow'

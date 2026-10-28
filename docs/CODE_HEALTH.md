@@ -13,18 +13,25 @@ SQLite and Postgres in GitHub Actions on every pull request.
    committed, so the live site must get it from Railway.
 
 **Code**
-3. `error_handlers.py` calls `db.session.remove()` after every request,
-   which throws away unsaved work in code that briefly opens a request
-   context (Flask-SQLAlchemy already cleans up).
-4. A smaller broken import in a rarely used path: `data_management_routes.py`
-   (`Stat`).
-5. `Throw.opposition_team` is never filled in when recording, so the
-   opposition filter on the connections chart never matches anything.
-6. 25 unused variables, 6 `raise` without `from`, and ~240 broad
+3. 25 unused variables, 6 `raise` without `from`, and ~240 broad
    `except Exception` blocks; `process_player_stats` (app/stats/players.py)
-   is still one 250-line function.
+   is still one 250-line function. Several log calls pass the error as a
+   second argument with no `%s` (`logger.error("...:", str(e))`), so the
+   message is lost.
 
 ## Done
+
+**Code (October 2026, second pass)**
+- `error_handlers.py` no longer calls `db.session.remove()` after every
+  request (Flask-SQLAlchemy does it when the app context ends); a failed
+  request still rolls back.
+- The unused `Stat` import in `data_management_routes.py` is gone.
+- Throws get their game's opponent when saved (and old ones were filled in
+  by migration `b2d4f6a8c0e3`), so filtering connections by opponent works.
+- The separate `/cutting-skills` blueprint (no stat-taker check) is gone;
+  the stat recorder uses `stat.record_cutting_skill`.
+- The off-season section (routes, models, templates, tables) is removed;
+  Programmes replaces it.
 
 **Security**
 - Hard-coded admin credentials removed from `run.py` and the old admin

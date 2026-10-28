@@ -46,13 +46,6 @@ try:
 except Exception:
     TournamentRSVP = None
 
-# Stats model - your file is app/models/stats.py. The class is likely "Stat".
-# If it's named differently (e.g., "Stats"), rename here accordingly.
-try:
-    from app.models.stats import Stat as StatModel
-except Exception:
-    StatModel = None
-
 
 
 # Helpers (single set)
