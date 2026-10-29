@@ -558,7 +558,7 @@ def update_player_goals(player_id):
     if not (current_user.is_admin or current_user.id == player.user_id or 
             (hasattr(current_user, 'role') and current_user.role == 'coach')):
         flash('You do not have permission to update goals for this player.', 'danger')
-        return redirect(url_for('team.player_detail', player_id=player_id))
+        return redirect(url_for('team.player_detail', player_id=player_id, _anchor='development'))
     
     try:
         # Update player goals
@@ -573,7 +573,7 @@ def update_player_goals(player_id):
         db.session.rollback()
         flash(f'Error updating goals: {str(e)}', 'danger')
     
-    return redirect(url_for('team.player_detail', player_id=player_id))
+    return redirect(url_for('team.player_detail', player_id=player_id, _anchor='development'))
 
 @bp.route('/settings/features', methods=['GET', 'POST'])
 @login_required
