@@ -105,6 +105,7 @@
 
   {# Overview #}
   <section class="pp-pane" id="pane-overview" role="tabpanel">
+    {% if sees_private and focus %}{{ fb.focus_card(focus) }}{% endif %}
     {% if upcoming_sessions or upcoming_tournaments %}
     <div class="th-label mt-0">Coming up</div>
     <div class="th-list pp-section">
@@ -231,6 +232,9 @@
   {# Development: goals, skills and coach feedback (the player and coaches only) #}
   {% if sees_private %}
   <section class="pp-pane" id="pane-development" role="tabpanel" hidden>
+    <div class="th-label mt-0 d-flex justify-content-between align-items-center"><span>Keep in mind</span>
+      {% if current_user.is_coach %}<a href="{{ url_for('feedback.player_feedback', player_id=player.id, _anchor='focus') }}" style="text-transform:none;letter-spacing:0">{{ 'Change' if focus else 'Set it' }}</a>{% endif %}</div>
+    {% if focus %}{{ fb.focus_card(focus, heading='Now') }}{% else %}{{ empty('Nothing set yet.' if current_user.is_coach else 'Nothing from your coaches yet.') }}{% endif %}
     {% set goal_sets = [('Short-term Goals (1-3 months)', player.short_term_goals), ('Mid-term Goals (3-6 months)', player.mid_term_goals),
                         ('Long-term Goals (6+ months)', player.long_term_goals)] %}
     <div class="th-label mt-0 d-flex justify-content-between align-items-center">
@@ -290,7 +294,7 @@
     </details>
     {% endif %}
     {% for entry in recent_feedback %}
-      {{ fb.note(entry, coach=current_user.is_coach, next=request.path) }}
+      {{ fb.note(entry, coach=current_user.is_coach, next=request.path ~ '#development', can_reply=entry.shared and (is_me or current_user.is_coach)) }}
     {% else %}
       {{ empty('No coaching notes yet.' if current_user.is_coach else 'No notes shared with you yet.') }}
     {% endfor %}

@@ -45,6 +45,7 @@
 {% set is_coach = current_user.is_coach %}
 {% set status_badge = {'attending': 'bg-success', 'maybe': 'bg-warning text-dark', 'not_attending': 'bg-secondary'} %}
 <div class="container" id="tournament-hub" data-tournament-id="{{ tournament.id }}">
+  {% set kind, row_id = 'tournament', tournament.id %}{% include 'feedback/_my_focus.html' %}
   <div class="th-head mb-3">
     <div>
       <h1 class="mb-1">{{ tournament.name }}</h1>

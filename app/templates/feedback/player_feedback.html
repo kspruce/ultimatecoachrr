@@ -37,6 +37,32 @@
         </a>
     </div>
 
+    <div class="card mb-4" id="focus">
+        <div class="card-body">
+            <h6 class="mb-2"><i class="bi bi-lightbulb me-1"></i>Keep in mind</h6>
+            {% if focus %}{{ fb.focus_card(focus, heading='Now') }}{% endif %}
+            <details {% if not focus %}open{% endif %}>
+                <summary class="btn btn-sm btn-outline-primary mb-2">{{ 'Change it' if focus else 'Set what to keep in mind' }}</summary>
+                {{ fb.focus_form(player, focus, coming_sessions, coming_tournaments, next=request.path ~ '#focus') }}
+            </details>
+            {% if focus %}
+            <form method="POST" action="{{ url_for('feedback.clear_focus', player_id=player.id) }}" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="next" value="{{ request.path }}#focus">
+                <button class="btn btn-link btn-sm text-danger px-0">Clear it</button>
+            </form>
+            {% endif %}
+            {% if focus_history %}
+            <details class="mt-2">
+                <summary class="small text-muted" style="cursor:pointer">Earlier ones ({{ focus_history|length }})</summary>
+                {% for f in focus_history %}
+                <div class="small mt-2"><b>{{ f.created_at.strftime('%-d %b %Y') }}{% if f.for_label %} · {{ f.for_label }}{% endif %}</b><div style="white-space:pre-wrap">{{ f.content }}</div></div>
+                {% endfor %}
+            </details>
+            {% endif %}
+        </div>
+    </div>
+
     <div class="card mb-4">
         <div class="card-body">
             <h6 class="mb-2">Add a note</h6>
@@ -73,7 +99,7 @@
             {% if loop.first or loop.previtem.created_at.strftime('%B %Y') != month %}
             <div class="session-group-header"><i class="bi bi-calendar3 me-1"></i>{{ month }}</div>
             {% endif %}
-            {{ fb.note(entry, coach=True) }}
+            {{ fb.note(entry, coach=True, can_reply=entry.shared, new_reply_ids=new_reply_ids, next=request.path) }}
         {% endfor %}
     {% else %}
     <div class="text-center py-5 text-muted">

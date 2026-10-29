@@ -542,8 +542,14 @@ def player_detail(player_id):
         team_roles=team_roles_util.team_roles(player.team_organization_id),
         role_history=role_history,
         role_plays=role_plays,
+        focus=current_focus(player.id),
     )
 
+
+
+def current_focus(player_id):
+    from app.utils.feedback import current_focus as focus_now
+    return focus_now(player_id)
 
 
 @bp.route('/player/<int:player_id>/update_goals', methods=['POST'])
