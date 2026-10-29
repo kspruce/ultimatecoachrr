@@ -207,9 +207,11 @@ def test_the_playbook_uses_roles(app, club):
     play = Play(name='Side stack', type='offense', team_organization_id=club['team'])
     db.session.add(play)
     db.session.commit()
-    form = page(c, f'/playbook/plays/{play.id}/assignments')
-    assert 'Initiation cutter (O-line)' in form
-    c.post(f'/playbook/plays/{play.id}/assignments', data={'position_id': cutter.id, 'instructions': 'Go deep first'})
+    form = page(c, f'/playbook/plays/{play.id}/edit')
+    assert f'<option value="{cutter.id}" >Initiation cutter</option>' in form and 'label="O-line"' in form
+    c.post(f'/playbook/plays/{play.id}/edit', data={'name': 'Side stack', 'type': 'offense', 'status': 'active',
+                                                    'role_id': [cutter.id], 'role_text': ['Go deep first'],
+                                                    'action': 'save'})
     assert PlayAssignment.query.one().position_id == cutter.id
     assert 'In 1 play' in page(c, '/team/roles/')
     by_role = page(c, '/playbook/positions')
@@ -265,7 +267,7 @@ def test_pick_a_role_on_the_play(app, club):
     # One stage, but players have roles: the diagram is drawn so a role can be picked
     body = page(club['ann'], f'/playbook/plays/{play_id}?role={cutter.id}')
     assert 'data-animation="role"' in body and f'<option value="{cutter.id}" selected>' in body
-    assert body.count('ms-auto js-show-role') == 2  # cutter and handler are drawn; Deep only has words
+    assert body.count("Show this role's path") == 2  # cutter and handler are drawn; Deep only has words
     assert 'Stay home' in body and 'drill_viewer.js' in body
 
     # By role: every play the role is in, with a link that picks out its path

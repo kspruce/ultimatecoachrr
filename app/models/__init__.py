@@ -15,7 +15,9 @@ from app.models.session import (
     SessionRSVP
 )
 from app.models.schedule import TrainingSchedule, ScheduleAvailability, SessionTemplate, SessionReminder
-from app.models.playbook import Play, Formation, PlayTag, PlayerPosition, PlayAssignment
+from app.models.playbook import (
+    Play, Formation, PlayTag, PlayerPosition, PlayAssignment, PlayLearned, PlayToLearn, PlaySetup,
+)
 from app.models.team_role import PlayerRole
 from app.models.theory import (
     TheorySection, TheoryTopic, TheoryVideo, TheoryTag, TheoryImage, TheoryRead, TheoryAssignment,
@@ -82,7 +84,7 @@ __all__ = [
     'ClassroomSession', 'ClassroomResource',
     'HandbookPage',
     # Playbook
-    'Play', 'Formation', 'PlayTag', 'PlayerPosition', 'PlayAssignment', 'PlayerRole',
+    'Play', 'Formation', 'PlayTag', 'PlayerPosition', 'PlayAssignment', 'PlayerRole', 'PlayLearned', 'PlayToLearn', 'PlaySetup',
     # Theory
     'TheorySection', 'TheoryTopic', 'TheoryVideo', 'TheoryTag', 'TheoryImage', 'TheoryRead',
     'TheoryAssignment',

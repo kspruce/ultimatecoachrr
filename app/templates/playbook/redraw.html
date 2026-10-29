@@ -1,0 +1,55 @@
+{# templates/playbook/redraw.html: plays still on an old image or embed link #}
+{% extends "base.html" %}
+{% from "playbook/_macros.html" import side_badge, thumb %}
+
+{% block styles %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/theory.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/playbook.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container th-page" style="max-width:860px">
+  <nav class="th-crumbs" aria-label="Breadcrumb"><a href="{{ url_for('playbook.index') }}">Playbook</a></nav>
+  <div class="th-head">
+    <div>
+      <h1>Plays to draw</h1>
+      <p>These plays aren't drawn on the field yet, so they've no animation and no role paths. Draw them, or retire the ones you don't use.</p>
+    </div>
+  </div>
+  {% if plays %}
+  <div class="th-list">
+    {% for play in plays %}
+    <div class="th-row">
+      <a class="th-row-main" href="{{ url_for('playbook.view_play', play_id=play.id) }}">
+        {{ thumb(play) }}
+        <div class="th-row-text">
+          <div class="th-row-title">{{ play.name }}</div>
+          <div class="th-row-meta">{{ side_badge(play) }}
+            {% if play.image_url %}<span class="th-badge">Picture</span>{% elif play.ultiplay_embed %}<span class="th-badge">Ultiplay link</span>{% else %}<span class="th-badge">Nothing yet</span>{% endif %}
+            {% if play.is_draft %}<span class="th-badge draft">Draft</span>{% endif %}</div>
+        </div>
+      </a>
+      <div class="th-row-end">
+        <a href="{{ url_for('playbook.draw_play', play_id=play.id) }}" class="btn btn-sm btn-primary">Draw it</a>
+        {% if not play.is_draft %}
+        <form method="POST" action="{{ url_for('playbook.set_status', play_id=play.id) }}" data-confirm="Retire &quot;{{ play.name }}&quot;? It stays readable but leaves the cards and the PDF.">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="next" value="{{ url_for('playbook.redraw') }}">
+          <button class="btn btn-sm btn-outline-secondary" name="status" value="retired">Retire</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="th-list th-empty"><i class="bi bi-check2-all"></i>Every play in use is drawn on the field.</div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/theory.js') }}"></script>
+{% endblock %}

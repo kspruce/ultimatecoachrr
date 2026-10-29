@@ -523,6 +523,18 @@
             </p>
             {% endif %}
 
+            {# Plays in the playbook this clip shows #}
+            {% set pb_settings = current_team.settings if current_team else none %}
+            {% if not pb_settings or pb_settings.playbook_enabled %}
+            {% set linked_plays = clip.plays.all()|rejectattr('is_draft')|list if not current_user.is_coach else clip.plays.all() %}
+            {% if linked_plays %}
+            <div class="d-flex gap-2 flex-wrap align-items-center mt-2" style="font-size:.85rem">
+              <span class="text-muted"><i class="bi bi-journal-richtext me-1"></i>In the playbook:</span>
+              {% for p in linked_plays %}<a href="{{ url_for('playbook.view_play', play_id=p.id) }}" class="badge rounded-pill text-bg-light border text-decoration-none">{{ p.name }}</a>{% endfor %}
+            </div>
+            {% endif %}
+            {% endif %}
+
             {% if clip.tag_list %}
             <div class="d-flex gap-2 flex-wrap mt-2">
               {% for tag in clip.tag_list %}

@@ -237,8 +237,10 @@
             b.classList.toggle('is-read', data.read);
             b.classList.toggle('btn-primary', !data.read);
             b.classList.toggle('btn-outline-secondary', data.read);
-            b.innerHTML = data.read ? '<i class="bi bi-check-circle-fill"></i> Read'
-                                    : '<i class="bi bi-check-circle"></i> Mark as read';
+            // (the playbook's "learned" button says so with data-done / data-todo)
+            var done = f.getAttribute('data-done') || 'Read', todo = f.getAttribute('data-todo') || 'Mark as read';
+            b.innerHTML = data.read ? '<i class="bi bi-check-circle-fill"></i> ' + done
+                                    : '<i class="bi bi-check-circle"></i> ' + todo;
             b.setAttribute('aria-pressed', data.read ? 'true' : 'false');
           });
           var next = document.querySelector('[data-next-topic]');

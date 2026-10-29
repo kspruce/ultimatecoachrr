@@ -1,57 +1,38 @@
 from flask_wtf import FlaskForm
-from wtforms import (
-    StringField,
-    SelectField,
-    TextAreaField,
-    SelectMultipleField,
-    SubmitField,
-    IntegerField
-)
-from wtforms.validators import DataRequired, Optional, Length, URL, NumberRange
-from app.models.playbook import Formation, PlayTag
-from app.utils.team_filter import get_current_team_id
+from wtforms import BooleanField, DateField, RadioField, SelectField, SelectMultipleField, StringField, TextAreaField
+from wtforms.validators import DataRequired, Length, Optional, ValidationError
+
+from app.forms.theory import IMAGE_URL
+from app.models.playbook import PLAY_STATUSES, PLAY_TYPES, SITUATIONS
+
+
+def image_url(form, field):
+    value = (field.data or '').strip()
+    if value and not (IMAGE_URL.match(value) or value.startswith('/playbook/image/') and value[16:].isdigit()):
+        raise ValidationError('Choose a photo, or paste a link that starts with https://')
+
 
 class PlayForm(FlaskForm):
-    name = StringField('Play Name', validators=[DataRequired(), Length(max=100)])
-    type = SelectField('Play Type', choices=[
-        ('offense', 'Offense'),
-        ('defense', 'Defense')
-    ], validators=[DataRequired()])
-    formation_id = SelectField('Formation', coerce=int, validators=[Optional()])
-    description = TextAreaField('Description', validators=[Optional()])
-    notes = TextAreaField('Notes', validators=[Optional()])
-    tags = SelectMultipleField('Tags', coerce=int, validators=[Optional()])
-    ultiplay_embed = TextAreaField('Ultiplay Embed Code', validators=[Optional()])
-    image_url = StringField('Diagram Image Link (ImgBB)', validators=[Optional(), URL()])
-    sort_order = IntegerField('Sort Order', validators=[Optional(), NumberRange(min=0)],
-                              description='Lower numbers appear first in the playbook and PDF')
-    submit = SubmitField('Save Play')
+    name = StringField('Name', validators=[DataRequired(), Length(max=100)])
+    type = RadioField('Side', choices=PLAY_TYPES, validators=[DataRequired()])
+    status = RadioField('Status', choices=PLAY_STATUSES, validators=[DataRequired()])
+    call = StringField('Call', validators=[Optional(), Length(max=60)],
+                       description="What's called on the line, e.g. \"Hammer\"")
+    signal = StringField('Hand signal', validators=[Optional(), Length(max=100)])
+    description = TextAreaField('How it works', validators=[Optional()])
+    notes = TextAreaField('Coaching notes', validators=[Optional()])
+    image_url = StringField('Photo', validators=[Optional(), Length(max=500), image_url])
+    ultiplay_embed = TextAreaField('Ultiplay embed code', validators=[Optional()])
+    tags = StringField('Tags', validators=[Optional(), Length(max=300)])
+    is_core = BooleanField('Core play: everyone must know it')
+    situations = SelectMultipleField('When it\'s for', choices=SITUATIONS, validators=[Optional()])
+    # Ids that aren't the team's are dropped by the route
+    topics = SelectMultipleField('Theory', coerce=int, validators=[Optional()], validate_choice=False)
+    drills = SelectMultipleField('Drills', coerce=int, validators=[Optional()], validate_choice=False)
+    clips = SelectMultipleField('Clips', coerce=int, validators=[Optional()], validate_choice=False)
 
-    def __init__(self, *args, **kwargs):
-        super(PlayForm, self).__init__(*args, **kwargs)
-        team_id = get_current_team_id()
-        self.formation_id.choices = [(0, 'None')] + [
-            (f.id, f.name)
-            for f in Formation.query.filter_by(team_organization_id=team_id).order_by(Formation.name)
-        ]
-        self.tags.choices = [
-            (t.id, t.name)
-            for t in PlayTag.query.filter_by(team_organization_id=team_id).order_by(PlayTag.name)
-        ]
 
-class FormationForm(FlaskForm):
-    name = StringField('Formation Name', validators=[DataRequired(), Length(max=100)])
-    type = SelectField('Formation Type', choices=[
-        ('offense', 'Offense'),
-        ('defense', 'Defense')
-    ], validators=[DataRequired()])
-    description = TextAreaField('Description', validators=[Optional()])
-    ultiplay_embed = TextAreaField('Ultiplay Embed Code', validators=[Optional()])
-    submit = SubmitField('Save Formation')
-    imgur_url = StringField('Imgur Image URL', 
-                       validators=[Optional(), URL()])
-
-class PositionAssignmentForm(FlaskForm):
-    position_id = SelectField('Role', coerce=int, validators=[DataRequired()])
-    instructions = TextAreaField('Instructions', validators=[DataRequired()])
-    submit = SubmitField('Save Assignment')
+class LearnForm(FlaskForm):
+    tournament_id = SelectField('Before a tournament', coerce=int, validators=[Optional()])
+    due_date = DateField('Learn by', validators=[Optional()])
+    note = StringField('Note for the team', validators=[Optional(), Length(max=200)])

@@ -12,6 +12,17 @@
 {% block title_placeholder %}Untitled Play{% endblock %}
 {% block title_value %}{{ play.name if play else '' }}{% endblock %}
 
+{% block setup_items %}
+<li><hr class="dropdown-divider"></li>
+<li><h6 class="dropdown-header">Your team's set-ups</h6></li>
+{% for x in setups %}
+<li><button class="dropdown-item" type="button" data-setup="{{ x.id }}">{{ x.name }}</button></li>
+{% else %}
+<li><span class="dropdown-item-text small text-muted">None saved yet</span></li>
+{% endfor %}
+<li><button class="dropdown-item" type="button" id="save-setup"><i class="bi bi-bookmark-plus me-1"></i>Save this stage as a set-up…</button></li>
+{% endblock %}
+
 {% block properties_title %}Play Details{% endblock %}
 {% block properties %}
 <div class="row mb-3">
@@ -24,14 +35,17 @@
         </select>
     </div>
     <div class="col-6">
-        <label class="form-label" for="play-formation">Formation</label>
-        <select id="play-formation" class="form-select">
-            <option value="">None</option>
-            {% for f in formations %}
-            <option value="{{ f.id }}" {% if play and play.formation_id == f.id %}selected{% endif %}>{{ f.name }}</option>
+        <label class="form-label" for="play-status">Who can see it</label>
+        <select id="play-status" class="form-select">
+            {% for value, label in statuses %}
+            <option value="{{ value }}" {% if (play.status if play else 'active') == value %}selected{% endif %}>{{ label }}</option>
             {% endfor %}
         </select>
     </div>
+</div>
+<div class="mb-3">
+    <label class="form-label" for="play-call">Call <span class="text-muted fw-normal">(optional)</span></label>
+    <input id="play-call" class="form-control" maxlength="60" placeholder="e.g. Hammer" value="{{ play.call if play and play.call else '' }}">
 </div>
 <div class="mb-3">
     <label class="form-label" for="drill-description">Description</label>
@@ -43,7 +57,7 @@
     <textarea id="play-notes" class="form-control" rows="3"
               placeholder="Cues, reads, what goes wrong">{{ play.notes if play and play.notes else '' }}</textarea>
 </div>
-<p class="small text-muted mb-0">Tags, position assignments and the video link are on the play's Edit page.</p>
+<p class="small text-muted mb-0">Who does what, tags and links to theory, drills and clips are on the play's Edit details page.</p>
 {% endblock %}
 
 {% block editor_data %}
@@ -53,4 +67,5 @@
      data-create-url="{{ url_for('playbook.create_drawn_play') }}"
      data-update-url="{{ url_for('playbook.update_drawn_play', play_id=play.id) if play else '' }}"></div>
 <script id="play-roles" type="application/json">{{ roles|tojson }}</script>
+<script id="play-setups" type="application/json" data-save-url="{{ url_for('playbook.save_setup') }}">{{ setups|tojson }}</script>
 {% endblock %}

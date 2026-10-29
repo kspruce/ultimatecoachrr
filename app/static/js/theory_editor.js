@@ -235,6 +235,23 @@
   }
   picker('related_drills', 'drill');
   picker('clips', 'clip');
+  picker('plays', 'play');
+
+  /* ── A play from the playbook inside the text: [[play:<id>]] ──── */
+  var playAt = null;
+  var playButton = form.querySelector('[data-md="play"]');
+  if (playButton) {
+    playButton.addEventListener('click', function () { playAt = [ta.selectionStart, ta.selectionEnd]; });
+    document.querySelectorAll('[data-insert-play]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var sheet = btn.closest('.offcanvas');
+        if (window.bootstrap && sheet) bootstrap.Offcanvas.getOrCreateInstance(sheet).hide();
+        ta.focus();
+        if (playAt) ta.setSelectionRange(playAt[0], playAt[1]);
+        insertBlock('[[play:' + btn.getAttribute('data-insert-play') + ']]');
+      });
+    });
+  }
 
   /* ── Draft kept on this device until saved ──────────────────── */
   var key = form.getAttribute('data-autosave-key');

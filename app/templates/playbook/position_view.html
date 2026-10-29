@@ -1,97 +1,73 @@
+{# templates/playbook/position_view.html: one team role across every play #}
 {% extends "base.html" %}
 
 {% block styles %}
 {{ super() }}
-<style>
-    .pos-pill {
-        display: inline-block; padding: .45rem 1rem; border-radius: 20px;
-        border: 1px solid var(--uc-gray-200); background: var(--uc-card-bg, white);
-        color: var(--uc-gray-600); font-size: .875rem; font-weight: 600;
-        text-decoration: none; transition: all .15s;
-    }
-    .pos-pill:hover { border-color: var(--uc-blue); color: var(--uc-blue); }
-    .pos-pill.active { background: var(--uc-blue); border-color: var(--uc-blue); color: white; }
-    .assignment-card { border-left: 3px solid var(--uc-gray-200); }
-    .assignment-card.offense { border-left-color: var(--uc-blue); }
-    .assignment-card.defense { border-left-color: var(--uc-red); }
-    .markdown-content p { margin-bottom: .4rem; }
-    .markdown-content ul, .markdown-content ol { margin: .2rem 0 .6rem 1.1rem; }
-    .markdown-content code { background: var(--uc-gray-100); padding: .1rem .3rem; border-radius: 3px; }
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/theory.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/playbook.css') }}">
 {% endblock %}
 
 {% block content %}
-<div class="container py-4">
-
-    <div class="uc-page-header mb-4">
-        <div>
-            <h2>Playbook by role</h2>
-            <p>Pick a role to see what it does in every play</p>
-        </div>
-        <a href="{{ url_for('playbook.index') }}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left me-1"></i>Back to Playbook
-        </a>
+<div class="container th-page" style="max-width:860px">
+  <nav class="th-crumbs" aria-label="Breadcrumb"><a href="{{ url_for('playbook.index') }}">Playbook</a></nav>
+  <div class="th-head">
+    <div>
+      <h1>Plays by role</h1>
+      <p>Pick a role to see what it does in every play.</p>
     </div>
+    {% if can_edit %}<a href="{{ url_for('roles.index') }}" class="btn btn-outline-secondary th-btn flex-shrink-0"><i class="bi bi-diagram-3"></i><span class="d-none d-sm-inline">Team roles</span></a>{% endif %}
+  </div>
 
-    {% if positions %}
-    <div class="d-flex gap-2 flex-wrap mb-4">
-        {% for pos in positions %}
-        <a href="{{ url_for('playbook.position_view', position_id=pos.id) }}"
-           class="pos-pill {{ 'active' if selected and selected.id == pos.id }}">
-            {% if pos.id in mine %}<i class="bi bi-person-fill" title="Your role"></i> {% endif %}{{ pos.name }}
-        </a>
-        {% endfor %}
+  {% if positions %}
+  <div class="th-chips" aria-label="Roles">
+    {% for pos in positions %}
+    <a class="th-chip {% if selected and selected.id == pos.id %}active{% endif %}" href="{{ url_for('playbook.position_view', position_id=pos.id) }}"
+       {% if selected and selected.id == pos.id %}aria-current="page"{% endif %}>{% if pos.id in mine %}<i class="bi bi-person-fill me-1" aria-label="Your role"></i>{% endif %}{{ pos.name }}</a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="th-list th-empty">
+    <i class="bi bi-person-badge"></i>
+    <p class="mb-0">No roles yet. {% if can_edit %}Set them up under <a href="{{ url_for('roles.index') }}">Team → Roles</a>.{% else %}Your coaches set them up.{% endif %}</p>
+  </div>
+  {% endif %}
+
+  {% if selected %}
+  {% if selected.description or selected.id in mine %}
+  <p class="text-muted mt-2">{% if selected.id in mine %}<strong>One of your roles this season.</strong> {% endif %}{{ selected.description or '' }}</p>
+  {% endif %}
+  {% if entries %}
+  <div class="th-label">{{ selected.name }} in {{ entries|length }} play{{ 's' if entries|length != 1 }}</div>
+  <div class="pb-roles">
+    {% for e in entries %}
+    {% set play = e.play %}
+    {% set link = url_for('playbook.view_play', play_id=play.id, role=selected.id) ~ '#drill-animation' if e.drawn else url_for('playbook.view_play', play_id=play.id) %}
+    <div class="pb-role">
+      <div class="pb-role-name d-flex align-items-center gap-2 flex-wrap">
+        <a href="{{ link }}" class="text-decoration-none">{{ play.name }}</a>
+        <span class="pb-side {{ play.type }}">{{ play.type_label }}</span>
+        {% if play.is_draft %}<span class="th-badge draft">Draft</span>{% endif %}
+      </div>
+      {% if e.drawn and play.editor_diagrams %}
+      <a href="{{ link }}"><img src="{{ play.editor_diagrams[0].image_url }}" alt="{{ play.name }}" class="pb-thumb my-2" style="width:100%;height:auto;max-height:220px;object-fit:contain" loading="lazy"></a>
+      {% endif %}
+      {% if e.assignment %}<div class="md">{{ e.assignment.instructions|markdown }}</div>
+      {% else %}<p class="small text-muted mb-0">In the drawing; nothing written for this role yet.</p>{% endif %}
+      <a href="{{ link }}" class="small">{{ "See this role's path" if e.drawn else 'View play' }}</a>
     </div>
-    {% else %}
-    <div class="alert alert-info">
-        No roles yet. Coaches set them up under Club → Roles.
-    </div>
-    {% endif %}
-
-    {% if selected %}
-        {% if selected.description %}<p class="text-muted">{{ selected.description }}</p>{% endif %}
-        {% if entries %}
-        <div class="row g-3">
-            {% for e in entries %}
-            {% set play = e.play %}
-            {% set link = url_for('playbook.view_play', play_id=play.id, role=selected.id) if e.drawn else url_for('playbook.view_play', play_id=play.id) %}
-            <div class="col-12">
-                <div class="card assignment-card {{ play.type }}">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center justify-content-between mb-2">
-                            <h6 class="mb-0" style="font-weight:700">
-                                <a href="{{ link }}" style="text-decoration:none;color:inherit">{{ play.name }}</a>
-                            </h6>
-                            <span class="badge {{ 'bg-primary' if play.type == 'offense' else 'bg-danger' }}"
-                                  style="font-size:.7rem">{{ play.type|title }}</span>
-                        </div>
-                        {% if e.drawn and play.editor_diagrams %}
-                        <a href="{{ link }}"><img src="{{ play.editor_diagrams[0].image_url }}" alt="{{ play.name }}" class="img-fluid rounded border mb-2" style="max-height:220px" loading="lazy"></a>
-                        {% endif %}
-                        {% if e.assignment %}
-                        <div class="markdown-content" style="font-size:.9rem;color:var(--uc-gray-600)">
-                            {{ e.assignment.instructions|markdown }}
-                        </div>
-                        {% else %}
-                        <p class="text-muted small mb-0">In the drawing; nothing written for this role yet.</p>
-                        {% endif %}
-                        <a href="{{ link }}" class="btn btn-sm btn-outline-secondary mt-2">
-                            <i class="bi bi-eye me-1"></i>{{ 'See this role’s path' if e.drawn else 'View play' }}
-                        </a>
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-        {% else %}
-        <div class="alert alert-secondary">
-            <strong>{{ selected.name }}</strong> isn't in any plays yet. Coaches give a player in a play's drawing this role,
-            or say what it does on the play's "Who does what".
-        </div>
-        {% endif %}
-    {% elif positions %}
-    <p class="text-muted">Pick a role above.</p>
-    {% endif %}
-
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="th-list th-empty mt-3">
+    <strong>{{ selected.name }}</strong> isn't in any plays in use yet. Coaches give a player in a play's drawing this role,
+    or say what it does under the play's "Who does what".
+  </div>
+  {% endif %}
+  {% endif %}
 </div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/theory.js') }}"></script>
 {% endblock %}

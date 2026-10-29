@@ -271,6 +271,14 @@ def to_read_and_watch(team_id, settings, sees_hidden=False, user=None):
                 assigned.append({'kind': 'theory', 'title': a.topic.name, 'meta': f'Assigned reading{due}',
                                  'when': None, 'pill': 'To read',
                                  'url': url_for('theory.topic', topic_id=a.topic_id)})
+    if user is not None and _enabled(settings, 'playbook_enabled'):
+        from app.utils.playbook import to_learn_unlearned
+        for r in to_learn_unlearned(user.id, team_id):
+            due = f' · {r.label[0].lower()}{r.label[1:]}' if r.label else ''
+            assigned.append({'kind': 'play', 'title': r.play.name, 'meta': f'Play to learn{due}',
+                             'when': None, 'pill': 'To learn',
+                             'url': url_for('playbook.view_play', play_id=r.play_id)})
+    if _enabled(settings, 'theory_enabled'):
         topics = (TheoryTopic.query.join(TheorySection, TheorySection.id == TheoryTopic.section_id)
                   .filter(TheoryTopic.team_organization_id == team_id, TheoryTopic.published.is_(True))
                   .order_by(db.func.coalesce(TheoryTopic.updated_at, TheoryTopic.created_at).desc())

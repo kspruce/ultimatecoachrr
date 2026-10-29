@@ -7,7 +7,7 @@ with headless Chromium (Playwright).
 Features:
 - Markdown rendering for descriptions, notes and assignment instructions
   (uses the app's registered |markdown Jinja filter).
-- Plays grouped under their parent concept within Offense/Defense sections.
+- Plays in their order within Offense/Defense sections.
 - Table of contents with real page numbers (two-pass pagination: render,
   locate invisible per-item markers with pypdf, re-render with the TOC).
 - Page footer with team name and page numbers.
@@ -61,57 +61,47 @@ def _qr_data_uri(url):
         return None
 
 
+def _image_src(url, team_id):
+    """A photo uploaded here goes in inline (the PDF can't fetch from the site)."""
+    m = re.match(r'^/(?:playbook|theory)/image/(\d+)$', url or '')
+    if not m:
+        return url or None
+    from app import db
+    from app.models.theory import TheoryImage
+    image = db.session.get(TheoryImage, int(m.group(1)))
+    if image is None or image.team_organization_id != team_id:
+        return None
+    return f'data:{image.mime_type};base64,{image.data}'
+
+
 def _item(kind, obj):
-    """Dict the template consumes for one play/formation."""
+    """Dict the template consumes for one play."""
     animation_url = extract_embed_url(obj.ultiplay_embed)
     # Drawn in the drill editor: every stage, inline
     stages = [{'label': d.step_label, 'caption': d.caption, 'src': data_uri(d)}
               for d in getattr(obj, 'editor_diagrams', [])]
     stages = [st for st in stages if st['src']]
     return {
-        'kind': kind,                       # 'concept' or 'play'
+        'kind': kind,
         'key': f'{kind}-{obj.id}',
         'obj': obj,
         'stages': stages,
-        'image': getattr(obj, 'image_url', None) or getattr(obj, 'imgur_url', None) or None,
+        'image': _image_src(obj.image_url, obj.team_organization_id),
         'animation_url': animation_url,
         'qr': _qr_data_uri(animation_url) if animation_url else None,
-        'plays': [],                        # nested plays (concepts only)
     }
 
 
-def build_sections(formations, plays, type_filter=None, tag_id=None):
-    """
-    Group content as: Offense -> [concepts (with their plays), ungrouped
-    plays], Defense -> same. Returns list of (section_name, items) where a
-    concept item carries its plays in item['plays'].
-    """
+def build_sections(plays, type_filter=None, tag_id=None):
+    """[(section name, items)]: Offense then Defense, each the plays in
+    their order."""
     if tag_id:
         plays = [p for p in plays if any(t.id == tag_id for t in p.tags)]
-
     sections = []
     for section_name, stype in (('Offense', 'offense'), ('Defense', 'defense')):
         if type_filter and type_filter != stype:
             continue
-
-        section_concepts = [f for f in formations
-                            if (f.type == 'offense') == (stype == 'offense')]
-        section_plays = [p for p in plays if p.type == stype]
-
-        items = []
-        for f in section_concepts:
-            concept = _item('concept', f)
-            concept['plays'] = [_item('play', p) for p in section_plays
-                                if p.formation_id == f.id]
-            # When filtering by tag, drop concepts with no matching plays
-            if tag_id and not concept['plays']:
-                continue
-            items.append(concept)
-
-        grouped_ids = {ip['obj'].id for it in items for ip in it['plays']}
-        ungrouped = [_item('play', p) for p in section_plays if p.id not in grouped_ids]
-        items.extend(ungrouped)
-
+        items = [_item('play', p) for p in plays if p.type == stype]
         if items:
             sections.append((section_name, items))
     return sections
@@ -125,10 +115,7 @@ def _toc_entries(sections):
         for it in items:
             entries.append({'label': it['obj'].name,
                             'level': 1,
-                            'key': it['key'],
-                            'is_concept': it['kind'] == 'concept'})
-            for ip in it['plays']:
-                entries.append({'label': ip['obj'].name, 'level': 2, 'key': ip['key']})
+                            'key': it['key']})
     return entries
 
 
@@ -158,7 +145,7 @@ def _footer_template(team_name):
     )
 
 
-def generate_playbook_pdf(formations, plays, team_name, type_filter=None,
+def generate_playbook_pdf(plays, team_name, type_filter=None,
                           tag_id=None, progress=None):
     """Return the playbook as PDF bytes.
 
@@ -175,8 +162,8 @@ def generate_playbook_pdf(formations, plays, team_name, type_filter=None,
             except Exception:
                 pass
 
-    report(5, 'Collecting plays and concepts…')
-    sections = build_sections(formations, plays, type_filter, tag_id)
+    report(5, 'Collecting plays…')
+    sections = build_sections(plays, type_filter, tag_id)
     generated = datetime.now().strftime('%d %B %Y')
     footer = _footer_template(team_name)
 
@@ -244,10 +231,10 @@ def _cache_dir():
     return path
 
 
-def cache_key(team_id, formations, plays, type_filter, tag_id):
+def cache_key(team_id, plays, type_filter, tag_id):
     """Digest of everything that affects the PDF's content."""
     parts = [f'team={team_id}', f'type={type_filter}', f'tag={tag_id}']
-    for obj in list(formations) + list(plays):
+    for obj in plays:
         stamp = obj.updated_at.isoformat() if obj.updated_at else '0'
         parts.append(f'{obj.__class__.__name__}:{obj.id}:{stamp}')
     return hashlib.sha1('|'.join(parts).encode()).hexdigest()[:16]

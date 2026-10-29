@@ -461,7 +461,7 @@
     {% endif %}
     {% for item in learn|default([]) %}
     <div class="item">
-      <div class="item-ic"><i class="bi {{ 'bi-mortarboard' if item.kind == 'theory' else 'bi-collection-play' }}" aria-hidden="true"></i></div>
+      <div class="item-ic"><i class="bi {{ {'theory': 'bi-mortarboard', 'play': 'bi-journal-richtext'}.get(item.kind, 'bi-collection-play') }}" aria-hidden="true"></i></div>
       <a class="item-x" href="{{ item.url }}"><b>{{ item.title }}</b><small>{{ item.meta }}</small></a>
       {% if item.pill %}<span class="pill">{{ item.pill }}</span>{% elif item.when and today and (today - item.when.date()).days <= 14 %}<span class="pill">New</span>{% else %}<span class="go" aria-hidden="true">→</span>{% endif %}
     </div>

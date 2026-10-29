@@ -1,0 +1,49 @@
+/* Playbook pages: built on the Theory hub's styles (theory.css), plus the
+   bits only plays need. */
+.pb-thumb { width: 64px; height: 44px; border-radius: 8px; object-fit: cover; flex-shrink: 0; background: #fff;
+            border: 1px solid var(--rule); }
+.pb-thumb.empty { display: flex; align-items: center; justify-content: center; color: var(--ink-3);
+                  background: var(--sunken); font-size: 1.1rem; }
+.pb-side { font-size: .7rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; padding: .15rem .45rem;
+           border-radius: 6px; background: var(--club-soft); color: var(--club-ink); }
+.pb-side.defense { background: var(--bad-soft); color: var(--bad); }
+.pb-call { display: inline-flex; flex-wrap: wrap; gap: .35rem .9rem; font-size: .95rem; margin: .25rem 0 1rem; }
+.pb-call b { font-weight: 800; }
+.pb-call span { color: var(--ink-2); }
+
+.pb-drawing { background: #fff; border: 1px solid var(--rule); border-radius: var(--radius); overflow: hidden;
+              margin-bottom: 1.25rem; }
+.pb-drawing img { display: block; width: 100%; height: auto; }
+.pb-drawing figcaption { padding: .5rem .85rem; font-size: .85rem; color: var(--ink-2); background: var(--card); }
+#drill-animation { border-radius: var(--radius); }
+#drill-animation .card-header { display: none; }
+
+.pb-mine { border: 2px solid var(--club-ink); background: var(--club-soft); border-radius: var(--radius);
+           padding: .85rem 1rem; margin-bottom: 1rem; }
+.pb-mine .th-card-kicker { margin-bottom: .2rem; }
+.pb-roles { background: var(--card); border: 1px solid var(--rule); border-radius: var(--radius); margin-bottom: 1.25rem; }
+.pb-role { padding: .75rem 1rem; border-bottom: 1px solid var(--rule); }
+.pb-role:last-child { border-bottom: 0; }
+.pb-role-name { font-size: .95rem; font-weight: 800; margin: 0 0 .2rem; }
+.pb-role.me { background: var(--club-soft); }
+.pb-role .md p:last-child, .pb-mine .md p:last-child { margin-bottom: 0; }
+
+.pb-role-row { border: 1px solid var(--rule); border-radius: 12px; padding: .75rem; margin-bottom: .75rem;
+               background: var(--paper); }
+.pb-role-row .top { display: grid; grid-template-columns: 1fr 44px; gap: .5rem; margin-bottom: .5rem; }
+.pb-seg { display: flex; gap: .4rem; flex-wrap: wrap; }
+.pb-seg input { position: absolute; opacity: 0; pointer-events: none; }
+.pb-seg label { min-height: 44px; display: inline-flex; align-items: center; padding: 0 1rem; border-radius: 999px;
+                border: 1px solid var(--rule); background: var(--card); font-weight: 700; cursor: pointer; }
+.pb-seg input:checked + label { background: var(--club-ink); border-color: var(--club-ink); color: var(--card); }
+.pb-seg input:focus-visible + label { outline: 2px solid var(--club-ink); outline-offset: 2px; }
+.th-form textarea.form-control { min-height: 96px; }
+
+/* A play shown inside a theory article */
+.pb-embed { display: block; border: 1px solid var(--rule); border-radius: 12px; overflow: hidden; margin: 1.25rem 0;
+            background: var(--card); color: var(--ink); text-decoration: none !important; }
+.pb-embed img { display: block; width: 100%; height: auto; background: #fff; margin: 0 !important;
+                border-radius: 0 !important; cursor: pointer; }
+.pb-embed-body { display: flex; align-items: center; gap: .6rem; padding: .6rem .85rem; font-size: .95rem; }
+.pb-embed-body b { flex: 1; min-width: 0; }
+

@@ -35,6 +35,7 @@ class TheoryTopicForm(FlaskForm):
     related_drills = SelectMultipleField('Linked drills', coerce=int, validators=[Optional()],
                                          validate_choice=False)
     clips = SelectMultipleField('Linked clips', coerce=int, validators=[Optional()], validate_choice=False)
+    plays = SelectMultipleField('Linked plays', coerce=int, validators=[Optional()], validate_choice=False)
 
 
 class TheoryAssignmentForm(FlaskForm):

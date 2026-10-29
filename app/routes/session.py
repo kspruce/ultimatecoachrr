@@ -518,6 +518,7 @@ def add_component(session_id):
                     component.focus_area = drill.focus_area
         
         db.session.add(component)
+        _set_component_plays(component, form.plays.data)
         db.session.commit()
         
         flash(f'Component "{component.title}" has been added!', 'success')
@@ -528,6 +529,21 @@ def add_component(session_id):
         return redirect(url_for('session.detail', session_id=session_id))
     
     return render_template('session/component_form.html', form=form, session=session_plan, title='Add Session Component')
+
+def _set_component_plays(component, play_ids):
+    """The playbook plays this part of the session works on (the team's only)."""
+    from app.models.playbook import Play
+    wanted = set(play_ids or [])
+    plays = Play.query.filter(Play.id.in_(wanted), Play.team_organization_id == get_current_team_id()).all() \
+        if wanted else []
+    for play in component.plays.all():
+        if play.id not in wanted:
+            component.plays.remove(play)
+    have = {p.id for p in component.plays}
+    for play in plays:
+        if play.id not in have:
+            component.plays.append(play)
+
 
 @bp.route('/edit_component/<int:component_id>', methods=['GET', 'POST'])
 @login_required
@@ -544,6 +560,8 @@ def edit_component(component_id):
     ).first_or_404()
     
     form = SessionComponentForm(obj=component)
+    if request.method == 'GET':
+        form.plays.data = [p.id for p in component.plays]
     
     # Populate drill choices - only from current team
     form.drill_id.choices = [(0, 'None')] + [(d.id, d.title) for d in SavedDrill.query.filter_by(
@@ -574,6 +592,7 @@ def edit_component(component_id):
                 component.drill_id = None
         else:
             component.drill_id = None
+        _set_component_plays(component, form.plays.data)
         
         db.session.commit()
         

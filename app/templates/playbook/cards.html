@@ -6,7 +6,8 @@
 {{ super() }}
 <style>
 .gd-wrap { max-width: 680px; margin: 0 auto; }
-.gd-filters { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: 1rem; }
+.gd-filters { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: .4rem; margin-bottom: 1rem; scrollbar-width: none; }
+.gd-filters a { flex-shrink: 0; white-space: nowrap; }
 .gd-filters a { border: 1px solid var(--rule); border-radius: 99px; padding: .35rem .9rem; font-size: .88rem;
                 text-decoration: none; color: var(--ink); min-height: 36px; display: inline-flex; align-items: center; }
 .gd-filters a.active { background: var(--club, var(--uc-blue)); border-color: transparent; color: #fff; }
@@ -26,6 +27,11 @@
 .gd-body summary { font-weight: 600; cursor: pointer; min-height: 32px; }
 .gd-roles dt { font-weight: 600; font-size: .85rem; }
 .gd-roles dd { margin: 0 0 .4rem; }
+.gd-body table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; margin: .4rem 0; font-size: .85rem; }
+.gd-body th, .gd-body td { border: 1px solid var(--rule); padding: .3rem .5rem; }
+.gd-call { font-size: .95rem; margin-bottom: .4rem; }
+.gd-mine { background: var(--club-soft); border-left: 3px solid var(--club-ink); border-radius: 8px; padding: .5rem .7rem; margin-bottom: .5rem; }
+.gd-mine .md p { display: inline; }
 .gd-foot { display: flex; justify-content: space-between; align-items: center; padding: 0 1rem 1rem; }
 </style>
 {% endblock %}
@@ -46,13 +52,17 @@
         <a href="{{ url_for('playbook.cards', **base) }}" class="{{ 'active' if not type_filter }}">All</a>
         <a href="{{ url_for('playbook.cards', type='offense', **base) }}" class="{{ 'active' if type_filter == 'offense' }}">Offence</a>
         <a href="{{ url_for('playbook.cards', type='defense', **base) }}" class="{{ 'active' if type_filter == 'defense' }}">Defence</a>
+        <a href="{{ url_for('playbook.cards', type=type_filter, when=situation, core=None if core_only else '1', **base) }}" class="{{ 'active' if core_only }}">★ Core</a>
+        {% for key, label in situations %}
+        <a href="{{ url_for('playbook.cards', type=type_filter, core='1' if core_only else None, when=None if situation == key else key, **base) }}" class="{{ 'active' if situation == key }}">{{ label }}</a>
+        {% endfor %}
     </nav>
 
     {% for play in plays %}
     <article class="gd-card" id="play-{{ play.id }}">
         <div class="gd-head">
-            <h2>{{ play.name }}</h2>
-            <span class="badge {{ 'bg-primary' if play.type == 'offense' else 'bg-danger' }}">{{ 'Offence' if play.type == 'offense' else 'Defence' }}</span>
+            <h2>{{ play.name }}{% if play.id in learned %} <i class="bi bi-check-circle-fill" style="color:var(--ok);font-size:.9rem" aria-label="Learned"></i>{% endif %}</h2>
+            <span class="badge {{ 'bg-primary' if play.type == 'offense' else 'bg-danger' }}">{{ play.type_label }}</span>
         </div>
         {% if play.editor_diagrams %}
         <div class="gd-stages{% if play.stage_count > 1 %} many{% endif %}">
@@ -69,7 +79,9 @@
         <div class="gd-stages"><figure class="gd-stage"><img src="{{ play.image_url }}" alt="{{ play.name }}" loading="lazy"></figure></div>
         {% endif %}
         <div class="gd-body">
-            {% if play.formation %}<div class="small text-muted mb-1">From {{ play.formation.name }}</div>{% endif %}
+            {% if play.call or play.signal %}<div class="gd-call">{% if play.call %}Call: <b>{{ play.call }}</b>{% endif %}{% if play.call and play.signal %} · {% endif %}{% if play.signal %}Signal: <b>{{ play.signal }}</b>{% endif %}</div>{% endif %}
+            {% set mine = my_part.get(play.id) %}
+            {% if mine %}<div class="gd-mine"><b>You ({{ mine.position.name }}):</b> <span class="md">{{ mine.instructions|markdown }}</span></div>{% endif %}
             {% if play.description %}<div class="md">{{ play.description|markdown }}</div>{% endif %}
             {% if play.assignments %}
             <details>

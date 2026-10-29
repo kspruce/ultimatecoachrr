@@ -7,7 +7,7 @@ import json
 import pytest
 
 from app import db
-from app.models.playbook import Formation, Play
+from app.models.playbook import Play
 from app.models.scouting import ScoutingReport
 from app.utils.playbook_export import build_sections
 from tests import stats_data
@@ -19,9 +19,9 @@ STAGES = {'version': 2, 'field': {'length': 70, 'width': 40, 'endzone': 20},
                      {'name': 'Break-side cut', 'notes': 'Clear early', 'objects': []}]}
 
 
-def play_form(title='Side stack', stages=2, play_type='offense', formation_id='', state=STAGES):
+def play_form(title='Side stack', stages=2, play_type='offense', state=STAGES, **extra):
     return {'data': json.dumps({'title': title, 'description': 'Iso the break side', 'notes': 'Patience',
-                                'type': play_type, 'formation_id': formation_id}),
+                                'type': play_type, **extra}),
             'editor': json.dumps(state),
             'svg': ['<svg xmlns="http://www.w3.org/2000/svg"></svg>'] * stages,
             'stage_name': ['Set up', 'Break-side cut'][:stages],
@@ -35,12 +35,10 @@ def club(app, team):
     player = make_user(team, 'player1', role='player')
     other = stats_data.build_team('Herd 2028', 'herd-2028')
     other_admin = make_user(other, 'otheradmin', role='admin')
-    formation = Formation(name='Vert stack', type='offense', team_organization_id=team.id)
-    other_formation = Formation(name='Their stack', type='offense', team_organization_id=other.id)
-    db.session.add_all([formation, other_formation])
-    db.session.commit()
-    return {'team': team.id, 'other': other.id, 'formation': formation.id, 'other_formation': other_formation.id,
+    coach = make_user(team, 'coach1', role='coach')
+    return {'team': team.id, 'other': other.id,
             'admin': stats_data.Client(app, admin.id, team.id),
+            'coach': stats_data.Client(app, coach.id, team.id),
             'player': stats_data.Client(app, player.id, team.id),
             'other_admin': stats_data.Client(app, other_admin.id, other.id)}
 
@@ -53,9 +51,14 @@ def draw(club, **kw):
 
 def test_draw_a_play_in_stages(app, club):
     assert 'data-kind="play"' in club['admin'].get('/playbook/plays/draw').get_data(as_text=True)
-    play_id = draw(club, formation_id=str(club['formation']))
+    play_id = draw(club, call='Iso', status='draft')
     play = db.session.get(Play, play_id)
-    assert play.name == 'Side stack' and play.type == 'offense' and play.formation_id == club['formation']
+    assert play.name == 'Side stack' and play.type == 'offense' and play.call == 'Iso' and play.status == 'draft'
+    # A draft is for coaches only
+    assert club['player'].get(f'/playbook/plays/{play_id}').status_code == 404
+    club['admin'].put(f'/playbook/api/plays/{play_id}', data=play_form(status='active'), content_type='multipart/form-data')
+    db.session.expire_all()
+    play = db.session.get(Play, play_id)
     assert play.notes == 'Patience' and play.stage_count == 2
     assert [d.step_label for d in play.editor_diagrams] == ['Set up', 'Break-side cut']
     assert club['admin'].get(play.editor_diagrams[1].image_url).data == png_bytes('blue')
@@ -63,7 +66,7 @@ def test_draw_a_play_in_stages(app, club):
     # The page plays it; players see it too, without the editing buttons
     page = club['player'].get(f'/playbook/plays/{play_id}').get_data(as_text=True)
     assert 'id="drill-animation"' in page and 'drill_viewer.js' in page
-    assert 'Edit drawing' not in page and '/assignments' not in page
+    assert 'Edit drawing' not in page and '/edit' not in page
     assert 'Edit drawing' in club['admin'].get(f'/playbook/plays/{play_id}').get_data(as_text=True)
 
     # Redrawn with one stage: the second goes
@@ -76,18 +79,16 @@ def test_draw_a_play_in_stages(app, club):
     assert 'id="drill-animation"' not in club['admin'].get(f'/playbook/plays/{play_id}').get_data(as_text=True)
 
 
-def test_only_admins_draw_and_only_their_own_plays(app, club):
+def test_coaches_draw_and_only_their_own_plays(app, club):
     r = club['player'].post('/playbook/api/plays', data=play_form(), content_type='multipart/form-data')
-    assert r.status_code == 302 and Play.query.count() == 0
+    assert r.status_code == 403 and Play.query.count() == 0
+    r = club['coach'].post('/playbook/api/plays', data=play_form('Coached'), content_type='multipart/form-data')
+    assert r.status_code == 201
     play_id = draw(club)
     r = club['other_admin'].put(f'/playbook/api/plays/{play_id}', data=play_form('Mine now'),
                                 content_type='multipart/form-data')
     assert r.status_code == 404
     assert club['other_admin'].get(f'/playbook/plays/{play_id}/draw').status_code == 404
-    # Another team's formation isn't taken
-    other_play = club['other_admin'].post('/playbook/api/plays', data=play_form(formation_id=str(club['formation'])),
-                                          content_type='multipart/form-data').get_json()['play_id']
-    assert db.session.get(Play, other_play).formation_id is None
 
 
 def test_cards_and_pdf_show_the_drawing(app, club):
@@ -100,7 +101,7 @@ def test_cards_and_pdf_show_the_drawing(app, club):
 
     with app.test_request_context():
         plays = Play.query.filter_by(team_organization_id=club['team']).all()
-        sections = dict(build_sections([], plays))
+        sections = dict(build_sections(plays))
         side = next(i for i in sections['Offense'] if i['obj'].id == o_play)
         cup = next(i for i in sections['Defense'] if i['obj'].id == d_play)
     assert len(side['stages']) == 2 and side['stages'][0]['src'].startswith('data:image/png;base64,')

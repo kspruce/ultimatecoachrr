@@ -5,6 +5,7 @@
 {% block styles %}
 {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/theory.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/playbook.css') }}">
 {% endblock %}
 
 {% macro read_form(extra_class='') %}
@@ -78,7 +79,7 @@
 
       <div class="th-article">
         <div class="topic-content">
-          {% if topic.content %}{{ topic.content|markdown }}{% else %}<p class="text-muted">Nothing written yet.</p>{% endif %}
+          {% if topic.content %}{{ body }}{% else %}<p class="text-muted">Nothing written yet.</p>{% endif %}
         </div>
       </div>
 
@@ -108,6 +109,22 @@
           <div class="th-row-text">
             <div class="th-row-title">{{ drill.title }}</div>
             {% if drill.focus_area or drill.recommended_duration %}<div class="th-row-sub">{{ drill.focus_area or '' }}{% if drill.focus_area and drill.recommended_duration %} · {% endif %}{% if drill.recommended_duration %}{{ drill.recommended_duration }} min{% endif %}</div>{% endif %}
+          </div>
+          <i class="bi bi-chevron-right th-chev" aria-hidden="true"></i>
+        </a>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if plays %}
+      <h2 class="th-label">Plays that use this</h2>
+      <div class="th-list mb-3">
+        {% for play in plays %}
+        <a class="th-row" href="{{ url_for('playbook.view_play', play_id=play.id) }}">
+          {% if play.thumbnail %}<img src="{{ play.thumbnail }}" alt="" class="pb-thumb" loading="lazy">{% else %}<i class="bi bi-journal-richtext" style="color:var(--club-ink);font-size:1.2rem" aria-hidden="true"></i>{% endif %}
+          <div class="th-row-text">
+            <div class="th-row-title">{{ play.name }}</div>
+            <div class="th-row-sub">{{ play.type_label }}{% if play.call %} · “{{ play.call }}”{% endif %}{% if play.is_draft %} · draft{% elif play.is_retired %} · retired{% endif %}</div>
           </div>
           <i class="bi bi-chevron-right th-chev" aria-hidden="true"></i>
         </a>

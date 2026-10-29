@@ -34,6 +34,29 @@ bp = Blueprint('theory', __name__, url_prefix='/theory')
 MAX_VIDEOS = 10
 
 
+def playbook_on(team_id):
+    settings = TeamSettings.query.filter_by(team_id=team_id).first() if team_id else None
+    return settings is None or bool(settings.playbook_enabled)
+
+
+def team_plays(team_id):
+    """The playbook plays a topic can link to or show (drafts for coaches)."""
+    from app.models.playbook import Play
+    if not playbook_on(team_id):
+        return []
+    query = Play.query.filter_by(team_organization_id=team_id)
+    if not can_edit():
+        query = query.filter(Play.status != 'draft')
+    return query.order_by(Play.type.desc(), Play.name).all()
+
+
+def render_content(text, team_id):
+    """A topic's markdown as HTML, with any [[play:<id>]] shown as that play."""
+    from app.utils.playbook import embed_plays
+    html = current_app.jinja_env.filters['markdown'](text or '')
+    return embed_plays(html, team_id, include_drafts=can_edit()) if playbook_on(team_id) else html
+
+
 def feature_enabled(team_id):
     settings = TeamSettings.query.filter_by(team_id=team_id).first() if team_id else None
     return settings is None or bool(settings.theory_enabled)
@@ -128,6 +151,12 @@ def index():
         pool = [t for t in topics if not tag or any(x.name.lower() == tag.lower() for x in t.tags)]
         results = hub.search(pool, q) if q else pool
 
+    # Searching finds the playbook's plays too
+    play_results = []
+    if q and not tag:
+        from app.routes.playbook import search as search_plays
+        play_results = search_plays([p for p in team_plays(team_id) if not p.is_retired], q)
+
     tag_names = sorted({x.name for t in topics for x in t.tags}, key=str.lower)
 
     assigned = []
@@ -146,7 +175,7 @@ def index():
     recent = sorted(published, key=lambda t: t.last_edited_at or datetime.min, reverse=True)[:3]
     return render_template('theory/index.html', title='Theory',
                            sections=sections, by_section=by_section, read=read,
-                           q=q, tag=tag, results=results, tag_names=tag_names,
+                           q=q, tag=tag, results=results, tag_names=tag_names, play_results=play_results,
                            snippet=hub.snippet,
                            continue_topic=hub.continue_reading(current_user.id, team_id, published, read),
                            assigned=assigned, read_counts=read_counts, readers_count=readers_count,
@@ -183,7 +212,9 @@ def topic(topic_id):
                            section_topics=topics, current_idx=i,
                            prev_topic=topics[i - 1] if i > 0 else None,
                            next_topic=topics[i + 1] if i + 1 < len(topics) else None,
-                           is_read=topic.id in read, read=read, readers=readers, clips=visible_clips(topic))
+                           is_read=topic.id in read, read=read, readers=readers, clips=visible_clips(topic),
+                           body=render_content(topic.content, topic.team_organization_id),
+                           plays=[p for p in team_plays(topic.team_organization_id) if p in topic.plays])
 
 
 @bp.route('/topic/<int:topic_id>/read', methods=['POST'])
@@ -211,7 +242,12 @@ def mark_read(topic_id):
 
 @bp.route('/image/<int:image_id>')
 def image(image_id):
-    image = TheoryImage.query.filter_by(id=image_id, team_organization_id=get_current_team_id()).first_or_404()
+    return serve_image(TheoryImage.query.filter_by(id=image_id, team_organization_id=get_current_team_id())
+                       .first_or_404())
+
+
+def serve_image(image):
+    """An uploaded photo (the playbook's are kept here too), cached by the browser."""
     etag = hashlib.sha1(image.data[:4096].encode('ascii') + str(image.id).encode()).hexdigest()
     if request.if_none_match and etag in request.if_none_match:
         return '', 304
@@ -254,7 +290,7 @@ def unassign(topic_id):
         db.session.delete(topic.assignment)
         db.session.commit()
         flash('No longer assigned.', 'success')
-    return redirect(request.form.get('next') or url_for('theory.readers', topic_id=topic.id))
+    return redirect(hub.local_next(url_for('theory.readers', topic_id=topic.id)))
 
 
 # ── Sections ───────────────────────────────────────────────────────────────
@@ -313,7 +349,7 @@ def move_section(section_id):
     db.session.commit()
     if wants_json():
         return jsonify({'ok': True})
-    return redirect(request.form.get('next') or url_for('theory.index'))
+    return redirect(hub.local_next(url_for('theory.index')))
 
 
 # ── Topics ─────────────────────────────────────────────────────────────────
@@ -358,7 +394,7 @@ def topic_form_page(form, topic=None, videos=None, drills=None):
     tag_names = sorted({t.name for t in TheoryTag.query.filter_by(team_organization_id=team_id)}, key=str.lower)
     return render_template('theory/topic_form.html', form=form, topic=topic, videos=videos,
                            drills=drills if drills is not None else team_drills(team_id), tag_names=tag_names,
-                           clips=team_clips(team_id),
+                           clips=team_clips(team_id), plays=team_plays(team_id),
                            title='Edit topic' if topic else 'New topic')
 
 
@@ -398,6 +434,9 @@ def _save_topic(form, topic):
     topic.related_drills = [d for d in team_drills(team_id) if d.id in drill_ids]
     clip_ids = set(form.clips.data or [])
     topic.clips = [c for c in team_clips(team_id) if c.id in clip_ids]
+    if playbook_on(team_id):
+        play_ids = set(form.plays.data or [])
+        topic.plays = [p for p in team_plays(team_id) if p.id in play_ids]
     topic.tags = hub.tags_for(hub.parse_tags(form.tags.data), team_id)
 
     old = {v.url: v for v in topic.related_videos}
@@ -448,6 +487,7 @@ def edit_topic(topic_id):
         form.tags.data = ', '.join(t.name for t in topic.tags)
         form.related_drills.data = [d.id for d in topic.related_drills]
         form.clips.data = [c.id for c in topic.clips]
+        form.plays.data = [p.id for p in topic.plays]
     if form.validate_on_submit():
         was_published = topic.published
         error = save_topic(form, topic)
@@ -504,7 +544,7 @@ def move_topic(topic_id):
     db.session.commit()
     if wants_json():
         return jsonify({'ok': True})
-    return redirect(request.form.get('next') or url_for('theory.section', slug=topic.section.slug))
+    return redirect(hub.local_next(url_for('theory.section', slug=topic.section.slug)))
 
 
 @bp.route('/organise', methods=['GET', 'POST'])
@@ -585,8 +625,7 @@ def import_cards():
 def preview():
     """The editor's Preview tab: the markdown as players will see it."""
     coach_only()
-    render = current_app.jinja_env.filters['markdown']
-    return jsonify({'html': str(render(request.form.get('content') or ''))})
+    return jsonify({'html': str(render_content(request.form.get('content'), get_current_team_id()))})
 
 
 @bp.route('/images', methods=['POST'])
