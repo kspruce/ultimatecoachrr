@@ -26,8 +26,7 @@ def index():
     from sqlalchemy import desc
     from datetime import date
     games = (
-        Game.query
-        .filter_by(team_organization_id=get_current_team_id())
+        scope_games(Game.query.filter_by(team_organization_id=get_current_team_id()))
         .order_by(desc(Game.date), desc(Game.id))
         .limit(30)
         .all()
