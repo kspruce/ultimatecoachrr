@@ -256,3 +256,50 @@ def test_draw_a_play(app, team, live_server, browser):
         "document.querySelector('.animation-caption strong').textContent.startsWith('2/2')", timeout=10000)
     assert page.errors == []
     db.session.remove()
+
+
+def test_give_a_player_a_role(app, team, live_server, browser):
+    """Right-click a player in a play to give them a role; it holds for
+    every stage, and the play page picks out that role's path."""
+    from app.models.playbook import Play, PlayerPosition
+    db.session.add_all([PlayerPosition(name='Initiation cutter', line='O', team_organization_id=team.id),
+                        PlayerPosition(name='Cup', line='D', team_organization_id=team.id)])
+    db.session.commit()
+    cutter_id = PlayerPosition.query.filter_by(name='Initiation cutter').one().id
+    admin = make_user(team, 'roleadmin', role='admin')
+    page = logged_in_page(app, browser, live_server, admin, team)
+    page.goto(live_server + '/playbook/plays/draw')
+    page.wait_for_selector('.upper-canvas')
+    at = field_mapper(page)
+
+    page.fill('#drill-title', 'Ho stack')
+    page.click('.tool-btn[data-tool="player-o"]')
+    page.mouse.click(*at(400, 200))
+    page.click('.tool-btn[data-tool="select"]')
+    page.mouse.click(*at(400, 200), button='right')
+    page.wait_for_selector('#object-menu')
+    menu = page.inner_text('#object-menu')
+    assert 'Initiation cutter' in menu and 'Cup' not in menu  # an O player gets O-line roles
+    page.click('#object-menu >> text=Initiation cutter')
+    assert 'Role: Initiation cutter' in page.inner_text('#tool-hint')
+    page.click('#add-stage')
+    page.wait_for_function("document.querySelector('#stage-count').textContent.startsWith('2 /')")
+    page.click('#save-drill')
+    page.wait_for_selector('.alert-success')
+    assert page.errors == []
+
+    play = Play.query.filter_by(name='Ho stack').one()
+    state = json.loads(play.editor_diagram.editor_json)
+    for stage in state['stages']:
+        player = next(o for o in stage['objects'] if o.get('herdType') == 'player-o')
+        assert str(player['herdRole']) == str(cutter_id)
+
+    page.goto(live_server + f'/playbook/plays/{play.id}?role={cutter_id}')
+    page.wait_for_selector('#drill-animation canvas')
+    assert page.input_value('[data-animation="role"]') == str(cutter_id)
+    page.select_option('[data-animation="role"]', '')
+    page.click('[data-animation="play"]')
+    page.wait_for_function(
+        "document.querySelector('.animation-caption strong').textContent.startsWith('2/2')", timeout=10000)
+    assert page.errors == []
+    db.session.remove()

@@ -212,6 +212,9 @@ def create_app(config_class=Config):
     from app.routes.seasons import bp as seasons_bp
     app.register_blueprint(seasons_bp)
 
+    from app.routes.roles import bp as roles_bp
+    app.register_blueprint(roles_bp)
+
     from app.routes.tournament import bp as tournament_bp
     app.register_blueprint(tournament_bp)
 

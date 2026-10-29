@@ -32,7 +32,7 @@
 
 {# ── Active-section helpers ───────────────────────────────── #}
 {% set ep = request.endpoint or '' %}
-{% set in_club     = ep.startswith('team.') or ep.startswith('game.') or ep.startswith('tournament.') or ep.startswith('calendar.') %}
+{% set in_club     = ep.startswith('team.') or ep.startswith('game.') or ep.startswith('tournament.') or ep.startswith('calendar.') or ep.startswith('roles.') %}
 {% set in_training = ep.startswith('session.') or ep.startswith('fitness.') or ep.startswith('training.') %}
 {% set in_strategy = ep.startswith('playbook.') or ep.startswith('scouting.') %}
 {% set in_theory   = ep.startswith('theory.') %}
@@ -103,6 +103,10 @@
         <ul class="dropdown-menu">
           <li><a class="dropdown-item" href="{{ url_for('team.index') }}">
             <i class="bi bi-people"></i> Team Roster</a></li>
+          {% if current_user.is_authenticated and current_user.is_coach %}
+          <li><a class="dropdown-item" href="{{ url_for('roles.index') }}">
+            <i class="bi bi-diagram-3"></i> Roles</a></li>
+          {% endif %}
           <li><a class="dropdown-item" href="{{ url_for('game.index') }}">
             <i class="bi bi-controller"></i> Games</a></li>
           <li><a class="dropdown-item" href="{{ url_for('tournament.index') }}">

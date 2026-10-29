@@ -32,6 +32,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const dataEl = document.getElementById('drill-data');
     const kind = dataEl.dataset.kind || 'drill';   // 'drill' or 'play'
     const Noun = kind === 'play' ? 'Play' : 'Drill';
+    // A play's players can each be one of the team's roles: [{id, name, line}]
+    const rolesEl = document.getElementById('play-roles');
+    const ROLES = rolesEl ? JSON.parse(rolesEl.textContent || '[]') : [];
     const createUrl = dataEl.dataset.createUrl;
     let drillId = dataEl.dataset.drillId || null;
     let updateUrl = dataEl.dataset.updateUrl || null;
@@ -796,6 +799,24 @@ document.addEventListener('DOMContentLoaded', function () {
         return true;
     }
 
+    // A player keeps their role through every stage of the play
+    function setRole(target, roleId) {
+        target.set('herdRole', roleId || null);
+        stages.forEach((stage, i) => {
+            if (i === current) return;
+            stage.objects.forEach(o => {
+                if (o.herdId && o.herdId === target.herdId) o.herdRole = roleId || null;
+            });
+        });
+        changed();
+        showRoleHint();
+    }
+
+    function rolesFor(target) {
+        const line = target.herdType === 'player-d' ? 'D' : 'O';
+        return ROLES.filter(r => !r.line || r.line === line);
+    }
+
     async function renamePlayer(target) {
         const label = await ask('Player label', {input: target.herdLabel || '', ok: 'Rename'});
         if (label === null) return;
@@ -857,6 +878,14 @@ document.addEventListener('DOMContentLoaded', function () {
         };
         if (target.herdType && target.herdType.startsWith('player')) {
             item('Rename…', () => renamePlayer(target));
+            const choices = rolesFor(target);
+            if (choices.length) {
+                header('Role');
+                choices.forEach(r => item((String(target.herdRole) === String(r.id) ? '✓ ' : '') + r.name,
+                                          () => setRole(target, r.id)));
+                if (target.herdRole) item('No role', () => setRole(target, null));
+                menu.appendChild(Object.assign(document.createElement('hr'), {className: 'dropdown-divider'}));
+            }
         }
         if (target.type === 'herdLine') {
             header('Style');
@@ -1201,6 +1230,23 @@ document.addEventListener('DOMContentLoaded', function () {
 
     canvas.on('selection:created', updateLineOptions);
     canvas.on('selection:updated', updateLineOptions);
+
+    // In a play, the hint says which role the selected player is
+    function showRoleHint() {
+        if (!ROLES.length) return;
+        const hint = document.getElementById('tool-hint');
+        const active = canvas.getActiveObject();
+        if (active && active.herdType && active.herdType.startsWith('player')) {
+            const role = ROLES.find(r => String(r.id) === String(active.herdRole));
+            hint.textContent = role ? `Role: ${role.name}. Right-click or long-press to change it.`
+                                    : 'Right-click or long-press to give this player a role.';
+        } else {
+            hint.textContent = TOOL_HINTS[currentTool] || '';
+        }
+    }
+    canvas.on('selection:created', showRoleHint);
+    canvas.on('selection:updated', showRoleHint);
+    canvas.on('selection:cleared', showRoleHint);
     canvas.on('selection:cleared', updateLineOptions);
 
     // ---- state, stages, undo ------------------------------------------------

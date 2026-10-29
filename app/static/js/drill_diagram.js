@@ -17,7 +17,8 @@
         move: {dash: [2, 5], width: 2.5},
     };
     const MOVERS = ['player-o', 'player-d', 'disc'];
-    const EXTRA_PROPS = ['herdType', 'herdLabel', 'herdId', 'herdColour'];
+    // herdRole: in a playbook play, the team role (its id) a player is
+    const EXTRA_PROPS = ['herdType', 'herdLabel', 'herdId', 'herdColour', 'herdRole'];
     const FORCES = {up: 'Force ↑', down: 'Force ↓', middle: 'Force middle', straight: 'Straight up'};
     const DEFAULT_FIELD = {length: 70, width: 40, endzone: 20, grid: false, markers: true,
                            view: 'full', force: 'none',
@@ -408,17 +409,29 @@
     // otherwise to whichever one it starts on (the disc, for a throw).
     // Arrows that start where another one ends carry on from there.
     function movements(objects) {
+        return assignArrows(objects).legs;
+    }
+
+    // Whose each arrow is, the way playback decides it: {object index: herdId}
+    function arrowOwners(objects) {
+        return assignArrows(objects).owners;
+    }
+
+    function assignArrows(objects) {
         const pos = {};
         const legs = {};
+        const owners = {};
         objects.forEach(o => {
             if (MOVERS.includes(o.herdType) && o.herdId && centred(o)) {
                 pos[o.herdId] = {x: o.left, y: o.top, type: o.herdType};
             }
         });
-        let lines = objects.filter(o => o.type === 'herdLine' && o.points && o.points.length > 1)
-            .map(o => ({style: o.lineStyle, from: o.herdFrom, delay: Number(o.delay) || 0,
-                        pts: samplePoints(serialisedLinePoints(o), o.smooth)}));
+        let lines = objects.map((o, index) => ({o, index}))
+            .filter(({o}) => o.type === 'herdLine' && o.points && o.points.length > 1)
+            .map(({o, index}) => ({index, style: o.lineStyle, from: o.herdFrom, delay: Number(o.delay) || 0,
+                                   pts: samplePoints(serialisedLinePoints(o), o.smooth)}));
         const assign = (id, line) => {
+            owners[line.index] = id;
             const end = line.pts[line.pts.length - 1];
             (legs[id] = legs[id] || []).push({pts: line.pts, delay: line.delay});
             pos[id] = {...pos[id], x: end.x, y: end.y};
@@ -446,7 +459,7 @@
                 return false;
             });
         }
-        return legs;
+        return {legs, owners};
     }
 
     // The next stage: the same things, with players and the disc at the ends
@@ -529,14 +542,15 @@
     function applyFrame(canvas, plan, t) {
         canvas.getObjects().forEach(o => {
             if (!o.herdType || o.herdType === 'field') return;
+            const base = o.herdBaseOpacity === undefined ? 1 : o.herdBaseOpacity;
             if (isArrow(o)) {
-                o.set('opacity', 1 - 0.85 * ease(t));
+                o.set('opacity', base * (1 - 0.85 * ease(t)));
                 return;
             }
             const track = plan[o.herdId];
             if (!track) return;
             if (track.fade) {
-                o.set('opacity', 1 - ease(t));
+                o.set('opacity', base * (1 - ease(t)));
             } else {
                 const p = trackPoint(track, t);
                 o.setPositionByOrigin(new fabric.Point(p.x, p.y), 'center', 'center');
@@ -557,6 +571,7 @@
         canvas.getObjects().filter(o => o.herdType !== 'field').forEach(o => canvas.remove(o));
         enlivened.forEach(o => {
             o.set({selectable: false, evented: false});
+            o.herdBaseOpacity = o.opacity;  // playback fades from here (a picked-out role dims the rest)
             canvas.add(o);
         });
         canvas.requestRenderAll();
@@ -739,7 +754,7 @@
         mid, lineSegments, segmentMiddle, samplePoints,
         withDefaults, logicalSize, viewRect, fieldParts, textOn, recolourPlayers,
         toDisplay, toSaved, pointToDisplay, pointToSaved,
-        centred, isArrow, movements, nextStageObjects,
+        centred, isArrow, movements, arrowOwners, nextStageObjects,
         transitionPlan, applyFrame, enliven, showStage, createPlayer,
         exportStage, videoType, recordVideo, normaliseState,
     };

@@ -1,5 +1,6 @@
-// Plays a drill's stages on the drill page (templates/session/drills/detail.html),
-// using drill_diagram.js. Not editable.
+// Plays a drill's or play's stages (templates/partials/diagram_animation.html),
+// using drill_diagram.js. Not editable. On a play, picking a role fades
+// everything but that role's player and the arrows they run.
 document.addEventListener('DOMContentLoaded', function () {
     const DD = window.DrillDiagram;
     const root = document.getElementById('drill-animation');
@@ -9,7 +10,8 @@ document.addEventListener('DOMContentLoaded', function () {
                                     () => Math.random().toString(36).slice(2, 10));
     const field = saved.field;
     const stages = saved.stages;
-    if (stages.length < 2) return;
+    const rolePick = root.querySelector('[data-animation="role"]');
+    if (stages.length < 2 && !rolePick) return;
 
     const holder = root.querySelector('.animation-canvas');
     const el = document.createElement('canvas');
@@ -28,7 +30,19 @@ document.addEventListener('DOMContentLoaded', function () {
         caption.querySelector('span').textContent = stage.notes ? ' – ' + stage.notes : '';
     }
 
+    function highlight(objects) {
+        const role = rolePick ? rolePick.value : '';
+        if (!role) return objects;
+        const ids = new Set(objects.filter(o => String(o.herdRole || '') === role).map(o => o.herdId));
+        const owners = DD.arrowOwners(objects);
+        return objects.map((o, i) => {
+            const mine = ids.has(o.herdId) || ids.has(owners[i]) || (o.herdFrom && ids.has(o.herdFrom));
+            return Object.assign({}, o, {opacity: mine ? 1 : (o.herdType === 'disc' ? 0.6 : 0.18)});
+        });
+    }
+
     const player = DD.createPlayer(canvas, () => stages, {
+        mapObjects: highlight,
         onUpdate: function (position, playing) {
             scrubber.value = String(Math.round(position * 1000));
             showCaption(Math.min(Math.floor(position + 0.001), stages.length - 1));
@@ -62,6 +76,16 @@ document.addEventListener('DOMContentLoaded', function () {
     root.querySelector('[data-animation="speed"]').addEventListener('change', e => {
         player.speed = parseFloat(e.target.value) || 1;
     });
+    if (rolePick) {
+        rolePick.addEventListener('change', () => {
+            player.reset();
+            player.seek(player.position);
+            const url = new URL(window.location.href);
+            if (rolePick.value) url.searchParams.set('role', rolePick.value);
+            else url.searchParams.delete('role');
+            window.history.replaceState({}, '', url);
+        });
+    }
 
     if (window.ResizeObserver) new ResizeObserver(fit).observe(holder);
     else window.addEventListener('resize', fit);
