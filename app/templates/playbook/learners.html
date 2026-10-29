@@ -31,9 +31,13 @@
     </p>
     <form method="POST" class="th-form" novalidate>
       {{ form.hidden_tag() }}
+      <div class="mb-2">
+        <label class="form-label" for="tournament_id">Before a tournament <span class="fw-normal text-muted">(optional)</span></label>
+        {{ form.tournament_id(class="form-select") }}
+      </div>
       <div class="row g-2">
         <div class="col-sm-5">
-          <label class="form-label" for="due_date">Learn by <span class="fw-normal text-muted">(optional)</span></label>
+          <label class="form-label" for="due_date">Learn by <span class="fw-normal text-muted">(the tournament's first day if left blank)</span></label>
           {{ form.due_date(class="form-control" + (" is-invalid" if form.due_date.errors else ""), type="date") }}
           {% for e in form.due_date.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
         </div>

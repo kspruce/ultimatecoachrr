@@ -63,6 +63,14 @@ def fetch_video_title(url):
     return None
 
 
+def local_next(default):
+    """The form's `next` page if it's on this site, else default (never
+    somewhere else: that would make an open redirect)."""
+    from flask import request
+    target = request.form.get('next') or ''
+    return target if target.startswith('/') and not target.startswith('//') and '\\' not in target else default
+
+
 def parse_tags(text):
     """'Zone, handler  resets,zone' -> ['Zone', 'handler resets'] (first
     spelling wins, case-insensitively)."""

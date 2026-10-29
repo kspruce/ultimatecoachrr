@@ -6,7 +6,8 @@
 {{ super() }}
 <style>
 .gd-wrap { max-width: 680px; margin: 0 auto; }
-.gd-filters { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: 1rem; }
+.gd-filters { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: .4rem; margin-bottom: 1rem; scrollbar-width: none; }
+.gd-filters a { flex-shrink: 0; white-space: nowrap; }
 .gd-filters a { border: 1px solid var(--rule); border-radius: 99px; padding: .35rem .9rem; font-size: .88rem;
                 text-decoration: none; color: var(--ink); min-height: 36px; display: inline-flex; align-items: center; }
 .gd-filters a.active { background: var(--club, var(--uc-blue)); border-color: transparent; color: #fff; }
@@ -51,6 +52,10 @@
         <a href="{{ url_for('playbook.cards', **base) }}" class="{{ 'active' if not type_filter }}">All</a>
         <a href="{{ url_for('playbook.cards', type='offense', **base) }}" class="{{ 'active' if type_filter == 'offense' }}">Offence</a>
         <a href="{{ url_for('playbook.cards', type='defense', **base) }}" class="{{ 'active' if type_filter == 'defense' }}">Defence</a>
+        <a href="{{ url_for('playbook.cards', type=type_filter, when=situation, core=None if core_only else '1', **base) }}" class="{{ 'active' if core_only }}">★ Core</a>
+        {% for key, label in situations %}
+        <a href="{{ url_for('playbook.cards', type=type_filter, core='1' if core_only else None, when=None if situation == key else key, **base) }}" class="{{ 'active' if situation == key }}">{{ label }}</a>
+        {% endfor %}
     </nav>
 
     {% for play in plays %}

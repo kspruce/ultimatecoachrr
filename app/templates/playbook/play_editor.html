@@ -12,6 +12,17 @@
 {% block title_placeholder %}Untitled Play{% endblock %}
 {% block title_value %}{{ play.name if play else '' }}{% endblock %}
 
+{% block setup_items %}
+<li><hr class="dropdown-divider"></li>
+<li><h6 class="dropdown-header">Your team's set-ups</h6></li>
+{% for x in setups %}
+<li><button class="dropdown-item" type="button" data-setup="{{ x.id }}">{{ x.name }}</button></li>
+{% else %}
+<li><span class="dropdown-item-text small text-muted">None saved yet</span></li>
+{% endfor %}
+<li><button class="dropdown-item" type="button" id="save-setup"><i class="bi bi-bookmark-plus me-1"></i>Save this stage as a set-up…</button></li>
+{% endblock %}
+
 {% block properties_title %}Play Details{% endblock %}
 {% block properties %}
 <div class="row mb-3">
@@ -56,4 +67,5 @@
      data-create-url="{{ url_for('playbook.create_drawn_play') }}"
      data-update-url="{{ url_for('playbook.update_drawn_play', play_id=play.id) if play else '' }}"></div>
 <script id="play-roles" type="application/json">{{ roles|tojson }}</script>
+<script id="play-setups" type="application/json" data-save-url="{{ url_for('playbook.save_setup') }}">{{ setups|tojson }}</script>
 {% endblock %}

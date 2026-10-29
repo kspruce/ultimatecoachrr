@@ -289,7 +289,7 @@ def unassign(topic_id):
         db.session.delete(topic.assignment)
         db.session.commit()
         flash('No longer assigned.', 'success')
-    return redirect(request.form.get('next') or url_for('theory.readers', topic_id=topic.id))
+    return redirect(hub.local_next(url_for('theory.readers', topic_id=topic.id)))
 
 
 # ── Sections ───────────────────────────────────────────────────────────────
@@ -348,7 +348,7 @@ def move_section(section_id):
     db.session.commit()
     if wants_json():
         return jsonify({'ok': True})
-    return redirect(request.form.get('next') or url_for('theory.index'))
+    return redirect(hub.local_next(url_for('theory.index')))
 
 
 # ── Topics ─────────────────────────────────────────────────────────────────
@@ -543,7 +543,7 @@ def move_topic(topic_id):
     db.session.commit()
     if wants_json():
         return jsonify({'ok': True})
-    return redirect(request.form.get('next') or url_for('theory.section', slug=topic.section.slug))
+    return redirect(hub.local_next(url_for('theory.section', slug=topic.section.slug)))
 
 
 @bp.route('/preview', methods=['POST'])

@@ -1,9 +1,9 @@
 from flask_wtf import FlaskForm
-from wtforms import DateField, RadioField, SelectMultipleField, StringField, TextAreaField
+from wtforms import BooleanField, DateField, RadioField, SelectField, SelectMultipleField, StringField, TextAreaField
 from wtforms.validators import DataRequired, Length, Optional, ValidationError
 
 from app.forms.theory import IMAGE_URL
-from app.models.playbook import PLAY_STATUSES, PLAY_TYPES
+from app.models.playbook import PLAY_STATUSES, PLAY_TYPES, SITUATIONS
 
 
 def image_url(form, field):
@@ -24,6 +24,8 @@ class PlayForm(FlaskForm):
     image_url = StringField('Photo', validators=[Optional(), Length(max=500), image_url])
     ultiplay_embed = TextAreaField('Ultiplay embed code', validators=[Optional()])
     tags = StringField('Tags', validators=[Optional(), Length(max=300)])
+    is_core = BooleanField('Core play: everyone must know it')
+    situations = SelectMultipleField('When it\'s for', choices=SITUATIONS, validators=[Optional()])
     # Ids that aren't the team's are dropped by the route
     topics = SelectMultipleField('Theory', coerce=int, validators=[Optional()], validate_choice=False)
     drills = SelectMultipleField('Drills', coerce=int, validators=[Optional()], validate_choice=False)
@@ -31,5 +33,6 @@ class PlayForm(FlaskForm):
 
 
 class LearnForm(FlaskForm):
+    tournament_id = SelectField('Before a tournament', coerce=int, validators=[Optional()])
     due_date = DateField('Learn by', validators=[Optional()])
     note = StringField('Note for the team', validators=[Optional(), Length(max=200)])

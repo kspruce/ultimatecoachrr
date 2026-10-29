@@ -32,6 +32,10 @@ play_clip_association = db.Table('play_clip_association',
 
 PLAY_TYPES = (('offense', 'Offence'), ('defense', 'Defence'))
 PLAY_STATUSES = (('draft', 'Draft'), ('active', 'In use'), ('retired', 'Retired'))
+# When a play is for: filters on the playbook, the cards and the call sheet
+SITUATIONS = (('pull', 'Pull play'), ('hold', 'Hold point'), ('break', 'Break point'),
+              ('endzone', 'Endzone'), ('timeout', 'After a timeout'), ('vs_zone', 'Against zone'),
+              ('vs_person', 'Against person'), ('upwind', 'Upwind'), ('downwind', 'Downwind'))
 
 
 class PlayTag(db.Model):
@@ -70,6 +74,9 @@ class Play(db.Model):
     status = db.Column(db.String(10), nullable=False, default='active', server_default='active')
     call = db.Column(db.String(60))     # what's shouted on the line
     signal = db.Column(db.String(100))  # the hand signal
+    is_core = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())  # everyone must know it
+    situations = db.Column(db.String(200))  # comma-separated SITUATIONS keys
+    share_token = db.Column(db.String(43), unique=True, nullable=True)  # a link that shows it without signing in
     description = db.Column(db.Text)
     formation_id = db.Column(db.Integer, db.ForeignKey('formation.id'))  # concepts: see Formation
     notes = db.Column(db.Text)
@@ -127,6 +134,15 @@ class Play(db.Model):
     @property
     def status_label(self):
         return dict(PLAY_STATUSES).get(self.status, 'In use')
+
+    @property
+    def situation_keys(self):
+        return [k for k in (self.situations or '').split(',') if k in dict(SITUATIONS)]
+
+    @property
+    def situation_labels(self):
+        names = dict(SITUATIONS)
+        return [names[k] for k in self.situation_keys]
 
     @property
     def is_draft(self):
@@ -207,8 +223,34 @@ class PlayToLearn(db.Model):
     team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'), nullable=False, index=True)
     play_id = db.Column(db.Integer, db.ForeignKey('play.id', ondelete='CASCADE'), nullable=False, unique=True)
     assigned_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    tournament_id = db.Column(db.Integer, db.ForeignKey('tournament.id', ondelete='SET NULL'), nullable=True)
     due_date = db.Column(db.Date, nullable=True)
     note = db.Column(db.String(200), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     play = db.relationship('Play', back_populates='to_learn')
+    tournament = db.relationship('Tournament')
+
+    @property
+    def label(self):
+        """'Learn for Nationals (Sat 14 Nov)' / 'Learn by Sat 14 Nov' / ''."""
+        when = self.due_date.strftime('%a %-d %b') if self.due_date else ''
+        if self.tournament:
+            return f'Learn for {self.tournament.name}' + (f' ({when})' if when else '')
+        return f'Learn by {when}' if when else ''
+
+
+class PlaySetup(db.Model):
+    """A starting position saved from the drawing editor (a team's own
+    stack, a pull play's line-up...). New plays can start from one, and any
+    stage can be set from one."""
+    __tablename__ = 'play_setup'
+
+    id = db.Column(db.Integer, primary_key=True)
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'), nullable=False, index=True)
+    name = db.Column(db.String(80), nullable=False)
+    type = db.Column(db.String(20))           # offense / defense / empty for either
+    state_json = db.Column(db.Text, nullable=False)  # {"field": ..., "objects": [...]} in the editor's format
+    image_data = db.Column(db.Text)           # base64 PNG of the stage, for the list
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)

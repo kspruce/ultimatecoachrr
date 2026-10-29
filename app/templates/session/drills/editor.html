@@ -511,6 +511,7 @@
                                 <li><button class="dropdown-item" type="button" data-formation="horizontal">Horizontal stack</button></li>
                                 <li><button class="dropdown-item" type="button" data-formation="zone">Zone (against a cup)</button></li>
                                 <li><button class="dropdown-item" type="button" data-formation="endzone">Endzone stack</button></li>
+                                {% block setup_items %}{% endblock %}
                                 <li><hr class="dropdown-divider"></li>
                                 <li><button class="dropdown-item" type="button" id="match-defenders">Match defenders (uses the force)</button></li>
                             </ul>

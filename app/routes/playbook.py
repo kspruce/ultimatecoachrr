@@ -22,7 +22,7 @@ from app.forms.playbook import LearnForm, PlayForm
 from app.models.clip import Clip
 from app.models.drill import SavedDrill
 from app.models.playbook import (Formation, Play, PlayAssignment, PlayerPosition, PlayLearned,
-                                 PlayToLearn, PLAY_STATUSES, PLAY_TYPES)
+                                 PlaySetup, PlayToLearn, PLAY_STATUSES, PLAY_TYPES, SITUATIONS)
 from app.models.team_settings import TeamSettings
 from app.models.theory import TheoryImage, TheorySection, TheoryTopic
 from app.utils import playbook as pb
@@ -67,8 +67,13 @@ def wants_json():
             or request.accept_mimetypes.best == 'application/json')
 
 
+PUBLIC_ENDPOINTS = {'playbook.shared_play'}
+
+
 @bp.before_request
 def check_access():
+    if request.endpoint in PUBLIC_ENDPOINTS:
+        return None  # a share link: checked by its token
     if not current_user.is_authenticated:
         return login.unauthorized()
     if not feature_on('playbook_enabled'):
@@ -322,6 +327,8 @@ def index():
     show_retired = request.args.get('show') == 'retired'
     tag = (request.args.get('tag') or '').strip()
     q = (request.args.get('q') or '').strip()
+    situation = request.args.get('when') if request.args.get('when') in dict(SITUATIONS) else None
+    core_only = request.args.get('core') == '1'
 
     every = team_plays(team_id).order_by(*_play_order()).all()
     in_use = [p for p in every if p.status == 'active']
@@ -330,6 +337,10 @@ def index():
         plays = [p for p in plays if p.type == type_filter]
     if tag:
         plays = [p for p in plays if any(t.name.lower() == tag.lower() for t in p.tags)]
+    if situation:
+        plays = [p for p in plays if situation in p.situation_keys]
+    if core_only:
+        plays = [p for p in plays if p.is_core]
     if q:
         plays = search(plays, q)
     tag_names = sorted({t.name for p in every for t in p.tags}, key=str.lower)
@@ -349,7 +360,11 @@ def index():
 
     return render_template('playbook/index.html', title='Playbook', plays=plays, type_filter=type_filter,
                            show_retired=show_retired, tag=tag, q=q, tag_names=tag_names,
-                           grouped=not (q or type_filter),
+                           grouped=not (q or type_filter), situation=situation, core_only=core_only,
+                           situations=[(k, v) for k, v in SITUATIONS if any(k in p.situation_keys for p in every)],
+                           has_core=any(p.is_core for p in every),
+                           to_redraw=[p for p in every if can_edit() and not p.is_retired and not p.editor_diagram]
+                           if can_edit() else [],
                            learned=learned, to_learn=to_learn, learn_counts=learn_counts, team_size=team_size,
                            known=len([p for p in in_use if p.id in learned]), total_in_use=len(in_use),
                            my_role=my_main_role(team_id),
@@ -406,6 +421,7 @@ def view_play(play_id):
                            next_play=siblings[i + 1] if i + 1 < len(siblings) else None,
                            position=(i + 1, len(siblings)),
                            who=who, animation_roles=[r for r in roles if r.id in drawn_roles],
+                           coming=coming_sessions(team_id) if can_edit() else [],
                            mine=mine, is_learned=play.id in pb.learned_ids(current_user.id, team_id),
                            learners=learners, topics=visible_topics(play),
                            clips=visible_clips(play.clips, team_id), reports=reports, sessions=sessions[:5])
@@ -432,12 +448,26 @@ def mark_learned(play_id):
 def learners(play_id):
     """Who has learned it, and asking the team to learn it."""
     coach_only()
+    from app.models.tournament import Tournament
     play = play_or_404(play_id)
     form = LearnForm(obj=play.to_learn)
+    coming = (Tournament.query.filter(Tournament.team_organization_id == play.team_organization_id,
+                                      db.or_(Tournament.start_date.is_(None),
+                                             Tournament.start_date >= datetime.utcnow().date()))
+              .order_by(Tournament.start_date).all())
+    if play.to_learn and play.to_learn.tournament and play.to_learn.tournament not in coming:
+        coming.insert(0, play.to_learn.tournament)
+    form.tournament_id.choices = [(0, 'No tournament')] + [
+        (t.id, t.name + (f" ({t.start_date.strftime('%-d %b')})" if t.start_date else '')) for t in coming]
+    if request.method == 'GET' and not play.to_learn:
+        form.tournament_id.data = 0
     if form.validate_on_submit():
         row = play.to_learn or PlayToLearn(play=play, team_organization_id=play.team_organization_id,
                                            assigned_by=current_user.id)
-        row.due_date = form.due_date.data
+        tournament = next((t for t in coming if t.id == form.tournament_id.data), None)
+        row.tournament_id = tournament.id if tournament else None
+        # Learning for a tournament: by its first day unless a date's given
+        row.due_date = form.due_date.data or (tournament.start_date if tournament else None)
         row.note = (form.note.data or '').strip() or None
         db.session.add(row)
         db.session.commit()
@@ -508,6 +538,12 @@ def cards():
         plays = [p for p in plays if p.type == type_filter]
     else:
         type_filter = None
+    situation = request.args.get('when') if request.args.get('when') in dict(SITUATIONS) else None
+    if situation:
+        plays = [p for p in plays if situation in p.situation_keys]
+    core_only = request.args.get('core') == '1'
+    if core_only:
+        plays = [p for p in plays if p.is_core]
     # Each card shows the player's own role first, and links to their path
     # when it's in the drawing
     mine = my_role_ids(team_id)
@@ -517,7 +553,8 @@ def cards():
         my_path[play.id] = next((r for r in mine if r in drawn), None)
         my_part[play.id] = next((a for r in mine for a in play.assignments if a.position_id == r), None)
     return render_template('playbook/cards.html', plays=plays, report=report, type_filter=type_filter,
-                           my_path=my_path, my_part=my_part, learned=pb.learned_ids(current_user.id, team_id))
+                           my_path=my_path, my_part=my_part, learned=pb.learned_ids(current_user.id, team_id),
+                           situation=situation, core_only=core_only, situations=SITUATIONS)
 
 
 # ── Drawing a play in the drill editor ───────────────────────────
@@ -528,11 +565,21 @@ def draw_play(play_id=None):
     coach_only()
     play = None
     editor_state = None
+    team_id = get_current_team_id()
     if play_id:
         play = play_or_404(play_id)
         if play.editor_diagram:
             editor_state = json.loads(play.editor_diagram.editor_json)
+    elif request.args.get('setup', type=int):
+        # A new play starting from a saved set-up
+        setup = PlaySetup.query.filter_by(id=request.args.get('setup', type=int), team_organization_id=team_id).first_or_404()
+        saved = json.loads(setup.state_json)
+        editor_state = {'version': 2, 'field': saved.get('field') or {},
+                        'stages': [{'name': setup.name, 'notes': '', 'objects': saved.get('objects') or []}]}
+    setups = PlaySetup.query.filter_by(team_organization_id=team_id).order_by(PlaySetup.name).all()
     return render_template('playbook/play_editor.html', play=play, drill=None, editor_state=editor_state,
+                           setups=[{'id': x.id, 'name': x.name, 'type': x.type or '',
+                                    'objects': json.loads(x.state_json).get('objects') or []} for x in setups],
                            other_diagrams=[], statuses=PLAY_STATUSES,
                            roles=[{'id': r.id, 'name': r.name, 'line': r.line or ''}
                                   for r in team_roles(get_current_team_id())],
@@ -682,6 +729,8 @@ def save_play(form, play):
         play.team_organization_id = team_id
         play.updated_by = current_user.id
         play.tags = pb.tags_for(form.tags.data, team_id)
+        play.is_core = bool(form.is_core.data)
+        play.situations = ','.join(k for k, _ in SITUATIONS if k in (form.situations.data or [])) or None
 
         topics, drills, clips = link_choices(team_id)
         wanted = set(form.topics.data or [])
@@ -738,6 +787,7 @@ def edit_play(play_id):
     form = PlayForm(obj=play)
     if request.method == 'GET':
         form.tags.data = ', '.join(t.name for t in play.tags)
+        form.situations.data = play.situation_keys
         form.topics.data = [t.id for t in play.theory_topics]
         form.drills.data = [d.id for d in play.drills]
         form.clips.data = [c.id for c in play.clips]
@@ -786,7 +836,7 @@ def move_play(play_id):
     for n, p in enumerate(plays, start=1):
         p.sort_order = n
     db.session.commit()
-    return redirect(request.form.get('next') or url_for('playbook.index', type=play.type))
+    return redirect(hub.local_next(url_for('playbook.index', type=play.type)))
 
 
 @bp.route('/plays/<int:play_id>/status', methods=['POST'])
@@ -803,7 +853,161 @@ def set_status(play_id):
         flash({'active': f'"{play.name}" is in use: the team can see it.',
                'retired': f'"{play.name}" retired: it\'s off the cards and the PDF.',
                'draft': f'"{play.name}" is a draft again: only coaches can see it.'}[status], 'success')
-    return redirect(url_for('playbook.view_play', play_id=play.id))
+    return redirect(hub.local_next(url_for('playbook.view_play', play_id=play.id)))
+
+
+# ── Plays not drawn yet (older image or embed links) ─────────────
+
+@bp.route('/redraw')
+def redraw():
+    coach_only()
+    plays = [p for p in team_plays(get_current_team_id()).order_by(Play.type.desc(), *_play_order())
+             if not p.is_retired and not p.editor_diagram]
+    return render_template('playbook/redraw.html', title='Plays to draw', plays=plays)
+
+
+# ── Share links: one play, readable without signing in ───────────
+
+@bp.route('/plays/<int:play_id>/share', methods=['POST'])
+def share_play(play_id):
+    import secrets
+    coach_only()
+    play = play_or_404(play_id)
+    if request.form.get('stop'):
+        play.share_token = None
+        flash('The share link no longer works.', 'success')
+    else:
+        play.share_token = secrets.token_urlsafe(24)
+        flash('Share link made: anyone with it can see this play, without signing in.', 'success')
+    db.session.commit()
+    return redirect(url_for('playbook.view_play', play_id=play.id) + '#share')
+
+
+@bp.route('/shared/<token>')
+def shared_play(token):
+    from app.utils.editor_diagrams import data_uri
+    play = Play.query.filter_by(share_token=token).first() if len(token) >= 20 else None
+    if play is None or play.is_draft or not feature_on('playbook_enabled', play.team_organization_id):
+        return render_template('error.html', error_message='This share link is not valid any more.'), 404
+    stages = [{'label': d.step_label, 'caption': d.caption, 'src': data_uri(d)} for d in play.editor_diagrams]
+    return render_template('playbook/shared.html', play=play, stages=[st for st in stages if st['src']],
+                           team=play.team_organization_id)
+
+
+# ── Add a play to a session ──────────────────────────────────────
+
+def coming_sessions(team_id):
+    from app.models.session import SessionPlan
+    return (SessionPlan.query.filter(SessionPlan.team_organization_id == team_id,
+                                     SessionPlan.date >= datetime.utcnow().date())
+            .order_by(SessionPlan.date).limit(12).all())
+
+
+@bp.route('/plays/<int:play_id>/add-to-session', methods=['POST'])
+def add_to_session(play_id):
+    """Add a part to a coming session that works on this play (with its
+    first linked drill, if it has one)."""
+    from app.models.session import SessionComponent, SessionPlan
+    coach_only()
+    play = play_or_404(play_id)
+    session = SessionPlan.query.filter_by(id=request.form.get('session_id', type=int),
+                                          team_organization_id=play.team_organization_id).first_or_404()
+    last = db.session.query(db.func.max(SessionComponent.order)).filter_by(session_id=session.id).scalar()
+    drill = play.drills[0] if play.drills else None
+    component = SessionComponent(session_id=session.id, team_organization_id=play.team_organization_id,
+                                 title=play.name[:100], component_type='drill', order=(last or 0) + 1,
+                                 description=f'Work on the {play.type_label.lower()} play "{play.name}".',
+                                 drill_id=drill.id if drill else None,
+                                 duration_minutes=drill.recommended_duration if drill else None,
+                                 focus_area=play.call or None)
+    db.session.add(component)
+    db.session.flush()
+    component.plays.append(play)
+    db.session.commit()
+    flash(f'"{play.name}" added to {session.title}.', 'success')
+    return redirect(url_for('session.detail', session_id=session.id))
+
+
+# ── Quiz: see the drawing, name the play ─────────────────────────
+
+@bp.route('/quiz')
+def quiz():
+    team_id = get_current_team_id()
+    type_filter = request.args.get('type') if request.args.get('type') in TYPES else None
+    query = Play.query.filter_by(team_organization_id=team_id, status='active')
+    if type_filter:
+        query = query.filter_by(type=type_filter)
+    plays = [p for p in query.all() if p.thumbnail]
+    questions = [{'id': p.id, 'name': p.name, 'call': p.call or '', 'image': p.thumbnail, 'type': p.type_label,
+                  'url': url_for('playbook.view_play', play_id=p.id)} for p in plays]
+    return render_template('playbook/quiz.html', title='Quiz', questions=questions, type_filter=type_filter,
+                           learned=sorted(pb.learned_ids(current_user.id, team_id)))
+
+
+# ── Set-ups: starting positions saved from the editor ────────────
+
+@bp.route('/setups')
+def setups():
+    coach_only()
+    rows = PlaySetup.query.filter_by(team_organization_id=get_current_team_id()).order_by(PlaySetup.name).all()
+    return render_template('playbook/setups.html', title='Set-ups', setups=rows)
+
+
+@bp.route('/setups', methods=['POST'])
+def save_setup():
+    """Save the editor's current stage as a set-up (JSON from the editor)."""
+    coach_only()
+    data = request.get_json(silent=True) or {}
+    name = ' '.join((data.get('name') or '').split())[:80]
+    objects = data.get('objects')
+    if not name or not isinstance(objects, list):
+        return jsonify({'success': False, 'message': 'Give the set-up a name.'}), 400
+    state = json.dumps({'field': data.get('field') if isinstance(data.get('field'), dict) else {}, 'objects': objects})
+    if len(state) > 500_000:
+        return jsonify({'success': False, 'message': 'That stage is too big to save as a set-up.'}), 400
+    png = data.get('png') or ''
+    image = png.split(',', 1)[1] if png.startswith('data:image/png;base64,') else None
+    if image and len(image) > 3_000_000:
+        image = None
+    setup = PlaySetup(team_organization_id=get_current_team_id(), name=name, state_json=state, image_data=image,
+                      type=data.get('type') if data.get('type') in TYPES else None, created_by=current_user.id)
+    db.session.add(setup)
+    db.session.commit()
+    return jsonify({'success': True, 'id': setup.id, 'name': setup.name}), 201
+
+
+@bp.route('/setups/<int:setup_id>/image')
+def setup_image(setup_id):
+    import base64
+    setup = PlaySetup.query.filter_by(id=setup_id, team_organization_id=get_current_team_id()).first_or_404()
+    if not setup.image_data:
+        abort(404)
+    from flask import make_response
+    response = make_response(base64.b64decode(setup.image_data))
+    response.headers['Content-Type'] = 'image/png'
+    response.headers['Cache-Control'] = 'private, max-age=3600'
+    return response
+
+
+@bp.route('/setups/<int:setup_id>/rename', methods=['POST'])
+def rename_setup(setup_id):
+    coach_only()
+    setup = PlaySetup.query.filter_by(id=setup_id, team_organization_id=get_current_team_id()).first_or_404()
+    name = ' '.join((request.form.get('name') or '').split())[:80]
+    if name:
+        setup.name = name
+        db.session.commit()
+    return redirect(url_for('playbook.setups'))
+
+
+@bp.route('/setups/<int:setup_id>/delete', methods=['POST'])
+def delete_setup(setup_id):
+    coach_only()
+    setup = PlaySetup.query.filter_by(id=setup_id, team_organization_id=get_current_team_id()).first_or_404()
+    db.session.delete(setup)
+    db.session.commit()
+    flash(f'Set-up "{setup.name}" deleted. Plays drawn from it keep their drawings.', 'success')
+    return redirect(url_for('playbook.setups'))
 
 
 # ── Photos (kept with Theory's, in the database) ─────────────────

@@ -138,6 +138,20 @@
     </div>
 
     <div class="th-form-card">
+      <label class="form-label d-block">When it's for <span class="fw-normal text-muted">(optional)</span></label>
+      <div class="pb-seg mb-3" role="group" aria-label="When it's for">
+        {% for value, label in form.situations.choices %}
+        <input type="checkbox" name="situations" id="when-{{ value }}" value="{{ value }}" {% if value in (form.situations.data or []) %}checked{% endif %}>
+        <label for="when-{{ value }}">{{ label }}</label>
+        {% endfor %}
+      </div>
+      <div class="form-check form-switch">
+        {{ form.is_core(class="form-check-input", role="switch") }}
+        <label class="form-check-label" for="is_core"><strong>★ Core play</strong>: everyone must know it</label>
+      </div>
+    </div>
+
+    <div class="th-form-card">
       <label class="form-label" for="description">How it works</label>
       {{ form.description(class="form-control", rows="4", placeholder="What it's for, the set-up and the main options. **Bold**, - lists and ## headings work.") }}
     </div>

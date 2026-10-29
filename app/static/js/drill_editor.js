@@ -1071,6 +1071,60 @@ document.addEventListener('DOMContentLoaded', function () {
         if (name !== 'zone' && await ask('Add a defender on each player?', {ok: 'Add defenders'})) matchDefenders();
     }
 
+    // ---- the team's own set-ups (plays only) -----------------------------
+    const setupsEl = document.getElementById('play-setups');
+    const setups = setupsEl ? JSON.parse(setupsEl.textContent || '[]') : [];
+
+    async function applySetup(id) {
+        const setup = setups.find(x => String(x.id) === String(id));
+        if (!setup) return;
+        const existing = userObjects().filter(o => MOVERS.includes(o.herdType) || o.type === 'herdLine');
+        if (existing.length && !await ask('Replace the players, disc and arrows on this stage?', {ok: 'Replace'})) return;
+        exitPlaybackIfNeeded();
+        // Fresh ids, so the same set-up can be used on more than one stage
+        const ids = {};
+        const objects = JSON.parse(JSON.stringify(setup.objects)).map(o => {
+            if (o.herdId) { ids[o.herdId] = ids[o.herdId] || newId(); o.herdId = ids[o.herdId]; }
+            return o;
+        });
+        objects.forEach(o => { if (o.herdFrom && ids[o.herdFrom]) o.herdFrom = ids[o.herdFrom]; });
+        stages[current].objects = objects;
+        await showObjects(objects);
+        changed();
+    }
+
+    async function saveSetup() {
+        commitStage();
+        const objects = stages[current].objects;
+        if (!objects.length) {
+            showNotification('Put some players on the field first.', 'warning');
+            return;
+        }
+        const name = (window.prompt('Name this set-up (e.g. "Side stack", "Pull play line-up")') || '').trim();
+        if (!name) return;
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        try {
+            const image = await DD.exportStage(field, objects);
+            const r = await fetch(setupsEl.dataset.saveUrl, {
+                method: 'POST',
+                headers: {'X-CSRFToken': csrfToken, 'Content-Type': 'application/json'},
+                body: JSON.stringify({name, objects, field, png: image.png, type: val('play-type')}),
+            });
+            const body = await r.json().catch(() => ({}));
+            if (!r.ok || !body.success) throw new Error(body.message || `HTTP ${r.status}`);
+            setups.push({id: body.id, name: body.name, objects: JSON.parse(JSON.stringify(objects))});
+            const item = document.createElement('li');
+            item.innerHTML = '<button class="dropdown-item" type="button"></button>';
+            item.firstChild.dataset.setup = body.id;
+            item.firstChild.textContent = body.name;
+            item.firstChild.addEventListener('click', () => applySetup(body.id));
+            document.getElementById('save-setup').closest('li').before(item);
+            showNotification(`Saved "${body.name}" as a set-up: it's in the Set up menu for every play.`, 'success');
+        } catch (err) {
+            showNotification('Could not save the set-up: ' + err.message, 'danger');
+        }
+    }
+
     // Put a defender on each offensive player that hasn't got one, on the
     // break side (away from the force) and a step towards the endzone they
     // attack; the player with the disc gets a mark.
@@ -1930,6 +1984,9 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('zoom-fit').addEventListener('click', fitToScreen);
     document.querySelectorAll('[data-formation]').forEach(btn =>
         btn.addEventListener('click', () => applyFormation(btn.dataset.formation)));
+    document.querySelectorAll('[data-setup]').forEach(btn =>
+        btn.addEventListener('click', () => applySetup(btn.dataset.setup)));
+    document.getElementById('save-setup')?.addEventListener('click', saveSetup);
     document.getElementById('match-defenders').addEventListener('click', matchDefenders);
 
     document.getElementById('save-properties').addEventListener('click', function () {

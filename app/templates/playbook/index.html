@@ -14,7 +14,7 @@
   <a class="th-row-main" href="{{ url_for('playbook.view_play', play_id=play.id) }}">
     {{ thumb(play) }}
     <div class="th-row-text">
-      <div class="th-row-title">{{ play.name }}</div>
+      <div class="th-row-title">{% if play.is_core %}<span title="Core play" aria-label="Core play" style="color:var(--warn)">★</span> {% endif %}{{ play.name }}</div>
       {% if play.call or play.signal %}<div class="th-row-sub">{% if play.call %}Call: {{ play.call }}{% endif %}{% if play.call and play.signal %} · {% endif %}{% if play.signal %}{{ play.signal }}{% endif %}</div>{% endif %}
       <div class="th-row-meta">
         {% if not grouped %}{{ side_badge(play) }}{% endif %}
@@ -22,6 +22,7 @@
         {% if play.to_learn and play.status == 'active' and not done %}<span class="th-badge due"><i class="bi bi-bookmark"></i>To learn</span>{% endif %}
         {% if done %}<span class="th-badge read"><i class="bi bi-check2"></i>Learned</span>{% endif %}
         {% if play.stage_count > 1 %}<span class="th-badge"><i class="bi bi-play-fill"></i>{{ play.stage_count }} stages</span>{% endif %}
+        {% for label in play.situation_labels[:2] %}<span class="th-badge">{{ label }}</span>{% endfor %}
       </div>
     </div>
     {% if not can_edit %}<i class="bi bi-chevron-right th-chev" aria-hidden="true"></i>{% endif %}
@@ -52,6 +53,7 @@
         <ul class="dropdown-menu dropdown-menu-end">
           <li><a class="dropdown-item" href="{{ url_for('playbook.draw_play', type=type_filter) }}"><i class="bi bi-easel2 me-2"></i>Draw a Play</a></li>
           <li><a class="dropdown-item" href="{{ url_for('playbook.add_play', type=type_filter) }}"><i class="bi bi-pencil me-2"></i>Write it up first, draw later</a></li>
+          <li><a class="dropdown-item" href="{{ url_for('playbook.setups') }}"><i class="bi bi-people me-2"></i>From a set-up</a></li>
         </ul>
       </div>
       {% endif %}
@@ -59,6 +61,8 @@
         <button class="th-icon-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="More"><i class="bi bi-three-dots"></i></button>
         <ul class="dropdown-menu dropdown-menu-end">
           <li><a class="dropdown-item" href="{{ url_for('playbook.cards') }}"><i class="bi bi-phone me-2"></i>Game-day cards</a></li>
+          <li><a class="dropdown-item" href="{{ url_for('playbook.quiz') }}"><i class="bi bi-patch-question me-2"></i>Quiz yourself</a></li>
+          {% if can_edit %}<li><a class="dropdown-item" href="{{ url_for('playbook.setups') }}"><i class="bi bi-people me-2"></i>Set-ups</a></li>{% endif %}
           <li><a class="dropdown-item" href="{{ url_for('playbook.position_view') }}"><i class="bi bi-person-badge me-2"></i>Plays by role{% if my_role %} · yours: {{ my_role.name }}{% endif %}</a></li>
           <li><a class="dropdown-item" href="#" data-export-pdf data-start-url="{{ url_for('playbook.export_start', type=type_filter) }}"><i class="bi bi-file-earmark-pdf me-2"></i>Download as PDF</a></li>
           {% if has_retired %}<li><a class="dropdown-item" href="{{ url_for('playbook.index', show=None if show_retired else 'retired') }}"><i class="bi bi-archive me-2"></i>{{ 'Back to plays in use' if show_retired else 'Retired plays' }}</a></li>{% endif %}
@@ -86,15 +90,35 @@
     {% if show_retired %}<input type="hidden" name="show" value="retired">{% endif %}
   </form>
   <div class="th-chips" aria-label="Show">
-    {% set keep = {'show': 'retired' if show_retired else None, 'q': q or None, 'tag': tag or None} %}
+    {% set keep = {'show': 'retired' if show_retired else None, 'q': q or None, 'tag': tag or None,
+                   'when': situation, 'core': '1' if core_only else None} %}
     <a class="th-chip {% if not type_filter %}active{% endif %}" href="{{ url_for('playbook.index', **keep) }}">All</a>
     <a class="th-chip {% if type_filter == 'offense' %}active{% endif %}" href="{{ url_for('playbook.index', type='offense', **keep) }}">Offence</a>
     <a class="th-chip {% if type_filter == 'defense' %}active{% endif %}" href="{{ url_for('playbook.index', type='defense', **keep) }}">Defence</a>
+  </div>
+  {% if has_core or situations or tag_names %}
+  <div class="th-chips" aria-label="Filter">
+    {% set base = {'type': type_filter, 'show': 'retired' if show_retired else None, 'q': q or None} %}
+    {% if has_core %}
+    <a class="th-chip {% if core_only %}active{% endif %}" href="{{ url_for('playbook.index', when=situation, tag=tag or None, core=None if core_only else '1', **base) }}">★ Core</a>
+    {% endif %}
+    {% for key, label in situations %}
+    <a class="th-chip {% if situation == key %}active{% endif %}" href="{{ url_for('playbook.index', when=None if situation == key else key, tag=tag or None, core='1' if core_only else None, **base) }}">{{ label }}</a>
+    {% endfor %}
     {% for name in tag_names %}
     <a class="th-chip {% if tag|lower == name|lower %}active{% endif %}"
-       href="{{ url_for('playbook.index', type=type_filter, show='retired' if show_retired else None, q=q or None, tag=None if tag|lower == name|lower else name) }}">#{{ name }}</a>
+       href="{{ url_for('playbook.index', when=situation, core='1' if core_only else None, tag=None if tag|lower == name|lower else name, **base) }}">#{{ name }}</a>
     {% endfor %}
   </div>
+  {% endif %}
+
+  {% if to_redraw and not (q or tag or show_retired or situation or core_only) %}
+  <a class="th-draft-banner text-decoration-none" href="{{ url_for('playbook.redraw') }}">
+    <i class="bi bi-easel2" aria-hidden="true"></i>
+    <div class="flex-grow-1">{{ to_redraw|length }} play{{ 's are' if to_redraw|length != 1 else ' is' }} not drawn on the field yet, so {{ 'they have' if to_redraw|length != 1 else 'it has' }} no animation or role paths.</div>
+    <span class="btn btn-sm btn-outline-secondary">Review</span>
+  </a>
+  {% endif %}
 
   {% if show_retired %}
   <div class="th-draft-banner"><i class="bi bi-archive" aria-hidden="true"></i><div class="flex-grow-1">Retired plays: kept for reference, off the cards and the PDF.</div></div>
@@ -112,7 +136,7 @@
         <div class="th-row-title">{{ r.play.name }}</div>
         {% if r.note %}<div class="th-row-sub">{{ r.note }}</div>{% endif %}
         <div class="th-row-meta">
-          {% if r.due_date %}<span class="th-badge due"><i class="bi bi-calendar-event"></i>Learn by {{ r.due_date.strftime('%a %-d %b') }}</span>{% endif %}
+          {% if r.label %}<span class="th-badge due"><i class="bi bi-calendar-event"></i>{{ r.label }}</span>{% endif %}
           {% if can_edit %}<span class="th-badge">{{ learn_counts.get(r.play_id, 0) }} of {{ team_size }} learned</span>{% endif %}
           {% if r.play.status != 'active' %}<span class="th-badge draft">{{ r.play.status_label }}: players can't see it on their list</span>{% endif %}
         </div>
@@ -147,7 +171,7 @@
   {% else %}
   <div class="th-list th-empty mt-3">
     <i class="bi bi-journal-richtext"></i>
-    {% if q or tag %}
+    {% if q or tag or situation or core_only %}
     <p class="mb-0">Nothing matches. <a href="{{ url_for('playbook.index') }}">Show every play</a></p>
     {% elif can_edit %}
     <p class="mb-3">No plays here yet. Draw one on the field: put the players out, add a stage for each cut and throw.</p>

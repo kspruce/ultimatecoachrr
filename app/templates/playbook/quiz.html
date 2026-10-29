@@ -1,0 +1,107 @@
+{# templates/playbook/quiz.html: see the drawing, name the play #}
+{% extends "base.html" %}
+
+{% block styles %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/theory.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/playbook.css') }}">
+<style>
+  .qz-pic { background: #fff; border: 1px solid var(--rule); border-radius: var(--radius); overflow: hidden; margin-bottom: 1rem; }
+  .qz-pic img { display: block; width: 100%; height: auto; }
+  .qz-options { display: grid; gap: .6rem; }
+  .qz-options button { min-height: 52px; text-align: left; font-weight: 700; border-radius: 12px; }
+  .qz-options button.right { background: var(--ok-soft); border-color: var(--ok); color: var(--ok); }
+  .qz-options button.wrong { background: var(--bad-soft); border-color: var(--bad); color: var(--bad); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container th-page" style="max-width:640px">
+  <nav class="th-crumbs" aria-label="Breadcrumb"><a href="{{ url_for('playbook.index') }}">Playbook</a></nav>
+  <div class="th-head">
+    <div><h1>Quiz</h1><p>Here's the drawing: which play is it?</p></div>
+  </div>
+  <div class="th-chips" aria-label="Which plays">
+    <a class="th-chip {% if not type_filter %}active{% endif %}" href="{{ url_for('playbook.quiz') }}">All</a>
+    <a class="th-chip {% if type_filter == 'offense' %}active{% endif %}" href="{{ url_for('playbook.quiz', type='offense') }}">Offence</a>
+    <a class="th-chip {% if type_filter == 'defense' %}active{% endif %}" href="{{ url_for('playbook.quiz', type='defense') }}">Defence</a>
+  </div>
+
+  {% if questions|length >= 2 %}
+  <div id="qz" data-questions='{{ questions|tojson }}'>
+    <div class="d-flex justify-content-between small text-muted mb-2"><span id="qz-count"></span><span id="qz-score"></span></div>
+    <div class="qz-pic"><img id="qz-img" alt="Which play is this?"></div>
+    <div class="qz-options" id="qz-options" role="group" aria-label="Answers"></div>
+    <div id="qz-after" class="mt-3" hidden>
+      <p id="qz-result" class="fw-bold mb-2" role="status" aria-live="polite"></p>
+      <div class="d-flex gap-2">
+        <a id="qz-open" class="btn btn-outline-secondary th-btn" href="#">Open the play</a>
+        <button type="button" id="qz-next" class="btn btn-primary th-btn flex-grow-1">Next</button>
+      </div>
+    </div>
+    <div id="qz-done" class="th-list th-empty" hidden>
+      <i class="bi bi-trophy"></i>
+      <p class="mb-3" id="qz-final"></p>
+      <button type="button" class="btn btn-primary th-btn" onclick="location.reload()">Go again</button>
+    </div>
+  </div>
+  {% else %}
+  <div class="th-list th-empty"><i class="bi bi-patch-question"></i>The quiz needs at least two plays in use with a drawing or picture.</div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+(function () {
+  var box = document.getElementById('qz');
+  if (!box) return;
+  var all = JSON.parse(box.dataset.questions);
+  function shuffle(a) { for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+  var order = shuffle(all.slice()).slice(0, 10), at = 0, score = 0;
+  var img = document.getElementById('qz-img'), options = document.getElementById('qz-options');
+  var after = document.getElementById('qz-after'), result = document.getElementById('qz-result');
+
+  function ask() {
+    var q = order[at];
+    document.getElementById('qz-count').textContent = 'Question ' + (at + 1) + ' of ' + order.length;
+    document.getElementById('qz-score').textContent = score + ' right';
+    img.src = q.image;
+    after.hidden = true;
+    options.innerHTML = '';
+    var choices = shuffle([q].concat(shuffle(all.filter(function (x) { return x.id !== q.id; })).slice(0, 3)));
+    choices.forEach(function (c) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'btn btn-outline-secondary';
+      b.textContent = c.name + (c.call ? ' (“' + c.call + '”)' : '');
+      b.addEventListener('click', function () { answer(c, b); });
+      options.appendChild(b);
+    });
+  }
+  function answer(choice, button) {
+    var q = order[at];
+    var right = choice.id === q.id;
+    if (right) score++;
+    options.querySelectorAll('button').forEach(function (b, i) { b.disabled = true; });
+    button.classList.add(right ? 'right' : 'wrong');
+    if (!right) {
+      options.querySelectorAll('button').forEach(function (b) { if (b.textContent.indexOf(q.name) === 0) b.classList.add('right'); });
+    }
+    result.textContent = right ? 'Right!' : 'Not quite: it\'s ' + q.name + '.';
+    document.getElementById('qz-open').href = q.url;
+    after.hidden = false;
+    document.getElementById('qz-next').focus();
+  }
+  document.getElementById('qz-next').addEventListener('click', function () {
+    at++;
+    if (at < order.length) return ask();
+    box.querySelectorAll('.qz-pic, .qz-options, #qz-after').forEach(function (el) { el.hidden = true; });
+    document.getElementById('qz-done').hidden = false;
+    document.getElementById('qz-final').textContent = 'You got ' + score + ' of ' + order.length + ' right.';
+  });
+  ask();
+})();
+</script>
+{% endblock %}

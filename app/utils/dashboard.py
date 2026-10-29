@@ -274,7 +274,7 @@ def to_read_and_watch(team_id, settings, sees_hidden=False, user=None):
     if user is not None and _enabled(settings, 'playbook_enabled'):
         from app.utils.playbook import to_learn_unlearned
         for r in to_learn_unlearned(user.id, team_id):
-            due = f' · learn by {r.due_date.strftime("%a %-d %b")}' if r.due_date else ''
+            due = f' · {r.label[0].lower()}{r.label[1:]}' if r.label else ''
             assigned.append({'kind': 'play', 'title': r.play.name, 'meta': f'Play to learn{due}',
                              'when': None, 'pill': 'To learn',
                              'url': url_for('playbook.view_play', play_id=r.play_id)})

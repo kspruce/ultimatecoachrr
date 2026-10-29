@@ -53,8 +53,10 @@
   </div>
   <div class="th-meta mb-2">
     {{ side_badge(play) }}
+    {% if play.is_core %}<span class="th-badge" style="color:var(--warn)">★ Core play</span>{% endif %}
+    {% for label in play.situation_labels %}<a href="{{ url_for('playbook.index', when=play.situation_keys[loop.index0]) }}" class="th-badge">{{ label }}</a>{% endfor %}
     {% for tag in play.tags %}<a href="{{ url_for('playbook.index', tag=tag.name) }}" class="th-badge">#{{ tag.name }}</a>{% endfor %}
-    {% if play.to_learn and play.to_learn.due_date %}<span class="th-badge due"><i class="bi bi-calendar-event"></i>Learn by {{ play.to_learn.due_date.strftime('%a %-d %b') }}</span>{% endif %}
+    {% if play.to_learn and play.to_learn.label %}<span class="th-badge due"><i class="bi bi-calendar-event"></i>{{ play.to_learn.label }}</span>{% endif %}
     {% if learners %}<a href="{{ url_for('playbook.learners', play_id=play.id) }}" class="th-badge"><i class="bi bi-people"></i>{{ learners[0] }} of {{ learners[1] }} learned</a>{% endif %}
   </div>
   {% if play.call or play.signal %}
@@ -186,6 +188,49 @@
         <i class="bi bi-calendar-check"></i><span>Practised: {{ s.title }}{% if s.date %} · {{ s.date.strftime('%-d %b %Y') }}{% endif %}</span>
       </a>
       {% endfor %}
+    </div>
+  </details>
+  {% endif %}
+
+  {% if can_edit and not play.is_draft %}
+  <details class="th-more" id="share" {% if play.share_token %}open{% endif %}>
+    <summary>Practise it, share it <i class="bi bi-chevron-down" aria-hidden="true"></i></summary>
+    <div class="th-more-body">
+      <div class="th-field">
+        <label class="form-label d-block" for="add-session">Add it to a session</label>
+        {% if coming %}
+        <form method="POST" action="{{ url_for('playbook.add_to_session', play_id=play.id) }}" class="d-flex gap-2">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <select id="add-session" name="session_id" class="form-select">
+            {% for s in coming %}<option value="{{ s.id }}">{{ s.title }}{% if s.date %} · {{ s.date.strftime('%a %-d %b') }}{% endif %}</option>{% endfor %}
+          </select>
+          <button class="btn btn-outline-primary th-btn flex-shrink-0"><i class="bi bi-plus-lg"></i>Add</button>
+        </form>
+        <p class="small text-muted mt-1 mb-0">Adds a part to the session that works on it{% if play.drills %}, with the drill "{{ play.drills[0].title }}"{% endif %}.</p>
+        {% else %}
+        <p class="small text-muted mb-0">No sessions coming up.</p>
+        {% endif %}
+      </div>
+      <div class="th-field">
+        <label class="form-label d-block">Share link</label>
+        {% if play.share_token %}
+        {% set link = url_for('playbook.shared_play', token=play.share_token, _external=True) %}
+        <div class="d-flex gap-2 mb-2">
+          <input class="form-control" value="{{ link }}" readonly aria-label="Share link" onclick="this.select()">
+          <button type="button" class="btn btn-outline-secondary th-btn flex-shrink-0" onclick="navigator.clipboard && navigator.clipboard.writeText('{{ link }}'); this.textContent='Copied'">Copy</button>
+        </div>
+        <form method="POST" action="{{ url_for('playbook.share_play', play_id=play.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-link px-0 text-danger" name="stop" value="1">Stop the link working</button>
+        </form>
+        {% else %}
+        <p class="small text-muted">For a guest player or another coach: they see the drawing, the roles and how it works, without signing in.</p>
+        <form method="POST" action="{{ url_for('playbook.share_play', play_id=play.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-outline-secondary th-btn"><i class="bi bi-link-45deg"></i>Make a share link</button>
+        </form>
+        {% endif %}
+      </div>
     </div>
   </details>
   {% endif %}
