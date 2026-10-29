@@ -1,0 +1,67 @@
+{# templates/theory/organise.html #}
+{% extends "base.html" %}
+
+{% block styles %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/theory.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container th-page" style="max-width:820px">
+  <nav class="th-crumbs" aria-label="Breadcrumb"><a href="{{ url_for('theory.index') }}">Theory</a></nav>
+  <div class="th-head">
+    <div>
+      <h1>{{ title }}</h1>
+      <p>Pick a new section for any topics you want to move, then save. Reorder topics within a section with the arrows on its page.</p>
+    </div>
+  </div>
+
+  <form method="POST" class="th-form-card mb-3 d-flex gap-2 align-items-end flex-wrap">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="add_section">
+    <div class="flex-grow-1">
+      <label class="form-label" for="new-section">New section</label>
+      <input class="form-control" id="new-section" name="name" maxlength="100" placeholder="e.g. Throw and catch" autocomplete="off" autocapitalize="words">
+    </div>
+    <button class="btn btn-outline-secondary th-btn"><i class="bi bi-folder-plus"></i>Add section</button>
+  </form>
+
+  <form method="POST" class="th-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% for section in sections %}
+    <div class="th-label" id="section-{{ section.id }}">
+      <a href="{{ url_for('theory.section', slug=section.slug) }}">{{ section.name }}</a>
+      <span class="fw-normal text-muted">· {{ topics[section.id]|length }}</span>
+    </div>
+    <div class="th-list mb-3">
+      {% for topic in topics[section.id] %}
+      <div class="th-row" id="topic-{{ topic.id }}">
+        <div class="th-row-text">
+          <div class="th-row-title">{{ topic.name }}</div>
+          {% if not topic.published %}<div class="th-row-meta"><span class="th-badge draft">Draft</span></div>{% endif %}
+        </div>
+        <div class="th-row-end">
+          <select class="form-select form-select-sm" name="section_{{ topic.id }}" aria-label="Section for {{ topic.name }}" style="max-width:14rem">
+            {% for s in sections %}<option value="{{ s.id }}" {% if s.id == section.id %}selected{% endif %}>{{ s.name }}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+      {% else %}
+      <div class="th-row"><div class="th-row-text"><div class="th-row-sub">No topics yet. Pick this section for a topic below or above to move it here.</div></div></div>
+      {% endfor %}
+    </div>
+    {% endfor %}
+    <div class="th-actionbar">
+      <a href="{{ url_for('theory.index') }}" class="btn btn-link px-2">Done</a>
+      <span class="grow"></span>
+      <button type="submit" class="btn btn-primary th-btn px-4"><i class="bi bi-check-lg"></i>Save moves</button>
+    </div>
+  </form>
+  <p class="small text-muted mt-3">To delete an empty section, use the menu on its page.</p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/theory.js') }}"></script>
+{% endblock %}

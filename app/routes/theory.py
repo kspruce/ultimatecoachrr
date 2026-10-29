@@ -507,6 +507,54 @@ def move_topic(topic_id):
     return redirect(request.form.get('next') or url_for('theory.section', slug=topic.section.slug))
 
 
+@bp.route('/organise', methods=['GET', 'POST'])
+def organise():
+    """Every topic with a section picker, to move many between sections in
+    one save, and a box for a new section to move them into."""
+    coach_only()
+    team_id = get_current_team_id()
+    sections = team_sections(team_id)
+    if request.method == 'POST' and request.form.get('action') == 'add_section':
+        name = ' '.join((request.form.get('name') or '').split())[:100]
+        if not name:
+            flash('Give the new section a name.', 'danger')
+        elif any(s.name.lower() == name.lower() for s in sections):
+            flash(f'There is already a section called "{name}".', 'danger')
+        else:
+            section = TheorySection(name=name, order=max([s.order or 0 for s in sections] + [0]) + 1,
+                                    team_organization_id=team_id,
+                                    slug=unique_slug(TheorySection, name, team_id))
+            db.session.add(section)
+            db.session.commit()
+            flash(f'Section "{name}" added. Pick it for the topics you want in it, then save.', 'success')
+            return redirect(url_for('theory.organise', _anchor=f'section-{section.id}'))
+        return redirect(url_for('theory.organise'))
+
+    topics = {s.id: s.topics.filter_by(team_organization_id=team_id).order_by(*in_order(TheoryTopic)).all()
+              for s in sections}
+    if request.method == 'POST':
+        by_id = {s.id: s for s in sections}
+        moves = []
+        for section in sections:
+            for topic in topics[section.id]:
+                target = by_id.get(request.form.get(f'section_{topic.id}', type=int))
+                if target is not None and target.id != section.id:
+                    moves.append((topic, target))
+        for topic, target in moves:
+            last = db.session.query(db.func.max(TheoryTopic.order)).filter_by(section_id=target.id).scalar()
+            topic.section_id, topic.section = target.id, target
+            topic.order = (last or 0) + 1
+            db.session.flush()
+        db.session.commit()
+        if moves:
+            flash(f'Moved {len(moves)} topic{"s" if len(moves) != 1 else ""}. '
+                  'Moved topics go to the end of their new section.', 'success')
+        else:
+            flash('Nothing to move: every topic is where it was.', 'info')
+        return redirect(url_for('theory.organise'))
+    return render_template('theory/organise.html', title='Organise sections', sections=sections, topics=topics)
+
+
 @bp.route('/import', methods=['GET', 'POST'])
 def import_cards():
     """Upload a markdown file of cards (app/utils/theory_import.py); they
@@ -527,6 +575,8 @@ def import_cards():
             else:
                 db.session.commit()
                 flash(report.summary() + ' Publish each one when you want the team to read it.', 'success')
+                if len(report.sections) > 1:
+                    return redirect(url_for('theory.index'))
                 return redirect(url_for('theory.section', slug=report.section.slug))
     return render_template('theory/import.html', title='Import cards', errors=errors), 400 if errors else 200
 

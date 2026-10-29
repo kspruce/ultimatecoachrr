@@ -248,11 +248,12 @@ def import_handbook_command(path, team_slug, dry_run, replace):
 @with_appcontext
 def import_theory_command(path, team_slug, dry_run, replace):
     """Load a markdown file of theory cards (e.g.
-    imports/theory-cards/herd-theory-cards-1-40.md) into a team's Theory hub
+    imports/theory-cards/herd-theory-cards.md) into a team's Theory hub
     as drafts, the same as Theory > New > Import cards on the site.
 
-    Re-running adds new cards, but leaves cards already on the site as
-    coaches edited them unless --replace is given.
+    Re-running adds new cards and moves cards already on the site into the
+    file's sections, but leaves their wording as coaches edited it unless
+    --replace is given.
     """
     from app.models.team_organization import TeamOrganization
     from app.utils.theory_import import decode, import_cards, TheoryImportError

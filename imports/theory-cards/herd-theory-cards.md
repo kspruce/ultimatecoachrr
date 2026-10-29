@@ -1,6 +1,4 @@
-# Herd Theory Cards
-
-Oct 29, 2026 · @Kieran
+# Start here
 
 ## How to use these cards
 
@@ -127,6 +125,8 @@ Each card is one idea a player can read in three minutes, posted the week it is 
 **Next level:** train in your zone of proximal development. If every rep goes perfectly, make it harder; if every rep fails, make it easier. Mistakes on some reps mean you’re learning.
 
 **Source:** The Inner Game of Ultimate Frisbee (Adams); HN Coach Corner (Getting out of your head; Zone of Proximal Development).
+
+# Throw and catch
 
 ## Card 4 · Grip, pivot and fakes: be a threat on every catch
 
@@ -260,6 +260,8 @@ Each card is one idea a player can read in three minutes, posted the week it is 
 
 **Source:** DK’s Bible 4.9; Flik Zone Offence 8; HN Deep Dives (Extreme Wind: Molly Brown v Phoenix; Firetails Downwind Offence).
 
+# Get open
+
 ## Card 10 · The first three steps: accelerate, stop, change direction
 
 **Release:** week 4
@@ -370,6 +372,8 @@ Each card is one idea a player can read in three minutes, posted the week it is 
 
 **Source:** HN Excel Premium (Deep Cutting, The L Cut, How to Jump); HN Next Gen 10 (Deep Cut Timing); HN 10 Big Drills; HB 27.3–27.4.
 
+# Handle and reset
+
 ## Card 15 · The handler’s job: forward, then dump
 
 **Release:** week 14
@@ -479,6 +483,8 @@ Each card is one idea a player can read in three minutes, posted the week it is 
 **Next level:** learn four give-and-go moves: immediate, delayed, break-side, and the Sockeye move (after an around break, the receiver charges and dishes back). Watch for the inverse give-and-go when the marker overcommits after you break them.
 
 **Source:** HB 34.2; HN Flik (Give and Go, Sealing the Lane, The Dish); HN Handler Offense (Give-Go Moves).
+
+# Defend
 
 ## Card 20 · Our marks: triangle by default, flat on the call
 
@@ -633,6 +639,8 @@ Each card is one idea a player can read in three minutes, posted the week it is 
 **Next level:** the buzz switch. When a cutter beats their defender deep, the nearest defender buzzes across to take them, and the beaten defender takes the open player. It’s perfect against handlers running a give-and-go. To spot switches, get your head up as your player changes direction and look downfield.
 
 **Source:** HN Team Defence (Switching against cutters; downfield switching); HN Flik (Buzz Switch); Ian French (Help the Helper).
+
+# Herd systems
 
 ## Card 27 · Vert stack: from the back and the front
 
@@ -817,6 +825,8 @@ Each card is one idea a player can read in three minutes, posted the week it is 
 **Next level:** measure force middle. There should be at least one poach look per point, the opposition’s yards should come mainly from break throws, and they should need about three more passes per point than against a one-way force. Adjust the mark to the matchup: back off tall throwers, crowd the favourite throw of quick ones, and against the very best, tell your team which break you’re stopping.
 
 **Source:** HN Point of Attack (Force Middle; Anti-Huck Force; Marking against Hammer; Marking Matchups).
+
+# Compete
 
 ## Card 35 · Good throw versus good decision
 
