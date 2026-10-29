@@ -31,7 +31,7 @@
   <h2 class="th-label">Who does what</h2>
   <div class="pb-roles">
     {% for a in play.assignments if a.position %}
-    <div class="pb-role"><h3>{{ a.position.name }}</h3><div class="md">{{ a.instructions|markdown }}</div></div>
+    <div class="pb-role"><div class="pb-role-name">{{ a.position.name }}</div><div class="md">{{ a.instructions|markdown }}</div></div>
     {% endfor %}
   </div>
   {% endif %}

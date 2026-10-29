@@ -24,7 +24,7 @@
 .pb-roles { background: var(--card); border: 1px solid var(--rule); border-radius: var(--radius); margin-bottom: 1.25rem; }
 .pb-role { padding: .75rem 1rem; border-bottom: 1px solid var(--rule); }
 .pb-role:last-child { border-bottom: 0; }
-.pb-role h3 { font-family: var(--font-sans); font-size: .95rem; font-weight: 800; margin: 0 0 .2rem; }
+.pb-role-name { font-size: .95rem; font-weight: 800; margin: 0 0 .2rem; }
 .pb-role.me { background: var(--club-soft); }
 .pb-role .md p:last-child, .pb-mine .md p:last-child { margin-bottom: 0; }
 
@@ -46,3 +46,4 @@
                 border-radius: 0 !important; cursor: pointer; }
 .pb-embed-body { display: flex; align-items: center; gap: .6rem; padding: .6rem .85rem; font-size: .95rem; }
 .pb-embed-body b { flex: 1; min-width: 0; }
+

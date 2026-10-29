@@ -43,11 +43,11 @@
     {% set play = e.play %}
     {% set link = url_for('playbook.view_play', play_id=play.id, role=selected.id) ~ '#drill-animation' if e.drawn else url_for('playbook.view_play', play_id=play.id) %}
     <div class="pb-role">
-      <h3 class="d-flex align-items-center gap-2 flex-wrap">
+      <div class="pb-role-name d-flex align-items-center gap-2 flex-wrap">
         <a href="{{ link }}" class="text-decoration-none">{{ play.name }}</a>
         <span class="pb-side {{ play.type }}">{{ play.type_label }}</span>
         {% if play.is_draft %}<span class="th-badge draft">Draft</span>{% endif %}
-      </h3>
+      </div>
       {% if e.drawn and play.editor_diagrams %}
       <a href="{{ link }}"><img src="{{ play.editor_diagrams[0].image_url }}" alt="{{ play.name }}" class="pb-thumb my-2" style="width:100%;height:auto;max-height:220px;object-fit:contain" loading="lazy"></a>
       {% endif %}

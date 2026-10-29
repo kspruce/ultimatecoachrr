@@ -4,6 +4,7 @@
 {% block styles %}
 {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/theory.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/playbook.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -24,7 +25,7 @@
   {% endif %}
 
   <div class="th-form-card">
-    <h2 class="h6 fw-bold mb-1">{{ 'Asked to learn it' if play.to_learn else 'Ask the team to learn this' }}</h2>
+    <div class="fw-bold mb-1">{{ 'Asked to learn it' if play.to_learn else 'Ask the team to learn this' }}</div>
     <p class="small text-muted">
       {% if play.status != 'active' %}It's {{ play.status_label|lower }}: players will see the request once it's in use.
       {% else %}It goes at the top of the Playbook and the home page for everyone who hasn't learned it.{% endif %}
