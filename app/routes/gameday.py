@@ -10,6 +10,7 @@ from app.utils.point_flow import get_game_roster
 from app.models.point import Point, LineUp
 from app.models.gameday import GameDayEvent, GameDayPlayerStats, LineTemplate, LineTemplatePlayer
 from app.models.team_organization import TeamOrganization  # Add this import
+from app.utils.season import scope_games, viewing_season, viewing_squad
 from app.utils.utils import stat_taker_required
 
 bp = Blueprint('gameday', __name__, url_prefix='/gameday')
@@ -24,8 +25,7 @@ def index():
     from sqlalchemy import desc
     from datetime import date
     games = (
-        Game.query
-        .filter_by(team_organization_id=get_current_team_id())
+        scope_games(Game.query.filter_by(team_organization_id=get_current_team_id()))
         .order_by(desc(Game.date), desc(Game.id))
         .limit(30)
         .all()
@@ -887,14 +887,15 @@ def team_stats():
     # Get current team ID
     team_id = get_current_team_id()
     
-    # Get all games for this team
-    games = Game.query.filter_by(
+    # Only the season (and squad) being viewed, like the other stats pages
+    games = scope_games(Game.query.filter_by(
         team_organization_id=team_id
-    ).order_by(Game.date.desc()).all()
+    )).order_by(Game.date.desc()).all()
     
-    # Get all player stats for this team
-    all_player_stats = GameDayPlayerStats.query.filter_by(
-        team_organization_id=team_id
+    # Player stats from those games only
+    all_player_stats = GameDayPlayerStats.query.filter(
+        GameDayPlayerStats.team_organization_id == team_id,
+        GameDayPlayerStats.game_id.in_([g.id for g in games])
     ).all()
     
     # Group stats by player
@@ -993,7 +994,9 @@ def team_stats():
         team=team,
         games=games,
         player_stats=player_stats,
-        team_totals=team_totals
+        team_totals=team_totals,
+        season=viewing_season(team_id),
+        squad=viewing_squad(team_id)
     )
 
 from app.utils.team_filter import get_current_team_id

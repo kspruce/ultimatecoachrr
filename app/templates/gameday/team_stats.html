@@ -55,7 +55,7 @@
        style="border-color: var(--uc-card-border) !important;">
     <div>
       <div class="fw-bold" style="font-size:1.05rem;">{{ team.name }}</div>
-      <div class="text-muted" style="font-size:0.82rem;">Season Stats — all recorded games</div>
+      <div class="text-muted" style="font-size:0.82rem;">{{ season.name if season else 'All-time' }} stats{% if squad %} · {{ squad.name }}{% endif %} — change it in the season menu at the top</div>
     </div>
     <div class="d-flex flex-wrap gap-2">
       <a href="{{ url_for('main.index') }}" class="btn btn-sm btn-outline-secondary">
