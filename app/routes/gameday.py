@@ -95,6 +95,7 @@ def game_dashboard(game_id):
     next_point_number = (max_point_number or 0) + 1
     
     linked_report, other_reports = scouting_for_game(game)
+    call_plays, other_plays = called_play_choices(game)
 
     return render_template('gameday/dashboard.html', 
                           game=game,
@@ -102,8 +103,34 @@ def game_dashboard(game_id):
                           mmp_players=mmp_players,
                           fmp_players=fmp_players,
                           line_templates=line_templates,
-                          next_point_number=next_point_number)
+                          next_point_number=next_point_number,
+                          call_plays=call_plays, other_plays=other_plays)
 
+
+
+def called_play_choices(game):
+    """(the call sheet's plays, the other plays in use) for Game Day's "Play
+    called", or ([], []) when the team has the Playbook off."""
+    from app.models.playbook import Play
+    from app.models.team_settings import TeamSettings
+    settings = TeamSettings.query.filter_by(team_id=game.team_organization_id).first()
+    if settings is not None and not settings.playbook_enabled:
+        return [], []
+    sheet = [r.play for r in game.call_sheet if r.play and r.play.status != 'draft']
+    on_sheet = {p.id for p in sheet}
+    others = (Play.query.filter_by(team_organization_id=game.team_organization_id, status='active')
+              .order_by(Play.name).all())
+    return sheet, [p for p in others if p.id not in on_sheet]
+
+
+def called_play_id(raw, team_id):
+    """The team's play with this id, for a point's "Play called"; None otherwise."""
+    from app.models.playbook import Play
+    try:
+        play_id = int(raw)
+    except (TypeError, ValueError):
+        return None
+    return play_id if Play.query.filter_by(id=play_id, team_organization_id=team_id).first() else None
 
 
 @bp.route('/api/record-point', methods=['POST'])
@@ -163,6 +190,7 @@ def record_point():
             starting_position='offense' if line_type == 'O-line' else 'defense',
             point_outcome=outcome,
             gender_ratio=gender_ratio,
+            called_play_id=called_play_id(data.get('play_id'), team_id),
             team_organization_id=team_id
         )
 

@@ -169,6 +169,28 @@
   </div>
   {% endif %}
 
+  {% if in_games %}
+  <h2 class="th-label">In games</h2>
+  <div class="th-list mb-3">
+    <div class="th-row">
+      <div class="th-row-text">
+        <div class="th-row-title">Scored {{ in_games.total.scored }} of {{ in_games.total.called }} time{{ 's' if in_games.total.called != 1 }} called</div>
+        <div class="th-row-meta">
+          {% if in_games.total.o.called %}<span class="th-badge">Holds {{ in_games.total.o.scored }}/{{ in_games.total.o.called }}</span>{% endif %}
+          {% if in_games.total.d.called %}<span class="th-badge">Breaks {{ in_games.total.d.scored }}/{{ in_games.total.d.called }}</span>{% endif %}
+        </div>
+      </div>
+      <div style="font-size:1.3rem;font-weight:800">{{ in_games.rate }}%</div>
+    </div>
+    {% for game, res in in_games.games %}
+    <a class="th-row" href="{{ url_for('playbook.call_sheet', game_id=game.id) }}" style="min-height:48px">
+      <div class="th-row-text"><div class="th-row-sub" style="-webkit-line-clamp:1">vs {{ game.opponent }}{% if game.date %} · {{ game.date.strftime('%-d %b') }}{% endif %}</div></div>
+      <span class="small">{{ res.scored }}/{{ res.called }}</span>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
   {% if play.notes %}
   <h2 class="th-label">Coaching notes</h2>
   <div class="th-article"><div class="topic-content">{{ play.notes|markdown }}</div></div>

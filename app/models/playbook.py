@@ -254,3 +254,21 @@ class PlaySetup(db.Model):
     image_data = db.Column(db.Text)           # base64 PNG of the stage, for the list
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class GameCallPlay(db.Model):
+    """A play on a game's call sheet: the plays the coaches plan to call in
+    that game, in order. Which play was called each point is Point.called_play."""
+    __tablename__ = 'game_call_play'
+    __table_args__ = (db.UniqueConstraint('game_id', 'play_id', name='uq_game_call_play'),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'), nullable=False, index=True)
+    game_id = db.Column(db.Integer, db.ForeignKey('game.id', ondelete='CASCADE'), nullable=False, index=True)
+    play_id = db.Column(db.Integer, db.ForeignKey('play.id', ondelete='CASCADE'), nullable=False)
+    order = db.Column(db.Integer, nullable=False, default=0)
+    note = db.Column(db.String(120))  # e.g. "after a timeout", "if they zone"
+
+    play = db.relationship('Play')
+    game = db.relationship('Game', backref=db.backref('call_sheet', order_by='GameCallPlay.order',
+                                                      cascade='all, delete-orphan', passive_deletes=True))

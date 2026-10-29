@@ -20,9 +20,12 @@ class Point(db.Model):
     force_direction = db.Column(db.String(10))
     team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'), nullable=True)
     majority_gender = db.Column(db.String(10))
+    # The playbook play called for this point (Game Day's "Play called")
+    called_play_id = db.Column(db.Integer, db.ForeignKey('play.id', ondelete='SET NULL'), nullable=True, index=True)
 
     # Relationships
     game = db.relationship('Game', back_populates='points')
+    called_play = db.relationship('Play')
     lineups = db.relationship('LineUp', back_populates='point', cascade='all, delete-orphan')
     events = db.relationship('Event', back_populates='point', cascade='all, delete-orphan')
     pulls = db.relationship('Pull', back_populates='point', cascade='all, delete-orphan')
