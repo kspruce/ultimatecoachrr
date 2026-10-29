@@ -1,4 +1,7 @@
 # app/routes/playbook.py
+import json
+from datetime import datetime
+
 from flask import (
     Blueprint, render_template, redirect, url_for, flash,
     request, jsonify, current_app, abort
@@ -7,8 +10,10 @@ from flask_login import login_required, current_user
 from app import db
 from app.models.playbook import Play, Formation, PlayTag, PlayAssignment, PlayerPosition
 from app.forms.playbook import PlayForm, FormationForm, PositionAssignmentForm
-from app.utils.utils import admin_required
+from app.utils.roles import drawing_role_ids, drawing_state, plays_by_role, team_roles
+from app.utils.utils import admin_required, coach_required
 from app.utils.team_filter import get_current_team_id
+from app.utils.editor_diagrams import save_editor_diagrams
 
 bp = Blueprint('playbook', __name__, url_prefix='/playbook')
 
@@ -217,24 +222,38 @@ def export_pdf():
 @bp.route('/positions/<int:position_id>')
 @login_required
 def position_view(position_id=None):
-    """Per-position view: pick a position, see its instructions across all plays."""
+    """By role: pick a role and see every play it's in, with what it does
+    and a link that shows just its path. A player who hasn't picked one
+    starts on their main role."""
     team_id = get_current_team_id()
-    positions = PlayerPosition.query.filter_by(team_organization_id=team_id) \
-        .order_by(PlayerPosition.name).all()
+    positions = team_roles(team_id)
+    mine = my_role_ids(team_id)
+    if position_id is None and mine:
+        return redirect(url_for('playbook.position_view', position_id=mine[0]))
 
     selected = None
-    assignments = []
+    entries = []
     if position_id:
         selected = PlayerPosition.query.filter_by(
             id=position_id, team_organization_id=team_id).first_or_404()
-        assignments = PlayAssignment.query.filter_by(
-            position_id=selected.id, team_organization_id=team_id
-        ).join(Play, PlayAssignment.play_id == Play.id) \
-         .order_by(Play.type, *_play_order()).all()
+        for play in plays_by_role(team_id).get(selected.id, []):
+            assignment = next((a for a in play.assignments if a.position_id == selected.id), None)
+            entries.append({'play': play, 'assignment': assignment,
+                            'drawn': selected.id in drawing_role_ids(drawing_state(play))})
 
     return render_template('playbook/position_view.html',
-                           positions=positions, selected=selected,
-                           assignments=assignments)
+                           positions=positions, selected=selected, entries=entries, mine=mine)
+
+
+def my_role_ids(team_id):
+    """The signed-in player's roles this season, main role first."""
+    from app.routes.roles import roles_season
+    from app.utils.roles import player_roles
+    from app.utils.season import roster_entry
+    player = current_user.player if current_user.is_authenticated else None
+    if player is None:
+        return []
+    return [r.role_id for r in player_roles(roster_entry(player, roles_season(team_id)))]
 
 
 # Main Routes
@@ -342,7 +361,133 @@ def view_play(play_id):
         team_organization_id=get_current_team_id()
     ).first_or_404()
 
-    return render_template('playbook/play_detail.html', play=play)
+    # Drawn in stages: the page plays them as an animation. Players given
+    # roles: pick a role to see just their path (one stage too).
+    state = drawing_state(play)
+    drawn_roles = drawing_role_ids(state)
+    animation = state if state and (len(state.get('stages') or []) > 1 or drawn_roles) else None
+    roles = team_roles(play.team_organization_id)
+    said = {a.position_id: a for a in play.assignments}
+    who = [{'role': r, 'assignment': said.get(r.id), 'drawn': r.id in drawn_roles}
+           for r in roles if r.id in said or r.id in drawn_roles]
+    who += [{'role': a.position, 'assignment': a, 'drawn': False} for a in play.assignments
+            if a.position is None]
+
+    return render_template('playbook/play_detail.html', play=play, animation=animation, who=who,
+                           animation_roles=[r for r in roles if r.id in drawn_roles])
+
+
+# ── Game-day cards: the playbook on a phone ──────────────────────
+@bp.route('/cards')
+@login_required
+def cards():
+    """One card per play, drawing first, for looking over before a game.
+    ?type=offense|defense filters; ?report=<scouting report> shows the plays
+    picked for that game."""
+    from app.models.scouting import ScoutingReport
+    team_id = get_current_team_id()
+    report = None
+    report_id = request.args.get('report', type=int)
+    if report_id:
+        report = ScoutingReport.query.filter_by(id=report_id, team_organization_id=team_id).first_or_404()
+        plays = report.plays_in_order
+    else:
+        plays = Play.query.filter_by(team_organization_id=team_id).order_by(Play.type.desc(), *_play_order()).all()
+    type_filter = request.args.get('type')
+    if type_filter in ('offense', 'defense'):
+        plays = [p for p in plays if p.type == type_filter]
+    else:
+        type_filter = None
+    # Each card's link picks out the player's own role, when it's in the drawing
+    mine = my_role_ids(team_id)
+    my_path = {}
+    for play in plays:
+        drawn = drawing_role_ids(drawing_state(play)) if mine else set()
+        my_path[play.id] = next((r for r in mine if r in drawn), None)
+    return render_template('playbook/cards.html', plays=plays, report=report, type_filter=type_filter,
+                           my_path=my_path)
+
+
+# ── Drawing a play in the drill editor ───────────────────────────
+@bp.route('/plays/draw')
+@bp.route('/plays/<int:play_id>/draw')
+@login_required
+@admin_required
+def draw_play(play_id=None):
+    """Draw a play on the field, in stages, with the drill editor."""
+    play = None
+    editor_state = None
+    if play_id:
+        play = Play.query.filter_by(id=play_id, team_organization_id=get_current_team_id()).first_or_404()
+        if play.editor_diagram:
+            editor_state = json.loads(play.editor_diagram.editor_json)
+    formations = (Formation.query.filter_by(team_organization_id=get_current_team_id())
+                  .order_by(Formation.name).all())
+    return render_template('playbook/play_editor.html', play=play, drill=None, editor_state=editor_state,
+                           formations=formations, other_diagrams=[],
+                           roles=[{'id': r.id, 'name': r.name, 'line': r.line or ''}
+                                  for r in team_roles(get_current_team_id())],
+                           new_type=request.args.get('type') if request.args.get('type') in ('offense', 'defense') else 'offense')
+
+
+def _apply_play_fields(play, data):
+    play.name = (data.get('title') or 'Untitled Play').strip()[:100]
+    play.description = data.get('description') or None
+    play.notes = data.get('notes') or None
+    if data.get('type') in ('offense', 'defense'):
+        play.type = data['type']
+    play.type = play.type or 'offense'
+    try:
+        formation_id = int(data.get('formation_id') or 0)
+    except (TypeError, ValueError):
+        formation_id = 0
+    formation = Formation.query.filter_by(id=formation_id, team_organization_id=get_current_team_id()).first() \
+        if formation_id else None
+    play.formation_id = formation.id if formation else None
+
+
+def _play_payload():
+    try:
+        data = json.loads(request.form.get('data') or '{}')
+    except ValueError:
+        abort(400)
+    return data if isinstance(data, dict) else {}
+
+
+def _play_saved(play, status=200):
+    return jsonify({'success': True, 'play_id': play.id,
+                    'editor_url': url_for('playbook.draw_play', play_id=play.id),
+                    'detail_url': url_for('playbook.view_play', play_id=play.id)}), status
+
+
+@bp.route('/api/plays', methods=['POST'])
+@login_required
+@admin_required
+def create_drawn_play():
+    play = Play(created_by=current_user.id, team_organization_id=get_current_team_id())
+    _apply_play_fields(play, _play_payload())
+    db.session.add(play)
+    error = save_editor_diagrams(play, source='Play editor')
+    if error:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': error}), 400
+    db.session.commit()
+    return _play_saved(play, 201)
+
+
+@bp.route('/api/plays/<int:play_id>', methods=['PUT'])
+@login_required
+@admin_required
+def update_drawn_play(play_id):
+    play = Play.query.filter_by(id=play_id, team_organization_id=get_current_team_id()).first_or_404()
+    _apply_play_fields(play, _play_payload())
+    error = save_editor_diagrams(play, source='Play editor')
+    if error:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': error}), 400
+    play.updated_at = datetime.utcnow()  # the PDF cache goes by it
+    db.session.commit()
+    return _play_saved(play)
 
 @bp.route('/plays/<int:play_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -575,7 +720,7 @@ def view_formation(formation_id):
 
 @bp.route('/plays/<int:play_id>/assignments', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@coach_required
 def manage_assignments(play_id):
     play = Play.query.filter_by(
         id=play_id,
@@ -585,9 +730,7 @@ def manage_assignments(play_id):
     form = PositionAssignmentForm()
 
     # Get all positions for the dropdown (filter by team)
-    form.position_id.choices = [(p.id, p.name) for p in PlayerPosition.query.filter_by(
-        team_organization_id=get_current_team_id()
-    ).order_by(PlayerPosition.name).all()]
+    form.position_id.choices = [(r.id, f'{r.name} ({r.line_label})') for r in team_roles(get_current_team_id())]
 
     if form.validate_on_submit():
         # Check if assignment for this position already exists
@@ -625,7 +768,7 @@ def manage_assignments(play_id):
 
 @bp.route('/plays/<int:play_id>/assignments/<int:assignment_id>/delete', methods=['POST'])
 @login_required
-@admin_required
+@coach_required
 def delete_assignment(play_id, assignment_id):
     # Verify the play belongs to the current team
     play = Play.query.filter_by(

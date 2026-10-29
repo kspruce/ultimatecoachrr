@@ -10,8 +10,9 @@ from app.utils.point_flow import get_game_roster
 from app.models.point import Point, LineUp
 from app.models.gameday import GameDayEvent, GameDayPlayerStats, LineTemplate, LineTemplatePlayer
 from app.models.team_organization import TeamOrganization  # Add this import
-from app.utils.season import scope_games, viewing_season, viewing_squad
 from app.utils.utils import stat_taker_required
+from app.models.tournament import Tournament
+from app.utils.season import scope_games, scope_tournaments, viewing_season
 
 bp = Blueprint('gameday', __name__, url_prefix='/gameday')
 
@@ -887,16 +888,16 @@ def team_stats():
     # Get current team ID
     team_id = get_current_team_id()
     
-    # Only the season (and squad) being viewed, like the other stats pages
-    games = scope_games(Game.query.filter_by(
-        team_organization_id=team_id
-    )).order_by(Game.date.desc()).all()
-    
-    # Player stats from those games only
+    # The season (and squad) being viewed, like the rest of the stats
+    games = (scope_games(Game.query.filter_by(team_organization_id=team_id), team_id)
+             .order_by(Game.date.desc()).all())
     all_player_stats = GameDayPlayerStats.query.filter(
         GameDayPlayerStats.team_organization_id == team_id,
-        GameDayPlayerStats.game_id.in_([g.id for g in games])
+        GameDayPlayerStats.game_id.in_([g.id for g in games] or [-1]),
     ).all()
+    # Games not played yet (no score, no stats) aren't part of the record
+    with_stats = {st.game_id for st in all_player_stats}
+    games = [g for g in games if (g.our_score or 0) + (g.their_score or 0) > 0 or g.id in with_stats]
     
     # Group stats by player
     player_stats_by_id = {}
@@ -962,11 +963,11 @@ def team_stats():
     # Calculate team totals
     team_totals = {
         'games_played': len(games),
-        'wins': sum(1 for game in games if game.our_score > game.their_score),
-        'losses': sum(1 for game in games if game.our_score < game.their_score),
-        'points_played': sum(game.our_score + game.their_score for game in games),
-        'points_scored': sum(game.our_score for game in games),
-        'points_conceded': sum(game.their_score for game in games),
+        'wins': sum(1 for game in games if (game.our_score or 0) > (game.their_score or 0)),
+        'losses': sum(1 for game in games if (game.our_score or 0) < (game.their_score or 0)),
+        'points_played': sum((game.our_score or 0) + (game.their_score or 0) for game in games),
+        'points_scored': sum(game.our_score or 0 for game in games),
+        'points_conceded': sum(game.their_score or 0 for game in games),
         'goals': sum(stats['goals'] for stats in player_stats),
         'assists': sum(stats['assists'] for stats in player_stats),
         'blocks': sum(stats['blocks'] for stats in player_stats),
@@ -996,7 +997,8 @@ def team_stats():
         player_stats=player_stats,
         team_totals=team_totals,
         season=viewing_season(team_id),
-        squad=viewing_squad(team_id)
+        tournaments=scope_tournaments(Tournament.query.filter_by(team_organization_id=team_id), team_id)
+            .order_by(Tournament.start_date.desc()).all(),
     )
 
 from app.utils.team_filter import get_current_team_id

@@ -11,6 +11,7 @@ from app.models.point import LineUp
 from app.models.event import Event, Pull
 from app.models.scouting import OpponentPlayer
 from app.models.session import Attendance, SessionRSVP
+from app.models.feedback import PlayerFeedback
 from app.utils.utils import coach_required
 from app.utils.permissions import can_manage_account
 from app.models.team_organization import TeamOrganization
@@ -500,15 +501,47 @@ def player_detail(player_id):
     
     # Pass current date for filtering upcoming sessions
     now = datetime.now().date()
-    
+
+    # Coaches see every note; the player sees the ones shared with them
+    feedback = PlayerFeedback.query.filter_by(player_id=player.id)
+    if not current_user.is_coach:
+        feedback = feedback.filter_by(shared=True)
+    recent_feedback = feedback.order_by(PlayerFeedback.created_at.desc()).limit(5).all()
+
+    # Roles this season, what they'd like, and earlier seasons' roles
+    from app.routes.roles import roles_season
+    from app.utils import roles as team_roles_util
+    role_season = roles_season(player.team_organization_id)
+    role_roster = roster_entry(player, role_season)
+    role_history = [(row.season, [r.role.name for r in team_roles_util.player_roles(row)])
+                    for row in sorted(player.season_entries, key=lambda r: r.season.start_date, reverse=True)
+                    if row.season_id != (role_season.id if role_season else None) and row.roles]
+    role_history = [(season, names) for season, names in role_history if names]
+    # The plays their roles are in (playbook switched on)
+    role_plays = []
+    settings = TeamSettings.query.filter_by(team_id=player.team_organization_id).first()
+    if settings is None or settings.playbook_enabled:
+        by_role = team_roles_util.plays_by_role(player.team_organization_id)
+        role_plays = [(r.role, by_role[r.role_id]) for r in team_roles_util.player_roles(role_roster)
+                      if by_role.get(r.role_id)]
+
     return render_template(
-        'team/player_detail.html', 
-        player=player, 
+        'team/player_detail.html',
+        player=player,
         season_rows=player_seasons(player),
         now=now,
         games_played=games_played,
         points_played=points_played,
-        recent_games=recent_games
+        recent_games=recent_games,
+        recent_feedback=recent_feedback,
+        feedback_tags=PlayerFeedback.CONTEXT_TAGS,
+        role_season=role_season,
+        on_role_roster=role_roster is not None,
+        my_roles=team_roles_util.player_roles(role_roster),
+        wanted_roles=team_roles_util.player_roles(role_roster, 'preferred'),
+        team_roles=team_roles_util.team_roles(player.team_organization_id),
+        role_history=role_history,
+        role_plays=role_plays,
     )
 
 
@@ -533,10 +566,6 @@ def update_player_goals(player_id):
         player.mid_term_goals = request.form.get('mid_term_goals')
         player.long_term_goals = request.form.get('long_term_goals')
         player.skills_to_develop = request.form.get('skills_to_develop')
-        
-        # Only admins and coaches can update feedback
-        if current_user.is_admin or (hasattr(current_user, 'role') and current_user.role == 'coach'):
-            player.coach_feedback = request.form.get('coach_feedback')
         
         db.session.commit()
         flash('Player goals updated successfully!', 'success')

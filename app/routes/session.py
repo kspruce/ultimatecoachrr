@@ -11,11 +11,11 @@ from datetime import datetime, timedelta
 import json
 from jinja2.utils import htmlsafe_json_dumps
 import base64
-import hashlib
 import hmac
 from flask_wtf.csrf import CSRFProtect
 from app.utils.utils import admin_required, coach_required
 from app.utils.season import scope_sessions
+from app.utils.editor_diagrams import save_editor_diagrams
 from app.forms.session import (
     SessionRSVPForm, SessionPlanForm, DrillForm, 
     SessionComponentForm, SessionFilterForm, AdminBulkRSVPForm,
@@ -326,11 +326,6 @@ def drill_diagram_svg(diagram_id, filename):
 
 
 # Drill API Routes (used by the drill editor, static/js/drill_editor.js)
-EDITOR_DIAGRAM_ORDER = 1000  # after any imported diagrams
-MAX_EDITOR_PNG = 5 * 1024 * 1024
-MAX_EDITOR_TEXT = 2 * 1024 * 1024
-MAX_EDITOR_STAGES = 20
-
 
 def _int_or_none(value):
     try:
@@ -352,67 +347,6 @@ def _apply_editor_fields(drill, data):
     drill.is_public = bool(data.get('is_public'))
 
 
-def _save_editor_diagram(drill):
-    """Store the posted drawing as the drill's editor diagrams: a PNG and an
-    SVG per stage, with the editor's JSON on the first. Returns an error
-    message, or None."""
-    pngs = request.files.getlist('diagram')
-    editor = request.form.get('editor')
-    if not pngs or not editor:
-        return None  # details only
-    if len(pngs) > MAX_EDITOR_STAGES:
-        return f'A drill can have up to {MAX_EDITOR_STAGES} stages.'
-    images = []
-    for png in pngs:
-        png_bytes = png.read(MAX_EDITOR_PNG + 1)
-        if len(png_bytes) > MAX_EDITOR_PNG or not png_bytes.startswith(b'\x89PNG\r\n\x1a\n'):
-            return 'The diagram image is not a PNG or is too large.'
-        images.append(png_bytes)
-    svgs = request.form.getlist('svg')
-    names = request.form.getlist('stage_name')
-    notes = request.form.getlist('stage_notes')
-    if len(editor) > MAX_EDITOR_TEXT or any(len(svg) > MAX_EDITOR_TEXT for svg in svgs):
-        return 'The diagram is too large to save.'
-    try:
-        json.loads(editor)
-    except ValueError:
-        return 'The diagram data is not valid.'
-
-    def item(values, i):
-        return (values[i].strip() or None) if i < len(values) else None
-
-    existing = drill.editor_diagrams
-    for old in existing[len(images):]:
-        drill.diagrams.remove(old)  # delete-orphan cascade removes the row
-    saved = []
-    for i, png_bytes in enumerate(images):
-        if i < len(existing):
-            diagram = existing[i]
-        else:
-            diagram = DrillDiagram(source='Drill editor', team_organization_id=drill.team_organization_id)
-            drill.diagrams.append(diagram)
-        svg = item(svgs, i)
-        diagram.order = EDITOR_DIAGRAM_ORDER + i
-        # A single drawing needs no "Stage 1" heading
-        diagram.step_label = (item(names, i) or f'Stage {i + 1}')[:100] if len(images) > 1 else None
-        diagram.caption = (item(notes, i) or '')[:255] or None
-        diagram.image_data = base64.b64encode(png_bytes).decode('ascii')
-        diagram.image_mime = 'image/png'
-        diagram.image_hash = hashlib.sha256(png_bytes).hexdigest()
-        diagram.svg_data = svg
-        diagram.svg_hash = hashlib.sha256(svg.encode()).hexdigest() if svg else None
-        diagram.editor_json = editor if i == 0 else json.dumps({'stage': i + 1})
-        saved.append(diagram)
-    db.session.flush()  # the URLs need the ids
-    for diagram in saved:
-        diagram.image_url = url_for('session.drill_diagram_image', diagram_id=diagram.id,
-                                    filename=f'{diagram.image_hash[:16]}.png')
-        diagram.svg_url = (url_for('session.drill_diagram_svg', diagram_id=diagram.id,
-                                   filename=f'{diagram.svg_hash[:16]}.svg')
-                           if diagram.svg_hash else None)
-    return None
-
-
 def _editor_payload():
     try:
         return json.loads(request.form.get('data') or '{}')
@@ -428,7 +362,7 @@ def create_drill():
     drill = SavedDrill(created_by=current_user.id, team_organization_id=get_current_team_id())
     _apply_editor_fields(drill, _editor_payload())
     db.session.add(drill)
-    error = _save_editor_diagram(drill)
+    error = save_editor_diagrams(drill)
     if error:
         db.session.rollback()
         return jsonify({'success': False, 'message': error}), 400
@@ -465,7 +399,7 @@ def manage_drill(drill_id):
 
     if request.method == 'PUT':
         _apply_editor_fields(drill, _editor_payload())
-        error = _save_editor_diagram(drill)
+        error = save_editor_diagrams(drill)
         if error:
             db.session.rollback()
             return jsonify({'success': False, 'message': error}), 400

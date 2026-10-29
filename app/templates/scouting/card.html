@@ -117,6 +117,20 @@ details.card-fold > summary { min-height:auto }
     </details>
     {% endif %}
 
+    {% if report.plays %}
+    <details class="gc-section card-fold" data-fold-key="plays" open>
+      <summary>Plays</summary>
+      <div class="d-flex flex-wrap gap-2">
+        {% for p in report.plays_in_order %}
+        <a href="{{ url_for('playbook.view_play', play_id=p.id) }}" class="btn btn-sm btn-outline-secondary">
+          <span class="badge {{ 'bg-primary' if p.type == 'offense' else 'bg-danger' }} me-1">{{ 'O' if p.type == 'offense' else 'D' }}</span>{{ p.name }}
+        </a>
+        {% endfor %}
+      </div>
+      <a href="{{ url_for('playbook.cards', report=report.id) }}" class="gc-note d-inline-block mt-2">Open them as cards</a>
+    </details>
+    {% endif %}
+
     {% if report.o_line_plan or report.d_line_plan %}
     <details class="gc-section card-fold" data-fold-key="lines" open>
       <summary>Lines</summary>

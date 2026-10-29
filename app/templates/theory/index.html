@@ -1,219 +1,215 @@
 {# templates/theory/index.html #}
 {% extends "base.html" %}
+{% from "theory/_macros.html" import move_buttons, section_menu %}
 
 {% block styles %}
 {{ super() }}
-<style>
-    /* Section card hover */
-    .section-card {
-        transition: box-shadow .2s, transform .2s;
-        text-decoration: none; display: block; height: 100%;
-    }
-    .section-card:hover {
-        transform: translateY(-3px);
-        box-shadow: var(--uc-shadow-md) !important;
-    }
-    /* Topic row in section card */
-    .section-topic-row {
-        display: flex; align-items: center; justify-content: space-between;
-        padding: .45rem 0; font-size: .83rem; color: var(--uc-gray-700);
-        border-bottom: 1px solid var(--uc-gray-100); text-decoration: none;
-        transition: color .12s;
-    }
-    .section-topic-row:last-of-type { border-bottom: none; }
-    .section-topic-row:hover { color: var(--uc-blue); }
-    /* Quick-access pill colours */
-    .qa-icon {
-        width: 48px; height: 48px; border-radius: 14px; display: inline-flex;
-        align-items: center; justify-content: center; font-size: 1.35rem;
-        margin-bottom: .75rem;
-    }
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/theory.css') }}">
 {% endblock %}
 
 {% block content %}
-<div class="container py-4">
+<div class="container th-page">
 
-    <!-- Page header -->
-    <div class="uc-page-header mb-4">
-        <div>
-            <h2>Theory Hub</h2>
-            <p>Guides and resources to elevate your game</p>
-        </div>
-        {% if current_user.is_admin %}
-        <div class="d-flex gap-2">
-            <a href="{{ url_for('theory.add_section') }}" class="btn btn-outline-secondary">
-                <i class="bi bi-folder-plus me-1"></i>Add Section
-            </a>
-            <a href="{{ url_for('theory.add_topic') }}" class="btn btn-primary">
-                <i class="bi bi-plus-lg me-1"></i>Add Topic
-            </a>
-        </div>
-        {% endif %}
+  <div class="th-head">
+    <div>
+      <h1>Theory</h1>
+      <p>Guides from the coaches: how we play and why.</p>
     </div>
-
-    {% if sections %}
-
-    {# ── Quick-access cards (first 4 sections) ─────────────── #}
-    {% set qa_styles = [
-        ('bi-shield-fill',    'uc-blue',   'rgba(59,130,246,.1)'),
-        ('bi-disc-fill',      'uc-teal',   'rgba(20,184,166,.1)'),
-        ('bi-lightning-fill', 'uc-amber',  'rgba(245,158,11,.1)'),
-        ('bi-diagram-3-fill', 'uc-purple', 'rgba(139,92,246,.1)'),
-    ] %}
-    <div class="row g-3 mb-5">
-        {% for section in sections[:4] %}
-        {% set style = qa_styles[loop.index0 % qa_styles|length] %}
-        <div class="col-sm-6 col-lg-3">
-            <a href="{{ url_for('theory.section', slug=section.slug) }}"
-               class="card section-card text-decoration-none">
-                <div class="card-body text-center py-4 px-3">
-                    <div class="qa-icon" style="background:{{ style[2] }};color:var(--{{ style[1] }})">
-                        <i class="bi {{ style[0] }}"></i>
-                    </div>
-                    <div style="font-weight:700;font-size:.9rem;color:var(--uc-gray-800);margin-bottom:.25rem">
-                        {{ section.name }}
-                    </div>
-                    {% if section.description %}
-                    <div style="font-size:.78rem;color:var(--uc-gray-400);line-height:1.45">
-                        {{ (section.description or "")|truncate(60) }}
-                    </div>
-                    {% endif %}
-                    {% set tc = section.topics.count() %}
-                    {% if tc %}
-                    <div class="mt-2" style="font-size:.72rem;font-weight:700;color:var(--{{ style[1] }})">
-                        {{ tc }} topic{{ 's' if tc != 1 }}
-                    </div>
-                    {% endif %}
-                </div>
-            </a>
-        </div>
-        {% endfor %}
-    </div>
-
-    {# ── All sections ────────────────────────────────────────── #}
-    <div style="font-size:.78rem;color:var(--uc-gray-400);font-weight:700;
-                letter-spacing:.08em;text-transform:uppercase;margin-bottom:1rem">
-        All Sections
-    </div>
-
-    <div class="row g-3">
-        {% for section in sections %}
-        <div class="col-md-6">
-            <div class="card h-100">
-                <div class="card-body p-0">
-
-                    <!-- Card header -->
-                    <div class="d-flex align-items-center justify-content-between px-4 pt-4 pb-3"
-                         style="border-bottom:1px solid var(--uc-gray-100)">
-                        <a href="{{ url_for('theory.section', slug=section.slug) }}"
-                           class="text-decoration-none d-flex align-items-center gap-2 flex-grow-1 min-w-0">
-                            {# Accent icon colour cycles through palette #}
-                            {% set palette = ['uc-blue','uc-teal','uc-amber','uc-purple','uc-sky','uc-green'] %}
-                            {% set c = palette[loop.index0 % palette|length] %}
-                            <div style="width:32px;height:32px;border-radius:9px;flex-shrink:0;
-                                        background:color-mix(in srgb, var(--club-ink) 8%, transparent);display:flex;
-                                        align-items:center;justify-content:center;
-                                        color:var(--{{ c }});font-size:.9rem">
-                                <i class="bi bi-book-fill"></i>
-                            </div>
-                            <span style="font-weight:700;font-size:.9rem;color:var(--uc-gray-800);
-                                         overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-                                {{ section.name }}
-                            </span>
-                        </a>
-                        {% set tc = section.topics.count() %}
-                        {% if tc %}
-                        <span class="badge ms-2 flex-shrink-0"
-                              style="background:var(--uc-gray-100);color:var(--uc-gray-500);font-size:.7rem">
-                            {{ tc }}
-                        </span>
-                        {% endif %}
-                    </div>
-
-                    <!-- Description -->
-                    {% if section.description %}
-                    <p class="px-4 pt-3 mb-0" style="font-size:.83rem;color:var(--uc-gray-500);line-height:1.55">
-                        {{ section.description }}
-                    </p>
-                    {% endif %}
-
-                    <!-- Topic preview list -->
-                    {% set preview_topics = section.topics.order_by('order').limit(3).all() %}
-                    {% if preview_topics %}
-                    <div class="px-4 py-3">
-                        {% for topic in preview_topics %}
-                        <a href="{{ url_for('theory.topic', topic_id=topic.id) }}"
-                           class="section-topic-row">
-                            <div class="d-flex align-items-center gap-2 flex-grow-1 min-w-0">
-                                <i class="bi bi-file-text flex-shrink-0"
-                                   style="color:var(--uc-blue);font-size:.78rem"></i>
-                                <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ topic.name }}</span>
-                            </div>
-                            <div class="d-flex gap-1 ms-2 flex-shrink-0">
-                                {% if topic.related_videos %}
-                                <span class="badge" style="background:color-mix(in srgb, var(--info) 12%, transparent);color:var(--uc-sky);font-size:.65rem">
-                                    <i class="bi bi-camera-video"></i>
-                                </span>
-                                {% endif %}
-                                {% if topic.image_url %}
-                                <span class="badge" style="background:color-mix(in srgb, var(--ok) 10%, transparent);color:var(--uc-green);font-size:.65rem">
-                                    <i class="bi bi-image"></i>
-                                </span>
-                                {% endif %}
-                            </div>
-                        </a>
-                        {% endfor %}
-                        {% if section.topics.count() > 3 %}
-                        <a href="{{ url_for('theory.section', slug=section.slug) }}"
-                           style="display:block;text-align:center;font-size:.78rem;color:var(--uc-blue);
-                                  font-weight:600;text-decoration:none;padding-top:.6rem">
-                            View all {{ section.topics.count() }} topics <i class="bi bi-arrow-right ms-1"></i>
-                        </a>
-                        {% endif %}
-                    </div>
-                    {% else %}
-                    <div class="px-4 py-3">
-                        <span style="font-size:.83rem;color:var(--uc-gray-300)">No topics yet.</span>
-                    </div>
-                    {% endif %}
-
-                </div>
-
-                {% if current_user.is_admin %}
-                <div class="card-footer" style="background:transparent;border-top:1px solid var(--uc-gray-100);padding:.6rem 1rem">
-                    <div class="d-flex gap-2">
-                        <a href="{{ url_for('theory.edit_section', section_id=section.id) }}"
-                           class="btn btn-sm btn-outline-secondary">
-                            <i class="bi bi-pencil me-1"></i>Edit
-                        </a>
-                        <a href="{{ url_for('theory.add_topic', section_id=section.id) }}"
-                           class="btn btn-sm btn-outline-primary">
-                            <i class="bi bi-plus-lg me-1"></i>Add Topic
-                        </a>
-                    </div>
-                </div>
-                {% endif %}
-
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-
-    {% else %}
-    <div class="card">
-        <div class="uc-empty">
-            <div class="uc-empty-icon"><i class="bi bi-mortarboard"></i></div>
-            <h5>No Theory Sections Yet</h5>
-            <p>Create sections and topics to build your team's learning hub.</p>
-            {% if current_user.is_admin %}
-            <a href="{{ url_for('theory.add_section') }}" class="btn btn-primary">
-                <i class="bi bi-plus-lg me-1"></i>Add First Section
-            </a>
-            {% endif %}
-        </div>
+    {% if can_edit %}
+    <div class="dropdown flex-shrink-0">
+      <button class="btn btn-primary th-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="bi bi-plus-lg"></i><span>New</span>
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        <li><a class="dropdown-item" href="{{ url_for('theory.add_topic') }}"><i class="bi bi-file-earmark-text me-2"></i>Topic</a></li>
+        <li><a class="dropdown-item" href="{{ url_for('theory.add_section') }}"><i class="bi bi-folder-plus me-2"></i>Section</a></li>
+        <li><a class="dropdown-item" href="{{ url_for('theory.import_cards') }}"><i class="bi bi-upload me-2"></i>Import cards</a></li>
+      </ul>
     </div>
     {% endif %}
+  </div>
+
+  {% if sections %}
+
+  {% if total_published %}
+  <div class="mb-3">
+    <div class="d-flex justify-content-between mb-1" style="font-size:.86rem;color:var(--ink-2)">
+      <span>You've read <strong>{{ total_read }}</strong> of {{ total_published }} topic{{ 's' if total_published != 1 }}</span>
+      <span>{{ (total_read / total_published * 100)|round|int }}%</span>
+    </div>
+    <div class="th-progress" role="progressbar" aria-valuemin="0" aria-valuemax="{{ total_published }}" aria-valuenow="{{ total_read }}"
+         aria-label="Topics read"><span style="width:{{ (total_read / total_published * 100)|round|int }}%"></span></div>
+  </div>
+  {% endif %}
+
+  <form method="GET" action="{{ url_for('theory.index') }}" role="search" class="th-search">
+    <i class="bi bi-search" aria-hidden="true"></i>
+    <input type="search" name="q" value="{{ q }}" class="form-control" placeholder="Search topics" aria-label="Search topics"
+           enterkeyhint="search" autocomplete="off">
+    {% if tag %}<input type="hidden" name="tag" value="{{ tag }}">{% endif %}
+  </form>
+  {% if tag_names %}
+  <div class="th-chips" aria-label="Filter by tag">
+    {% for name in tag_names %}
+    <a class="th-chip {% if tag|lower == name|lower %}active{% endif %}"
+       href="{{ url_for('theory.index', q=q or None, tag=None if tag|lower == name|lower else name) }}"
+       {% if tag|lower == name|lower %}aria-current="true"{% endif %}>{{ name }}</a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if results is not none %}
+  {# ── Search results ───────────────────────────────────────── #}
+  <div class="d-flex align-items-center justify-content-between mt-2 mb-2">
+    <div style="font-size:.9rem;color:var(--ink-2)">
+      {{ results|length }} result{{ 's' if results|length != 1 }}{% if q %} for “{{ q }}”{% endif %}{% if tag %} tagged <strong>{{ tag }}</strong>{% endif %}
+    </div>
+    <a href="{{ url_for('theory.index') }}" class="btn btn-link btn-sm">Clear</a>
+  </div>
+  {% if results %}
+  <div class="th-list">
+    {% for t in results %}
+    <a class="th-row" href="{{ url_for('theory.topic', topic_id=t.id) }}">
+      <div class="th-row-text">
+        <div class="th-row-title">{{ t.name }}</div>
+        <div class="th-row-sub">{{ t.section.name }}{% if q %} · {{ snippet(t, q) }}{% endif %}</div>
+        <div class="th-row-meta">
+          {% if not t.published %}<span class="th-badge draft">Draft</span>{% endif %}
+          {% if t.id in read %}<span class="th-badge read"><i class="bi bi-check2"></i>Read</span>{% endif %}
+          {% for x in t.tags %}<span class="th-badge">{{ x.name }}</span>{% endfor %}
+        </div>
+      </div>
+      <i class="bi bi-chevron-right th-chev" aria-hidden="true"></i>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="th-list th-empty"><i class="bi bi-search"></i>Nothing matches. Try fewer or different words.</div>
+  {% endif %}
+
+  {% else %}
+
+  {# ── Assigned reading ─────────────────────────────────────── #}
+  {% if assigned %}
+  <div class="th-label">{{ 'Assigned reading' if can_edit else 'Assigned to you' }}</div>
+  <div class="th-list">
+    {% for a in assigned %}
+    {% set done = a.topic_id in read %}
+    <a class="th-row" href="{{ url_for('theory.readers', topic_id=a.topic_id) if can_edit else url_for('theory.topic', topic_id=a.topic_id) }}">
+      <span class="th-row-num {% if done %}done{% endif %}" aria-hidden="true"><i class="bi {{ 'bi-check-lg' if done else 'bi-bookmark' }}"></i></span>
+      <div class="th-row-text">
+        <div class="th-row-title">{{ a.topic.name }}</div>
+        <div class="th-row-sub">{{ a.topic.section.name }}{% if a.note %} · {{ a.note }}{% endif %}</div>
+        <div class="th-row-meta">
+          {% if a.due_date %}<span class="th-badge due"><i class="bi bi-calendar-event"></i>Read by {{ a.due_date.strftime('%a %-d %b') }}</span>{% endif %}
+          {% if can_edit %}<span class="th-badge">{{ read_counts.get(a.topic_id, 0) }} of {{ readers_count }} read</span>{% endif %}
+          {% if not a.topic.published %}<span class="th-badge draft">Draft: players can't see it yet</span>{% endif %}
+          {% if done and not can_edit %}<span class="th-badge read">Done</span>{% endif %}
+        </div>
+      </div>
+      <i class="bi bi-chevron-right th-chev" aria-hidden="true"></i>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {# ── Continue reading ─────────────────────────────────────── #}
+  {% if continue_topic %}
+  <div class="th-label">Continue reading</div>
+  <a class="th-card d-flex align-items-center gap-3" href="{{ url_for('theory.topic', topic_id=continue_topic.id) }}">
+    <div class="flex-grow-1" style="min-width:0">
+      <div class="th-card-kicker">{{ continue_topic.section.name }}</div>
+      <div class="th-card-title">{{ continue_topic.name }}</div>
+    </div>
+    <i class="bi bi-arrow-right-circle-fill" style="font-size:1.8rem;color:var(--club-ink)" aria-hidden="true"></i>
+  </a>
+  {% endif %}
+
+  {# ── Drafts (coaches) ─────────────────────────────────────── #}
+  {% if can_edit and drafts %}
+  <div class="th-label">Your team's drafts</div>
+  <div class="th-list">
+    {% for t in drafts %}
+    <a class="th-row" href="{{ url_for('theory.topic', topic_id=t.id) }}">
+      <div class="th-row-text">
+        <div class="th-row-title">{{ t.name }}</div>
+        <div class="th-row-sub">{{ t.section.name }}{% if t.last_edited_at %} · edited {{ t.last_edited_at.strftime('%-d %b') }}{% endif %}</div>
+      </div>
+      <span class="th-badge draft">Draft</span>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {# ── Sections ─────────────────────────────────────────────── #}
+  <div class="th-label">Sections</div>
+  <div class="th-list">
+    {% for section in sections %}
+    {% set topics = by_section.get(section.id, []) %}
+    {% set live = topics|selectattr('published')|list %}
+    {% set done = live|selectattr('id', 'in', read)|list|length %}
+    <div class="th-row">
+      <a class="th-row-main" href="{{ url_for('theory.section', slug=section.slug) }}">
+        <div class="th-row-text">
+          <div class="th-row-title">{{ section.name }}</div>
+          {% if section.description %}<div class="th-row-sub">{{ section.description }}</div>{% endif %}
+          <div class="d-flex align-items-center gap-2 mt-2">
+            {% if live %}
+            <div class="th-progress flex-grow-1" style="max-width:160px" aria-hidden="true"><span style="width:{{ (done / live|length * 100)|round|int }}%"></span></div>
+            <span style="font-size:.8rem;color:var(--ink-3);white-space:nowrap">{{ done }}/{{ live|length }} read</span>
+            {% else %}
+            <span style="font-size:.8rem;color:var(--ink-3)">No topics yet</span>
+            {% endif %}
+            {% if can_edit and topics|length > live|length %}<span class="th-badge draft">{{ topics|length - live|length }} draft{{ 's' if topics|length - live|length != 1 }}</span>{% endif %}
+          </div>
+        </div>
+        {% if not can_edit %}<i class="bi bi-chevron-right th-chev" aria-hidden="true"></i>{% endif %}
+      </a>
+      {% if can_edit %}
+      <div class="th-row-end">
+        {{ move_buttons(url_for('theory.move_section', section_id=section.id), section.name, loop.first, loop.last) }}
+        {{ section_menu(section, topics|length, loop.first, loop.last) }}
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  {# ── Recently updated ─────────────────────────────────────── #}
+  {% if recent %}
+  <div class="th-label">Recently updated</div>
+  <div class="th-list">
+    {% for t in recent %}
+    <a class="th-row" href="{{ url_for('theory.topic', topic_id=t.id) }}">
+      <div class="th-row-text">
+        <div class="th-row-title">{{ t.name }}</div>
+        <div class="th-row-sub">{{ t.section.name }}{% if t.last_edited_at %} · {{ t.last_edited_at.strftime('%-d %b') }}{% endif %}</div>
+      </div>
+      {% if t.id in read %}<span class="th-badge read"><i class="bi bi-check2"></i>Read</span>{% else %}<i class="bi bi-chevron-right th-chev" aria-hidden="true"></i>{% endif %}
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% endif %}{# results #}
+
+  {% else %}
+  <div class="th-list th-empty">
+    <i class="bi bi-mortarboard"></i>
+    {% if can_edit %}
+    <p class="mb-3">Start with a section (e.g. Offence, Defence, Throwing), then add topics to it.</p>
+    <a href="{{ url_for('theory.add_section') }}" class="btn btn-primary th-btn"><i class="bi bi-folder-plus"></i>Create the first section</a>
+    <a href="{{ url_for('theory.import_cards') }}" class="btn btn-outline-secondary th-btn ms-1"><i class="bi bi-upload"></i>Import cards</a>
+    {% else %}
+    <p class="mb-0">Nothing here yet. Your coaches' guides will show up here.</p>
+    {% endif %}
+  </div>
+  {% endif %}
 
 </div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/theory.js') }}"></script>
 {% endblock %}

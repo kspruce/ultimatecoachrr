@@ -1,0 +1,79 @@
+{# templates/theory/readers.html: who has read a topic, and asking the team to read it #}
+{% extends "base.html" %}
+
+{% block styles %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/theory.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container th-page" style="max-width:760px">
+  <nav class="th-crumbs" aria-label="Breadcrumb">
+    <a href="{{ url_for('theory.index') }}">Theory</a><span aria-hidden="true">›</span>
+    <a href="{{ url_for('theory.section', slug=topic.section.slug) }}">{{ topic.section.name }}</a><span aria-hidden="true">›</span>
+    <a href="{{ url_for('theory.topic', topic_id=topic.id) }}">{{ topic.name }}</a>
+  </nav>
+  <div class="th-head">
+    <div>
+      <h1>Who's read it</h1>
+      <p>{{ read_count }} of {{ people|length }} on the team {{ 'has' if read_count == 1 else 'have' }} marked “{{ topic.name }}” as read.</p>
+    </div>
+  </div>
+
+  {% if people %}
+  <div class="th-progress mb-3" aria-hidden="true"><span style="width:{{ (read_count / people|length * 100)|round|int }}%"></span></div>
+  {% endif %}
+
+  {# Asking the team to read it #}
+  <div class="th-form-card">
+    <h2 class="h6 fw-bold mb-1">{{ 'Assigned to the team' if topic.assignment else 'Ask the team to read this' }}</h2>
+    <p class="small text-muted">
+      {% if not topic.published %}It's a draft: players will see the assignment once it's published.
+      {% else %}It goes at the top of the Theory page and the home page for everyone who hasn't read it.{% endif %}
+    </p>
+    <form method="POST" class="th-form" novalidate>
+      {{ form.hidden_tag() }}
+      <div class="row g-2">
+        <div class="col-sm-5">
+          <label class="form-label" for="due_date">Read by <span class="fw-normal text-muted">(optional)</span></label>
+          {{ form.due_date(class="form-control" + (" is-invalid" if form.due_date.errors else ""), type="date") }}
+          {% for e in form.due_date.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        </div>
+        <div class="col-sm-7">
+          <label class="form-label" for="note">Note <span class="fw-normal text-muted">(optional)</span></label>
+          {{ form.note(class="form-control", placeholder="e.g. Before Saturday's session") }}
+        </div>
+      </div>
+      <div class="d-flex flex-wrap gap-2 mt-3">
+        <button type="submit" class="btn btn-primary th-btn"><i class="bi bi-bookmark-check"></i>{{ 'Save' if topic.assignment else 'Assign to the team' }}</button>
+      </div>
+    </form>
+    {% if topic.assignment %}
+    <form method="POST" action="{{ url_for('theory.unassign', topic_id=topic.id) }}" class="mt-2">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn btn-link px-0 text-danger">Stop asking the team to read it</button>
+    </form>
+    {% endif %}
+  </div>
+
+  <div class="th-label">The team</div>
+  {% if people %}
+  <div class="th-list">
+    {% for user, name, when in people %}
+    <div class="th-row" style="min-height:52px">
+      <span class="th-row-num {% if when %}done{% endif %}" aria-hidden="true"><i class="bi {{ 'bi-check-lg' if when else 'bi-dash' }}"></i></span>
+      <div class="th-row-text"><div class="th-row-title" style="font-weight:600">{{ name }}</div></div>
+      {% if when %}<span class="th-badge read">Read {{ when.strftime('%-d %b') }}</span>{% else %}<span class="th-badge">Not yet</span>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="th-list th-empty">Nobody on the team yet.</div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/theory.js') }}"></script>
+{% endblock %}

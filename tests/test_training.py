@@ -2,6 +2,8 @@
 before the plan is written, coaches see everyone at once, plans are built
 on one page, the register starts from the answers, and reminders go to the
 maybes."""
+import csv
+import io
 from datetime import date, time, timedelta
 
 import pytest
@@ -307,9 +309,12 @@ def test_grid_csv_round_trip(app, club, week):
     rsvp.set_usual(week['sat'], club['bea'], 'maybe')
     db.session.commit()
     csv_text = c.get('/sessions/availability/grid.csv').get_data(as_text=True)
-    header, *rows = csv_text.strip().splitlines()
-    assert header.startswith('Player,Squad,' + sat.date.isoformat() + ' Saturday')
-    assert any(r.startswith(club['ann'].name + ',1s,Yes') for r in rows)
+    header, *rows = csv.reader(io.StringIO(csv_text.strip()))
+    # Sessions run in date order, so where Saturday falls depends on today
+    assert header[:2] == ['Player', 'Squad']
+    sat_column = header.index(f'{sat.date.isoformat()} Saturday')
+    ann_row = next(r for r in rows if r[0] == club['ann'].name)
+    assert ann_row[1] == '1s' and ann_row[sat_column] == 'Yes'
     assert 'Maybe (usual)' in csv_text
 
     # Importing it back changes nothing (usual answers stay usual)
@@ -456,7 +461,8 @@ def email(app):
 
 def test_maybes_and_no_answers_get_one_reminder(app, club, week, email):
     team_id = club['team'].id
-    session = week['wed'].sessions.order_by(SessionPlan.date).first()  # within a week
+    # Reminders cover tomorrow onwards, so not today's session on a Wednesday
+    session = next(s for s in week['wed'].sessions.order_by(SessionPlan.date) if s.date > TODAY)
     ann, yes, no = club['ann'], club['players'][1], club['players'][2]
     rsvp.set_rsvp(session, ann, 'maybe')
     rsvp.set_rsvp(session, yes, 'yes')

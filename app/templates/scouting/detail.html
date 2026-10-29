@@ -156,6 +156,18 @@
                 <div class="section-kicker">D-line</div><div style="font-size:.88rem">{{ report.d_line_plan|nl2br }}</div></div></div>
               {% endif %}
             </div>
+            {% if report.plays %}
+            <div class="plan-block mt-3"><div class="section-kicker">Plays to run</div>
+              <div class="d-flex flex-wrap gap-2 mt-1">
+                {% for p in report.plays_in_order %}
+                <a href="{{ url_for('playbook.view_play', play_id=p.id) }}" class="btn btn-sm btn-outline-secondary">
+                  <span class="badge {{ 'bg-primary' if p.type == 'offense' else 'bg-danger' }} me-1">{{ 'O' if p.type == 'offense' else 'D' }}</span>{{ p.name }}
+                </a>
+                {% endfor %}
+              </div>
+              <a href="{{ url_for('playbook.cards', report=report.id) }}" class="small d-inline-block mt-2"><i class="bi bi-phone me-1"></i>Game-day cards for these plays</a>
+            </div>
+            {% endif %}
           {% else %}
             <p class="text-muted small mb-2">No game plan yet: the two or three things the team needs to know to beat {{ report.team_name }}.</p>
             {% if current_user.is_coach %}

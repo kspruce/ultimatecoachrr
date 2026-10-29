@@ -54,6 +54,8 @@
         background: var(--card); border: 1px solid var(--uc-gray-200);
         box-shadow: var(--uc-shadow-sm);
     }
+    .pb-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; max-width: 560px; }
+    .pb-stats .uc-stat-pill { min-width: 0; padding-left: .5rem; padding-right: .5rem; text-align: center; }
     .uc-stat-pill .stat-num { font-size: 1.75rem; font-weight: 800; line-height: 1; }
     .uc-stat-pill .stat-lbl { font-size: .75rem; color: var(--uc-gray-400); font-weight: 600; margin-top: .25rem; letter-spacing: .04em; text-transform: uppercase; }
 
@@ -89,31 +91,31 @@
             <h2>Playbook</h2>
             <p>Offensive and defensive strategies for your team</p>
         </div>
-        <div class="d-flex gap-2">
-            {% if current_user.is_admin %}
-            <a href="{{ url_for('playbook.add_play') }}" class="btn btn-primary">
-                <i class="bi bi-plus-lg me-1"></i>Add Play
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{{ url_for('playbook.cards') }}" class="btn btn-outline-primary">
+                <i class="bi bi-phone me-1"></i>Game-day cards
             </a>
-            <a href="{{ url_for('playbook.add_formation') }}" class="btn btn-outline-secondary">
-                <i class="bi bi-plus-lg me-1"></i>Add Concept
+            {% if current_user.is_admin %}
+            <a href="{{ url_for('playbook.draw_play') }}" class="btn btn-primary">
+                <i class="bi bi-pencil-square me-1"></i>Draw a Play
             </a>
             {% endif %}
-            <a href="{{ url_for('playbook.position_view') }}" class="btn btn-outline-secondary">
-                <i class="bi bi-person-badge me-1"></i>By Position
-            </a>
-            <div class="btn-group">
-                <a href="{{ url_for('playbook.export_pdf') }}" class="btn btn-outline-secondary export-pdf-btn"
-                   id="exportPdfBtn" data-type="">
-                    <i class="bi bi-file-earmark-pdf me-1" id="exportPdfIcon"></i><span id="exportPdfLabel">Export PDF</span>
-                </a>
-                <button type="button" class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split"
-                        data-bs-toggle="dropdown" aria-expanded="false">
-                    <span class="visually-hidden">Export options</span>
+            <div class="dropdown">
+                <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                    More
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">
+                    {% if current_user.is_admin %}
+                    <li><a class="dropdown-item" href="{{ url_for('playbook.add_play') }}"><i class="bi bi-plus-lg me-2"></i>Add a play from a link</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('playbook.add_formation') }}"><i class="bi bi-plus-lg me-2"></i>Add a concept</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    {% endif %}
+                    <li><a class="dropdown-item" href="{{ url_for('playbook.position_view') }}"><i class="bi bi-person-badge me-2"></i>Plays by role</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><h6 class="dropdown-header"><i class="bi bi-file-earmark-pdf me-1"></i>Export PDF</h6></li>
                     <li><a class="dropdown-item export-pdf-btn" data-type="" href="{{ url_for('playbook.export_pdf') }}">Full playbook</a></li>
-                    <li><a class="dropdown-item export-pdf-btn" data-type="offense" href="{{ url_for('playbook.export_pdf', type='offense') }}">Offense only</a></li>
-                    <li><a class="dropdown-item export-pdf-btn" data-type="defense" href="{{ url_for('playbook.export_pdf', type='defense') }}">Defense only</a></li>
+                    <li><a class="dropdown-item export-pdf-btn" data-type="offense" href="{{ url_for('playbook.export_pdf', type='offense') }}">Offence only</a></li>
+                    <li><a class="dropdown-item export-pdf-btn" data-type="defense" href="{{ url_for('playbook.export_pdf', type='defense') }}">Defence only</a></li>
                 </ul>
             </div>
         </div>
@@ -137,7 +139,7 @@
     </div>
 
     <!-- Stats row -->
-    <div class="d-flex gap-3 flex-wrap mb-4">
+    <div class="pb-stats mb-4">
         <div class="uc-stat-pill">
             <span class="stat-num" style="color:var(--uc-indigo)">{{ formations|length }}</span>
             <span class="stat-lbl">Team Concepts</span>
@@ -328,6 +330,9 @@
                         {% for tag in play.tags %}
                         <span class="badge bg-secondary" style="font-size:.7rem" data-tag-id="{{ tag.id }}">{{ tag.name }}</span>
                         {% endfor %}
+                        {% if play.stage_count > 1 %}
+                        <span class="badge bg-success-subtle text-success-emphasis" style="font-size:.7rem"><i class="bi bi-play-fill"></i> {{ play.stage_count }} stages</span>
+                        {% endif %}
                     </div>
                     <i class="bi bi-chevron-down rotate-icon" style="color:var(--uc-gray-400);flex-shrink:0"></i>
                 </div>
@@ -341,7 +346,12 @@
                                 <div class="embed-container">{{ play.ultiplay_embed|embed_html }}</div>
                             {% endif %}
                         {% endif %}
-                        {% if play.image_url %}
+                        {% if play.editor_diagrams %}
+                        <a href="{{ url_for('playbook.view_play', play_id=play.id) }}">
+                            <img src="{{ play.editor_diagrams[0].image_url }}" alt="{{ play.name }} diagram"
+                                 class="img-fluid rounded border mb-3" style="max-height:320px" loading="lazy">
+                        </a>
+                        {% elif play.image_url %}
                         <img src="{{ play.image_url }}" alt="{{ play.name }} diagram"
                              class="img-fluid rounded mb-3" style="max-height:320px">
                         {% endif %}
@@ -421,6 +431,9 @@
                         {% for tag in play.tags %}
                         <span class="badge bg-secondary" style="font-size:.7rem" data-tag-id="{{ tag.id }}">{{ tag.name }}</span>
                         {% endfor %}
+                        {% if play.stage_count > 1 %}
+                        <span class="badge bg-success-subtle text-success-emphasis" style="font-size:.7rem"><i class="bi bi-play-fill"></i> {{ play.stage_count }} stages</span>
+                        {% endif %}
                     </div>
                     <i class="bi bi-chevron-down rotate-icon" style="color:var(--uc-gray-400);flex-shrink:0"></i>
                 </div>
@@ -434,7 +447,12 @@
                                 <div class="embed-container">{{ play.ultiplay_embed|embed_html }}</div>
                             {% endif %}
                         {% endif %}
-                        {% if play.image_url %}
+                        {% if play.editor_diagrams %}
+                        <a href="{{ url_for('playbook.view_play', play_id=play.id) }}">
+                            <img src="{{ play.editor_diagrams[0].image_url }}" alt="{{ play.name }} diagram"
+                                 class="img-fluid rounded border mb-3" style="max-height:320px" loading="lazy">
+                        </a>
+                        {% elif play.image_url %}
                         <img src="{{ play.image_url }}" alt="{{ play.name }} diagram"
                              class="img-fluid rounded mb-3" style="max-height:320px">
                         {% endif %}

@@ -451,14 +451,22 @@
   {# The coaches' newest reading and film #}
   <section class="panel" aria-labelledby="learn-h">
     <div class="panel-h"><h2 id="learn-h">To read &amp; watch</h2>{% if not s or s.theory_enabled %}<a href="{{ url_for('theory.index') }}">Theory →</a>{% elif not s or s.clip_enabled %}<a href="{{ url_for('clip.index') }}">Clips →</a>{% endif %}</div>
+    {% set unseen = unseen_feedback_count() %}
+    {% if unseen %}
+    <div class="item" id="new-feedback">
+      <div class="item-ic"><i class="bi bi-chat-square-heart" aria-hidden="true"></i></div>
+      <a class="item-x" href="{{ url_for('feedback.mine') }}"><b>{{ unseen }} new note{{ 's' if unseen != 1 }} from your coaches</b><small>My Feedback</small></a>
+      <span class="pill">New</span>
+    </div>
+    {% endif %}
     {% for item in learn|default([]) %}
     <div class="item">
       <div class="item-ic"><i class="bi {{ 'bi-mortarboard' if item.kind == 'theory' else 'bi-collection-play' }}" aria-hidden="true"></i></div>
       <a class="item-x" href="{{ item.url }}"><b>{{ item.title }}</b><small>{{ item.meta }}</small></a>
-      {% if item.when and today and (today - item.when.date()).days <= 14 %}<span class="pill">New</span>{% else %}<span class="go" aria-hidden="true">→</span>{% endif %}
+      {% if item.pill %}<span class="pill">{{ item.pill }}</span>{% elif item.when and today and (today - item.when.date()).days <= 14 %}<span class="pill">New</span>{% else %}<span class="go" aria-hidden="true">→</span>{% endif %}
     </div>
     {% else %}
-    <div class="empty">Nothing new from your coaches yet. Theory topics and clip playlists show up here.</div>
+    {% if not unseen %}<div class="empty">Nothing new from your coaches yet. Theory topics and clip playlists show up here.</div>{% endif %}
     {% endfor %}
   </section>
   {% endif %}

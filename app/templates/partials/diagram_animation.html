@@ -1,0 +1,53 @@
+{# Plays a drawing's stages (drill_viewer.js). Needs `animation`, the
+   editor's saved state, and the page to load fabric, drill_diagram.js and
+   drill_viewer.js. A play passes `animation_roles` (the roles its players
+   are) for a picker that picks out one role's path; `?role=` preselects it. #}
+{% set one_stage = (animation.stages or [])|length < 2 %}
+{% set picked_role = request.args.get('role', '') %}
+<div class="card mb-4" id="drill-animation">
+    <div class="card-header d-flex flex-wrap gap-2 align-items-center justify-content-between">
+        <h4 class="mb-0">{{ 'Diagram' if one_stage else 'Animation' }}</h4>
+        {% if animation_roles %}
+        <label class="d-flex align-items-center gap-2 mb-0 small">
+            <span class="text-muted">Show</span>
+            <select class="form-select form-select-sm w-auto" data-animation="role" aria-label="Show one role's path">
+                <option value="">Everyone</option>
+                {% for r in animation_roles %}
+                <option value="{{ r.id }}" {% if picked_role == r.id|string %}selected{% endif %}>{{ r.name }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        {% endif %}
+    </div>
+    <div class="card-body">
+        <div class="animation-canvas border rounded overflow-hidden mb-2"></div>
+        <div class="anim-controls"{% if one_stage %} hidden{% endif %}>
+            <div class="btn-group btn-group-sm anim-buttons" role="group" aria-label="Animation controls">
+                <button type="button" class="btn btn-outline-secondary" data-animation="prev" title="Previous stage"><i class="bi bi-skip-start-fill"></i></button>
+                <button type="button" class="btn btn-success" data-animation="play"><i class="bi bi-play-fill"></i> Play</button>
+                <button type="button" class="btn btn-outline-secondary" data-animation="next" title="Next stage"><i class="bi bi-skip-end-fill"></i></button>
+            </div>
+            <input type="range" class="form-range anim-scrubber"
+                   data-animation="scrubber" min="0" max="1000" step="1" value="0" aria-label="Animation position">
+            <select class="form-select form-select-sm w-auto" data-animation="speed" aria-label="Speed">
+                <option value="0.5">½×</option>
+                <option value="1" selected>1×</option>
+                <option value="2">2×</option>
+            </select>
+        </div>
+        <div class="animation-caption small mt-2"{% if one_stage %} hidden{% endif %}><strong></strong><span class="text-muted"></span></div>
+    </div>
+</div>
+<script id="drill-animation-data" type="application/json">{{ animation|tojson }}</script>
+<style>
+    #drill-animation .anim-controls { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+    #drill-animation [hidden] { display: none !important; }
+    /* session_styles.css stacks button groups on phones; not these */
+    #drill-animation .anim-buttons { display: inline-flex; flex-direction: row; flex-wrap: nowrap; flex: 0 0 auto; }
+    #drill-animation .anim-buttons .btn { flex: 0 0 auto; margin-bottom: 0; }
+    #drill-animation .anim-scrubber { flex: 1 1 120px; width: auto; min-width: 0; }
+    @media (max-width: 767.98px) {
+        #drill-animation .btn { padding: 0.45rem 0.8rem; }
+        #drill-animation .form-range { height: 1.75rem; }
+    }
+</style>

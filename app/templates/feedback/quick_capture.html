@@ -161,6 +161,17 @@ body { background: var(--uc-page-bg); }
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--club-ink) 15%, transparent);
 }
 
+/* Share with the player */
+.qf-share {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    color: var(--uc-gray-600);
+    margin-bottom: 0.65rem;
+    min-height: 32px;
+}
+
 /* Save button */
 .save-btn {
     width: 100%;
@@ -260,6 +271,11 @@ body { background: var(--uc-page-bg); }
                 placeholder="Type your observation…"
                 rows="3"
                 autofocus></textarea>
+
+      <label class="qf-share">
+        <input type="checkbox" class="form-check-input mt-0" id="share-{{ player.id }}">
+        Share with {{ player.name.split(' ')[0] }}
+      </label>
 
       <!-- Save button -->
       <button type="button"
@@ -369,6 +385,7 @@ body { background: var(--uc-page-bg); }
                 player_id: playerId,
                 content: content,
                 context_tag: tag,
+                shared: document.getElementById('share-' + playerId).checked,
             }),
         })
         .then(function (res) { return res.json(); })

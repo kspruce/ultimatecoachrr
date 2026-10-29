@@ -11,6 +11,8 @@ from app.utils.point_flow import get_game_roster, next_point_to_analyse, sync_ga
 from app.stats.throwing import is_break_throw
 import math
 
+from werkzeug.exceptions import HTTPException
+
 bp = Blueprint('stat', __name__, url_prefix='/stats')
 
 
@@ -385,9 +387,11 @@ def undo_cutting_skill(point_id):
         
         return jsonify({'message': 'Cutting skill undone'}), 200
     
+    except HTTPException:
+        raise
     except Exception as e:
         import traceback
-        current_app.logger.error("Error in undo_cutting_skill:", str(e))
+        current_app.logger.error("Error in undo_cutting_skill: %s", e)
         current_app.logger.error(traceback.format_exc())
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
@@ -814,14 +818,21 @@ def record_cutting_skill(point_id):
         db.session.commit()
         
         return jsonify({
+            **cutting_skill.to_dict(),
+            'player_name': player.name,
             'success': True,
             'cutting_skill_id': cutting_skill.id,
             'message': f'Cutting skill recorded for {player.name}'
         }), 201
         
+    except HTTPException:
+        raise
+    except (KeyError, TypeError, ValueError) as e:  # a bad type, outcome or number
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         import traceback
-        current_app.logger.error("Error in record_cutting_skill:", str(e))
+        current_app.logger.error("Error in record_cutting_skill: %s", e)
         current_app.logger.error(traceback.format_exc())
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500

@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}{% if report %}Plays vs {{ report.team_name }}{% else %}Game-day cards{% endif %}{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<style>
+.gd-wrap { max-width: 680px; margin: 0 auto; }
+.gd-filters { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: 1rem; }
+.gd-filters a { border: 1px solid var(--rule); border-radius: 99px; padding: .35rem .9rem; font-size: .88rem;
+                text-decoration: none; color: var(--ink); min-height: 36px; display: inline-flex; align-items: center; }
+.gd-filters a.active { background: var(--club, var(--uc-blue)); border-color: transparent; color: #fff; }
+.gd-card { background: var(--card, var(--uc-card-bg)); border: 1px solid var(--rule); border-radius: 16px;
+           margin-bottom: 1.25rem; overflow: hidden; scroll-margin-top: 70px; }
+.gd-head { display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding: .85rem 1rem .6rem; }
+.gd-head h2 { font-size: 1.15rem; margin: 0; }
+.gd-stages { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: .5rem; padding: 0 1rem .5rem;
+             -webkit-overflow-scrolling: touch; }
+.gd-stage { flex: 0 0 100%; scroll-snap-align: center; margin: 0; }
+.gd-stages.many .gd-stage { flex-basis: 88%; }
+.gd-stage img { width: 100%; border-radius: 10px; border: 1px solid var(--rule); background: #fff; }
+.gd-stage figcaption { font-size: .8rem; color: var(--ink-2, #6c757d); margin-top: .25rem; }
+.gd-body { padding: .25rem 1rem 1rem; font-size: .92rem; }
+.gd-body .md p { margin-bottom: .4rem; }
+.gd-body details { margin-top: .5rem; }
+.gd-body summary { font-weight: 600; cursor: pointer; min-height: 32px; }
+.gd-roles dt { font-weight: 600; font-size: .85rem; }
+.gd-roles dd { margin: 0 0 .4rem; }
+.gd-foot { display: flex; justify-content: space-between; align-items: center; padding: 0 1rem 1rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-3 gd-wrap">
+    <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+        <h1 class="h3 mb-0">{% if report %}Plays vs {{ report.team_name }}{% else %}Game-day cards{% endif %}</h1>
+        <a href="{{ url_for('scouting.detail', report_id=report.id) if report else url_for('playbook.index') }}"
+           class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ 'Scouting' if report else 'Playbook' }}</a>
+    </div>
+    {% if report and report.game_plan %}
+    <p class="text-muted small mb-2">{{ report.game_plan.strip().split('\n')[0] }}</p>
+    {% endif %}
+
+    <nav class="gd-filters" aria-label="Show">
+        {% set base = {'report': report.id} if report else {} %}
+        <a href="{{ url_for('playbook.cards', **base) }}" class="{{ 'active' if not type_filter }}">All</a>
+        <a href="{{ url_for('playbook.cards', type='offense', **base) }}" class="{{ 'active' if type_filter == 'offense' }}">Offence</a>
+        <a href="{{ url_for('playbook.cards', type='defense', **base) }}" class="{{ 'active' if type_filter == 'defense' }}">Defence</a>
+    </nav>
+
+    {% for play in plays %}
+    <article class="gd-card" id="play-{{ play.id }}">
+        <div class="gd-head">
+            <h2>{{ play.name }}</h2>
+            <span class="badge {{ 'bg-primary' if play.type == 'offense' else 'bg-danger' }}">{{ 'Offence' if play.type == 'offense' else 'Defence' }}</span>
+        </div>
+        {% if play.editor_diagrams %}
+        <div class="gd-stages{% if play.stage_count > 1 %} many{% endif %}">
+            {% for d in play.editor_diagrams %}
+            <figure class="gd-stage">
+                <img src="{{ d.image_url }}" alt="{{ d.step_label or play.name }}" loading="lazy">
+                {% if play.stage_count > 1 or d.caption %}
+                <figcaption>{% if play.stage_count > 1 %}{{ loop.index }}/{{ play.stage_count }} · {{ d.step_label or 'Stage ' ~ loop.index }}{% endif %}{% if d.caption %} – {{ d.caption }}{% endif %}</figcaption>
+                {% endif %}
+            </figure>
+            {% endfor %}
+        </div>
+        {% elif play.image_url %}
+        <div class="gd-stages"><figure class="gd-stage"><img src="{{ play.image_url }}" alt="{{ play.name }}" loading="lazy"></figure></div>
+        {% endif %}
+        <div class="gd-body">
+            {% if play.formation %}<div class="small text-muted mb-1">From {{ play.formation.name }}</div>{% endif %}
+            {% if play.description %}<div class="md">{{ play.description|markdown }}</div>{% endif %}
+            {% if play.assignments %}
+            <details>
+                <summary>Who does what</summary>
+                <dl class="gd-roles mt-1 mb-0">
+                    {% for a in play.assignments %}
+                    <dt>{{ a.position.name if a.position else 'Everyone' }}</dt>
+                    <dd class="md">{{ a.instructions|markdown }}</dd>
+                    {% endfor %}
+                </dl>
+            </details>
+            {% endif %}
+            {% if play.notes %}
+            <details>
+                <summary>Coaching notes</summary>
+                <div class="md mt-1">{{ play.notes|markdown }}</div>
+            </details>
+            {% endif %}
+        </div>
+        <div class="gd-foot">
+            <span class="small text-muted">{% if play.stage_count > 1 %}Swipe for each stage{% endif %}</span>
+            {% if my_path.get(play.id) %}
+            <a href="{{ url_for('playbook.view_play', play_id=play.id, role=my_path[play.id]) }}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-person-fill"></i> Your path
+            </a>
+            {% else %}
+            <a href="{{ url_for('playbook.view_play', play_id=play.id) }}" class="btn btn-sm btn-outline-primary">
+                {% if play.stage_count > 1 %}<i class="bi bi-play-fill"></i> Watch it{% else %}Full play{% endif %}
+            </a>
+            {% endif %}
+        </div>
+    </article>
+    {% else %}
+    <div class="text-center text-muted py-5">
+        <i class="bi bi-journal-x" style="font-size:2.5rem"></i>
+        <p class="mt-2">{% if report %}No plays picked for this game yet{% if current_user.is_coach %}: choose them in the scouting report's game plan{% endif %}.{% else %}No plays here yet.{% endif %}</p>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

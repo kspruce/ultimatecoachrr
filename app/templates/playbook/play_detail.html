@@ -38,6 +38,12 @@
     .markdown-content table th, .markdown-content table td {
         border: 1px solid var(--uc-gray-200, var(--rule)); padding: .25rem .5rem; }
     .markdown-content img { max-width: 100%; }
+    .play-stages > summary { cursor: pointer; font-weight: 600; list-style: none; }
+    .play-stages > summary::-webkit-details-marker { display: none; }
+    .border-dashed { border-style: dashed; }
+    .who-list { display: grid; gap: .6rem; }
+    .who-row { padding: .6rem .75rem; border: 1px solid var(--rule); border-radius: 10px; }
+    .who-row .markdown-content > :last-child { margin-bottom: 0; }
 </style>
 {% endblock %}
 
@@ -61,17 +67,18 @@
                 {% endfor %}
             </div>
         </div>
-        <div class="col-md-4 text-end">
-            <div class="btn-group">
+        <div class="col-md-4 text-md-end">
+            <div class="d-flex flex-wrap gap-2 justify-content-md-end">
                 {% if current_user.is_admin %}
-                    <a href="{{ url_for('playbook.edit_play', play_id=play.id) }}" 
-                       class="btn btn-outline-primary">
+                    <a href="{{ url_for('playbook.draw_play', play_id=play.id) }}" class="btn btn-primary">
+                        <i class="bi bi-pencil-square"></i> {{ 'Edit drawing' if play.editor_diagram else 'Draw it' }}
+                    </a>
+                    <a href="{{ url_for('playbook.edit_play', play_id=play.id) }}" class="btn btn-outline-primary">
                         <i class="bi bi-pencil"></i> Edit Play
                     </a>
                 {% endif %}
-                <a href="{{ url_for('playbook.index') }}" 
-                   class="btn btn-outline-secondary">
-                    <i class="bi bi-arrow-left"></i> Back to Playbook
+                <a href="{{ url_for('playbook.index') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Playbook
                 </a>
             </div>
         </div>
@@ -80,22 +87,40 @@
     <div class="row">
         <!-- Main Content -->
         <div class="col-md-8">
-            <!-- Video Section -->
-            {% if play.ultiplay_embed %}
+            <!-- Drawing -->
+            {% if animation %}
+                {% include "partials/diagram_animation.html" %}
+            {% endif %}
+            {% if play.editor_diagrams and not animation %}
             <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Play Video</h5>
-                </div>
-                <div class="card-body">
-                    <div class="embed-container">
-                        {{ play.ultiplay_embed|embed_html }}
-                    </div>
+                <div class="card-body text-center">
+                    {% set d = play.editor_diagrams[0] %}
+                    <img src="{{ d.image_url }}" alt="{{ play.name }} diagram" class="img-fluid rounded border">
+                    {% if d.caption %}<p class="small text-muted mt-2 mb-0">{{ d.caption }}</p>{% endif %}
                 </div>
             </div>
             {% endif %}
+            {% if play.stage_count > 1 %}
+            <details class="card mb-4 play-stages">
+                <summary class="card-header">All {{ play.stage_count }} stages</summary>
+                <div class="card-body">
+                    <div class="row g-3">
+                        {% for d in play.editor_diagrams %}
+                        <div class="col-sm-6">
+                            <figure class="mb-0">
+                                <div class="fw-bold small mb-1">{{ loop.index }}. {{ d.step_label or 'Stage ' ~ loop.index }}</div>
+                                <img src="{{ d.image_url }}" class="img-fluid rounded border" alt="{{ d.step_label or play.name }}" loading="lazy">
+                                {% if d.caption %}<figcaption class="small text-muted mt-1">{{ d.caption }}</figcaption>{% endif %}
+                            </figure>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </details>
+            {% endif %}
 
-            <!-- Diagram Section -->
-            {% if play.image_url %}
+            <!-- Older linked diagram -->
+            {% if play.image_url and not play.editor_diagrams %}
             <div class="card mb-4">
                 <div class="card-header">
                     <h5 class="card-title mb-0">Play Diagram</h5>
@@ -103,6 +128,16 @@
                 <div class="card-body text-center">
                     <img src="{{ play.image_url }}" alt="{{ play.name }} diagram"
                          class="img-fluid rounded" style="max-height:500px">
+                </div>
+            </div>
+            {% endif %}
+
+            {% if not play.editor_diagrams and not play.image_url and not play.ultiplay_embed and current_user.is_admin %}
+            <div class="card mb-4 border-dashed">
+                <div class="card-body text-center py-4">
+                    <i class="bi bi-easel2 fs-2 text-muted"></i>
+                    <p class="mb-2">No diagram yet. Draw the play on the field, stage by stage, and players can watch it move.</p>
+                    <a href="{{ url_for('playbook.draw_play', play_id=play.id) }}" class="btn btn-primary btn-sm">Draw it</a>
                 </div>
             </div>
             {% endif %}
@@ -121,34 +156,53 @@
                 </div>
             </div>
 
+            <!-- Video Section -->
+            {% if play.ultiplay_embed %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Play Video</h5>
+                </div>
+                <div class="card-body">
+                    <div class="embed-container">
+                        {{ play.ultiplay_embed|embed_html }}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
             <!-- Position Assignment Section -->
             <div class="card mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="card-title mb-0">Position Assignments</h5>
+                    <h5 class="card-title mb-0">Who does what</h5>
+                    {% if current_user.is_coach %}
                     <a href="{{ url_for('playbook.manage_assignments', play_id=play.id) }}" class="btn btn-sm btn-primary">
-                        <i class="bi bi-person-cog"></i> Manage Assignments
+                        <i class="bi bi-person-gear"></i> Manage
                     </a>
+                    {% endif %}
                 </div>
                 <div class="card-body">
-                    {% if play.assignments %}
-                        <div class="accordion" id="assignmentsAccordion">
-                            {% for assignment in play.assignments %}
-                            <div class="accordion-item">
-                                <h2 class="accordion-header" id="heading{{ assignment.id }}">
-                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ assignment.id }}">
-                                        {{ assignment.position.name }}
-                                    </button>
-                                </h2>
-                                <div id="collapse{{ assignment.id }}" class="accordion-collapse collapse" data-bs-parent="#assignmentsAccordion">
-                                    <div class="accordion-body">
-                                        <div class="markdown-content">{{ assignment.instructions|markdown }}</div>
-                                    </div>
-                                </div>
+                    {% if who %}
+                    <div class="who-list">
+                        {% for w in who %}
+                        <div class="who-row">
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                <strong>{{ w.role.name if w.role else 'Everyone' }}</strong>
+                                {% if w.role %}<span class="text-muted small">{{ w.role.line_label }}</span>{% endif %}
+                                {% if w.drawn %}
+                                <a class="btn btn-sm btn-outline-primary ms-auto js-show-role" data-role="{{ w.role.id }}"
+                                   href="{{ url_for('playbook.view_play', play_id=play.id, role=w.role.id) }}#drill-animation">
+                                    <i class="bi bi-eye"></i> Show path
+                                </a>
+                                {% endif %}
                             </div>
-                            {% endfor %}
+                            {% if w.assignment %}
+                            <div class="markdown-content mt-1">{{ w.assignment.instructions|markdown }}</div>
+                            {% endif %}
                         </div>
+                        {% endfor %}
+                    </div>
                     {% else %}
-                        <p class="text-muted">No position assignments defined.</p>
+                        <p class="text-muted mb-0">Nothing yet.{% if current_user.is_coach %} Give the players in the drawing roles (right-click or long-press a player in the editor), or say what each role does with Manage.{% endif %}</p>
                     {% endif %}
                 </div>
             </div>
@@ -309,7 +363,25 @@
 
 {% block scripts %}
 {{ super() }}
+{% if animation %}
+<script src="https://cdn.jsdelivr.net/npm/fabric@5.3.0/dist/fabric.min.js"></script>
+<script src="{{ url_for('static', filename='js/drill_diagram.js') }}"></script>
+<script src="{{ url_for('static', filename='js/drill_viewer.js') }}"></script>
+{% endif %}
 <script src="{{ url_for('static', filename='js/playbook.js') }}"></script>
+<script>
+// "Show path" picks the role on the diagram above instead of reloading
+document.querySelectorAll('.js-show-role').forEach(function (link) {
+    link.addEventListener('click', function (e) {
+        var pick = document.querySelector('[data-animation="role"]');
+        if (!pick) return;
+        e.preventDefault();
+        pick.value = link.dataset.role;
+        pick.dispatchEvent(new Event('change'));
+        document.getElementById('drill-animation').scrollIntoView({behavior: 'smooth'});
+    });
+});
+</script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize tooltips

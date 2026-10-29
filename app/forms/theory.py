@@ -1,69 +1,42 @@
 # app/forms/theory.py
+import re
+
 from flask_wtf import FlaskForm
-from wtforms import (
-    StringField, TextAreaField, IntegerField, SelectField, 
-    URLField, SelectMultipleField
-)
-from wtforms.validators import DataRequired, Optional, Length, URL, ValidationError
+from wtforms import DateField, SelectField, SelectMultipleField, StringField, TextAreaField
+from wtforms.validators import DataRequired, Length, Optional, ValidationError
+
+# A web address, or a photo uploaded here (/theory/image/<id>)
+IMAGE_URL = re.compile(r'^(https?://\S+|/theory/image/\d+)$')
+
+
+def image_url(form, field):
+    if field.data and not IMAGE_URL.match(field.data.strip()):
+        raise ValidationError('Choose a photo, or paste a link that starts with https://')
+
 
 class TheorySectionForm(FlaskForm):
-    name = StringField('Section Name', 
-                      validators=[DataRequired(), Length(max=100)],
-                      description="Name of the theory section (e.g., Defense, Throwing)")
-    
-    description = TextAreaField('Description', 
-                              validators=[Optional()],
-                              description="Brief overview of what this section covers")
-    
-    order = IntegerField('Display Order', 
-                        validators=[Optional()],
-                        description="Order in which this section appears (lower numbers first)")
+    name = StringField('Section name',
+                       validators=[DataRequired(), Length(max=100)],
+                       description="e.g. Defence, Throwing, Offence")
+
+    description = TextAreaField('Description',
+                                validators=[Optional(), Length(max=1000)],
+                                description="One or two lines on what this section covers")
+
 
 class TheoryTopicForm(FlaskForm):
-    name = StringField('Topic Name', validators=[DataRequired(), Length(max=100)])
-    content = TextAreaField('Content', validators=[DataRequired()])
+    name = StringField('Title', validators=[DataRequired(), Length(max=100)])
     section_id = SelectField('Section', coerce=int, validators=[DataRequired()])
-    order = IntegerField('Display Order', validators=[Optional()])
-    image_url = StringField('Image URL (Imgur)', validators=[
-        Optional(),
-        URL(message="Please enter a valid URL")
-    ])
-    related_drills = SelectMultipleField('Related Drills', coerce=int, validators=[Optional()])
-    
-    tags = SelectMultipleField('Tags',
-                              coerce=int,
-                              validators=[Optional()],
-                              render_kw={"class": "select2-multiple"})  # Add this class
+    # Required to publish, not to save a draft (checked in the route)
+    content = TextAreaField('Content', validators=[Optional()])
+    image_url = StringField('Cover photo', validators=[Optional(), Length(max=500), image_url])
+    tags = StringField('Tags', validators=[Optional(), Length(max=500)],
+                       description='Separate tags with commas')
+    related_drills = SelectMultipleField('Linked drills', coerce=int, validators=[Optional()],
+                                         validate_choice=False)
+    clips = SelectMultipleField('Linked clips', coerce=int, validators=[Optional()], validate_choice=False)
 
-class TheoryVideoForm(FlaskForm):
-    title = StringField('Video Title', 
-                       validators=[DataRequired(), Length(max=200)],
-                       description="Title of the video")
-    
-    url = URLField('Video URL', 
-                   validators=[DataRequired(), URL()],
-                   description="YouTube or Vimeo URL")
-    
-    description = TextAreaField('Description', 
-                              validators=[Optional()],
-                              description="Brief description of the video content")
-    
-    order = IntegerField('Display Order', 
-                        validators=[Optional()],
-                        description="Order in which this video appears")
 
-class TheoryTagForm(FlaskForm):
-    name = StringField('Tag Name', 
-                      validators=[DataRequired(), Length(max=50)],
-                      description="Name of the tag")
-
-    def validate_name(self, field):
-        from app.models.theory import TheoryTag
-        tag = TheoryTag.query.filter_by(name=field.data).first()
-        if tag:
-            raise ValidationError('This tag already exists.')
-
-class TheorySearchForm(FlaskForm):
-    query = StringField('Search', validators=[Optional()])
-    section = SelectField('Section', coerce=int, validators=[Optional()])
-    tags = SelectMultipleField('Tags', coerce=int, validators=[Optional()])
+class TheoryAssignmentForm(FlaskForm):
+    due_date = DateField('Read by', validators=[Optional()])
+    note = StringField('Note for the team', validators=[Optional(), Length(max=200)])

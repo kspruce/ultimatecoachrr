@@ -12,8 +12,8 @@ copies, scheduling, validation, dashboard), `app/utils/programme_import.py`
 (spreadsheet import/export), `app/routes/programmes.py`,
 `app/templates/programmes/`. Tests: `tests/test_programmes.py`.
 
-The older Off-Season pages (`/off-season`, phases and the track-workout
-table) are unchanged and separate.
+Programmes replace the older Off-Season pages (`/off-season`), which have
+been removed along with their tables.
 
 ## Who can do what
 

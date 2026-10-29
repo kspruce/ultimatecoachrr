@@ -10,16 +10,13 @@ def register_error_handlers(app):
         app.logger.error(f"Database error: {str(error)}", exc_info=True)
         return render_template('error.html', error_message="A database error occurred. Please try again later."), 500
     
-    @app.before_request
-    def before_request():
-        # This ensures we have a fresh session at the start of each request
-        pass
-    
     @app.teardown_request
     def teardown_request(exception=None):
+        # A failed request leaves nothing half-done. Flask-SQLAlchemy removes
+        # the session itself when the app context ends; removing it here too
+        # threw away unsaved work in code that briefly opens a request context.
         if exception is not None:
             try:
                 db.session.rollback()
-            except:
+            except Exception:
                 pass
-        db.session.remove()

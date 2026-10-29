@@ -317,6 +317,26 @@
     </div>
     {% endif %}
 
+    {% if game_notes is defined %}
+    {% import "feedback/_note.html" as fb %}
+    {{ fb.styles() }}
+    <div class="row mb-4" id="player-feedback">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header"><h5 class="mb-0"><i class="bi bi-chat-square-text me-2"></i>Player feedback</h5></div>
+                <div class="card-body">
+                    {{ fb.form(feedback_tags, players=note_players, game_id=game.id, next=request.path ~ '#player-feedback', default_tag='In-game') }}
+                    {% if game_notes %}<hr>{% endif %}
+                    {% for entry in game_notes %}
+                        {{ fb.note(entry, coach=True, show_player=True, next=request.path ~ '#player-feedback') }}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {{ fb.picker_script() }}
+    {% endif %}
+
     <!-- Edit Players Modal -->
     <div class="modal fade" id="editPlayersModal" tabindex="-1">
         <div class="modal-dialog modal-lg">

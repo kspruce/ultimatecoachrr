@@ -15,7 +15,7 @@ class Throw(db.Model):
     
     # Keep team relationships but make them work with Player.team string
     team = db.Column(db.String(50))  # Match Player.team string field
-    opposition_team = db.Column(db.String(50))  # Store opposition team name
+    opposition_team = db.Column(db.String(50))  # the game's opponent, filled in when saved
     
     # Event IDs to link the throw to its related events
     throwing_event_id = db.Column(db.Integer, db.ForeignKey('event.id'))
@@ -106,3 +106,15 @@ class Throw(db.Model):
         return f'<Throw {self.id} by {self.thrower_id} to {self.receiver_id}>'
 
 
+@db.event.listens_for(Throw, 'before_insert')
+def _fill_opposition_team(mapper, connection, throw):
+    """The opponent of the game the throw's point is in, so the connections
+    chart can be filtered by opponent."""
+    if throw.opposition_team or not throw.point_id:
+        return
+    from app.models.game import Game
+    from app.models.point import Point
+    opponent = connection.execute(
+        db.select(Game.opponent).join(Point, Point.game_id == Game.id).where(Point.id == throw.point_id)
+    ).scalar()
+    throw.opposition_team = (opponent or '')[:50] or None
