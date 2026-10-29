@@ -1624,7 +1624,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 description: val('drill-description'),
                 notes: val('play-notes'),
                 type: val('play-type'),
-                formation_id: val('play-formation'),
+                status: val('play-status'),
+                call: val('play-call'),
             };
         }
         return {

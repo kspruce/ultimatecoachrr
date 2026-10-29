@@ -1,640 +1,167 @@
+{# templates/playbook/index.html #}
 {% extends "base.html" %}
+{% from "playbook/_macros.html" import play_menu, move_buttons, side_badge, thumb %}
 
 {% block styles %}
 {{ super() }}
-<style>
-    /* ─── Playbook-specific styles ──────────────────────────────── */
-    .uc-tab-nav {
-        display: flex; gap: .35rem; border-bottom: 1px solid var(--uc-gray-200);
-        margin-bottom: 1.5rem; padding-bottom: 0;
-    }
-    .uc-tab-nav .nav-link {
-        font-size: .875rem; font-weight: 600; color: var(--uc-gray-400);
-        padding: .55rem 1rem; border-radius: 9px 9px 0 0;
-        border: none; background: none;
-        border-bottom: 2px solid transparent; margin-bottom: -1px;
-        transition: color .15s, border-color .15s;
-    }
-    .uc-tab-nav .nav-link:hover { color: var(--uc-gray-800); }
-    .uc-tab-nav .nav-link.active {
-        color: var(--uc-blue); border-bottom-color: var(--uc-blue);
-    }
-    /* Concept cards hover lift */
-    .concept-card { transition: box-shadow .2s, transform .2s; cursor: pointer; }
-    .concept-card:hover { transform: translateY(-3px); box-shadow: var(--uc-shadow-md) !important; }
-    /* Play accordion rows */
-    .play-row { border: 1px solid var(--uc-gray-200); border-radius: 10px; margin-bottom: .5rem; overflow: hidden; }
-    .play-row .play-row-header {
-        display: flex; align-items: center; justify-content: space-between;
-        padding: .85rem 1.1rem; background: var(--card); cursor: pointer;
-        gap: .75rem;
-    }
-    .play-row .play-row-header:hover { background: var(--uc-gray-50); }
-    .play-row .play-row-body { padding: 1.1rem; border-top: 1px solid var(--uc-gray-100); background: var(--uc-gray-50); }
-    /* Offense / defense accent */
-    .play-offense { border-left: 3px solid var(--uc-blue); }
-    .play-defense { border-left: 3px solid var(--uc-red); }
-    /* Embed container */
-    .embed-container { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 10px; background: var(--uc-gray-100); margin-bottom: 1rem; }
-    .embed-container iframe { position: absolute; top: 0; left: 0; width: 100% !important; height: 100% !important; border: 0; }
-    .iframe-direct-container { width: 100%; height: 300px; border: 0; border-radius: 10px; }
-    /* Rendered markdown in play rows */
-    .markdown-content p { margin-bottom: .4rem; }
-    .markdown-content ul, .markdown-content ol { margin: .2rem 0 .6rem 1.1rem; }
-    .markdown-content h1, .markdown-content h2, .markdown-content h3 { font-size: 1rem; margin: .5rem 0 .25rem; }
-    .markdown-content code { background: var(--uc-gray-100); padding: .1rem .3rem; border-radius: 3px; }
-    .markdown-content img { max-width: 100%; }
-    /* Chevron rotation */
-    .rotate-icon { transition: transform .25s; }
-    [aria-expanded="true"] .rotate-icon { transform: rotate(180deg); }
-    /* Stat pill */
-    .uc-stat-pill {
-        display: flex; flex-direction: column; align-items: center;
-        padding: 1.1rem 1.5rem; border-radius: var(--uc-radius);
-        background: var(--card); border: 1px solid var(--uc-gray-200);
-        box-shadow: var(--uc-shadow-sm);
-    }
-    .pb-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; max-width: 560px; }
-    .pb-stats .uc-stat-pill { min-width: 0; padding-left: .5rem; padding-right: .5rem; text-align: center; }
-    .uc-stat-pill .stat-num { font-size: 1.75rem; font-weight: 800; line-height: 1; }
-    .uc-stat-pill .stat-lbl { font-size: .75rem; color: var(--uc-gray-400); font-weight: 600; margin-top: .25rem; letter-spacing: .04em; text-transform: uppercase; }
-
-    /* ─── Dark mode overrides ────────────────────────────────── */
-    [data-theme="dark"] .play-row-header {
-        background: var(--uc-card-bg) !important;
-        color: var(--uc-page-text);
-    }
-    [data-theme="dark"] .play-row-header:hover {
-        background: var(--uc-gray-100) !important;
-    }
-    [data-theme="dark"] .play-row-body {
-        background: var(--uc-gray-100) !important;
-        border-top-color: var(--uc-card-border);
-    }
-    [data-theme="dark"] .play-row {
-        border-color: var(--uc-card-border);
-    }
-    [data-theme="dark"] .uc-stat-pill {
-        background: var(--uc-card-bg);
-        border-color: var(--uc-card-border);
-        color: var(--uc-page-text);
-    }
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/theory.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/playbook.css') }}">
 {% endblock %}
 
+{% macro play_row(play, first=False, last=False) %}
+{% set done = play.id in learned %}
+<div class="th-row">
+  <a class="th-row-main" href="{{ url_for('playbook.view_play', play_id=play.id) }}">
+    {{ thumb(play) }}
+    <div class="th-row-text">
+      <div class="th-row-title">{{ play.name }}</div>
+      {% if play.call or play.signal %}<div class="th-row-sub">{% if play.call %}Call: {{ play.call }}{% endif %}{% if play.call and play.signal %} · {% endif %}{% if play.signal %}{{ play.signal }}{% endif %}</div>{% endif %}
+      <div class="th-row-meta">
+        {% if not grouped %}{{ side_badge(play) }}{% endif %}
+        {% if play.is_draft %}<span class="th-badge draft">Draft</span>{% endif %}
+        {% if play.to_learn and play.status == 'active' and not done %}<span class="th-badge due"><i class="bi bi-bookmark"></i>To learn</span>{% endif %}
+        {% if done %}<span class="th-badge read"><i class="bi bi-check2"></i>Learned</span>{% endif %}
+        {% if play.stage_count > 1 %}<span class="th-badge"><i class="bi bi-play-fill"></i>{{ play.stage_count }} stages</span>{% endif %}
+      </div>
+    </div>
+    {% if not can_edit %}<i class="bi bi-chevron-right th-chev" aria-hidden="true"></i>{% endif %}
+  </a>
+  {% if can_edit %}
+  <div class="th-row-end">
+    {% if not show_retired and not q and not tag %}{{ move_buttons(play, first, last) }}{% endif %}
+    {{ play_menu(play, show_move=not show_retired and not q and not tag, first=first, last=last) }}
+  </div>
+  {% endif %}
+</div>
+{% endmacro %}
+
 {% block content %}
-<div class="container py-4">
+<div class="container th-page">
 
-    <!-- Page header -->
-    <div class="uc-page-header mb-4">
-        <div>
-            <h2>Playbook</h2>
-            <p>Offensive and defensive strategies for your team</p>
-        </div>
-        <div class="d-flex flex-wrap gap-2">
-            <a href="{{ url_for('playbook.cards') }}" class="btn btn-outline-primary">
-                <i class="bi bi-phone me-1"></i>Game-day cards
-            </a>
-            {% if current_user.is_admin %}
-            <a href="{{ url_for('playbook.draw_play') }}" class="btn btn-primary">
-                <i class="bi bi-pencil-square me-1"></i>Draw a Play
-            </a>
-            {% endif %}
-            <div class="dropdown">
-                <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                    More
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end">
-                    {% if current_user.is_admin %}
-                    <li><a class="dropdown-item" href="{{ url_for('playbook.add_play') }}"><i class="bi bi-plus-lg me-2"></i>Add a play from a link</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('playbook.add_formation') }}"><i class="bi bi-plus-lg me-2"></i>Add a concept</a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    {% endif %}
-                    <li><a class="dropdown-item" href="{{ url_for('playbook.position_view') }}"><i class="bi bi-person-badge me-2"></i>Plays by position</a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><h6 class="dropdown-header"><i class="bi bi-file-earmark-pdf me-1"></i>Export PDF</h6></li>
-                    <li><a class="dropdown-item export-pdf-btn" data-type="" href="{{ url_for('playbook.export_pdf') }}">Full playbook</a></li>
-                    <li><a class="dropdown-item export-pdf-btn" data-type="offense" href="{{ url_for('playbook.export_pdf', type='offense') }}">Offence only</a></li>
-                    <li><a class="dropdown-item export-pdf-btn" data-type="defense" href="{{ url_for('playbook.export_pdf', type='defense') }}">Defence only</a></li>
-                </ul>
-            </div>
-        </div>
+  <div class="th-head">
+    <div>
+      <h1>Playbook</h1>
+      <p>Our offence and defence plays.</p>
     </div>
-
-    <!-- Export progress -->
-    <div id="exportProgress" class="card mb-4" style="display:none">
-        <div class="card-body py-2 px-3">
-            <div class="d-flex justify-content-between align-items-center mb-1" style="font-size:.85rem">
-                <span id="exportProgressLabel" style="color:var(--uc-gray-600)">
-                    <i class="bi bi-file-earmark-pdf me-1"></i>Starting export…
-                </span>
-                <span id="exportProgressPct" style="color:var(--uc-gray-400);font-weight:600">0%</span>
-            </div>
-            <div class="progress" style="height:8px">
-                <div id="exportProgressBar"
-                     class="progress-bar progress-bar-striped progress-bar-animated"
-                     role="progressbar" style="width:0%"></div>
-            </div>
-        </div>
+    <div class="d-flex gap-2 flex-shrink-0">
+      {% if can_edit %}
+      <div class="dropdown">
+        <button class="btn btn-primary th-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="bi bi-plus-lg"></i><span>New play</span>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li><a class="dropdown-item" href="{{ url_for('playbook.draw_play', type=type_filter) }}"><i class="bi bi-easel2 me-2"></i>Draw it on the field</a></li>
+          <li><a class="dropdown-item" href="{{ url_for('playbook.add_play', type=type_filter) }}"><i class="bi bi-pencil me-2"></i>Write it up first</a></li>
+        </ul>
+      </div>
+      {% endif %}
+      <div class="dropdown">
+        <button class="th-icon-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="More"><i class="bi bi-three-dots"></i></button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li><a class="dropdown-item" href="{{ url_for('playbook.cards') }}"><i class="bi bi-phone me-2"></i>Game-day cards</a></li>
+          <li><a class="dropdown-item" href="{{ url_for('playbook.position_view') }}"><i class="bi bi-person-badge me-2"></i>Roles{% if my_role %} · yours: {{ my_role.name }}{% endif %}</a></li>
+          <li><a class="dropdown-item" href="#" data-export-pdf data-start-url="{{ url_for('playbook.export_start', type=type_filter) }}"><i class="bi bi-file-earmark-pdf me-2"></i>Download as PDF</a></li>
+          {% if has_retired %}<li><a class="dropdown-item" href="{{ url_for('playbook.index', show=None if show_retired else 'retired') }}"><i class="bi bi-archive me-2"></i>{{ 'Back to plays in use' if show_retired else 'Retired plays' }}</a></li>{% endif %}
+        </ul>
+      </div>
     </div>
+  </div>
+  <div class="small text-muted mb-2" id="pb-export-status" role="status" aria-live="polite" hidden></div>
 
-    <!-- Stats row -->
-    <div class="pb-stats mb-4">
-        <div class="uc-stat-pill">
-            <span class="stat-num" style="color:var(--uc-indigo)">{{ formations|length }}</span>
-            <span class="stat-lbl">Team Concepts</span>
-        </div>
-        <div class="uc-stat-pill">
-            <span class="stat-num" style="color:var(--uc-blue)">{{ offensive_plays|length }}</span>
-            <span class="stat-lbl">Offensive Plays</span>
-        </div>
-        <div class="uc-stat-pill">
-            <span class="stat-num" style="color:var(--uc-red)">{{ defensive_plays|length }}</span>
-            <span class="stat-lbl">Defensive Plays</span>
-        </div>
+  {% if total_in_use %}
+  <div class="mb-3">
+    <div class="d-flex justify-content-between mb-1" style="font-size:.86rem;color:var(--ink-2)">
+      <span>You've learned <strong>{{ known }}</strong> of {{ total_in_use }} play{{ 's' if total_in_use != 1 }}</span>
+      <a href="{{ url_for('playbook.cards') }}" class="text-decoration-none"><i class="bi bi-phone me-1"></i>Cards</a>
     </div>
+    <div class="th-progress" aria-hidden="true"><span style="width:{{ (known / total_in_use * 100)|round|int }}%"></span></div>
+  </div>
+  {% endif %}
 
-    <!-- Search & filter -->
-    <div class="row g-2 mb-4">
-        <div class="col-md-8">
-            <div class="input-group">
-                <span class="input-group-text" style="border-radius:9px 0 0 9px;border-color:var(--uc-card-border);background:var(--uc-card-bg)">
-                    <i class="bi bi-search" style="color:var(--uc-gray-400)"></i>
-                </span>
-                <input type="text" class="form-control" id="playSearch"
-                       placeholder="Search plays and concepts…"
-                       style="border-left:none;border-radius:0 9px 9px 0">
-            </div>
+  <form method="GET" action="{{ url_for('playbook.index') }}" role="search" class="th-search">
+    <i class="bi bi-search" aria-hidden="true"></i>
+    <input type="search" name="q" value="{{ q }}" class="form-control" placeholder="Search plays, calls and roles" aria-label="Search plays"
+           enterkeyhint="search" autocomplete="off">
+    {% if type_filter %}<input type="hidden" name="type" value="{{ type_filter }}">{% endif %}
+    {% if show_retired %}<input type="hidden" name="show" value="retired">{% endif %}
+  </form>
+  <div class="th-chips" aria-label="Show">
+    {% set keep = {'show': 'retired' if show_retired else None, 'q': q or None, 'tag': tag or None} %}
+    <a class="th-chip {% if not type_filter %}active{% endif %}" href="{{ url_for('playbook.index', **keep) }}">All</a>
+    <a class="th-chip {% if type_filter == 'offense' %}active{% endif %}" href="{{ url_for('playbook.index', type='offense', **keep) }}">Offence</a>
+    <a class="th-chip {% if type_filter == 'defense' %}active{% endif %}" href="{{ url_for('playbook.index', type='defense', **keep) }}">Defence</a>
+    {% for name in tag_names %}
+    <a class="th-chip {% if tag|lower == name|lower %}active{% endif %}"
+       href="{{ url_for('playbook.index', type=type_filter, show='retired' if show_retired else None, q=q or None, tag=None if tag|lower == name|lower else name) }}">#{{ name }}</a>
+    {% endfor %}
+  </div>
+
+  {% if show_retired %}
+  <div class="th-draft-banner"><i class="bi bi-archive" aria-hidden="true"></i><div class="flex-grow-1">Retired plays: kept for reference, off the cards and the PDF.</div></div>
+  {% endif %}
+
+  {# ── Asked to learn ─────────────────────────────────────── #}
+  {% if to_learn and not (q or tag or show_retired) %}
+  <div class="th-label">{{ 'Asked to learn' if can_edit else 'To learn' }}</div>
+  <div class="th-list">
+    {% for r in to_learn %}
+    {% set done = r.play_id in learned %}
+    <a class="th-row" href="{{ url_for('playbook.learners', play_id=r.play_id) if can_edit else url_for('playbook.view_play', play_id=r.play_id) }}">
+      {{ thumb(r.play) }}
+      <div class="th-row-text">
+        <div class="th-row-title">{{ r.play.name }}</div>
+        {% if r.note %}<div class="th-row-sub">{{ r.note }}</div>{% endif %}
+        <div class="th-row-meta">
+          {% if r.due_date %}<span class="th-badge due"><i class="bi bi-calendar-event"></i>Learn by {{ r.due_date.strftime('%a %-d %b') }}</span>{% endif %}
+          {% if can_edit %}<span class="th-badge">{{ learn_counts.get(r.play_id, 0) }} of {{ team_size }} learned</span>{% endif %}
+          {% if r.play.status != 'active' %}<span class="th-badge draft">{{ r.play.status_label }}: players can't see it on their list</span>{% endif %}
         </div>
-        <div class="col-md-4">
-            <select class="form-select" id="tagFilter">
-                <option selected value="">Filter by tag</option>
-                {% if all_tags is defined %}
-                    {% for tag in all_tags %}
-                    <option value="{{ tag.id }}">{{ tag.name }}</option>
-                    {% endfor %}
-                {% endif %}
-            </select>
-        </div>
-    </div>
+      </div>
+      <i class="bi bi-chevron-right th-chev" aria-hidden="true"></i>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
 
-    <!-- Tabs -->
-    <ul class="nav uc-tab-nav" id="playbookTabs" role="tablist">
-        <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="concepts-tab"
-                    data-bs-toggle="tab" data-bs-target="#concepts" type="button" role="tab">
-                <i class="bi bi-layers me-1"></i>Team Concepts
-                {% if formations %}<span class="badge bg-secondary ms-1" style="font-size:.7rem">{{ formations|length }}</span>{% endif %}
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="offense-tab"
-                    data-bs-toggle="tab" data-bs-target="#offense" type="button" role="tab">
-                <i class="bi bi-arrow-up-right-circle me-1"></i>Offense
-                {% if offensive_plays %}<span class="badge bg-secondary ms-1" style="font-size:.7rem">{{ offensive_plays|length }}</span>{% endif %}
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="defense-tab"
-                    data-bs-toggle="tab" data-bs-target="#defense" type="button" role="tab">
-                <i class="bi bi-shield me-1"></i>Defense
-                {% if defensive_plays %}<span class="badge bg-secondary ms-1" style="font-size:.7rem">{{ defensive_plays|length }}</span>{% endif %}
-            </button>
-        </li>
-    </ul>
-
-    <!-- Tab content -->
-    <div class="tab-content" id="playbookTabContent">
-
-        <!-- ── Team Concepts ───────────────────────────────── -->
-        <div class="tab-pane fade show active" id="concepts" role="tabpanel">
-            {% if formations %}
-            <div class="row g-3">
-                {% for formation in formations %}
-                <div class="col-md-6 col-lg-4">
-                    <div class="card h-100 concept-card">
-                        <!-- coloured accent stripe -->
-                        <div style="height:4px;border-radius:var(--uc-radius) var(--uc-radius) 0 0;
-                                    background:{{ 'var(--uc-blue)' if formation.type == 'offense' else 'var(--uc-red)' }}"></div>
-                        <div class="card-body pb-2">
-                            <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
-                                <h6 class="fw-700 mb-0" style="font-weight:700;font-size:.95rem">{{ formation.name }}</h6>
-                                <span class="badge {% if formation.type == 'offense' %}bg-primary{% else %}bg-danger{% endif %}"
-                                      style="font-size:.7rem;flex-shrink:0">
-                                    {{ formation.type|title }}
-                                </span>
-                            </div>
-                            <p class="text-muted" style="font-size:.825rem;margin-bottom:.5rem">
-                                {{ (formation.description or '')|truncate(140) }}
-                            </p>
-                            {% if formation.plays %}
-                            <div style="font-size:.75rem;color:var(--uc-gray-400)">
-                                <i class="bi bi-collection me-1"></i>Used in {{ formation.plays|length }} play{{ 's' if formation.plays|length != 1 }}
-                            </div>
-                            {% endif %}
-                            {% if formation.ultiplay_embed %}
-                            <button class="btn btn-sm btn-outline-secondary mt-2" type="button"
-                                    data-bs-toggle="collapse" data-bs-target="#conceptVideo{{ formation.id }}">
-                                <i class="bi bi-play-circle me-1"></i>View Animation
-                            </button>
-                            <div class="collapse mt-2" id="conceptVideo{{ formation.id }}">
-                                {% if "ultiplays.com/embed/" in formation.ultiplay_embed %}
-                                    {% set embed_url = formation.ultiplay_embed.split('src="')[1].split('"')[0] %}
-                                    <iframe class="iframe-direct-container" src="{{ embed_url }}" frameborder="0" allowfullscreen></iframe>
-                                {% else %}
-                                    <div class="embed-container">{{ formation.ultiplay_embed|embed_html }}</div>
-                                {% endif %}
-                            </div>
-                            {% endif %}
-                        </div>
-                        <div class="card-footer" style="background:transparent;border-top:1px solid var(--uc-gray-100);padding:.75rem 1rem">
-                            <div class="d-flex gap-2">
-                                <a href="{{ url_for('playbook.view_formation', formation_id=formation.id) }}"
-                                   class="btn btn-sm btn-primary" style="flex:1">
-                                    <i class="bi bi-eye me-1"></i>View
-                                </a>
-                                {% if current_user.is_admin %}
-                                <a href="{{ url_for('playbook.edit_formation', formation_id=formation.id) }}"
-                                   class="btn btn-sm btn-outline-secondary">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
-                                <button type="button" class="btn btn-sm btn-outline-danger"
-                                        data-bs-toggle="modal" data-bs-target="#deleteFormationModal{{ formation.id }}">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-
-                    {% if current_user.is_admin %}
-                    <div class="modal fade" id="deleteFormationModal{{ formation.id }}" tabindex="-1">
-                        <div class="modal-dialog">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title">Delete Team Concept</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                </div>
-                                <div class="modal-body">
-                                    <p>Delete <strong>{{ formation.name }}</strong>? This cannot be undone.</p>
-                                    {% if formation.plays %}
-                                    <div class="alert alert-warning" style="font-size:.875rem">
-                                        <i class="bi bi-exclamation-triangle me-1"></i>
-                                        This concept is used in {{ formation.plays|length }} play(s) and will be removed from them.
-                                    </div>
-                                    {% endif %}
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                                    <form action="{{ url_for('playbook.delete_formation', formation_id=formation.id) }}" method="POST" class="d-inline">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                        <button type="submit" class="btn btn-danger">Delete</button>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    {% endif %}
-                </div>
-                {% endfor %}
-            </div>
-            {% else %}
-            <div class="card">
-                <div class="uc-empty">
-                    <div class="uc-empty-icon"><i class="bi bi-layers"></i></div>
-                    <h5>No Team Concepts Yet</h5>
-                    <p>Add your first formation or system concept.</p>
-                    {% if current_user.is_admin %}
-                    <a href="{{ url_for('playbook.add_formation') }}" class="btn btn-primary">
-                        <i class="bi bi-plus-lg me-1"></i>Add First Concept
-                    </a>
-                    {% endif %}
-                </div>
-            </div>
-            {% endif %}
-        </div>
-
-        <!-- ── Offensive Plays ─────────────────────────────── -->
-        <div class="tab-pane fade" id="offense" role="tabpanel">
-            {% if offensive_plays %}
-            {% for play in offensive_plays %}
-            <div class="play-row play-offense">
-                <div class="play-row-header" data-bs-toggle="collapse" data-bs-target="#playDetails{{ play.id }}" aria-expanded="false">
-                    <div class="d-flex align-items-center gap-2 flex-wrap" style="flex:1;min-width:0">
-                        <span class="fw-bold" style="font-size:.9rem">{{ play.name }}</span>
-                        {% if play.formation %}
-                        <span class="badge" style="background:var(--uc-gray-100);color:var(--uc-gray-600);font-size:.72rem">
-                            {{ play.formation.name }}
-                        </span>
-                        {% endif %}
-                        {% for tag in play.tags %}
-                        <span class="badge bg-secondary" style="font-size:.7rem" data-tag-id="{{ tag.id }}">{{ tag.name }}</span>
-                        {% endfor %}
-                        {% if play.stage_count > 1 %}
-                        <span class="badge bg-success-subtle text-success-emphasis" style="font-size:.7rem"><i class="bi bi-play-fill"></i> {{ play.stage_count }} stages</span>
-                        {% endif %}
-                    </div>
-                    <i class="bi bi-chevron-down rotate-icon" style="color:var(--uc-gray-400);flex-shrink:0"></i>
-                </div>
-                <div class="collapse" id="playDetails{{ play.id }}">
-                    <div class="play-row-body">
-                        {% if play.ultiplay_embed %}
-                            {% if "ultiplays.com/embed/" in play.ultiplay_embed %}
-                                {% set embed_url = play.ultiplay_embed.split('src="')[1].split('"')[0] %}
-                                <iframe class="iframe-direct-container mb-3" src="{{ embed_url }}" frameborder="0" allowfullscreen></iframe>
-                            {% else %}
-                                <div class="embed-container">{{ play.ultiplay_embed|embed_html }}</div>
-                            {% endif %}
-                        {% endif %}
-                        {% if play.editor_diagrams %}
-                        <a href="{{ url_for('playbook.view_play', play_id=play.id) }}">
-                            <img src="{{ play.editor_diagrams[0].image_url }}" alt="{{ play.name }} diagram"
-                                 class="img-fluid rounded border mb-3" style="max-height:320px" loading="lazy">
-                        </a>
-                        {% elif play.image_url %}
-                        <img src="{{ play.image_url }}" alt="{{ play.name }} diagram"
-                             class="img-fluid rounded mb-3" style="max-height:320px">
-                        {% endif %}
-                        {% if play.description %}
-                        <div class="markdown-content" style="font-size:.875rem;color:var(--uc-gray-600)">{{ play.description|markdown }}</div>
-                        {% endif %}
-                        {% if play.updated_at %}
-                        <div style="font-size:.75rem;color:var(--uc-gray-400)">
-                            <i class="bi bi-clock-history me-1"></i>Updated {{ play.updated_at.strftime('%d %b %Y') }}
-                        </div>
-                        {% endif %}
-                        <div class="d-flex gap-2 mt-2">
-                            <a href="{{ url_for('playbook.view_play', play_id=play.id) }}" class="btn btn-sm btn-primary">
-                                <i class="bi bi-eye me-1"></i>Full Details
-                            </a>
-                            {% if current_user.is_admin %}
-                            <a href="{{ url_for('playbook.edit_play', play_id=play.id) }}" class="btn btn-sm btn-outline-secondary">
-                                <i class="bi bi-pencil me-1"></i>Edit
-                            </a>
-                            <button type="button" class="btn btn-sm btn-outline-danger"
-                                    data-bs-toggle="modal" data-bs-target="#deletePlayModal{{ play.id }}">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-                {% if current_user.is_admin %}
-                <div class="modal fade" id="deletePlayModal{{ play.id }}" tabindex="-1">
-                    <div class="modal-dialog"><div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">Delete Play</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">Delete <strong>{{ play.name }}</strong>?</div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                            <form action="{{ url_for('playbook.delete_play', play_id=play.id) }}" method="POST" class="d-inline">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                <button type="submit" class="btn btn-danger">Delete</button>
-                            </form>
-                        </div>
-                    </div></div>
-                </div>
-                {% endif %}
-            </div>
-            {% endfor %}
-            {% else %}
-            <div class="card">
-                <div class="uc-empty">
-                    <div class="uc-empty-icon"><i class="bi bi-arrow-up-right-circle"></i></div>
-                    <h5>No Offensive Plays Yet</h5>
-                    <p>Add your team's offensive plays and animations.</p>
-                    {% if current_user.is_admin %}
-                    <a href="{{ url_for('playbook.add_play') }}" class="btn btn-primary">
-                        <i class="bi bi-plus-lg me-1"></i>Add First Play
-                    </a>
-                    {% endif %}
-                </div>
-            </div>
-            {% endif %}
-        </div>
-
-        <!-- ── Defensive Plays ─────────────────────────────── -->
-        <div class="tab-pane fade" id="defense" role="tabpanel">
-            {% if defensive_plays %}
-            {% for play in defensive_plays %}
-            <div class="play-row play-defense">
-                <div class="play-row-header" data-bs-toggle="collapse" data-bs-target="#playDetails{{ play.id }}" aria-expanded="false">
-                    <div class="d-flex align-items-center gap-2 flex-wrap" style="flex:1;min-width:0">
-                        <span class="fw-bold" style="font-size:.9rem">{{ play.name }}</span>
-                        {% if play.formation %}
-                        <span class="badge" style="background:var(--uc-gray-100);color:var(--uc-gray-600);font-size:.72rem">
-                            {{ play.formation.name }}
-                        </span>
-                        {% endif %}
-                        {% for tag in play.tags %}
-                        <span class="badge bg-secondary" style="font-size:.7rem" data-tag-id="{{ tag.id }}">{{ tag.name }}</span>
-                        {% endfor %}
-                        {% if play.stage_count > 1 %}
-                        <span class="badge bg-success-subtle text-success-emphasis" style="font-size:.7rem"><i class="bi bi-play-fill"></i> {{ play.stage_count }} stages</span>
-                        {% endif %}
-                    </div>
-                    <i class="bi bi-chevron-down rotate-icon" style="color:var(--uc-gray-400);flex-shrink:0"></i>
-                </div>
-                <div class="collapse" id="playDetails{{ play.id }}">
-                    <div class="play-row-body">
-                        {% if play.ultiplay_embed %}
-                            {% if "ultiplays.com/embed/" in play.ultiplay_embed %}
-                                {% set embed_url = play.ultiplay_embed.split('src="')[1].split('"')[0] %}
-                                <iframe class="iframe-direct-container mb-3" src="{{ embed_url }}" frameborder="0" allowfullscreen></iframe>
-                            {% else %}
-                                <div class="embed-container">{{ play.ultiplay_embed|embed_html }}</div>
-                            {% endif %}
-                        {% endif %}
-                        {% if play.editor_diagrams %}
-                        <a href="{{ url_for('playbook.view_play', play_id=play.id) }}">
-                            <img src="{{ play.editor_diagrams[0].image_url }}" alt="{{ play.name }} diagram"
-                                 class="img-fluid rounded border mb-3" style="max-height:320px" loading="lazy">
-                        </a>
-                        {% elif play.image_url %}
-                        <img src="{{ play.image_url }}" alt="{{ play.name }} diagram"
-                             class="img-fluid rounded mb-3" style="max-height:320px">
-                        {% endif %}
-                        {% if play.description %}
-                        <div class="markdown-content" style="font-size:.875rem;color:var(--uc-gray-600)">{{ play.description|markdown }}</div>
-                        {% endif %}
-                        {% if play.updated_at %}
-                        <div style="font-size:.75rem;color:var(--uc-gray-400)">
-                            <i class="bi bi-clock-history me-1"></i>Updated {{ play.updated_at.strftime('%d %b %Y') }}
-                        </div>
-                        {% endif %}
-                        <div class="d-flex gap-2 mt-2">
-                            <a href="{{ url_for('playbook.view_play', play_id=play.id) }}" class="btn btn-sm btn-primary">
-                                <i class="bi bi-eye me-1"></i>Full Details
-                            </a>
-                            {% if current_user.is_admin %}
-                            <a href="{{ url_for('playbook.edit_play', play_id=play.id) }}" class="btn btn-sm btn-outline-secondary">
-                                <i class="bi bi-pencil me-1"></i>Edit
-                            </a>
-                            <button type="button" class="btn btn-sm btn-outline-danger"
-                                    data-bs-toggle="modal" data-bs-target="#deletePlayModal{{ play.id }}">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-                {% if current_user.is_admin %}
-                <div class="modal fade" id="deletePlayModal{{ play.id }}" tabindex="-1">
-                    <div class="modal-dialog"><div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">Delete Play</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">Delete <strong>{{ play.name }}</strong>?</div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                            <form action="{{ url_for('playbook.delete_play', play_id=play.id) }}" method="POST" class="d-inline">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                <button type="submit" class="btn btn-danger">Delete</button>
-                            </form>
-                        </div>
-                    </div></div>
-                </div>
-                {% endif %}
-            </div>
-            {% endfor %}
-            {% else %}
-            <div class="card">
-                <div class="uc-empty">
-                    <div class="uc-empty-icon"><i class="bi bi-shield"></i></div>
-                    <h5>No Defensive Plays Yet</h5>
-                    <p>Add your team's defensive schemes and animations.</p>
-                    {% if current_user.is_admin %}
-                    <a href="{{ url_for('playbook.add_play') }}" class="btn btn-primary">
-                        <i class="bi bi-plus-lg me-1"></i>Add First Play
-                    </a>
-                    {% endif %}
-                </div>
-            </div>
-            {% endif %}
-        </div>
-
-    </div><!-- /tab-content -->
+  {# ── The plays ──────────────────────────────────────────── #}
+  {% if plays %}
+    {% if grouped %}
+      {% for side, label in TYPES.items() %}
+      {% set group = plays|selectattr('type', 'equalto', side)|list %}
+      {% if group %}
+      <div class="th-label d-flex justify-content-between align-items-center">
+        <span>{{ label }}</span>
+        {% if can_edit and not show_retired %}<a href="{{ url_for('playbook.draw_play', type=side) }}" class="text-decoration-none" style="text-transform:none;letter-spacing:0;font-size:.85rem">+ Add</a>{% endif %}
+      </div>
+      <div class="th-list">
+        {% for play in group %}{{ play_row(play, loop.first, loop.last) }}{% endfor %}
+      </div>
+      {% endif %}
+      {% endfor %}
+    {% else %}
+      <div class="th-label">{{ plays|length }} play{{ 's' if plays|length != 1 }}{% if q %} for “{{ q }}”{% endif %}</div>
+      <div class="th-list">
+        {% for play in plays %}{{ play_row(play, loop.first, loop.last) }}{% endfor %}
+      </div>
+    {% endif %}
+  {% else %}
+  <div class="th-list th-empty mt-3">
+    <i class="bi bi-journal-richtext"></i>
+    {% if q or tag %}
+    <p class="mb-0">Nothing matches. <a href="{{ url_for('playbook.index') }}">Show every play</a></p>
+    {% elif can_edit %}
+    <p class="mb-3">No plays here yet. Draw one on the field: put the players out, add a stage for each cut and throw.</p>
+    <a href="{{ url_for('playbook.draw_play', type=type_filter) }}" class="btn btn-primary th-btn"><i class="bi bi-easel2"></i>Draw a play</a>
+    {% else %}
+    <p class="mb-0">No plays here yet. Your coaches' plays will show up here.</p>
+    {% endif %}
+  </div>
+  {% endif %}
 </div>
 {% endblock %}
 
 {% block scripts %}
 {{ super() }}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Fix iframe reload on collapse open
-    document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const target = document.querySelector(this.getAttribute('data-bs-target'));
-            if (target) {
-                setTimeout(() => {
-                    target.querySelectorAll('iframe').forEach(iframe => {
-                        const src = iframe.src; iframe.src = ''; setTimeout(() => iframe.src = src, 50);
-                    });
-                }, 300);
-            }
-        });
-    });
-
-    // Live search
-    const searchInput = document.getElementById('playSearch');
-    if (searchInput) {
-        searchInput.addEventListener('input', function() {
-            const term = this.value.toLowerCase();
-            document.querySelectorAll('.concept-card').forEach(card => {
-                const match = card.querySelector('h6')?.textContent.toLowerCase().includes(term) ||
-                              card.querySelector('p')?.textContent.toLowerCase().includes(term);
-                card.closest('.col-md-6, .col-lg-4').style.display = match ? '' : 'none';
-            });
-            document.querySelectorAll('.play-row').forEach(row => {
-                const text = row.textContent.toLowerCase();
-                row.style.display = text.includes(term) ? '' : 'none';
-            });
-        });
-    }
-
-    // Tag filter
-    const tagFilter = document.getElementById('tagFilter');
-    if (tagFilter) {
-        tagFilter.addEventListener('change', function() {
-            const sel = this.value;
-            document.querySelectorAll('.play-row').forEach(row => {
-                if (!sel) { row.style.display = ''; return; }
-                const tags = Array.from(row.querySelectorAll('.badge[data-tag-id]')).map(b => b.getAttribute('data-tag-id'));
-                row.style.display = tags.includes(sel) ? '' : 'none';
-            });
-        });
-    }
-
-    // Export PDF with live progress bar
-    const progressCard = document.getElementById('exportProgress');
-    const progressBar = document.getElementById('exportProgressBar');
-    const progressLabel = document.getElementById('exportProgressLabel');
-    const progressPct = document.getElementById('exportProgressPct');
-    let exportPolling = null;
-
-    function setProgress(pct, label, error) {
-        progressBar.style.width = pct + '%';
-        progressPct.textContent = pct + '%';
-        progressLabel.innerHTML = '<i class="bi bi-file-earmark-pdf me-1"></i>' + label;
-        progressBar.classList.toggle('bg-danger', !!error);
-        progressBar.classList.toggle('bg-success', pct >= 100 && !error);
-    }
-
-    function finishExport(delayMs) {
-        clearInterval(exportPolling);
-        exportPolling = null;
-        document.querySelectorAll('.export-pdf-btn').forEach(b => b.classList.remove('disabled'));
-        setTimeout(() => { progressCard.style.display = 'none'; }, delayMs);
-    }
-
-    function startExport(type) {
-        if (exportPolling) return; // one at a time
-        document.querySelectorAll('.export-pdf-btn').forEach(b => b.classList.add('disabled'));
-        progressCard.style.display = '';
-        setProgress(2, 'Starting export…');
-
-        const startUrl = "{{ url_for('playbook.export_start') }}" + (type ? '?type=' + type : '');
-        fetch(startUrl)
-            .then(r => r.json())
-            .then(({ job_id }) => {
-                const statusUrl = "{{ url_for('playbook.export_status', job_id='JOB') }}".replace('JOB', job_id);
-                exportPolling = setInterval(() => {
-                    fetch(statusUrl)
-                        .then(r => r.json())
-                        .then(s => {
-                            if (s.state === 'ready') {
-                                setProgress(100, 'Done — downloading…');
-                                window.location = s.download_url;
-                                finishExport(2500);
-                            } else if (s.state === 'error' || s.state === 'unknown') {
-                                setProgress(100, s.label || 'Export failed', true);
-                                finishExport(6000);
-                            } else {
-                                setProgress(s.pct || 5, s.label || 'Working…');
-                            }
-                        })
-                        .catch(() => { setProgress(100, 'Connection lost', true); finishExport(6000); });
-                }, 700);
-            })
-            .catch(() => { setProgress(100, 'Could not start export', true); finishExport(6000); });
-    }
-
-    document.querySelectorAll('.export-pdf-btn').forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            startExport(this.dataset.type || '');
-        });
-    });
-
-    // URL tab param
-    const tab = new URLSearchParams(window.location.search).get('tab');
-    if (tab) {
-        const el = document.querySelector(`#${tab}-tab`);
-        if (el) new bootstrap.Tab(el).show();
-    }
-});
-</script>
+<script src="{{ url_for('static', filename='js/theory.js') }}"></script>
+<script src="{{ url_for('static', filename='js/playbook_export.js') }}"></script>
 {% endblock %}

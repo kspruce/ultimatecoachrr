@@ -1,0 +1,75 @@
+{# templates/playbook/learners.html: who has learned a play, and asking the team to learn it #}
+{% extends "base.html" %}
+
+{% block styles %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/theory.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container th-page" style="max-width:760px">
+  <nav class="th-crumbs" aria-label="Breadcrumb">
+    <a href="{{ url_for('playbook.index') }}">Playbook</a><span aria-hidden="true">›</span>
+    <a href="{{ url_for('playbook.view_play', play_id=play.id) }}">{{ play.name }}</a>
+  </nav>
+  <div class="th-head">
+    <div>
+      <h1>Who knows it</h1>
+      <p>{{ learned_count }} of {{ people|length }} on the team {{ 'has' if learned_count == 1 else 'have' }} marked “{{ play.name }}” as learned.</p>
+    </div>
+  </div>
+
+  {% if people %}
+  <div class="th-progress mb-3" aria-hidden="true"><span style="width:{{ (learned_count / people|length * 100)|round|int }}%"></span></div>
+  {% endif %}
+
+  <div class="th-form-card">
+    <h2 class="h6 fw-bold mb-1">{{ 'Asked to learn it' if play.to_learn else 'Ask the team to learn this' }}</h2>
+    <p class="small text-muted">
+      {% if play.status != 'active' %}It's {{ play.status_label|lower }}: players will see the request once it's in use.
+      {% else %}It goes at the top of the Playbook and the home page for everyone who hasn't learned it.{% endif %}
+    </p>
+    <form method="POST" class="th-form" novalidate>
+      {{ form.hidden_tag() }}
+      <div class="row g-2">
+        <div class="col-sm-5">
+          <label class="form-label" for="due_date">Learn by <span class="fw-normal text-muted">(optional)</span></label>
+          {{ form.due_date(class="form-control" + (" is-invalid" if form.due_date.errors else ""), type="date") }}
+          {% for e in form.due_date.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        </div>
+        <div class="col-sm-7">
+          <label class="form-label" for="note">Note <span class="fw-normal text-muted">(optional)</span></label>
+          {{ form.note(class="form-control", placeholder="e.g. For Nationals") }}
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary th-btn mt-3"><i class="bi bi-bookmark-check"></i>{{ 'Save' if play.to_learn else 'Ask the team' }}</button>
+    </form>
+    {% if play.to_learn %}
+    <form method="POST" action="{{ url_for('playbook.unassign', play_id=play.id) }}" class="mt-2">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn btn-link px-0 text-danger">Stop asking the team to learn it</button>
+    </form>
+    {% endif %}
+  </div>
+
+  <div class="th-label">The team</div>
+  {% if people %}
+  <div class="th-list">
+    {% for user, name, when in people %}
+    <div class="th-row" style="min-height:52px">
+      <span class="th-row-num {% if when %}done{% endif %}" aria-hidden="true"><i class="bi {{ 'bi-check-lg' if when else 'bi-dash' }}"></i></span>
+      <div class="th-row-text"><div class="th-row-title" style="font-weight:600">{{ name }}</div></div>
+      {% if when %}<span class="th-badge read">Learned {{ when.strftime('%-d %b') }}</span>{% else %}<span class="th-badge">Not yet</span>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="th-list th-empty">Nobody on the team yet.</div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/theory.js') }}"></script>
+{% endblock %}

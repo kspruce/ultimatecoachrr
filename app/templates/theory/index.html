@@ -5,6 +5,7 @@
 {% block styles %}
 {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/theory.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/playbook.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -82,8 +83,23 @@
     </a>
     {% endfor %}
   </div>
-  {% else %}
+  {% elif not play_results %}
   <div class="th-list th-empty"><i class="bi bi-search"></i>Nothing matches. Try fewer or different words.</div>
+  {% endif %}
+  {% if play_results %}
+  <div class="th-label">In the playbook</div>
+  <div class="th-list">
+    {% for p in play_results %}
+    <a class="th-row" href="{{ url_for('playbook.view_play', play_id=p.id) }}">
+      {% if p.thumbnail %}<img src="{{ p.thumbnail }}" alt="" class="pb-thumb" loading="lazy">{% endif %}
+      <div class="th-row-text">
+        <div class="th-row-title">{{ p.name }}</div>
+        <div class="th-row-sub">{{ p.type_label }} play{% if p.call %} · “{{ p.call }}”{% endif %}{% if p.is_draft %} · draft{% endif %}</div>
+      </div>
+      <i class="bi bi-chevron-right th-chev" aria-hidden="true"></i>
+    </a>
+    {% endfor %}
+  </div>
   {% endif %}
 
   {% else %}

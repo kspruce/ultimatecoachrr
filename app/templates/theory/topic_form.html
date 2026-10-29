@@ -4,6 +4,7 @@
 {% block styles %}
 {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/theory.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/playbook.css') }}">
 {% endblock %}
 
 {% macro errors(field) %}{% for e in field.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}{% endmacro %}
@@ -94,6 +95,7 @@
           <button type="button" data-md="photo" aria-label="Insert a photo"><i class="bi bi-image"></i><span>Photo</span></button>
           <button type="button" data-md="link" aria-label="Link"><i class="bi bi-link-45deg"></i></button>
           <button type="button" data-md="hr" aria-label="Divider"><i class="bi bi-hr"></i></button>
+          {% if plays %}<button type="button" data-md="play" aria-label="Show a play from the playbook" data-bs-toggle="offcanvas" data-bs-target="#th-play-insert"><i class="bi bi-journal-richtext"></i><span>Play</span></button>{% endif %}
           <input type="file" id="th-inline-file" accept="image/*" class="visually-hidden">
         </div>
         {{ form.content(class="form-control" + (" is-invalid" if form.content.errors else ""), id="content",
@@ -106,7 +108,7 @@
       {{ errors(form.content) }}
     </div>
 
-    <details class="th-more" {% if form.tags.errors or videos or form.related_drills.data or form.clips.data %}open{% endif %}>
+    <details class="th-more" {% if form.tags.errors or videos or form.related_drills.data or form.clips.data or form.plays.data %}open{% endif %}>
       <summary>More options <i class="bi bi-chevron-down" aria-hidden="true"></i></summary>
       <div class="th-more-body">
 
@@ -133,6 +135,16 @@
           <p class="small text-muted mb-0">No drills saved yet. Drills you save in Sessions can be linked here.</p>
           {% endif %}
         </div>
+
+        {% if plays %}
+        <div class="th-field">
+          <label class="form-label d-block">Plays that use this</label>
+          <div class="th-picked" id="th-plays-picked"></div>
+          <button type="button" class="btn btn-outline-secondary th-btn" data-bs-toggle="offcanvas" data-bs-target="#th-play-sheet">
+            <i class="bi bi-journal-richtext"></i>Choose plays
+          </button>
+        </div>
+        {% endif %}
 
         <div class="th-field">
           <label class="form-label d-block">Linked clips</label>
@@ -214,6 +226,46 @@
             <input type="checkbox" class="form-check-input mt-0" name="related_drills" value="{{ d.id }}" {% if d.id in picked %}checked{% endif %} data-drill-title="{{ d.title }}">
             <span><strong>{{ d.title }}</strong>{% if d.focus_area %}<br><small class="text-muted">{{ d.focus_area }}</small>{% endif %}</span>
           </label>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    {# Plays: one sheet to link them, one to show a play inside the text #}
+    {% if plays %}
+    <div class="offcanvas offcanvas-bottom th-sheet" tabindex="-1" id="th-play-sheet" aria-labelledby="th-play-title">
+      <div class="th-sheet-grip" aria-hidden="true"></div>
+      <div class="offcanvas-header">
+        <h5 class="offcanvas-title" id="th-play-title">Link plays</h5>
+        <button type="button" class="btn btn-primary btn-sm" data-bs-dismiss="offcanvas">Done</button>
+      </div>
+      <div class="offcanvas-body pt-1">
+        <input type="search" class="form-control mb-2" placeholder="Search plays" aria-label="Search plays" data-play-search autocomplete="off">
+        <div class="th-pick-list">
+          {% set picked_plays = form.plays.data or [] %}
+          {% for p in plays %}
+          <label data-play-name="{{ p.name|lower }} {{ (p.call or '')|lower }}">
+            <input type="checkbox" class="form-check-input mt-0" name="plays" value="{{ p.id }}" {% if p.id in picked_plays %}checked{% endif %} data-play-title="{{ p.name }}">
+            <span><strong>{{ p.name }}</strong><br><small class="text-muted">{{ p.type_label }}{% if p.call %} · “{{ p.call }}”{% endif %}{% if p.is_draft %} · draft{% endif %}</small></span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    <div class="offcanvas offcanvas-bottom th-sheet" tabindex="-1" id="th-play-insert" aria-labelledby="th-play-insert-title">
+      <div class="th-sheet-grip" aria-hidden="true"></div>
+      <div class="offcanvas-header">
+        <h5 class="offcanvas-title" id="th-play-insert-title">Show a play in the text</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+      </div>
+      <div class="offcanvas-body pt-1">
+        <p class="small text-muted">Its drawing goes in where the cursor is, linking to the play.</p>
+        <div class="th-pick-list">
+          {% for p in plays %}
+          <button type="button" class="btn btn-link text-start w-100 d-flex align-items-center gap-2 px-1" style="min-height:48px;text-decoration:none;border-bottom:1px solid var(--rule)" data-insert-play="{{ p.id }}">
+            <span class="pb-side {{ p.type }}">{{ p.type_label }}</span><span>{{ p.name }}</span>
+          </button>
           {% endfor %}
         </div>
       </div>

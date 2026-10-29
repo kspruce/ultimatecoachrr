@@ -1,357 +1,209 @@
+{# templates/playbook/play_detail.html #}
 {% extends "base.html" %}
+{% from "playbook/_macros.html" import play_menu, side_badge %}
 
 {% block styles %}
 {{ super() }}
-<style>
-    .embed-container {
-        position: relative;
-        padding-bottom: 56.25%;
-        height: 0;
-        overflow: hidden;
-        max-width: 100%;
-    }
-
-    .embed-container iframe {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        border: 0;
-    }
-
-    .badge {
-        margin-right: 0.25rem;
-    }
-
-    /* Rendered markdown */
-    .markdown-content p { margin-bottom: .5rem; }
-    .markdown-content ul, .markdown-content ol { margin: .25rem 0 .75rem 1.25rem; }
-    .markdown-content h1 { font-size: 1.25rem; margin: .75rem 0 .35rem; }
-    .markdown-content h2 { font-size: 1.15rem; margin: .75rem 0 .35rem; }
-    .markdown-content h3 { font-size: 1.05rem; margin: .6rem 0 .3rem; }
-    .markdown-content blockquote { border-left: 3px solid var(--uc-gray-200, var(--rule));
-        padding-left: .75rem; color: var(--uc-gray-600, #6c757d); margin: .5rem 0; }
-    .markdown-content code { background: var(--uc-gray-100, #f8f9fa);
-        padding: .1rem .3rem; border-radius: 3px; }
-    .markdown-content table { border-collapse: collapse; margin: .5rem 0; }
-    .markdown-content table th, .markdown-content table td {
-        border: 1px solid var(--uc-gray-200, var(--rule)); padding: .25rem .5rem; }
-    .markdown-content img { max-width: 100%; }
-    .play-stages > summary { cursor: pointer; font-weight: 600; list-style: none; }
-    .play-stages > summary::-webkit-details-marker { display: none; }
-    .border-dashed { border-style: dashed; }
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/theory.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/playbook.css') }}">
 {% endblock %}
 
+{% macro learned_form() %}
+<form method="POST" action="{{ url_for('playbook.mark_learned', play_id=play.id) }}" data-read-form data-done="Learned" data-todo="Mark as learned" class="th-read-btn">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="read" value="{{ '0' if is_learned else '1' }}">
+  <button type="submit" class="btn th-btn w-100 {{ 'btn-outline-secondary is-read' if is_learned else 'btn-primary' }}" aria-pressed="{{ 'true' if is_learned else 'false' }}">
+    {% if is_learned %}<i class="bi bi-check-circle-fill"></i> Learned{% else %}<i class="bi bi-check-circle"></i> Mark as learned{% endif %}
+  </button>
+</form>
+{% endmacro %}
+
 {% block content %}
-<div class="container">
-    <!-- Header Section -->
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h1>{{ play.name }}</h1>
-            <div class="mb-2">
-                <span class="badge bg-{{ 'primary' if play.type == 'offense' else 'danger' }}">
-                    {{ play.type|title }}
-                </span>
-                {% if play.formation %}
-                <span class="badge bg-secondary">
-                    Formation: {{ play.formation.name }}
-                </span>
-                {% endif %}
-                {% for tag in play.tags %}
-                <span class="badge bg-info">{{ tag.name }}</span>
-                {% endfor %}
-            </div>
-        </div>
-        <div class="col-md-4 text-md-end">
-            <div class="d-flex flex-wrap gap-2 justify-content-md-end">
-                {% if current_user.is_admin %}
-                    <a href="{{ url_for('playbook.draw_play', play_id=play.id) }}" class="btn btn-primary">
-                        <i class="bi bi-pencil-square"></i> {{ 'Edit drawing' if play.editor_diagram else 'Draw it' }}
-                    </a>
-                    <a href="{{ url_for('playbook.edit_play', play_id=play.id) }}" class="btn btn-outline-primary">
-                        <i class="bi bi-pencil"></i> Edit Play
-                    </a>
-                {% endif %}
-                <a href="{{ url_for('playbook.index') }}" class="btn btn-outline-secondary">
-                    <i class="bi bi-arrow-left"></i> Playbook
-                </a>
-            </div>
-        </div>
+{% if request.args.get('saved') %}<div hidden data-clear-drafts="playbook-draft:{{ play.id }} playbook-draft:new"></div>{% endif %}
+<div class="container th-page" style="max-width:860px">
+
+  <nav class="th-crumbs" aria-label="Breadcrumb">
+    <a href="{{ url_for('playbook.index') }}">Playbook</a><span aria-hidden="true">›</span>
+    <a href="{{ url_for('playbook.index', type=play.type, show='retired' if play.is_retired else None) }}">{{ play.type_label }}</a>
+    {% if position[1] > 1 %}<span aria-hidden="true">·</span><span>{{ position[0] }} of {{ position[1] }}</span>{% endif %}
+  </nav>
+
+  {% if play.is_draft %}
+  <div class="th-draft-banner">
+    <i class="bi bi-eye-slash" aria-hidden="true"></i>
+    <div class="flex-grow-1">Draft: only coaches can see this.</div>
+    <form method="POST" action="{{ url_for('playbook.set_status', play_id=play.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn btn-sm btn-primary" name="status" value="active">Put it in use</button>
+    </form>
+  </div>
+  {% elif play.is_retired %}
+  <div class="th-draft-banner"><i class="bi bi-archive" aria-hidden="true"></i><div class="flex-grow-1">Retired: kept for reference, off the cards and the PDF.</div></div>
+  {% endif %}
+
+  <div class="th-head mb-1">
+    <h1 id="th-title">{{ play.name }}</h1>
+    {% if can_edit %}
+    <div class="d-flex gap-2 flex-shrink-0">
+      <a href="{{ url_for('playbook.edit_play', play_id=play.id) }}" class="th-icon-btn sm" aria-label="Edit {{ play.name }}"><i class="bi bi-pencil"></i></a>
+      {{ play_menu(play, show_move=not play.is_retired, first=position[0] == 1, last=position[0] == position[1], move_class='',
+                   next=url_for('playbook.view_play', play_id=play.id)) }}
     </div>
+    {% endif %}
+  </div>
+  <div class="th-meta mb-2">
+    {{ side_badge(play) }}
+    {% for tag in play.tags %}<a href="{{ url_for('playbook.index', tag=tag.name) }}" class="th-badge">#{{ tag.name }}</a>{% endfor %}
+    {% if play.to_learn and play.to_learn.due_date %}<span class="th-badge due"><i class="bi bi-calendar-event"></i>Learn by {{ play.to_learn.due_date.strftime('%a %-d %b') }}</span>{% endif %}
+    {% if learners %}<a href="{{ url_for('playbook.learners', play_id=play.id) }}" class="th-badge"><i class="bi bi-people"></i>{{ learners[0] }} of {{ learners[1] }} learned</a>{% endif %}
+  </div>
+  {% if play.call or play.signal %}
+  <div class="pb-call">
+    {% if play.call %}<span>Call: <b>{{ play.call }}</b></span>{% endif %}
+    {% if play.signal %}<span>Signal: <b>{{ play.signal }}</b></span>{% endif %}
+  </div>
+  {% endif %}
 
-    <div class="row">
-        <!-- Main Content -->
-        <div class="col-md-8">
-            <!-- Drawing -->
-            {% if animation %}
-                {% include "partials/diagram_animation.html" %}
-            {% endif %}
-            {% if play.editor_diagrams and not animation %}
-            <div class="card mb-4">
-                <div class="card-body text-center">
-                    {% set d = play.editor_diagrams[0] %}
-                    <img src="{{ d.image_url }}" alt="{{ play.name }} diagram" class="img-fluid rounded border">
-                    {% if d.caption %}<p class="small text-muted mt-2 mb-0">{{ d.caption }}</p>{% endif %}
-                </div>
-            </div>
-            {% endif %}
-            {% if play.stage_count > 1 %}
-            <details class="card mb-4 play-stages">
-                <summary class="card-header">All {{ play.stage_count }} stages</summary>
-                <div class="card-body">
-                    <div class="row g-3">
-                        {% for d in play.editor_diagrams %}
-                        <div class="col-sm-6">
-                            <figure class="mb-0">
-                                <div class="fw-bold small mb-1">{{ loop.index }}. {{ d.step_label or 'Stage ' ~ loop.index }}</div>
-                                <img src="{{ d.image_url }}" class="img-fluid rounded border" alt="{{ d.step_label or play.name }}" loading="lazy">
-                                {% if d.caption %}<figcaption class="small text-muted mt-1">{{ d.caption }}</figcaption>{% endif %}
-                            </figure>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </details>
-            {% endif %}
-
-            <!-- Older linked diagram -->
-            {% if play.image_url and not play.editor_diagrams %}
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Play Diagram</h5>
-                </div>
-                <div class="card-body text-center">
-                    <img src="{{ play.image_url }}" alt="{{ play.name }} diagram"
-                         class="img-fluid rounded" style="max-height:500px">
-                </div>
-            </div>
-            {% endif %}
-
-            {% if not play.editor_diagrams and not play.image_url and not play.ultiplay_embed and current_user.is_admin %}
-            <div class="card mb-4 border-dashed">
-                <div class="card-body text-center py-4">
-                    <i class="bi bi-easel2 fs-2 text-muted"></i>
-                    <p class="mb-2">No diagram yet. Draw the play on the field, stage by stage, and players can watch it move.</p>
-                    <a href="{{ url_for('playbook.draw_play', play_id=play.id) }}" class="btn btn-primary btn-sm">Draw it</a>
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- Description Section -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Description</h5>
-                </div>
-                <div class="card-body">
-                    {% if play.description %}
-                    <div class="markdown-content">{{ play.description|markdown }}</div>
-                    {% else %}
-                    <p class="text-muted">No description provided.</p>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Video Section -->
-            {% if play.ultiplay_embed %}
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Play Video</h5>
-                </div>
-                <div class="card-body">
-                    <div class="embed-container">
-                        {{ play.ultiplay_embed|embed_html }}
-                    </div>
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- Position Assignment Section -->
-            <div class="card mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="card-title mb-0">Position Assignments</h5>
-                    {% if current_user.is_admin %}
-                    <a href="{{ url_for('playbook.manage_assignments', play_id=play.id) }}" class="btn btn-sm btn-primary">
-                        <i class="bi bi-person-gear"></i> Manage
-                    </a>
-                    {% endif %}
-                </div>
-                <div class="card-body">
-                    {% if play.assignments %}
-                        <div class="accordion" id="assignmentsAccordion">
-                            {% for assignment in play.assignments %}
-                            <div class="accordion-item">
-                                <h2 class="accordion-header" id="heading{{ assignment.id }}">
-                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ assignment.id }}">
-                                        {{ assignment.position.name }}
-                                    </button>
-                                </h2>
-                                <div id="collapse{{ assignment.id }}" class="accordion-collapse collapse" data-bs-parent="#assignmentsAccordion">
-                                    <div class="accordion-body">
-                                        <div class="markdown-content">{{ assignment.instructions|markdown }}</div>
-                                    </div>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                    {% else %}
-                        <p class="text-muted">No position assignments defined.</p>
-                    {% endif %}
-                </div>
-            </div>
-
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Practice History</h5>
-                </div>
-                <div class="card-body">
-                    {% if play.session_components|length > 0 %}
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Date</th>
-                                        <th>Session</th>
-                                        <th>Component</th>
-                                        <th>Focus Area</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for component in play.session_components %}
-                                    <tr>
-                                        <td>{{ component.session.date.strftime('%Y-%m-%d') if component.session.date else 'N/A' }}</td>
-                                        <td>{{ component.session.title }}</td>
-                                        <td>{{ component.title }}</td>
-                                        <td>{{ component.focus_area or 'N/A' }}</td>
-                                        <td>
-                                            <a href="{{ url_for('session.detail', session_id=component.session_id) }}" 
-                                               class="btn btn-sm btn-outline-primary">
-                                                <i class="bi bi-eye"></i> View Session
-                                            </a>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    {% else %}
-                        <p class="text-muted">This play hasn't been practiced in any sessions yet.</p>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Notes Section -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Coaching Notes</h5>
-                </div>
-                <div class="card-body">
-                    {% if play.notes %}
-                    <div class="markdown-content">{{ play.notes|markdown }}</div>
-                    {% else %}
-                    <p class="text-muted">No coaching notes provided.</p>
-                    {% endif %}
-                </div>
-            </div>
-
-            {% if play.updated_at %}
-            <p class="text-muted" style="font-size:.8rem">
-                <i class="bi bi-clock-history me-1"></i>Last updated {{ play.updated_at.strftime('%d %b %Y') }}
-            </p>
-            {% endif %}
-        </div>
-
-        <!-- Sidebar -->
-        <div class="col-md-4">
-            <!-- Formation Details -->
-            {% if play.formation %}
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Formation Details</h5>
-                </div>
-                <div class="card-body">
-                    <h6>{{ play.formation.name }}</h6>
-                    {% if play.formation.ultiplay_embed %}
-                    <div class="embed-container mb-3">
-                        {{ play.formation.ultiplay_embed|embed_html }}
-                    </div>
-                    {% endif %}
-                    {% if play.formation.description %}
-                    <p class="mb-0">{{ play.formation.description }}</p>
-                    {% endif %}
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- Metadata -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Play Information</h5>
-                </div>
-                <div class="card-body">
-                    <ul class="list-unstyled">
-                        <li class="mb-2">
-                            <strong>Created:</strong> 
-                            {{ play.created_at.strftime('%Y-%m-%d') }}
-                        </li>
-                        <li class="mb-2">
-                            <strong>Last Updated:</strong> 
-                            {{ play.updated_at.strftime('%Y-%m-%d') }}
-                        </li>
-                        {% if play.tags %}
-                        <li class="mb-2">
-                            <strong>Tags:</strong><br>
-                            {% for tag in play.tags %}
-                            <span class="badge bg-info">{{ tag.name }}</span>
-                            {% endfor %}
-                        </li>
-                        {% endif %}
-                    </ul>
-                </div>
-            </div>
-
-            <!-- Actions -->
-            <div class="card">
-                <div class="card-body">
-                    <div class="d-grid gap-2">
-                        {% if current_user.is_admin %}
-                            <button type="button" 
-                                    class="btn btn-outline-danger"
-                                    data-bs-toggle="modal" 
-                                    data-bs-target="#deletePlayModal">
-                                <i class="bi bi-trash"></i> Delete Play
-                            </button>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
+  {# The drawing: animated when it has stages #}
+  {% if animation %}
+    {% include "partials/diagram_animation.html" %}
+  {% elif play.editor_diagrams %}
+    {% set d = play.editor_diagrams[0] %}
+    <figure class="pb-drawing" data-lightbox="{{ d.image_url }}" data-caption="{{ play.name }}" style="cursor:zoom-in">
+      <img src="{{ d.image_url }}" alt="{{ play.name }}: the drawing">
+      {% if d.caption %}<figcaption>{{ d.caption }}</figcaption>{% endif %}
+    </figure>
+  {% elif play.image_url %}
+    <figure class="pb-drawing" data-lightbox="{{ play.image_url }}" data-caption="{{ play.name }}" style="cursor:zoom-in">
+      <img src="{{ play.image_url }}" alt="{{ play.name }}: the drawing">
+    </figure>
+  {% elif play.ultiplay_embed %}
+    <div class="pb-drawing"><div class="ratio ratio-16x9">{{ play.ultiplay_embed|embed_html }}</div></div>
+  {% elif can_edit %}
+    <div class="th-list th-empty mb-3">
+      <i class="bi bi-easel2"></i>
+      <p class="mb-3">No drawing yet. Draw it on the field, stage by stage, and players can watch it move.</p>
+      <a href="{{ url_for('playbook.draw_play', play_id=play.id) }}" class="btn btn-primary th-btn"><i class="bi bi-easel2"></i>Draw it</a>
     </div>
-</div>
-
-<!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deletePlayModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Delete Play</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to delete "{{ play.name }}"? This action cannot be undone.</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" 
-                        class="btn btn-danger" 
-                        onclick="playbookManager.deletePlay({{ play.id }})">
-                    Delete Play
-                </button>
-            </div>
-        </div>
+  {% endif %}
+  {% if animation and play.stage_count > 1 %}
+  <details class="th-more">
+    <summary>All {{ play.stage_count }} stages <i class="bi bi-chevron-down" aria-hidden="true"></i></summary>
+    <div class="th-more-body">
+      {% for d in play.editor_diagrams %}
+      <figure class="pb-drawing" data-lightbox="{{ d.image_url }}" data-caption="{{ loop.index }}. {{ d.step_label or 'Stage ' ~ loop.index }}" style="cursor:zoom-in">
+        <img src="{{ d.image_url }}" alt="Stage {{ loop.index }}" loading="lazy">
+        <figcaption><b>{{ loop.index }}. {{ d.step_label or 'Stage ' ~ loop.index }}</b>{% if d.caption %} – {{ d.caption }}{% endif %}</figcaption>
+      </figure>
+      {% endfor %}
     </div>
+  </details>
+  {% endif %}
+
+  {# Who does what, yours first #}
+  {% if mine %}
+  <div class="pb-mine">
+    <div class="th-card-kicker">Your role: {{ mine.position.name }}</div>
+    <div class="md topic-content" style="font-size:1rem">{{ mine.instructions|markdown }}</div>
+  </div>
+  {% endif %}
+  {% if play.assignments %}
+  <h2 class="th-label">Who does what</h2>
+  <div class="pb-roles">
+    {% for a in play.assignments %}
+    <div class="pb-role {% if mine and a.id == mine.id %}me{% endif %}">
+      <h3>{{ a.position.name if a.position else 'Everyone' }}{% if mine and a.id == mine.id %} <span class="th-badge due">You</span>{% endif %}</h3>
+      <div class="md">{{ a.instructions|markdown }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% if not my_role %}
+  <p class="small text-muted"><a href="{{ url_for('playbook.position_view') }}">Pick your usual role</a> and every play shows what you do first.</p>
+  {% endif %}
+  {% endif %}
+
+  {% if play.description %}
+  <h2 class="th-label">How it works</h2>
+  <div class="th-article"><div class="topic-content">{{ play.description|markdown }}</div></div>
+  {% endif %}
+
+  {% if topics %}
+  <h2 class="th-label">Read the why</h2>
+  <div class="th-list mb-3">
+    {% for t in topics %}
+    <a class="th-row" href="{{ url_for('theory.topic', topic_id=t.id) }}">
+      <i class="bi bi-mortarboard" style="color:var(--club-ink);font-size:1.2rem" aria-hidden="true"></i>
+      <div class="th-row-text"><div class="th-row-title">{{ t.name }}</div><div class="th-row-sub">{{ t.section.name }}{% if not t.published %} · draft{% endif %}</div></div>
+      <i class="bi bi-chevron-right th-chev" aria-hidden="true"></i>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if play.drills %}
+  <h2 class="th-label">Drills to practise it</h2>
+  <div class="th-list mb-3">
+    {% for drill in play.drills %}
+    <a class="th-row" href="{{ url_for('session.drill_detail', drill_id=drill.id) }}">
+      <i class="bi bi-list-check" style="color:var(--ok);font-size:1.2rem" aria-hidden="true"></i>
+      <div class="th-row-text"><div class="th-row-title">{{ drill.title }}</div>{% if drill.focus_area %}<div class="th-row-sub">{{ drill.focus_area }}</div>{% endif %}</div>
+      <i class="bi bi-chevron-right th-chev" aria-hidden="true"></i>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if clips %}
+  <h2 class="th-label">See it in a game</h2>
+  <div class="th-list mb-3">
+    {% for clip in clips %}
+    <a class="th-row" href="{{ url_for('clip.view_clip', clip_id=clip.id) }}">
+      <i class="bi bi-camera-video" style="color:var(--club-ink);font-size:1.2rem" aria-hidden="true"></i>
+      <div class="th-row-text"><div class="th-row-title">{{ clip.title or 'Clip' }}</div>{% if clip.game %}<div class="th-row-sub">vs {{ clip.game.opponent }}</div>{% endif %}</div>
+      <i class="bi bi-chevron-right th-chev" aria-hidden="true"></i>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if play.notes %}
+  <h2 class="th-label">Coaching notes</h2>
+  <div class="th-article"><div class="topic-content">{{ play.notes|markdown }}</div></div>
+  {% endif %}
+
+  {% if reports or sessions %}
+  <details class="th-more">
+    <summary>Where it's used <i class="bi bi-chevron-down" aria-hidden="true"></i></summary>
+    <div class="th-more-body">
+      {% for r in reports %}
+      <a class="d-flex align-items-center gap-2 py-2 text-decoration-none" href="{{ url_for('scouting.detail', report_id=r.id) }}" style="min-height:44px">
+        <i class="bi bi-binoculars"></i><span>Game plan vs {{ r.team_name }}</span>
+      </a>
+      {% endfor %}
+      {% for s in sessions %}
+      <a class="d-flex align-items-center gap-2 py-2 text-decoration-none" href="{{ url_for('session.detail', session_id=s.id) }}" style="min-height:44px">
+        <i class="bi bi-calendar-check"></i><span>Practised: {{ s.title }}{% if s.date %} · {{ s.date.strftime('%-d %b %Y') }}{% endif %}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </details>
+  {% endif %}
+
+  {% if play.editor or play.author %}
+  <p class="small text-muted">Updated {{ (play.updated_at or play.created_at).strftime('%-d %b %Y') }} by {{ (play.editor or play.author).username }}</p>
+  {% endif %}
+
+  {# Previous / learned / next: pinned to the bottom on phones #}
+  {% if not play.is_draft %}
+  <div class="th-readbar">
+    {% if prev_play %}<a href="{{ url_for('playbook.view_play', play_id=prev_play.id) }}" class="th-icon-btn" aria-label="Previous: {{ prev_play.name }}"><i class="bi bi-arrow-left"></i></a>
+    {% else %}<a href="{{ url_for('playbook.index') }}" class="th-icon-btn" aria-label="Back to the playbook"><i class="bi bi-grid"></i></a>{% endif %}
+    {{ learned_form() }}
+    {% if next_play %}<a href="{{ url_for('playbook.view_play', play_id=next_play.id) }}" class="th-icon-btn" data-next-topic aria-label="Next: {{ next_play.name }}"><i class="bi bi-arrow-right"></i></a>
+    {% else %}<a href="{{ url_for('playbook.index') }}" class="th-icon-btn" aria-label="Back to the playbook"><i class="bi bi-check2-all"></i></a>{% endif %}
+  </div>
+  <div class="th-readbar-spacer"></div>
+  {% endif %}
 </div>
 {% endblock %}
 
@@ -362,19 +214,5 @@
 <script src="{{ url_for('static', filename='js/drill_diagram.js') }}"></script>
 <script src="{{ url_for('static', filename='js/drill_viewer.js') }}"></script>
 {% endif %}
-<script src="{{ url_for('static', filename='js/playbook.js') }}"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize tooltips
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl)
-    });
-
-    // Handle successful deletion
-    window.addEventListener('playDeleted', function(event) {
-        window.location.href = "{{ url_for('playbook.index') }}";
-    });
-});
-</script>
+<script src="{{ url_for('static', filename='js/theory.js') }}"></script>
 {% endblock %}

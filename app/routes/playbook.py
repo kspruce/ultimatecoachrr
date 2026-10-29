@@ -1,4 +1,13 @@
 # app/routes/playbook.py
+"""The playbook: offence and defence plays. Coaches (captains and admins
+too) write and draw them; everyone on the team reads them, marks them
+learned and flicks through the game-day cards. Every page is a 404 when the
+team has the Playbook switched off.
+
+A play is a Draft (coaches only), In use, or Retired (still readable, but
+off the cards, the PDF and game plans). Team concepts moved to Theory; their
+old links redirect there.
+"""
 import json
 from datetime import datetime
 
@@ -6,20 +15,87 @@ from flask import (
     Blueprint, render_template, redirect, url_for, flash,
     request, jsonify, current_app, abort
 )
-from flask_login import login_required, current_user
-from app import db
-from app.models.playbook import Play, Formation, PlayTag, PlayAssignment, PlayerPosition
-from app.forms.playbook import PlayForm, FormationForm, PositionAssignmentForm
-from app.utils.utils import admin_required
-from app.utils.team_filter import get_current_team_id
+from flask_login import current_user
+
+from app import db, login
+from app.forms.playbook import LearnForm, PlayForm
+from app.models.clip import Clip
+from app.models.drill import SavedDrill
+from app.models.playbook import (Formation, Play, PlayAssignment, PlayerPosition, PlayerUsualRole, PlayLearned,
+                                 PlayToLearn, PLAY_STATUSES, PLAY_TYPES)
+from app.models.team_settings import TeamSettings
+from app.models.theory import TheoryImage, TheorySection, TheoryTopic
+from app.utils import playbook as pb
+from app.utils import theory as hub
 from app.utils.editor_diagrams import save_editor_diagrams
+from app.utils.team_filter import get_current_team_id
 
 bp = Blueprint('playbook', __name__, url_prefix='/playbook')
+
+TYPES = dict(PLAY_TYPES)
+STATUSES = dict(PLAY_STATUSES)
+MAX_ROLES = 15
 
 
 def _play_order():
     """Manual sort order first (lower = first), then name."""
-    return (db.func.coalesce(Play.sort_order, 999999), Play.name)
+    return pb.in_order()
+
+
+def settings_for(team_id):
+    return TeamSettings.query.filter_by(team_id=team_id).first() if team_id else None
+
+
+def feature_on(name, team_id=None):
+    settings = settings_for(team_id or get_current_team_id())
+    return settings is None or bool(getattr(settings, name, True))
+
+
+def can_edit():
+    """Coaches, captains and admins."""
+    return current_user.is_authenticated and current_user.is_coach
+
+
+def coach_only():
+    if not can_edit():
+        abort(403)
+
+
+def wants_json():
+    return (request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+            or request.accept_mimetypes.best == 'application/json')
+
+
+@bp.before_request
+def check_access():
+    if not current_user.is_authenticated:
+        return login.unauthorized()
+    if not feature_on('playbook_enabled'):
+        abort(404)
+
+
+@bp.context_processor
+def playbook_context():
+    return {'can_edit': can_edit(), 'TYPES': TYPES, 'STATUSES': STATUSES}
+
+
+def team_plays(team_id, include_drafts=None):
+    query = Play.query.filter_by(team_organization_id=team_id)
+    if not (can_edit() if include_drafts is None else include_drafts):
+        query = query.filter(Play.status != 'draft')
+    return query
+
+
+def play_or_404(play_id):
+    play = Play.query.filter_by(id=play_id, team_organization_id=get_current_team_id()).first_or_404()
+    if play.is_draft and not can_edit():
+        abort(404)
+    return play
+
+
+def export_plays(team_id):
+    """What goes in the PDF: plays in use."""
+    return Play.query.filter_by(team_organization_id=team_id, status='active').order_by(*_play_order()).all()
 
 
 # ── Background export jobs (progress reporting) ──────────────────
@@ -66,10 +142,7 @@ def _run_export_job(app, job_id, team_id, team_name, type_filter, tag_id):
         if job is None:
             return
         try:
-            formations = Formation.query.filter_by(team_organization_id=team_id) \
-                .order_by(Formation.name).all()
-            plays = Play.query.filter_by(team_organization_id=team_id) \
-                .order_by(*_play_order()).all()
+            plays = export_plays(team_id)
 
             def progress(pct, label):
                 j = _export_jobs.get(job_id)
@@ -78,10 +151,10 @@ def _run_export_job(app, job_id, team_id, team_name, type_filter, tag_id):
                     j['label'] = label
 
             pdf_bytes = generate_playbook_pdf(
-                formations, plays, team_name,
+                plays, team_name,
                 type_filter=type_filter, tag_id=tag_id, progress=progress)
 
-            key = cache_key(team_id, formations, plays, type_filter, tag_id)
+            key = cache_key(team_id, plays, type_filter, tag_id)
             store_cached_pdf(team_id, key, pdf_bytes)
 
             job.update(state='ready', pct=100, label='Ready',
@@ -97,7 +170,6 @@ def _run_export_job(app, job_id, team_id, team_name, type_filter, tag_id):
 
 
 @bp.route('/export/start')
-@login_required
 def export_start():
     """Kick off a background export; returns a job id to poll."""
     from app.models.team_organization import TeamOrganization
@@ -118,11 +190,8 @@ def export_start():
         _export_jobs[job_id] = job
 
     # Cache fast-path: nothing changed since the last export
-    formations = Formation.query.filter_by(team_organization_id=team_id) \
-        .order_by(Formation.name).all()
-    plays = Play.query.filter_by(team_organization_id=team_id) \
-        .order_by(*_play_order()).all()
-    cached = cached_pdf(team_id, cache_key(team_id, formations, plays, type_filter, tag_id))
+    plays = export_plays(team_id)
+    cached = cached_pdf(team_id, cache_key(team_id, plays, type_filter, tag_id))
     if cached:
         job.update(state='ready', pct=100, label='Ready', pdf=cached,
                    filename=_export_filename(team_name, type_filter))
@@ -138,7 +207,6 @@ def export_start():
 
 
 @bp.route('/export/status/<job_id>')
-@login_required
 def export_status(job_id):
     job = _export_jobs.get(job_id)
     if job is None or job['team_id'] != get_current_team_id():
@@ -150,7 +218,6 @@ def export_status(job_id):
 
 
 @bp.route('/export/download/<job_id>')
-@login_required
 def export_download(job_id):
     from io import BytesIO
     from flask import send_file
@@ -163,7 +230,6 @@ def export_download(job_id):
 
 
 @bp.route('/export.pdf')
-@login_required
 def export_pdf():
     """Export the playbook as a PDF. Optional filters: ?type=offense|defense, ?tag=<id>."""
     from io import BytesIO
@@ -183,10 +249,7 @@ def export_pdf():
         type_filter = None
     tag_id = request.args.get('tag', type=int)
 
-    formations = Formation.query.filter_by(team_organization_id=team_id) \
-        .order_by(Formation.name).all()
-    plays = Play.query.filter_by(team_organization_id=team_id) \
-        .order_by(*_play_order()).all()
+    plays = export_plays(team_id)
 
     def respond(pdf_bytes):
         suffix = f'_{type_filter}' if type_filter else ''
@@ -196,13 +259,13 @@ def export_pdf():
                          as_attachment=True, download_name=filename)
 
     # Serve from cache when nothing has changed
-    key = cache_key(team_id, formations, plays, type_filter, tag_id)
+    key = cache_key(team_id, plays, type_filter, tag_id)
     cached = cached_pdf(team_id, key)
     if cached:
         return respond(cached)
 
     try:
-        pdf_bytes = generate_playbook_pdf(formations, plays, team_name,
+        pdf_bytes = generate_playbook_pdf(plays, team_name,
                                           type_filter=type_filter, tag_id=tag_id)
     except ImportError:
         current_app.logger.error('Playbook export: playwright is not installed')
@@ -217,134 +280,81 @@ def export_pdf():
     return respond(pdf_bytes)
 
 
-@bp.route('/positions')
-@bp.route('/positions/<int:position_id>')
-@login_required
-def position_view(position_id=None):
-    """Per-position view: pick a position, see its instructions across all plays."""
-    team_id = get_current_team_id()
-    positions = PlayerPosition.query.filter_by(team_organization_id=team_id) \
-        .order_by(PlayerPosition.name).all()
 
-    selected = None
-    assignments = []
-    if position_id:
-        selected = PlayerPosition.query.filter_by(
-            id=position_id, team_organization_id=team_id).first_or_404()
-        assignments = PlayAssignment.query.filter_by(
-            position_id=selected.id, team_organization_id=team_id
-        ).join(Play, PlayAssignment.play_id == Play.id) \
-         .order_by(Play.type, *_play_order()).all()
+# ── Reading ────────────────────────────────────────────────────────────────
 
-    return render_template('playbook/position_view.html',
-                           positions=positions, selected=selected,
-                           assignments=assignments)
+def search(plays, q):
+    """Plays matching every word of q, best first (name and call, then tags,
+    then the text and roles)."""
+    words = q.lower().split()
+    scored = []
+    for p in plays:
+        title = f'{p.name} {p.call or ""}'.lower()
+        tags = ' '.join(t.name.lower() for t in p.tags)
+        body = ' '.join([hub.plain_text(p.description), p.signal or '',
+                         *(f'{a.position.name if a.position else ""} {a.instructions}' for a in p.assignments)]).lower()
+        if all(w in title or w in tags or w in body for w in words):
+            scored.append((-sum(5 * (w in title) + 3 * (w in tags) + (w in body) for w in words), p.name.lower(), p))
+    return [p for _, _, p in sorted(scored, key=lambda s: s[:2])]
 
 
-# Main Routes
 @bp.route('/')
-@login_required
 def index():
-    """Display playbook overview"""
-    offensive_plays = Play.query.filter_by(
-        type='offense',
-        team_organization_id=get_current_team_id()
-    ).order_by(*_play_order()).all()
+    team_id = get_current_team_id()
+    type_filter = request.args.get('type') if request.args.get('type') in TYPES else None
+    show_retired = request.args.get('show') == 'retired'
+    tag = (request.args.get('tag') or '').strip()
+    q = (request.args.get('q') or '').strip()
 
-    defensive_plays = Play.query.filter_by(
-        type='defense',
-        team_organization_id=get_current_team_id()
-    ).order_by(*_play_order()).all()
+    every = team_plays(team_id).order_by(*_play_order()).all()
+    in_use = [p for p in every if p.status == 'active']
+    plays = [p for p in every if p.is_retired == show_retired]
+    if type_filter:
+        plays = [p for p in plays if p.type == type_filter]
+    if tag:
+        plays = [p for p in plays if any(t.name.lower() == tag.lower() for t in p.tags)]
+    if q:
+        plays = search(plays, q)
+    tag_names = sorted({t.name for p in every for t in p.tags}, key=str.lower)
 
-    formations = Formation.query.filter_by(
-        team_organization_id=get_current_team_id()
-    ).order_by(Formation.name).all()
+    learned = pb.learned_ids(current_user.id, team_id)
+    to_learn, learn_counts, team_size = [], {}, 0
+    if can_edit():
+        to_learn = sorted(PlayToLearn.query.filter_by(team_organization_id=team_id).all(),
+                          key=lambda r: (r.due_date is None, r.due_date, r.created_at))
+        if to_learn:
+            team_size = len(hub.team_readers(team_id))
+            ids = [r.play_id for r in to_learn]
+            learn_counts = dict(db.session.query(PlayLearned.play_id, db.func.count(PlayLearned.id))
+                                .filter(PlayLearned.play_id.in_(ids)).group_by(PlayLearned.play_id).all())
+    else:
+        to_learn = pb.to_learn_unlearned(current_user.id, team_id)
 
-    all_tags = PlayTag.query.filter_by(
-        team_organization_id=get_current_team_id()
-    ).order_by(PlayTag.name).all()
+    return render_template('playbook/index.html', title='Playbook', plays=plays, type_filter=type_filter,
+                           show_retired=show_retired, tag=tag, q=q, tag_names=tag_names,
+                           grouped=not (q or type_filter),
+                           learned=learned, to_learn=to_learn, learn_counts=learn_counts, team_size=team_size,
+                           known=len([p for p in in_use if p.id in learned]), total_in_use=len(in_use),
+                           my_role=pb.usual_role(current_user.id, team_id),
+                           has_retired=any(p.is_retired for p in every))
 
-    return render_template('playbook/index.html',
-                         offensive_plays=offensive_plays,
-                         defensive_plays=defensive_plays,
-                         formations=formations,
-                         all_tags=all_tags)
 
-# Play Routes
-@bp.route('/plays/add', methods=['GET', 'POST'])
-@login_required
-@admin_required
-def add_play():
-    if not current_user.is_admin:
-        flash('You do not have permission to access this page.', 'danger')
-        return redirect(url_for('main.index'))
+def visible_clips(clips, team_id):
+    from app.routes.clip.helpers import sees_hidden_clips
+    return [c for c in clips if c.team_organization_id == team_id and (sees_hidden_clips() or not c.is_hidden)]
 
-    form = PlayForm()
 
-    # Update formation choices to only include formations from current team
-    form.formation_id.choices = [(0, 'None')] + [
-        (f.id, f.name) for f in Formation.query.filter_by(
-            team_organization_id=get_current_team_id()
-        ).order_by(Formation.name).all()
-    ]
-
-    # Update tag choices to only include tags from current team
-    form.tags.choices = [(t.id, t.name) for t in PlayTag.query.filter_by(
-        team_organization_id=get_current_team_id()
-    ).order_by(PlayTag.name).all()]
-
-    if form.validate_on_submit():
-
-        play = Play(
-            name=form.name.data,
-            type=form.type.data,
-            description=form.description.data,
-            notes=form.notes.data,
-            ultiplay_embed=form.ultiplay_embed.data,
-            image_url=form.image_url.data,
-            sort_order=form.sort_order.data,
-            created_by=current_user.id,
-            team_organization_id=get_current_team_id()  # Add team organization ID
-        )
-
-        if form.formation_id.data and form.formation_id.data > 0:
-            # Verify formation belongs to current team
-            formation = Formation.query.filter_by(
-                id=form.formation_id.data,
-                team_organization_id=get_current_team_id()
-            ).first()
-
-            if formation:
-                play.formation_id = formation.id
-
-        # Handle tags if any are selected
-        if form.tags.data:
-            for tag_id in form.tags.data:
-                # Verify tag belongs to current team
-                tag = PlayTag.query.filter_by(
-                    id=tag_id,
-                    team_organization_id=get_current_team_id()
-                ).first()
-
-                if tag:
-                    play.tags.append(tag)
-
-        db.session.add(play)
-        db.session.commit()
-
-        flash(f'Play "{play.name}" has been created!', 'success')
-        return redirect(url_for('playbook.index'))
-
-    return render_template('playbook/play_form.html', form=form, title='Add Play')
+def visible_topics(play):
+    if not feature_on('theory_enabled', play.team_organization_id):
+        return []
+    return [t for t in play.theory_topics if t.team_organization_id == play.team_organization_id
+            and (t.published or can_edit())]
 
 
 @bp.route('/plays/<int:play_id>')
-@login_required
 def view_play(play_id):
-    play = Play.query.filter_by(
-        id=play_id,
-        team_organization_id=get_current_team_id()
-    ).first_or_404()
+    play = play_or_404(play_id)
+    team_id = play.team_organization_id
 
     # Drawn in stages: the page plays them as an animation
     animation = None
@@ -353,67 +363,182 @@ def view_play(play_id):
         if len(state.get('stages') or []) > 1:
             animation = state
 
-    return render_template('playbook/play_detail.html', play=play, animation=animation)
+    # Previous / next among the same side's plays
+    siblings = [p for p in team_plays(team_id).filter_by(type=play.type).order_by(*_play_order())
+                if p.is_retired == play.is_retired]
+    ids = [p.id for p in siblings]
+    i = ids.index(play.id) if play.id in ids else 0
+
+    my_role = pb.usual_role(current_user.id, team_id)
+    mine = next((a for a in play.assignments if my_role and a.position_id == my_role.id), None)
+    learners = None
+    if can_edit():
+        learners = (PlayLearned.query.filter_by(play_id=play.id).count(), len(hub.team_readers(team_id)))
+    reports = [r for r in play.scouting_reports if r.team_organization_id == team_id] \
+        if feature_on('scouting_enabled', team_id) else []
+    sessions = sorted({c.session for c in play.session_components
+                       if c.session and c.team_organization_id == team_id},
+                      key=lambda s: s.date or datetime.min.date(), reverse=True)
+    return render_template('playbook/play_detail.html', title=play.name, play=play, animation=animation,
+                           prev_play=siblings[i - 1] if i > 0 else None,
+                           next_play=siblings[i + 1] if i + 1 < len(siblings) else None,
+                           position=(i + 1, len(siblings)),
+                           my_role=my_role, mine=mine, is_learned=play.id in pb.learned_ids(current_user.id, team_id),
+                           learners=learners, topics=visible_topics(play),
+                           clips=visible_clips(play.clips, team_id), reports=reports, sessions=sessions[:5])
+
+
+@bp.route('/plays/<int:play_id>/learned', methods=['POST'])
+def mark_learned(play_id):
+    play = play_or_404(play_id)
+    row = PlayLearned.query.filter_by(user_id=current_user.id, play_id=play.id).first()
+    want = request.form.get('read', '1') != '0'
+    if want and row is None:
+        db.session.add(PlayLearned(user_id=current_user.id, play_id=play.id,
+                                   team_organization_id=play.team_organization_id))
+    elif not want and row is not None:
+        db.session.delete(row)
+    db.session.commit()
+    if wants_json():
+        return jsonify({'read': want})
+    flash(f'"{play.name}" marked as learned.' if want else f'"{play.name}" is back on your list to learn.', 'success')
+    return redirect(url_for('playbook.view_play', play_id=play.id))
+
+
+@bp.route('/plays/<int:play_id>/learners', methods=['GET', 'POST'])
+def learners(play_id):
+    """Who has learned it, and asking the team to learn it."""
+    coach_only()
+    play = play_or_404(play_id)
+    form = LearnForm(obj=play.to_learn)
+    if form.validate_on_submit():
+        row = play.to_learn or PlayToLearn(play=play, team_organization_id=play.team_organization_id,
+                                           assigned_by=current_user.id)
+        row.due_date = form.due_date.data
+        row.note = (form.note.data or '').strip() or None
+        db.session.add(row)
+        db.session.commit()
+        flash(f'The team has been asked to learn "{play.name}".' if play.status == 'active'
+              else "Saved. Players will see it once the play is in use.", 'success')
+        return redirect(url_for('playbook.learners', play_id=play.id))
+    done = {r.user_id: r.learned_at for r in play.learned}
+    people = [(user, name, done.get(user.id)) for user, name in hub.team_readers(play.team_organization_id)]
+    people.sort(key=lambda p: (p[2] is None, p[1].lower()))
+    return render_template('playbook/learners.html', title=f'Who knows {play.name}', play=play, form=form,
+                           people=people, learned_count=sum(1 for p in people if p[2]))
+
+
+@bp.route('/plays/<int:play_id>/unassign', methods=['POST'])
+def unassign(play_id):
+    coach_only()
+    play = play_or_404(play_id)
+    if play.to_learn:
+        db.session.delete(play.to_learn)
+        db.session.commit()
+        flash('No longer asking the team to learn it.', 'success')
+    return redirect(url_for('playbook.learners', play_id=play.id))
+
+
+@bp.route('/roles')
+@bp.route('/roles/<int:position_id>')
+def position_view(position_id=None):
+    """A role's instructions across every play; and choosing your usual role."""
+    team_id = get_current_team_id()
+    positions = pb.team_positions(team_id)
+    my_role = pb.usual_role(current_user.id, team_id)
+    selected = None
+    if position_id:
+        selected = next((p for p in positions if p.id == position_id), None) or abort(404)
+    elif my_role:
+        selected = my_role
+    assignments = []
+    if selected:
+        assignments = [a for a in PlayAssignment.query.filter_by(position_id=selected.id, team_organization_id=team_id)
+                       .join(Play, PlayAssignment.play_id == Play.id)
+                       .order_by(Play.type.desc(), *_play_order())
+                       if a.play.status == 'active' or (a.play.is_draft and can_edit())]
+    return render_template('playbook/roles.html', title='Roles', positions=positions, selected=selected,
+                           assignments=assignments, my_role=my_role)
+
+
+@bp.route('/roles/mine', methods=['POST'])
+def set_my_role():
+    team_id = get_current_team_id()
+    position_id = request.form.get('position_id', type=int)
+    row = PlayerUsualRole.query.filter_by(user_id=current_user.id, team_organization_id=team_id).first()
+    if not position_id:
+        if row:
+            db.session.delete(row)
+        db.session.commit()
+        flash("You haven't got a usual role now.", 'success')
+        return redirect(url_for('playbook.position_view'))
+    position = PlayerPosition.query.filter_by(id=position_id, team_organization_id=team_id).first_or_404()
+    if row is None:
+        row = PlayerUsualRole(user_id=current_user.id, team_organization_id=team_id, position_id=position.id)
+        db.session.add(row)
+    row.position_id = position.id
+    db.session.commit()
+    flash(f'Plays will show what {position.name} does first.', 'success')
+    return redirect(url_for('playbook.position_view', position_id=position.id))
 
 
 # ── Game-day cards: the playbook on a phone ──────────────────────
 @bp.route('/cards')
-@login_required
 def cards():
-    """One card per play, drawing first, for looking over before a game.
-    ?type=offense|defense filters; ?report=<scouting report> shows the plays
-    picked for that game."""
+    """One card per play in use, drawing first, for looking over before a
+    game. ?type=offense|defense filters; ?report=<scouting report> shows the
+    plays picked for that game."""
     from app.models.scouting import ScoutingReport
     team_id = get_current_team_id()
     report = None
     report_id = request.args.get('report', type=int)
     if report_id:
         report = ScoutingReport.query.filter_by(id=report_id, team_organization_id=team_id).first_or_404()
-        plays = report.plays_in_order
+        plays = [p for p in report.plays_in_order if p.team_organization_id == team_id and not p.is_draft]
     else:
-        plays = Play.query.filter_by(team_organization_id=team_id).order_by(Play.type.desc(), *_play_order()).all()
+        plays = Play.query.filter_by(team_organization_id=team_id, status='active') \
+            .order_by(Play.type.desc(), *_play_order()).all()
     type_filter = request.args.get('type')
     if type_filter in ('offense', 'defense'):
         plays = [p for p in plays if p.type == type_filter]
     else:
         type_filter = None
-    return render_template('playbook/cards.html', plays=plays, report=report, type_filter=type_filter)
+    return render_template('playbook/cards.html', plays=plays, report=report, type_filter=type_filter,
+                           my_role=pb.usual_role(current_user.id, team_id),
+                           learned=pb.learned_ids(current_user.id, team_id))
 
 
 # ── Drawing a play in the drill editor ───────────────────────────
 @bp.route('/plays/draw')
 @bp.route('/plays/<int:play_id>/draw')
-@login_required
-@admin_required
 def draw_play(play_id=None):
     """Draw a play on the field, in stages, with the drill editor."""
+    coach_only()
     play = None
     editor_state = None
     if play_id:
-        play = Play.query.filter_by(id=play_id, team_organization_id=get_current_team_id()).first_or_404()
+        play = play_or_404(play_id)
         if play.editor_diagram:
             editor_state = json.loads(play.editor_diagram.editor_json)
-    formations = (Formation.query.filter_by(team_organization_id=get_current_team_id())
-                  .order_by(Formation.name).all())
     return render_template('playbook/play_editor.html', play=play, drill=None, editor_state=editor_state,
-                           formations=formations, other_diagrams=[],
-                           new_type=request.args.get('type') if request.args.get('type') in ('offense', 'defense') else 'offense')
+                           other_diagrams=[], statuses=PLAY_STATUSES,
+                           new_type=request.args.get('type') if request.args.get('type') in TYPES else 'offense')
 
 
 def _apply_play_fields(play, data):
     play.name = (data.get('title') or 'Untitled Play').strip()[:100]
     play.description = data.get('description') or None
     play.notes = data.get('notes') or None
-    if data.get('type') in ('offense', 'defense'):
+    if 'call' in data:
+        play.call = (data.get('call') or '').strip()[:60] or None
+    if data.get('type') in TYPES and data['type'] != play.type:
         play.type = data['type']
+        play.sort_order = next_order(play.team_organization_id, play.type)
     play.type = play.type or 'offense'
-    try:
-        formation_id = int(data.get('formation_id') or 0)
-    except (TypeError, ValueError):
-        formation_id = 0
-    formation = Formation.query.filter_by(id=formation_id, team_organization_id=get_current_team_id()).first() \
-        if formation_id else None
-    play.formation_id = formation.id if formation else None
+    if data.get('status') in STATUSES:
+        play.status = data['status']
+    play.status = play.status or 'active'
+    play.updated_by = current_user.id
 
 
 def _play_payload():
@@ -431,9 +556,8 @@ def _play_saved(play, status=200):
 
 
 @bp.route('/api/plays', methods=['POST'])
-@login_required
-@admin_required
 def create_drawn_play():
+    coach_only()
     play = Play(created_by=current_user.id, team_organization_id=get_current_team_id())
     _apply_play_fields(play, _play_payload())
     db.session.add(play)
@@ -446,10 +570,9 @@ def create_drawn_play():
 
 
 @bp.route('/api/plays/<int:play_id>', methods=['PUT'])
-@login_required
-@admin_required
 def update_drawn_play(play_id):
-    play = Play.query.filter_by(id=play_id, team_organization_id=get_current_team_id()).first_or_404()
+    coach_only()
+    play = play_or_404(play_id)
     _apply_play_fields(play, _play_payload())
     error = save_editor_diagrams(play, source='Play editor')
     if error:
@@ -459,306 +582,244 @@ def update_drawn_play(play_id):
     db.session.commit()
     return _play_saved(play)
 
-@bp.route('/plays/<int:play_id>/edit', methods=['GET', 'POST'])
-@login_required
-@admin_required
-def edit_play(play_id):
-    play = Play.query.filter_by(
-        id=play_id,
-        team_organization_id=get_current_team_id()
-    ).first_or_404()
 
-    form = PlayForm(obj=play)
+# ── Writing a play ───────────────────────────────────────────────
 
-    # Update formation choices to only include formations from current team
-    form.formation_id.choices = [(0, 'None')] + [
-        (f.id, f.name) for f in Formation.query.filter_by(
-            team_organization_id=get_current_team_id()
-        ).order_by(Formation.name).all()
-    ]
+def next_order(team_id, play_type):
+    last = db.session.query(db.func.max(Play.sort_order)).filter_by(team_organization_id=team_id,
+                                                                    type=play_type).scalar()
+    return (last or 0) + 1
 
-    # Update tag choices to only include tags from current team
-    form.tags.choices = [(t.id, t.name) for t in PlayTag.query.filter_by(
-        team_organization_id=get_current_team_id()
-    ).order_by(PlayTag.name).all()]
 
-    if form.validate_on_submit():
-        play.name = form.name.data
+def link_choices(team_id):
+    """What a play can be linked to: theory topics, drills and clips."""
+    topics = []
+    if feature_on('theory_enabled', team_id):
+        topics = (TheoryTopic.query.join(TheorySection, TheorySection.id == TheoryTopic.section_id)
+                  .filter(TheoryTopic.team_organization_id == team_id)
+                  .order_by(TheorySection.order, TheoryTopic.order, TheoryTopic.name).all())
+    drills = SavedDrill.query.filter_by(team_organization_id=team_id).order_by(SavedDrill.title).all()
+    clips = Clip.query.filter_by(team_organization_id=team_id).order_by(Clip.created_at.desc()).all() \
+        if feature_on('clip_enabled', team_id) else []
+    return topics, drills, clips
+
+
+def roles_from_form():
+    """[(role name, instructions)] from the form's role rows, and any problem."""
+    names = request.form.getlist('role_name')
+    texts = request.form.getlist('role_text')
+    roles, seen = [], set()
+    for n, name in enumerate(names):
+        name = ' '.join(name.split())[:50]
+        text = (texts[n] if n < len(texts) else '').strip()
+        if not name and not text:
+            continue
+        if not name:
+            return roles, 'Give each role a name (e.g. Handler 1, Cup, Deep).'
+        if not text:
+            return roles, f'Say what {name} does, or remove the role.'
+        if name.lower() in seen:
+            return roles, f'{name} is in the list twice.'
+        seen.add(name.lower())
+        roles.append((name, text))
+    if len(roles) > MAX_ROLES:
+        return roles, f'A play can have up to {MAX_ROLES} roles.'
+    return roles, None
+
+
+def form_page(form, play=None, roles=None):
+    team_id = get_current_team_id()
+    if roles is None:
+        roles = [(a.position.name if a.position else '', a.instructions) for a in play.assignments] if play else []
+    topics, drills, clips = link_choices(team_id)
+    tag_names = sorted({t.name for p in Play.query.filter_by(team_organization_id=team_id) for t in p.tags},
+                       key=str.lower)
+    return render_template('playbook/play_form.html', form=form, play=play, roles=roles,
+                           position_names=[p.name for p in pb.team_positions(team_id)], tag_names=tag_names,
+                           topics=topics, drills=drills, clips=clips,
+                           topic_items=[(t.id, t.name, t.section.name + ('' if t.published else ' · draft'))
+                                        for t in topics],
+                           drill_items=[(d.id, d.title, d.focus_area) for d in drills],
+                           clip_items=[(c.id, c.title or f'Clip {c.id}', f'vs {c.game.opponent}' if c.game else None)
+                                       for c in clips],
+                           title='Edit play' if play else 'New play')
+
+
+def save_play(form, play):
+    """Fill play from a valid form; returns an error message or None."""
+    with db.session.no_autoflush:
+        team_id = get_current_team_id()
+        roles, error = roles_from_form()
+        if error:
+            return error
+        if play.type != form.type.data or play.sort_order is None:
+            play.sort_order = next_order(team_id, form.type.data)
+        play.name = form.name.data.strip()
         play.type = form.type.data
-        play.description = form.description.data
-        play.notes = form.notes.data
-        play.ultiplay_embed = form.ultiplay_embed.data
-        play.image_url = form.image_url.data
-        play.sort_order = form.sort_order.data
+        play.status = form.status.data
+        play.call = (form.call.data or '').strip() or None
+        play.signal = (form.signal.data or '').strip() or None
+        play.description = form.description.data or None
+        play.notes = form.notes.data or None
+        play.image_url = (form.image_url.data or '').strip() or None
+        play.ultiplay_embed = (form.ultiplay_embed.data or '').strip() or None
+        play.team_organization_id = team_id
+        play.updated_by = current_user.id
+        play.tags = pb.tags_for(form.tags.data, team_id)
 
-        if form.formation_id.data and form.formation_id.data > 0:
-            # Verify formation belongs to current team
-            formation = Formation.query.filter_by(
-                id=form.formation_id.data,
-                team_organization_id=get_current_team_id()
-            ).first()
+        topics, drills, clips = link_choices(team_id)
+        wanted = set(form.topics.data or [])
+        # Links to topics this coach can't pick right now (Theory off) stay put
+        play.theory_topics = [t for t in topics if t.id in wanted] if topics else play.theory_topics
+        wanted = set(form.drills.data or [])
+        play.drills = [d for d in drills if d.id in wanted]
+        if feature_on('clip_enabled', team_id):
+            wanted = set(form.clips.data or [])
+            play.clips = [c for c in clips if c.id in wanted]
 
-            if formation:
-                play.formation_id = formation.id
-            else:
-                play.formation_id = None
-        else:
-            play.formation_id = None
-
-        db.session.commit()
-        flash(f'Play "{play.name}" has been updated!', 'success')
-        return redirect(url_for('playbook.view_play', play_id=play.id))
-
-    return render_template('playbook/play_form.html', form=form, play=play, title='Edit Play')
+        positions = {p.name.lower(): p for p in pb.team_positions(team_id)}
+        old = {a.position.name.lower(): a for a in play.assignments if a.position}
+        play.assignments = []
+        for n, (name, text) in enumerate(roles, start=1):
+            assignment = old.pop(name.lower(), None) or PlayAssignment(team_organization_id=team_id)
+            assignment.position = pb.position_for(name, team_id, positions)
+            assignment.instructions = text
+            assignment.order = n
+            play.assignments.append(assignment)
+    return None
 
 
-# Formation Routes
-@bp.route('/formations/add', methods=['GET', 'POST'])
-@login_required
-@admin_required
-def add_formation():
-    form = FormationForm()
+@bp.route('/plays/add', methods=['GET', 'POST'])
+def add_play():
+    coach_only()
+    team_id = get_current_team_id()
+    form = PlayForm()
+    if request.method == 'GET':
+        form.type.data = request.args.get('type') if request.args.get('type') in TYPES else 'offense'
+        form.status.data = 'active'
     if form.validate_on_submit():
+        play = Play(created_by=current_user.id, team_organization_id=team_id)
+        error = save_play(form, play)
+        if error is None:
+            db.session.add(play)
+            db.session.flush()
+            pb.tidy_up(team_id)
+            db.session.commit()
+            if request.form.get('action') == 'draw':
+                return redirect(url_for('playbook.draw_play', play_id=play.id))
+            flash(f'"{play.name}" added to the playbook.' if play.status == 'active'
+                  else f'"{play.name}" saved as a draft.', 'success')
+            return redirect(url_for('playbook.view_play', play_id=play.id, saved=1))
+        db.session.rollback()
+        flash(error, 'danger')
+        return form_page(form, roles=roles_from_form()[0])
+    return form_page(form)
 
-        formation = Formation(
-            name=form.name.data,
-            type=form.type.data,
-            description=form.description.data,
-            ultiplay_embed=form.ultiplay_embed.data,
-            imgur_url=form.imgur_url.data,
-            created_by=current_user.id,
-            team_organization_id=get_current_team_id()  # Add team organization ID
-        )
 
-        # Debug print
-        current_app.logger.debug(f"Creating formation with imgur_url: {formation.imgur_url}")
-
-        db.session.add(formation)
-        db.session.commit()
-
-        flash(f'Team concept "{formation.name}" has been created!', 'success')
-        return redirect(url_for('playbook.index'))
-
-    return render_template('playbook/formation_form.html', form=form, title='Add Team Concept')
-
-# Error handlers
-@bp.errorhandler(404)
-def not_found_error(error):
-    if request.is_json:
-        return jsonify({
-            'success': False,
-            'message': 'Resource not found'
-        }), 404
-    return render_template('error.html', error_message='Page not found.'), 404
-
-@bp.errorhandler(500)
-def internal_error(error):
-    db.session.rollback()
-    if request.is_json:
-        return jsonify({
-            'success': False,
-            'message': 'Internal server error'
-        }), 500
-    return render_template('error.html', error_message='Something went wrong. Please try again.'), 500
-
-@bp.route('/formations/edit/<int:formation_id>', methods=['GET', 'POST'])
-@login_required
-@admin_required
-def edit_formation(formation_id):
-    formation = Formation.query.filter_by(
-        id=formation_id,
-        team_organization_id=get_current_team_id()
-    ).first_or_404()
-
-    form = FormationForm(obj=formation)
-
+@bp.route('/plays/<int:play_id>/edit', methods=['GET', 'POST'])
+def edit_play(play_id):
+    coach_only()
+    team_id = get_current_team_id()
+    play = play_or_404(play_id)
+    form = PlayForm(obj=play)
+    if request.method == 'GET':
+        form.tags.data = ', '.join(t.name for t in play.tags)
+        form.topics.data = [t.id for t in play.theory_topics]
+        form.drills.data = [d.id for d in play.drills]
+        form.clips.data = [c.id for c in play.clips]
     if form.validate_on_submit():
-        formation.name = form.name.data
-        formation.type = form.type.data
-        formation.description = form.description.data
-        formation.ultiplay_embed = form.ultiplay_embed.data
+        error = save_play(form, play)
+        if error is None:
+            db.session.flush()
+            pb.tidy_up(team_id)
+            play.updated_at = datetime.utcnow()  # the PDF cache goes by it
+            db.session.commit()
+            if request.form.get('action') == 'draw':
+                return redirect(url_for('playbook.draw_play', play_id=play.id))
+            flash('Saved.', 'success')
+            return redirect(url_for('playbook.view_play', play_id=play.id, saved=1))
+        db.session.rollback()
+        flash(error, 'danger')
+        return form_page(form, play=db.session.get(Play, play_id), roles=roles_from_form()[0])
+    return form_page(form, play=play)
 
-        # Make sure this line is present
-        formation.imgur_url = form.imgur_url.data
 
-        # Debug print
-        current_app.logger.debug(f"Saving formation with imgur_url: {formation.imgur_url}")
-
-        db.session.commit()
-        flash(f'Team concept "{formation.name}" has been updated!', 'success')
-        return redirect(url_for('playbook.view_formation', formation_id=formation.id))
-
-    return render_template('playbook/formation_form.html', form=form, formation=formation, title='Edit Formation')
-
-# Also add a delete route for formations
-@bp.route('/plays/<int:play_id>/delete', methods=['POST'])  # Changed to match JS URL
-@login_required
-@admin_required
+@bp.route('/plays/<int:play_id>/delete', methods=['POST'])
 def delete_play(play_id):
-    if not current_user.is_admin:
-        return jsonify({
-            'success': False,
-            'message': 'Permission denied'
-        }), 403
+    coach_only()
+    team_id = get_current_team_id()
+    play = play_or_404(play_id)
+    name = play.name
+    db.session.delete(play)
+    db.session.flush()
+    pb.tidy_up(team_id)
+    db.session.commit()
+    flash(f'"{name}" deleted.', 'success')
+    return redirect(url_for('playbook.index'))
 
-    play = Play.query.filter_by(
-        id=play_id,
-        team_organization_id=get_current_team_id()
-    ).first_or_404()
 
-    try:
-        title = play.name
-        db.session.delete(play)
+@bp.route('/plays/<int:play_id>/move', methods=['POST'])
+def move_play(play_id):
+    """Swap with the neighbouring play on the same side."""
+    coach_only()
+    play = play_or_404(play_id)
+    plays = Play.query.filter_by(team_organization_id=play.team_organization_id, type=play.type) \
+        .order_by(*_play_order()).all()
+    i = plays.index(play)
+    j = i - 1 if request.form.get('direction') == 'up' else i + 1
+    if 0 <= j < len(plays):
+        plays[i], plays[j] = plays[j], plays[i]
+    for n, p in enumerate(plays, start=1):
+        p.sort_order = n
+    db.session.commit()
+    return redirect(request.form.get('next') or url_for('playbook.index', type=play.type))
+
+
+@bp.route('/plays/<int:play_id>/status', methods=['POST'])
+def set_status(play_id):
+    """Publish a draft, retire a play or bring it back."""
+    coach_only()
+    play = play_or_404(play_id)
+    status = request.form.get('status')
+    if status in STATUSES:
+        play.status = status
+        play.updated_by = current_user.id
+        play.updated_at = datetime.utcnow()
         db.session.commit()
+        flash({'active': f'"{play.name}" is in use: the team can see it.',
+               'retired': f'"{play.name}" retired: it\'s off the cards and the PDF.',
+               'draft': f'"{play.name}" is a draft again: only coaches can see it.'}[status], 'success')
+    return redirect(url_for('playbook.view_play', play_id=play.id))
 
-        flash(f'Play "{title}" has been deleted!', 'success')
-        return redirect(url_for('playbook.index'))
 
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"Error deleting play: {str(e)}")
-        return jsonify({
-            'success': False,
-            'message': 'An error occurred while deleting the play.'
-        }), 500
+# ── Photos (kept with Theory's, in the database) ─────────────────
 
-@bp.route('/formations/<int:formation_id>/delete', methods=['POST'])  # Changed to match JS URL
-@login_required
-@admin_required
-def delete_formation(formation_id):
-    if not current_user.is_admin:
-        return jsonify({
-            'success': False,
-            'message': 'Permission denied'
-        }), 403
-
-    formation = Formation.query.filter_by(
-        id=formation_id,
-        team_organization_id=get_current_team_id()
-    ).first_or_404()
-
-    # Check if formation is being used by any plays
-    plays_using_formation = Play.query.filter_by(
-        formation_id=formation_id,
-        team_organization_id=get_current_team_id()
-    ).all()
-
-    if plays_using_formation:
-        return jsonify({
-            'success': False,
-            'message': 'Cannot delete formation that is being used by plays.'
-        }), 400
-
+@bp.route('/images', methods=['POST'])
+def upload_image():
+    coach_only()
+    file = request.files.get('image')
+    if not file or not file.filename:
+        return jsonify({'error': 'Choose a photo to upload.'}), 400
     try:
-        name = formation.name
-        db.session.delete(formation)
-        db.session.commit()
+        image = hub.save_image(file, get_current_team_id(), current_user.id)
+    except hub.ImageError as e:
+        return jsonify({'error': str(e)}), 400
+    db.session.commit()
+    return jsonify({'url': url_for('playbook.image', image_id=image.id)})
 
-        flash(f'Formation "{name}" has been deleted!', 'success')
-        return redirect(url_for('playbook.index'))
 
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"Error deleting formation: {str(e)}")
-        return jsonify({
-            'success': False,
-            'message': 'An error occurred while deleting the formation.'
-        }), 500
+@bp.route('/image/<int:image_id>')
+def image(image_id):
+    from app.routes.theory import serve_image
+    return serve_image(TheoryImage.query.filter_by(id=image_id, team_organization_id=get_current_team_id())
+                       .first_or_404())
 
+
+# ── Team concepts moved to Theory ────────────────────────────────
 
 @bp.route('/formation/<int:formation_id>')
-@login_required
 def view_formation(formation_id):
-    formation = Formation.query.filter_by(
-        id=formation_id,
-        team_organization_id=get_current_team_id()
-    ).first_or_404()
-
-    # Get plays that use this formation
-    related_plays = Play.query.filter_by(
-        formation_id=formation_id,
-        team_organization_id=get_current_team_id()
-    ).all()
-
-    # Debug print
-    current_app.logger.debug(f"Formation ID: {formation.id}, Name: {formation.name}")
-    current_app.logger.debug(f"Imgur URL: {formation.imgur_url}")
-
-    return render_template('playbook/view_formation.html',
-                          formation=formation,
-                          related_plays=related_plays)
-
-@bp.route('/plays/<int:play_id>/assignments', methods=['GET', 'POST'])
-@login_required
-@admin_required
-def manage_assignments(play_id):
-    play = Play.query.filter_by(
-        id=play_id,
-        team_organization_id=get_current_team_id()
-    ).first_or_404()
-
-    form = PositionAssignmentForm()
-
-    # Get all positions for the dropdown (filter by team)
-    form.position_id.choices = [(p.id, p.name) for p in PlayerPosition.query.filter_by(
-        team_organization_id=get_current_team_id()
-    ).order_by(PlayerPosition.name).all()]
-
-    if form.validate_on_submit():
-        # Check if assignment for this position already exists
-        existing = PlayAssignment.query.filter_by(
-            play_id=play.id,
-            position_id=form.position_id.data,
-            team_organization_id=get_current_team_id()
-        ).first()
-
-        if existing:
-            existing.instructions = form.instructions.data
-            flash('Position assignment updated', 'success')
-        else:
-
-            assignment = PlayAssignment(
-                play_id=play.id,
-                position_id=form.position_id.data,
-                instructions=form.instructions.data,
-                team_organization_id=get_current_team_id()  # Add team organization ID
-            )
-            db.session.add(assignment)
-            flash('Position assignment added', 'success')
-
-        db.session.commit()
-        return redirect(url_for('playbook.manage_assignments', play_id=play.id))
-
-    # Get existing assignments
-    assignments = PlayAssignment.query.filter_by(
-        play_id=play.id,
-        team_organization_id=get_current_team_id()
-    ).all()
-
-    return render_template('playbook/assignments.html',
-                          play=play, form=form, assignments=assignments)
-
-@bp.route('/plays/<int:play_id>/assignments/<int:assignment_id>/delete', methods=['POST'])
-@login_required
-@admin_required
-def delete_assignment(play_id, assignment_id):
-    # Verify the play belongs to the current team
-    play = Play.query.filter_by(
-        id=play_id,
-        team_organization_id=get_current_team_id()
-    ).first_or_404()
-
-    assignment = PlayAssignment.query.filter_by(
-        id=assignment_id,
-        play_id=play_id,
-        team_organization_id=get_current_team_id()
-    ).first_or_404()
-
-    # Verify the assignment belongs to the specified play
-    if assignment.play_id != play_id:
-        abort(404)
-
-    db.session.delete(assignment)
-    db.session.commit()
-    flash('Assignment deleted', 'success')
-    return redirect(url_for('playbook.manage_assignments', play_id=play_id))
+    formation = Formation.query.filter_by(id=formation_id, team_organization_id=get_current_team_id()).first_or_404()
+    if formation.moved_to_topic_id and feature_on('theory_enabled'):
+        return redirect(url_for('theory.topic', topic_id=formation.moved_to_topic_id))
+    abort(404)

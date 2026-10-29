@@ -1,0 +1,61 @@
+{# Playbook: pieces shared by the pages #}
+
+{% macro side_badge(play) %}<span class="pb-side {{ play.type }}">{{ play.type_label }}</span>{% endmacro %}
+
+{% macro thumb(play) %}
+{% if play.thumbnail %}<img src="{{ play.thumbnail }}" alt="" class="pb-thumb" loading="lazy">
+{% else %}<span class="pb-thumb empty" aria-hidden="true"><i class="bi bi-easel2"></i></span>{% endif %}
+{% endmacro %}
+
+{# Arrows beside a row from 576px; on phones they're in the row's menu #}
+{% macro move_buttons(play, first, last, next=None) %}
+<form method="POST" action="{{ url_for('playbook.move_play', play_id=play.id) }}" class="d-none d-sm-inline">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="next" value="{{ next or '' }}">
+  <button class="th-icon-btn sm" name="direction" value="up" aria-label="Move {{ play.name }} up" {% if first %}disabled{% endif %}><i class="bi bi-arrow-up"></i></button>
+  <button class="th-icon-btn sm" name="direction" value="down" aria-label="Move {{ play.name }} down" {% if last %}disabled{% endif %}><i class="bi bi-arrow-down"></i></button>
+</form>
+{% endmacro %}
+
+{% macro status_item(play, status, icon, label) %}
+<li>
+  <form method="POST" action="{{ url_for('playbook.set_status', play_id=play.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="dropdown-item" name="status" value="{{ status }}"><i class="bi {{ icon }} me-2"></i>{{ label }}</button>
+  </form>
+</li>
+{% endmacro %}
+
+{% macro play_menu(play, show_move=False, first=True, last=True, move_class='d-sm-none', next=None) %}
+<div class="dropdown">
+  <button class="th-icon-btn sm" type="button" data-bs-toggle="dropdown" aria-expanded="false"
+          aria-label="Options for {{ play.name }}"><i class="bi bi-three-dots"></i></button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><a class="dropdown-item" href="{{ url_for('playbook.edit_play', play_id=play.id) }}"><i class="bi bi-pencil me-2"></i>Edit details</a></li>
+    <li><a class="dropdown-item" href="{{ url_for('playbook.draw_play', play_id=play.id) }}"><i class="bi bi-easel2 me-2"></i>{{ 'Edit drawing' if play.editor_diagram else 'Draw it' }}</a></li>
+    <li><a class="dropdown-item" href="{{ url_for('playbook.learners', play_id=play.id) }}"><i class="bi bi-people me-2"></i>Who knows it · ask to learn</a></li>
+    {% if show_move and not (first and last) %}
+    {% for direction, icon, label, off in [('up', 'bi-arrow-up', 'Move up', first), ('down', 'bi-arrow-down', 'Move down', last)] %}
+    <li class="{{ move_class }}">
+      <form method="POST" action="{{ url_for('playbook.move_play', play_id=play.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="next" value="{{ next or '' }}">
+        <button class="dropdown-item" name="direction" value="{{ direction }}" {% if off %}disabled{% endif %}><i class="bi {{ icon }} me-2"></i>{{ label }}</button>
+      </form>
+    </li>
+    {% endfor %}
+    {% endif %}
+    <li><hr class="dropdown-divider"></li>
+    {% if play.is_draft %}{{ status_item(play, 'active', 'bi-send', 'Put it in use') }}
+    {% elif play.is_retired %}{{ status_item(play, 'active', 'bi-arrow-counterclockwise', 'Bring it back') }}
+    {% else %}{{ status_item(play, 'retired', 'bi-archive', 'Retire it') }}{% endif %}
+    <li>
+      <form method="POST" action="{{ url_for('playbook.delete_play', play_id=play.id) }}"
+            data-confirm="Delete &quot;{{ play.name }}&quot; and its drawing? This can't be undone. (Retiring keeps it.)">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="dropdown-item text-danger"><i class="bi bi-trash me-2"></i>Delete</button>
+      </form>
+    </li>
+  </ul>
+</div>
+{% endmacro %}

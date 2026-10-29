@@ -1,293 +1,210 @@
+{# templates/playbook/play_form.html: a play's details, roles and links (the drawing is in the drill editor) #}
 {% extends "base.html" %}
 
 {% block styles %}
 {{ super() }}
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/easymde/2.18.0/easymde.min.css">
-<style>
-    .EasyMDEContainer .CodeMirror { min-height: 140px; }
-    .embed-preview {
-        position: relative;
-        padding-bottom: 56.25%; /* 16:9 aspect ratio */
-        height: 0;
-        overflow: hidden;
-        border: 1px solid var(--rule);
-        border-radius: 4px;
-        margin-top: 10px;
-        background: var(--sunken);
-    }
-
-    .embed-preview iframe {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        border: 0;
-    }
-
-    .preview-placeholder {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: var(--ink-2);
-    }
-
-    .embed-help {
-        background: var(--sunken);
-        padding: 15px;
-        border-radius: 4px;
-        margin-top: 10px;
-    }
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/theory.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/playbook.css') }}">
 {% endblock %}
 
+{% macro errors(field) %}{% for e in field.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}{% endmacro %}
+
+{% macro seg(field, name) %}
+<div class="pb-seg" role="radiogroup" aria-label="{{ field.label.text }}">
+  {% for value, label in field.choices %}
+  <input type="radio" name="{{ name }}" id="{{ name }}-{{ value }}" value="{{ value }}" {% if field.data == value %}checked{% endif %}>
+  <label for="{{ name }}-{{ value }}">{{ label }}</label>
+  {% endfor %}
+</div>
+{{ errors(field) }}
+{% endmacro %}
+
+{% macro role_row(name='', text='') %}
+<div class="pb-role-row">
+  <div class="top">
+    <input type="text" name="role_name" class="form-control" value="{{ name }}" placeholder="Role, e.g. Handler 1" list="pb-positions"
+           aria-label="Role" autocomplete="off" maxlength="50">
+    <button type="button" class="th-icon-btn" data-remove-role aria-label="Remove this role"><i class="bi bi-trash"></i></button>
+  </div>
+  <textarea name="role_text" class="form-control" rows="2" placeholder="What they do" aria-label="What they do">{{ text }}</textarea>
+</div>
+{% endmacro %}
+
+{% macro picker_sheet(id, title, field, items, picked, search_label) %}
+<div class="offcanvas offcanvas-bottom th-sheet" tabindex="-1" id="{{ id }}" aria-labelledby="{{ id }}-title">
+  <div class="th-sheet-grip" aria-hidden="true"></div>
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title" id="{{ id }}-title">{{ title }}</h5>
+    <button type="button" class="btn btn-primary btn-sm" data-bs-dismiss="offcanvas">Done</button>
+  </div>
+  <div class="offcanvas-body pt-1">
+    <input type="search" class="form-control mb-2" placeholder="{{ search_label }}" aria-label="{{ search_label }}" data-pick-search autocomplete="off">
+    <div class="th-pick-list">
+      {% for item_id, label, sub in items %}
+      <label data-pick-name="{{ label|lower }} {{ (sub or '')|lower }}">
+        <input type="checkbox" class="form-check-input mt-0" name="{{ field }}" value="{{ item_id }}" {% if item_id in picked %}checked{% endif %} data-pick-title="{{ label }}">
+        <span><strong>{{ label }}</strong>{% if sub %}<br><small class="text-muted">{{ sub }}</small>{% endif %}</span>
+      </label>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endmacro %}
+
 {% block content %}
-<div class="container">
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h1>{{ title }}</h1>
+{% set back = url_for('playbook.view_play', play_id=play.id) if play else url_for('playbook.index') %}
+<div class="container th-page" style="max-width:860px">
+  <nav class="th-crumbs" aria-label="Breadcrumb">
+    <a href="{{ url_for('playbook.index') }}">Playbook</a>
+    {% if play %}<span aria-hidden="true">›</span><a href="{{ back }}">{{ play.name }}</a>{% endif %}
+  </nav>
+  <div class="th-head"><h1>{{ title }}</h1></div>
+
+  <div class="th-draft-banner" id="th-restore" hidden>
+    <i class="bi bi-clock-history" aria-hidden="true"></i>
+    <div class="flex-grow-1">You have unsaved changes from <span data-restore-when>earlier</span>.</div>
+    <button type="button" class="btn btn-sm btn-primary" data-restore>Restore</button>
+    <button type="button" class="btn btn-sm btn-link" data-discard>Discard</button>
+  </div>
+
+  <form method="POST" id="pb-play-form" class="th-form" novalidate
+        data-autosave-key="playbook-draft:{{ play.id if play else 'new' }}" data-upload-url="{{ url_for('playbook.upload_image') }}">
+    {{ form.hidden_tag() }}
+    {# Enter in a text box submits with the first button: keep that a plain save #}
+    <button type="submit" name="action" value="save" class="visually-hidden" tabindex="-1" aria-hidden="true"></button>
+    <datalist id="pb-positions">{% for name in position_names %}<option value="{{ name }}">{% endfor %}</datalist>
+
+    <div class="th-form-card">
+      <div class="mb-3">
+        <label class="form-label" for="name">Name</label>
+        {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else ""), placeholder="e.g. Side stack iso",
+                     autocomplete="off", autocapitalize="words") }}
+        {{ errors(form.name) }}
+      </div>
+      <div class="mb-3">
+        <label class="form-label d-block">Side</label>
+        {{ seg(form.type, 'type') }}
+      </div>
+      <div class="row g-2">
+        <div class="col-sm-5">
+          <label class="form-label" for="call">Call <span class="fw-normal text-muted">(optional)</span></label>
+          {{ form.call(class="form-control", placeholder="e.g. Hammer", autocomplete="off") }}
+          {{ errors(form.call) }}
         </div>
-        <div class="col-md-4 text-end">
-            <a href="{{ url_for('playbook.index') }}" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left"></i> Back to Playbook
-            </a>
+        <div class="col-sm-7">
+          <label class="form-label" for="signal">Hand signal <span class="fw-normal text-muted">(optional)</span></label>
+          {{ form.signal(class="form-control", placeholder="e.g. Fist on head", autocomplete="off") }}
+          {{ errors(form.signal) }}
         </div>
+      </div>
     </div>
 
-    <div class="row">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-body">
-                    <form method="POST">
-                        {{ form.hidden_tag() }}
-                        
-                        <!-- Basic Information -->
-                        <div class="row mb-3">
-                            <div class="col-md-8">
-                                {{ form.name.label(class="form-label") }}
-                                {{ form.name(class="form-control") }}
-                            </div>
-                            <div class="col-md-4">
-                                {{ form.type.label(class="form-label") }}
-                                {{ form.type(class="form-select") }}
-                            </div>
-                        </div>
-
-                        <!-- Formation Selection -->
-                        <div class="form-group mb-3">
-                            {{ form.formation_id.label(class="form-label") }}
-                            {{ form.formation_id(class="form-select") }}
-                            <small class="form-text text-muted">
-                                Select the formation this play is based on, or 
-                                <a href="{{ url_for('playbook.add_formation') }}" target="_blank">create a new formation</a>
-                            </small>
-                        </div>
-
-                        <!-- Description -->
-                        <div class="form-group mb-3">
-                            {{ form.description.label(class="form-label") }}
-                            {{ form.description(class="form-control", rows="4") }}
-                            <small class="form-text text-muted">Markdown supported — shown in the playbook and the PDF export</small>
-                        </div>
-
-                        <!-- Notes -->
-                        <div class="form-group mb-3">
-                            {{ form.notes.label(class="form-label") }}
-                            {{ form.notes(class="form-control", rows="3") }}
-                            <small class="form-text text-muted">Markdown supported</small>
-                        </div>
-
-                        <!-- Sort order -->
-                        <div class="form-group mb-3" style="max-width:220px">
-                            {{ form.sort_order.label(class="form-label") }}
-                            {{ form.sort_order(class="form-control", placeholder="e.g. 10") }}
-                            <small class="form-text text-muted">Lower numbers appear first; leave blank for alphabetical</small>
-                        </div>
-
-                        <!-- Ultiplay Embed -->
-                        <div class="form-group mb-4">
-                            <label class="form-label">Play Video</label>
-                            
-                            <div class="mb-3">
-                                {{ form.ultiplay_embed.label(class="form-label") }}
-                                {{ form.ultiplay_embed(class="form-control", rows=3, 
-                                    placeholder="Paste the embed code from Ultiplay here...",
-                                    oninput="previewEmbed(this.value)") }}
-                            </div>
-
-                            <!-- Embed Preview -->
-                            <div class="embed-preview">
-                                <div id="embed-preview-content">
-                                    <div class="preview-placeholder">
-                                        <div class="text-center">
-                                            <i class="bi bi-camera-video fa-3x mb-2"></i>
-                                            <br>
-                                            Video preview will appear here
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Help Text -->
-                            <div class="embed-help">
-                                <h6><i class="bi bi-info-circle"></i> How to get the embed code:</h6>
-                                <ol>
-                                    <li>Go to your video on Ultiplay</li>
-                                    <li>Click the "Share" button</li>
-                                    <li>Select "Embed"</li>
-                                    <li>Copy the entire embed code and paste it above</li>
-                                </ol>
-                            </div>
-                        </div>
-
-                        <!-- Diagram Image -->
-                        <div class="form-group mb-4">
-                            {{ form.image_url.label(class="form-label") }}
-                            {{ form.image_url(class="form-control",
-                                placeholder="https://i.ibb.co/xxxxxxxx/play-diagram.png",
-                                oninput="previewImage(this.value)") }}
-                            <small class="form-text text-muted">
-                                Static diagram of the play. Upload your image to
-                                <a href="https://imgbb.com" target="_blank">imgbb.com</a> and paste the
-                                <strong>direct link</strong> (ends in .png/.jpg). Used in the online
-                                playbook and the PDF export.
-                            </small>
-                            <div class="mt-2">
-                                <img id="image-url-preview"
-                                     src="{{ play.image_url if play and play.image_url else '' }}"
-                                     alt="Diagram preview"
-                                     class="img-fluid rounded border"
-                                     style="max-height:260px;{{ '' if play and play.image_url else 'display:none;' }}">
-                            </div>
-                        </div>
-
-                        <!-- Tags -->
-                        <div class="form-group mb-3">
-                            {{ form.tags.label(class="form-label") }}
-                            {{ form.tags(class="form-select", multiple="multiple") }}
-                            <small class="form-text text-muted">
-                                Hold Ctrl/Cmd to select multiple tags
-                            </small>
-                        </div>
-
-                        <!-- Submit Buttons -->
-                        <div class="form-group d-flex justify-content-between">
-                            <button type="submit" class="btn btn-primary">
-                                {% if play %}Update Play{% else %}Create Play{% endif %}
-                            </button>
-                            <a href="{{ url_for('playbook.index') }}" class="btn btn-outline-secondary">Cancel</a>
-                        </div>
-                    </form>
-                </div>
-            </div>
+    {# The drawing #}
+    <div class="th-form-card">
+      <label class="form-label d-block">Drawing</label>
+      {% if play and play.editor_diagram %}
+      <div class="d-flex align-items-center gap-3">
+        <img src="{{ play.editor_diagram.image_url }}" alt="" class="pb-thumb" style="width:120px;height:80px">
+        <div>
+          <div class="small text-muted mb-2">{{ play.stage_count }} stage{{ 's' if play.stage_count != 1 }}</div>
+          <button type="submit" name="action" value="draw" class="btn btn-outline-primary th-btn"><i class="bi bi-easel2"></i>Save and edit the drawing</button>
         </div>
-
-        <!-- Help Panel -->
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Tips for Creating Plays</h5>
-                </div>
-                <div class="card-body">
-                    <ul class="list-unstyled">
-                        <li class="mb-2">
-                            <i class="bi bi-info-circle text-primary"></i>
-                            Give your play a clear, descriptive name
-                        </li>
-                        <li class="mb-2">
-                            <i class="bi bi-info-circle text-primary"></i>
-                            Select a formation or create a new one
-                        </li>
-                        <li class="mb-2">
-                            <i class="bi bi-info-circle text-primary"></i>
-                            Include detailed execution steps
-                        </li>
-                        <li class="mb-2">
-                            <i class="bi bi-info-circle text-primary"></i>
-                            Add coaching points in the notes
-                        </li>
-                        <li class="mb-2">
-                            <i class="bi bi-info-circle text-primary"></i>
-                            Add a video demonstration if available
-                        </li>
-                    </ul>
-                </div>
-            </div>
+      </div>
+      {% else %}
+      <button type="submit" name="action" value="draw" class="btn btn-outline-primary th-btn mb-2"><i class="bi bi-easel2"></i>Save and draw it on the field</button>
+      <div class="th-cover mt-2" id="th-cover">
+        <img id="th-cover-img" src="{{ form.image_url.data or '' }}" alt="" {% if not form.image_url.data %}hidden{% endif %}>
+        <div class="d-flex flex-wrap gap-2 justify-content-center">
+          <label class="btn btn-outline-secondary th-btn mb-0" for="th-cover-file">
+            <i class="bi bi-camera"></i><span data-cover-label>{{ 'Change photo' if form.image_url.data else 'Or add a photo of it' }}</span>
+          </label>
+          <input type="file" id="th-cover-file" accept="image/*" class="visually-hidden">
+          <button type="button" class="btn btn-outline-secondary th-btn" id="th-cover-remove" {% if not form.image_url.data %}hidden{% endif %}><i class="bi bi-x-lg"></i>Remove</button>
         </div>
+        <div class="small text-muted mt-2" id="th-cover-status" role="status" aria-live="polite"></div>
+      </div>
+      <details class="mt-2" {% if form.image_url.errors %}open{% endif %}>
+        <summary class="small text-muted" style="min-height:36px;display:flex;align-items:center">Or paste a link to a picture</summary>
+        {{ form.image_url(class="form-control mt-1" + (" is-invalid" if form.image_url.errors else ""), id="image_url", placeholder="https://…", inputmode="url", autocomplete="off") }}
+        {{ errors(form.image_url) }}
+      </details>
+      {% endif %}
     </div>
+
+    <div class="th-form-card">
+      <label class="form-label" for="description">How it works</label>
+      {{ form.description(class="form-control", rows="4", placeholder="What it's for, the set-up and the main options. **Bold**, - lists and ## headings work.") }}
+    </div>
+
+    <div class="th-form-card">
+      <label class="form-label d-block">Who does what</label>
+      <div id="pb-roles">
+        {% for name, text in roles %}{{ role_row(name, text) }}{% endfor %}
+      </div>
+      <template id="pb-role-row">{{ role_row() }}</template>
+      <button type="button" class="btn btn-outline-secondary th-btn" data-add-role><i class="bi bi-plus-lg"></i>Add a role</button>
+    </div>
+
+    <div class="th-form-card">
+      <label class="form-label" for="notes">Coaching notes <span class="fw-normal text-muted">(optional)</span></label>
+      {{ form.notes(class="form-control", rows="3", placeholder="Cues, reads, what goes wrong") }}
+    </div>
+
+    <details class="th-more" {% if form.tags.data or form.topics.data or form.drills.data or form.clips.data or form.ultiplay_embed.data %}open{% endif %}>
+      <summary>Tags and links <i class="bi bi-chevron-down" aria-hidden="true"></i></summary>
+      <div class="th-more-body">
+        <div class="th-field">
+          <label class="form-label" for="tags">Tags</label>
+          {{ form.tags(class="form-control", placeholder="e.g. endzone, vs zone", autocomplete="off", autocapitalize="none") }}
+          {{ errors(form.tags) }}
+          {% if tag_names %}
+          <div class="th-chips mt-2" aria-label="Tags you've used">
+            {% for name in tag_names %}<button type="button" class="th-chip" data-add-tag="{{ name }}">+ {{ name }}</button>{% endfor %}
+          </div>
+          {% endif %}
+        </div>
+        {% for key, label, items, sheet, empty in [
+            ('topics', 'Theory: read the why', topics, 'pb-topic-sheet', 'No theory topics yet.'),
+            ('drills', 'Drills to practise it', drills, 'pb-drill-sheet', 'No drills saved yet.'),
+            ('clips', 'Clips of it in a game', clips, 'pb-clip-sheet', 'No clips yet.')] %}
+        <div class="th-field">
+          <label class="form-label d-block">{{ label }}</label>
+          <div class="th-picked" data-picked-for="{{ key }}"></div>
+          {% if items %}
+          <button type="button" class="btn btn-outline-secondary th-btn" data-bs-toggle="offcanvas" data-bs-target="#{{ sheet }}"><i class="bi bi-link-45deg"></i>Choose</button>
+          {% else %}
+          <p class="small text-muted mb-0">{{ empty }}</p>
+          {% endif %}
+        </div>
+        {% endfor %}
+        <div class="th-field">
+          <label class="form-label" for="ultiplay_embed">Ultiplay embed code <span class="fw-normal text-muted">(optional)</span></label>
+          {{ form.ultiplay_embed(class="form-control font-monospace", rows="2", placeholder="<iframe src=\"https://…\"></iframe>") }}
+        </div>
+      </div>
+    </details>
+
+    {% if topics %}{{ picker_sheet('pb-topic-sheet', 'Link theory', 'topics', topic_items, form.topics.data or [], 'Search topics') }}{% endif %}
+    {% if drills %}{{ picker_sheet('pb-drill-sheet', 'Link drills', 'drills', drill_items, form.drills.data or [], 'Search drills') }}{% endif %}
+    {% if clips %}{{ picker_sheet('pb-clip-sheet', 'Link clips', 'clips', clip_items, form.clips.data or [], 'Search clips') }}{% endif %}
+
+    <div class="th-form-card">
+      <label class="form-label d-block">Who can see it</label>
+      {{ seg(form.status, 'status') }}
+      <p class="small text-muted mt-2 mb-0">Drafts are for coaches only. Retired plays stay readable but leave the cards and the PDF.</p>
+    </div>
+
+    <div class="th-actionbar">
+      <a href="{{ back }}" class="btn btn-link px-2">Cancel</a>
+      <span class="grow"></span>
+      <button type="submit" name="action" value="save" class="btn btn-primary th-btn px-4"><i class="bi bi-check-lg"></i>Save</button>
+    </div>
+  </form>
 </div>
 {% endblock %}
 
 {% block scripts %}
 {{ super() }}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/easymde/2.18.0/easymde.min.js"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    if (window.EasyMDE) {
-        ['description', 'notes'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) new EasyMDE({
-                element: el, spellChecker: false, status: false, forceSync: true,
-                minHeight: '120px',
-                toolbar: ['bold', 'italic', 'heading', '|', 'unordered-list',
-                          'ordered-list', 'quote', '|', 'preview', 'guide']
-            });
-        });
-    }
-});
-
-function previewImage(url) {
-    const img = document.getElementById('image-url-preview');
-    url = (url || '').trim();
-    if (url && /^https?:\/\//.test(url)) {
-        img.src = url;
-        img.style.display = '';
-        img.onerror = () => { img.style.display = 'none'; };
-    } else {
-        img.style.display = 'none';
-    }
-}
-
-function previewEmbed(embedCode) {
-    const previewContainer = document.getElementById('embed-preview-content');
-    
-    if (embedCode.trim()) {
-        // Basic XSS protection by only allowing iframe tags with specific attributes
-        const sanitized = embedCode.replace(/[<>]/g, match => {
-            return {
-                '<': '<',
-                '>': '>'
-            }[match];
-        });
-        
-        // Only process if it looks like an iframe embed code
-        if (sanitized.toLowerCase().includes('iframe')) {
-            previewContainer.innerHTML = embedCode;
-        }
-    } else {
-        previewContainer.innerHTML = `
-            <div class="preview-placeholder">
-                <div class="text-center">
-                    <i class="bi bi-camera-video fa-3x mb-2"></i>
-                    <br>
-                    Video preview will appear here
-                </div>
-            </div>
-        `;
-    }
-}
-
-// Initialize preview if there's existing embed code
-document.addEventListener('DOMContentLoaded', function() {
-    const embedInput = document.querySelector('#ultiplay_embed');
-    if (embedInput && embedInput.value) {
-        previewEmbed(embedInput.value);
-    }
-});
-</script>
+<script src="{{ url_for('static', filename='js/theory.js') }}"></script>
+<script src="{{ url_for('static', filename='js/playbook_editor.js') }}"></script>
 {% endblock %}
