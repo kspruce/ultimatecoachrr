@@ -26,6 +26,7 @@ from app.models.team_settings import TeamSettings
 from app.models.theory import (TheoryAssignment, TheoryImage, TheoryRead, TheorySection, TheoryTag,
                                TheoryTopic, TheoryVideo, unique_slug, video_embed_url)
 from app.utils import theory as hub
+from app.utils import theory_import
 from app.utils.team_filter import get_current_team_id
 
 bp = Blueprint('theory', __name__, url_prefix='/theory')
@@ -504,6 +505,30 @@ def move_topic(topic_id):
     if wants_json():
         return jsonify({'ok': True})
     return redirect(request.form.get('next') or url_for('theory.section', slug=topic.section.slug))
+
+
+@bp.route('/import', methods=['GET', 'POST'])
+def import_cards():
+    """Upload a markdown file of cards (app/utils/theory_import.py); they
+    arrive as drafts in the section the file names."""
+    coach_only()
+    errors = []
+    if request.method == 'POST':
+        file = request.files.get('file')
+        if not file or not file.filename:
+            errors = ['Choose a Markdown (.md) file to upload.']
+        else:
+            try:
+                report = theory_import.import_cards(theory_import.decode(file.read()), get_current_team_id(),
+                                                    current_user.id, replace=bool(request.form.get('replace')))
+            except theory_import.TheoryImportError as e:
+                db.session.rollback()
+                errors = e.errors
+            else:
+                db.session.commit()
+                flash(report.summary() + ' Publish each one when you want the team to read it.', 'success')
+                return redirect(url_for('theory.section', slug=report.section.slug))
+    return render_template('theory/import.html', title='Import cards', errors=errors), 400 if errors else 200
 
 
 @bp.route('/preview', methods=['POST'])
