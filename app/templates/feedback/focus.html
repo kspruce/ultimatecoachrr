@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% import "feedback/_note.html" as fb %}
+{# Every active player's "keep in mind", and who could do with a word. #}
+
+{% block title %}Keep in mind{% endblock %}
+
+{% block styles %}
+{{ super() }}
+{{ fb.styles() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/theory.css') }}">
+<style>
+  .kf-row { background: var(--card); border: 1px solid var(--rule); border-radius: var(--radius); padding: .85rem 1rem; margin-bottom: .75rem; }
+  .kf-name { font-weight: 800; font-size: 1.02rem; }
+  .kf-text { white-space: pre-wrap; margin: .35rem 0 0; }
+  .kf-flags { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .4rem; }
+  .kf-row details > summary { list-style: none; }
+  .kf-row details > summary::-webkit-details-marker { display: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container th-page" style="max-width:860px">
+  <nav class="th-crumbs" aria-label="Breadcrumb"><a href="{{ url_for('feedback.hub') }}">Player Feedback</a></nav>
+  <div class="th-head">
+    <div>
+      <h1>Keep in mind</h1>
+      <p>What each player should keep in mind at the next training or tournament. It stays until you change it, so update it every so often rather than every session.</p>
+    </div>
+  </div>
+  <div class="th-chips" aria-label="Show">
+    <a class="th-chip {% if not only %}active{% endif %}" href="{{ url_for('feedback.focus_board') }}">Everyone ({{ all_count }})</a>
+    <a class="th-chip {% if only %}active{% endif %}" href="{{ url_for('feedback.focus_board', show='follow') }}">Could do with a word ({{ follow|length }})</a>
+  </div>
+
+  {% for p in players %}
+  {% set f = focus.get(p.id) %}
+  <div class="kf-row" id="player-{{ p.id }}">
+    <div class="d-flex align-items-start gap-2">
+      <div class="flex-grow-1" style="min-width:0">
+        <a class="kf-name text-decoration-none" href="{{ url_for('feedback.player_feedback', player_id=p.id) }}">{{ p.name }}</a>
+        {% if f %}
+        <div class="small text-muted">{{ f.for_label or 'Until changed' }} · set {{ f.created_at.strftime('%-d %b') }}{% if f.seen_at %} · seen{% endif %}</div>
+        <p class="kf-text">{{ f.content }}</p>
+        {% endif %}
+        {% if follow.get(p.id) or replies.get(p.id) %}
+        <div class="kf-flags">
+          {% if replies.get(p.id) %}<a class="th-badge due" href="{{ url_for('feedback.player_feedback', player_id=p.id) }}"><i class="bi bi-reply"></i>{{ replies[p.id] }} new repl{{ 'ies' if replies[p.id] != 1 else 'y' }}</a>{% endif %}
+          {% for reason in follow.get(p.id, []) %}<span class="th-badge draft">{{ reason }}</span>{% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    <details class="mt-2">
+      <summary class="btn btn-sm btn-outline-primary">{{ 'Change' if f else 'Set' }}</summary>
+      <div class="mt-2">{{ fb.focus_form(p, f, coming_sessions, coming_tournaments, next=url_for('feedback.focus_board', show='follow' if only else None) ~ '#player-' ~ p.id) }}</div>
+    </details>
+  </div>
+  {% else %}
+  <div class="th-list th-empty">{{ 'Everyone has what they need for now.' if only else 'No active players yet.' }}</div>
+  {% endfor %}
+</div>
+{% endblock %}

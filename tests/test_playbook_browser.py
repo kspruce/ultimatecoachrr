@@ -120,3 +120,35 @@ def test_save_and_use_a_setup(app, team, live_server, browser, book):
     assert page.locator(f'[data-setup="{setup.id}"]').count() == 1
     assert page.evaluate("JSON.parse(document.getElementById('editor-state').textContent).stages[0].objects.length") >= 8
     assert page.errors == []
+
+
+def test_play_called_on_game_day(app, team, live_server, browser, book):
+    """Game Day shows the call sheet's plays for the line on the field."""
+    from app.models.game import Game
+    from app.models.playbook import GameCallPlay
+    from app.models.team_organization import TeamOrganization
+    from app.models.user import User
+    game = Game(opponent='Ka-Pow', team_organization_id=team.id)
+    db.session.add(game)
+    db.session.flush()
+    db.session.add_all([GameCallPlay(game_id=game.id, play_id=book['play'], order=1, team_organization_id=team.id),
+                        GameCallPlay(game_id=game.id, play_id=book['cup'], order=2, team_organization_id=team.id)])
+    db.session.commit()
+    game_id = game.id
+    page = phone_page(app, browser, live_server, db.session.get(User, book['coach'].id),
+                      db.session.get(TeamOrganization, team.id))
+    page.goto(live_server + f'/gameday/game/{game_id}')
+    o_call = page.locator(f'label[for="call-{book["play"]}"]')
+    d_call = page.locator(f'label[for="call-{book["cup"]}"]')
+    assert o_call.is_visible() and not d_call.is_visible()
+    page.locator('label[for="d-line"]').click()
+    assert d_call.is_visible() and not o_call.is_visible()
+    d_call.click()
+    picked = "document.querySelector('input[name=called_play]:checked').value"
+    assert page.evaluate(picked) == str(book['cup'])
+    page.locator('label[for="o-line"]').click()   # the D play can't stay picked on an O point
+    assert page.evaluate(picked) == ''
+    no_sideways_scroll(page)
+    page.goto(live_server + f'/playbook/games/{game_id}/sheet')
+    no_sideways_scroll(page)
+    assert page.errors == []

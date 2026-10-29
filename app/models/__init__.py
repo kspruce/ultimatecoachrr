@@ -16,7 +16,7 @@ from app.models.session import (
 )
 from app.models.schedule import TrainingSchedule, ScheduleAvailability, SessionTemplate, SessionReminder
 from app.models.playbook import (
-    Play, Formation, PlayTag, PlayerPosition, PlayAssignment, PlayLearned, PlayToLearn, PlaySetup,
+    Play, Formation, PlayTag, PlayerPosition, PlayAssignment, PlayLearned, PlayToLearn, PlaySetup, GameCallPlay,
 )
 from app.models.team_role import PlayerRole
 from app.models.theory import (
@@ -61,7 +61,7 @@ from app.models.team_signup_invite import TeamSignupInvite
 from app.models.site_settings import SiteSettings
 
 # Coach feedback
-from app.models.feedback import PlayerFeedback
+from app.models.feedback import PlayerFeedback, FeedbackReply, PlayerFocus, PlayerGoal, PlayerReview
 
 # Training programmes (any club's off-season plans, built on the website)
 from app.models.programme import (
@@ -84,7 +84,7 @@ __all__ = [
     'ClassroomSession', 'ClassroomResource',
     'HandbookPage',
     # Playbook
-    'Play', 'Formation', 'PlayTag', 'PlayerPosition', 'PlayAssignment', 'PlayerRole', 'PlayLearned', 'PlayToLearn', 'PlaySetup',
+    'Play', 'Formation', 'PlayTag', 'PlayerPosition', 'PlayAssignment', 'PlayerRole', 'PlayLearned', 'PlayToLearn', 'PlaySetup', 'GameCallPlay',
     # Theory
     'TheorySection', 'TheoryTopic', 'TheoryVideo', 'TheoryTag', 'TheoryImage', 'TheoryRead',
     'TheoryAssignment',
@@ -109,7 +109,7 @@ __all__ = [
     # Site settings
     'SiteSettings',
     # Coach feedback
-    'PlayerFeedback',
+    'PlayerFeedback', 'FeedbackReply', 'PlayerFocus', 'PlayerGoal', 'PlayerReview',
     # Training programmes
     'Programme', 'ProgrammeVersion', 'ProgrammeTrack', 'ProgrammeWeek', 'ProgrammeSession',
     'ProgrammeExercise', 'PerformanceTest', 'ProgrammeMilestone', 'ProgrammeEnrolment', 'SessionLog',

@@ -406,6 +406,9 @@ def build(user, team_id, settings=None, roster_signup=None, today=None):
         'my_tournaments': my_tournaments(team_id, today, player),
         'my_session': my_session(team_id, today, player, coming) if player else None,
     }
+    if player is not None:
+        from app.utils.feedback import current_focus
+        data['focus'] = current_focus(player.id)
     if is_coach:
         tournaments = upcoming_tournaments(team_id, today, limit=1)
         data['squad'] = squad_card(tournaments[0] if tournaments else None)

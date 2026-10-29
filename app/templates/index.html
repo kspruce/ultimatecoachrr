@@ -396,6 +396,16 @@
 </section>
 {% endif %}
 
+{# ══════════ KEEP IN MIND (the player's focus from the coaches) ══════════ #}
+{% if focus|default(none) %}
+<section class="panel" aria-labelledby="focus-h" style="border:2px solid var(--club-ink)">
+  <div class="panel-h"><h2 id="focus-h"><i class="bi bi-lightbulb me-1" aria-hidden="true"></i>Keep in mind</h2><a href="{{ url_for('feedback.mine') }}">My feedback →</a></div>
+  {% if focus.for_label %}<div class="small fw-bold mb-1" style="color:var(--club-ink)">{{ focus.for_label }}</div>{% endif %}
+  <div style="white-space:pre-wrap;font-size:1.02rem">{{ focus.content }}</div>
+  <div class="small text-muted mt-1">From {{ focus.coach.username if focus.coach else 'your coaches' }} · {{ focus.created_at.strftime('%-d %b') }}</div>
+</section>
+{% endif %}
+
 {# ══════════ BODY ══════════ #}
 <div class="dash">
   {# Coming up, with the viewer's answer (or, for coaches, the headcount) on each row #}

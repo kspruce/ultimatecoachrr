@@ -75,3 +75,29 @@ def embed_plays(html, team_id, include_drafts=False):
         play = plays.get(int(match.group(1)))
         return render_template('playbook/_embed.html', play=play) if play else ''
     return Markup(PLAY_EMBED.sub(card, html))
+
+
+# ── How called plays went ──────────────────────────────────────────────────
+
+def play_results(points):
+    """{play id: {'called', 'scored', 'o': {'called', 'scored'}, 'd': {...}}}
+    from points with a called play. O-line points scored are holds, D-line
+    points scored are breaks."""
+    results = {}
+    for point in points:
+        if not point.called_play_id or point.point_outcome not in ('scored', 'conceded'):
+            continue
+        row = results.setdefault(point.called_play_id, {'called': 0, 'scored': 0,
+                                                        'o': {'called': 0, 'scored': 0},
+                                                        'd': {'called': 0, 'scored': 0}})
+        line = row['o'] if point.our_line_type == 'O-line' else row['d']
+        won = point.point_outcome == 'scored'
+        for counts in (row, line):
+            counts['called'] += 1
+            counts['scored'] += won
+    return results
+
+
+def rate(counts):
+    """'3 of 4 (75%)' style numbers for a {'called', 'scored'} dict."""
+    return round(counts['scored'] / counts['called'] * 100) if counts['called'] else None

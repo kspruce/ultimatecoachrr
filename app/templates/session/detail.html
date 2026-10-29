@@ -9,6 +9,7 @@
 {% block content %}
 <div class="container">
     {% include 'session/partials/_season_plan_banner.html' %}
+    {% set kind, row_id = 'session', session.id %}{% include 'feedback/_my_focus.html' %}
     <div class="row mb-4">
         <div class="col-md-8">
             <h1>{{ session.title }}</h1>

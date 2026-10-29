@@ -37,14 +37,53 @@
         </a>
     </div>
 
+    <div class="card mb-4" id="focus">
+        <div class="card-body">
+            <h6 class="mb-2"><i class="bi bi-lightbulb me-1"></i>Keep in mind</h6>
+            {% if focus %}{{ fb.focus_card(focus, heading='Now') }}{% endif %}
+            <details {% if not focus %}open{% endif %}>
+                <summary class="btn btn-sm btn-outline-primary mb-2">{{ 'Change it' if focus else 'Set what to keep in mind' }}</summary>
+                {{ fb.focus_form(player, focus, coming_sessions, coming_tournaments, next=request.path ~ '#focus') }}
+            </details>
+            {% if focus %}
+            <form method="POST" action="{{ url_for('feedback.clear_focus', player_id=player.id) }}" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="next" value="{{ request.path }}#focus">
+                <button class="btn btn-link btn-sm text-danger px-0">Clear it</button>
+            </form>
+            {% endif %}
+            {% if focus_history %}
+            <details class="mt-2">
+                <summary class="small text-muted" style="cursor:pointer">Earlier ones ({{ focus_history|length }})</summary>
+                {% for f in focus_history %}
+                <div class="small mt-2"><b>{{ f.created_at.strftime('%-d %b %Y') }}{% if f.for_label %} · {{ f.for_label }}{% endif %}</b><div style="white-space:pre-wrap">{{ f.content }}</div></div>
+                {% endfor %}
+            </details>
+            {% endif %}
+        </div>
+    </div>
+
     <div class="card mb-4">
         <div class="card-body">
             <h6 class="mb-2">Add a note</h6>
-            {{ fb.form(context_tags, player=player, games=games, game_id=game_id) }}
+            {{ fb.form(context_tags, player=player, games=games, game_id=game_id, goals=goals) }}
             <p class="text-muted small mb-0 mt-2">
                 Notes stay with the coaches unless you share them.
                 {% if player.user_id %}Shared notes show under My Feedback for {{ player.name }}.{% else %}{{ player.name }} has no login yet, so shared notes wait until they join.{% endif %}
             </p>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="mb-0"><i class="bi bi-bullseye me-1"></i>Goals and reviews</h6>
+                <a href="{{ url_for('feedback.new_review', player_id=player.id) }}" class="btn btn-sm btn-outline-primary">Write a review</a>
+            </div>
+            {% if goals %}<ul class="small ps-3 mb-2">{% for g in goals %}<li>{{ g.title }} <span class="text-muted">({{ g.horizon_label }}{% if g.notes %} · {{ g.notes|length }} note{{ 's' if g.notes|length != 1 }}{% endif %})</span></li>{% endfor %}</ul>
+            {% else %}<p class="small text-muted mb-2">No goals yet.</p>{% endif %}
+            {% for r in reviews %}<div class="small"><a href="{{ url_for('feedback.view_review', review_id=r.id) }}">{{ r.title }}</a> · {{ r.created_at.strftime('%-d %b %Y') }}{% if not r.shared %} · coaches only{% endif %}{% if r.player_comment %} · they commented{% endif %}</div>{% endfor %}
+            <a class="small" href="{{ url_for('team.player_detail', player_id=player.id, _anchor='development') }}">Goals on their profile →</a>
         </div>
     </div>
 
@@ -73,7 +112,7 @@
             {% if loop.first or loop.previtem.created_at.strftime('%B %Y') != month %}
             <div class="session-group-header"><i class="bi bi-calendar3 me-1"></i>{{ month }}</div>
             {% endif %}
-            {{ fb.note(entry, coach=True) }}
+            {{ fb.note(entry, coach=True, can_reply=entry.shared, new_reply_ids=new_reply_ids, next=request.path) }}
         {% endfor %}
     {% else %}
     <div class="text-center py-5 text-muted">

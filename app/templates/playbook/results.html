@@ -1,0 +1,48 @@
+{# templates/playbook/results.html: the plays called in games, and how often we scored #}
+{% extends "base.html" %}
+{% from "playbook/_macros.html" import side_badge, thumb %}
+
+{% block styles %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/theory.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/playbook.css') }}">
+{% endblock %}
+
+{% macro line(counts, word) %}{% if counts.called %}<span class="th-badge">{{ word }} {{ counts.scored }}/{{ counts.called }}</span>{% endif %}{% endmacro %}
+
+{% block content %}
+<div class="container th-page" style="max-width:760px">
+  <nav class="th-crumbs" aria-label="Breadcrumb"><a href="{{ url_for('playbook.index') }}">Playbook</a></nav>
+  <div class="th-head">
+    <div>
+      <h1>How our plays went</h1>
+      <p>Plays called in Game Day{% if season %} in {{ season.name }}{% endif %}{% if games_with_calls %}, across {{ games_with_calls }} game{{ 's' if games_with_calls != 1 }}{% endif %}. Holds are O-line points we scored; breaks are D-line points we scored.</p>
+    </div>
+  </div>
+
+  {% if rows %}
+  <div class="th-list">
+    {% for play, r in rows %}
+    {% set pct = rate(r) %}
+    <a class="th-row" href="{{ url_for('playbook.view_play', play_id=play.id) }}">
+      {{ thumb(play) }}
+      <div class="th-row-text">
+        <div class="th-row-title">{{ play.name }}</div>
+        <div class="th-row-meta">{{ side_badge(play) }}{{ line(r.o, 'Holds') }}{{ line(r.d, 'Breaks') }}</div>
+        <div class="th-progress mt-2" style="max-width:220px" aria-hidden="true"><span style="width:{{ pct }}%"></span></div>
+      </div>
+      <div class="text-end" style="white-space:nowrap">
+        <div style="font-size:1.2rem;font-weight:800">{{ pct }}%</div>
+        <div class="small text-muted">{{ r.scored }} of {{ r.called }}</div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="th-list th-empty">
+    <i class="bi bi-bar-chart"></i>
+    <p class="mb-0">No plays called yet{% if season %} this season{% endif %}. In Game Day, pick the play under <em>Play called</em> before each point.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

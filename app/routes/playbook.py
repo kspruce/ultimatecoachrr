@@ -22,7 +22,7 @@ from app.forms.playbook import LearnForm, PlayForm
 from app.models.clip import Clip
 from app.models.drill import SavedDrill
 from app.models.playbook import (Formation, Play, PlayAssignment, PlayerPosition, PlayLearned,
-                                 PlaySetup, PlayToLearn, PLAY_STATUSES, PLAY_TYPES, SITUATIONS)
+                                 PlaySetup, PlayToLearn, GameCallPlay, PLAY_STATUSES, PLAY_TYPES, SITUATIONS)
 from app.models.team_settings import TeamSettings
 from app.models.theory import TheoryImage, TheorySection, TheoryTopic
 from app.utils import playbook as pb
@@ -422,6 +422,7 @@ def view_play(play_id):
                            position=(i + 1, len(siblings)),
                            who=who, animation_roles=[r for r in roles if r.id in drawn_roles],
                            coming=coming_sessions(team_id) if can_edit() else [],
+                           in_games=_in_games(play),
                            mine=mine, is_learned=play.id in pb.learned_ids(current_user.id, team_id),
                            learners=learners, topics=visible_topics(play),
                            clips=visible_clips(play.clips, team_id), reports=reports, sessions=sessions[:5])
@@ -896,6 +897,21 @@ def shared_play(token):
 
 # ── Add a play to a session ──────────────────────────────────────
 
+def _in_games(play):
+    """How the play went when called, all time: totals and the last few games."""
+    from app.models.point import Point
+    points = Point.query.filter_by(called_play_id=play.id, team_organization_id=play.team_organization_id).all()
+    if not points:
+        return None
+    total = pb.play_results(points).get(play.id)
+    by_game = {}
+    for p in points:
+        by_game.setdefault(p.game, []).append(p)
+    games = sorted(by_game, key=lambda g: (g.date is None, g.date), reverse=True)[:5]
+    return {'total': total, 'rate': pb.rate(total) if total else None,
+            'games': [(g, pb.play_results(by_game[g]).get(play.id)) for g in games]}
+
+
 def coming_sessions(team_id):
     from app.models.session import SessionPlan
     return (SessionPlan.query.filter(SessionPlan.team_organization_id == team_id,
@@ -926,6 +942,86 @@ def add_to_session(play_id):
     db.session.commit()
     flash(f'"{play.name}" added to {session.title}.', 'success')
     return redirect(url_for('session.detail', session_id=session.id))
+
+
+# ── A game's call sheet, and how the called plays went ───────────
+
+def game_or_404(game_id):
+    from app.models.game import Game
+    return Game.query.filter_by(id=game_id, team_organization_id=get_current_team_id()).first_or_404()
+
+
+def game_points(game):
+    from app.models.point import Point
+    return Point.query.filter_by(game_id=game.id, team_organization_id=game.team_organization_id).all()
+
+
+@bp.route('/games/<int:game_id>/sheet', methods=['GET', 'POST'])
+def call_sheet(game_id):
+    """The plays planned for a game, in order, and how each went when called."""
+    from app.models.scouting import scouting_for_game
+    game = game_or_404(game_id)
+    team_id = game.team_organization_id
+    linked, others = scouting_for_game(game)
+    report = linked or (others[0] if others else None)
+    if request.method == 'POST':
+        coach_only()
+        plays = {p.id: p for p in Play.query.filter_by(team_organization_id=team_id).filter(Play.status != 'retired')}
+        if request.form.get('action') == 'from_plan' and report:
+            wanted = [p.id for p in report.plays_in_order if p.id in plays]
+            notes = {}
+        else:
+            wanted = [int(x) for x in request.form.getlist('play_id') if x.isdigit() and int(x) in plays]
+            notes = {pid: (request.form.get(f'note_{pid}') or '').strip()[:120] for pid in wanted}
+        old = {row.play_id: row for row in game.call_sheet}
+        seen = []
+        game.call_sheet = []
+        for n, play_id in enumerate(dict.fromkeys(wanted), start=1):
+            row = old.pop(play_id, None) or GameCallPlay(team_organization_id=team_id, play_id=play_id)
+            row.order = n
+            if play_id in notes:
+                row.note = notes[play_id] or None
+            game.call_sheet.append(row)
+            seen.append(play_id)
+        db.session.commit()
+        flash(f'Call sheet saved: {len(seen)} play{"s" if len(seen) != 1 else ""}.', 'success')
+        return redirect(url_for('playbook.call_sheet', game_id=game.id))
+
+    rows = [r for r in game.call_sheet if r.play and (not r.play.is_draft or can_edit())]
+    results = pb.play_results(game_points(game))
+    called_off_sheet = [db.session.get(Play, pid) for pid in results if pid not in {r.play_id for r in rows}]
+    choices = []
+    if can_edit():
+        choices = [p for p in Play.query.filter_by(team_organization_id=team_id).filter(Play.status != 'retired')
+                   .order_by(Play.type.desc(), *_play_order())]
+    return render_template('playbook/call_sheet.html', title=f'Call sheet vs {game.opponent}', game=game, rows=rows,
+                           results=results, rate=pb.rate, report=report, choices=choices,
+                           called_off_sheet=[p for p in called_off_sheet if p and (not p.is_draft or can_edit())],
+                           my_part=_my_parts([r.play for r in rows], team_id))
+
+
+def _my_parts(plays, team_id):
+    mine = my_role_ids(team_id)
+    return {p.id: next((a for r in mine for a in p.assignments if a.position_id == r), None) for p in plays}
+
+
+@bp.route('/results')
+def results():
+    """Every play called in games this season: how often, and how often we scored."""
+    from app.models.game import Game
+    from app.models.point import Point
+    from app.utils.season import scope_games, viewing_season
+    team_id = get_current_team_id()
+    games = scope_games(Game.query.filter_by(team_organization_id=team_id), team_id).all()
+    points = Point.query.filter(Point.game_id.in_([g.id for g in games]), Point.called_play_id.isnot(None)).all() \
+        if games else []
+    results = pb.play_results(points)
+    plays = {p.id: p for p in team_plays(team_id).filter(Play.id.in_(list(results) or [0]))}
+    rows = sorted(((plays[pid], r) for pid, r in results.items() if pid in plays),
+                  key=lambda pr: (-pr[1]['called'], pr[0].name.lower()))
+    season = viewing_season(team_id)
+    return render_template('playbook/results.html', title='How our plays went', rows=rows, rate=pb.rate,
+                           season=season, games_with_calls=len({p.game_id for p in points}))
 
 
 # ── Set-ups: starting positions saved from the editor ────────────
