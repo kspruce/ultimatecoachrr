@@ -1,5 +1,7 @@
 """Team roles and who holds them each season (Team → Roles, player profiles,
 the playbook). See app/models/team_role.py."""
+import json
+
 from app import db
 from app.models.playbook import PlayerPosition
 from app.models.season import SeasonRoster
@@ -174,3 +176,43 @@ def copy_roles(previous, season, player_ids):
     # Players who didn't carry over leave gaps in the depth order
     for role in team_roles(season.team_organization_id):
         _renumber(role, season)
+
+
+# ── Roles in the playbook ──────────────────────────────────────────────────
+
+def drawing_state(play):
+    """The play's editable drawing (all stages), or None."""
+    diagram = play.editor_diagram
+    if diagram is None:
+        return None
+    try:
+        return json.loads(diagram.editor_json)
+    except ValueError:
+        return None
+
+
+def drawing_role_ids(state):
+    """The ids of the roles the drawing's players are."""
+    ids = set()
+    for stage in (state or {}).get('stages') or [{'objects': (state or {}).get('objects') or []}]:
+        for o in stage.get('objects') or []:
+            try:
+                if o.get('herdRole'):
+                    ids.add(int(o['herdRole']))
+            except (TypeError, ValueError):
+                pass
+    return ids
+
+
+def plays_by_role(team_id):
+    """{role id: [plays]} for every play that has the role in its drawing or
+    says what it does."""
+    from app.models.playbook import Play, PlayAssignment
+    found = {}
+    for play in Play.query.filter_by(team_organization_id=team_id).all():
+        ids = drawing_role_ids(drawing_state(play))
+        ids |= {a.position_id for a in PlayAssignment.query.filter_by(play_id=play.id) if a.position_id}
+        for role_id in ids:
+            found.setdefault(role_id, []).append(play)
+    order = lambda p: (p.type != 'offense', p.sort_order is None, p.sort_order or 0, p.name.lower())  # noqa: E731
+    return {role_id: sorted(plays, key=order) for role_id, plays in found.items()}

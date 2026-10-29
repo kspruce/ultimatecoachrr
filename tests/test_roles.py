@@ -217,3 +217,79 @@ def test_the_playbook_uses_roles(app, club):
 
     c.post(f'/team/roles/{cutter.id}/delete')
     assert PlayAssignment.query.count() == 0 and PlayerPosition.query.filter_by(name='Initiation cutter').count() == 0
+
+
+# ── Roles in a play's drawing ──────────────────────────────────────────────
+
+def drawn_play(club, roles_by_label, stages=1):
+    """A play drawn in the editor whose players have roles: {label: role id}."""
+    import json
+    from app.models.drill import DrillDiagram
+    objects = [{'type': 'group', 'herdType': 'player-o', 'herdId': f'p{n}', 'herdLabel': label,
+                'herdRole': role_id, 'left': 100 * n, 'top': 100}
+               for n, (label, role_id) in enumerate(roles_by_label.items(), start=1)]
+    state = {'version': 2, 'field': {}, 'stages': [{'name': f'Stage {i + 1}', 'objects': objects}
+                                                   for i in range(stages)]}
+    play = Play(name='Side stack', type='offense', team_organization_id=club['team'])
+    db.session.add(play)
+    db.session.flush()
+    for i in range(stages):
+        db.session.add(DrillDiagram(play_id=play.id, order=1000 + i, team_organization_id=club['team'],
+                                    image_url='/x.png', source='Play editor',
+                                    editor_json=json.dumps(state) if i == 0 else json.dumps({'stage': i + 1})))
+    db.session.commit()
+    return play.id
+
+
+def test_drawing_role_ids():
+    state = {'stages': [{'objects': [{'herdRole': 3}, {'herdRole': '4'}, {'herdRole': None}, {}]},
+                        {'objects': [{'herdRole': 3}, {'herdRole': 'x'}]}]}
+    assert team_roles.drawing_role_ids(state) == {3, 4}
+    assert team_roles.drawing_role_ids(None) == set()
+
+
+def test_pick_a_role_on_the_play(app, club):
+    c = club['coach']
+    for name in ('Initiation cutter', 'Centre handler', 'Deep'):
+        c.post('/team/roles/add', data={'name': name, 'line': 'O'})
+    cutter, handler, deep = role(club, 'Initiation cutter'), role(club, 'Centre handler'), role(club, 'Deep')
+    play_id = drawn_play(club, {'C1': cutter.id, 'H1': handler.id})
+    db.session.add(PlayAssignment(play_id=play_id, position_id=deep.id, instructions='Stay home',
+                                  team_organization_id=club['team']))
+    db.session.commit()
+
+    # The editor (captains and admins draw plays) knows the team's roles
+    editor = page(club['captain'], f'/playbook/plays/{play_id}/draw')
+    assert 'id="play-roles"' in editor and 'Initiation cutter' in editor
+
+    # One stage, but players have roles: the diagram is drawn so a role can be picked
+    body = page(club['ann'], f'/playbook/plays/{play_id}?role={cutter.id}')
+    assert 'data-animation="role"' in body and f'<option value="{cutter.id}" selected>' in body
+    assert body.count('ms-auto js-show-role') == 2  # cutter and handler are drawn; Deep only has words
+    assert 'Stay home' in body and 'drill_viewer.js' in body
+
+    # By role: every play the role is in, with a link that picks out its path
+    by_role = page(club['ann'], f'/playbook/positions/{cutter.id}')
+    assert 'Side stack' in by_role and f'role={cutter.id}' in by_role
+    assert 'Side stack' in page(club['ann'], f'/playbook/positions/{deep.id}')
+    assert 'In 1 play' in page(c, '/team/roles/')
+
+
+def test_players_find_their_plays(app, club):
+    c = club['coach']
+    c.post('/team/roles/add', data={'name': 'Initiation cutter', 'line': 'O'})
+    cutter = role(club, 'Initiation cutter')
+    play_id = drawn_play(club, {'C1': cutter.id})
+    ann_id = club['players'][0]
+    c.post(f'/team/roles/{cutter.id}/assign', data={'player_id': ann_id})
+
+    # "Plays by role" opens on their main role
+    r = club['ann'].get('/playbook/positions')
+    assert r.status_code == 302 and r.headers['Location'].endswith(f'/playbook/positions/{cutter.id}')
+    # Their profile lists the plays, and game-day cards link to their path
+    profile = page(club['ann'], f'/team/player/{ann_id}')
+    assert f'/playbook/plays/{play_id}?role={cutter.id}' in profile
+    cards = page(club['ann'], '/playbook/cards')
+    assert 'Your path' in cards and f'role={cutter.id}' in cards
+    # Someone without the role gets the ordinary link
+    assert 'Your path' not in page(c, '/playbook/cards')

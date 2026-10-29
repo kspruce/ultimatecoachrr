@@ -24,6 +24,16 @@
     <div class="small text-muted mb-2"><i class="bi bi-hand-index-thumb me-1"></i>{{ 'You’d' if is_me else 'Would' }} like: {% for r in wanted_roles %}{{ r.role.name }}{{ ', ' if not loop.last }}{% endfor %}</div>
     {% endif %}
 
+    {% if role_plays %}
+    <div class="pr-plays mb-2">
+      {% for role, plays in role_plays %}
+      <div class="small"><span class="fw-semibold">{{ role.name }}:</span>
+        {% for play in plays %}<a href="{{ url_for('playbook.view_play', play_id=play.id, role=role.id) }}">{{ play.name }}</a>{{ ', ' if not loop.last }}{% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
     {% if role_history %}
     <div class="small text-muted mb-2">
       {% for season, names in role_history %}<div>{{ season.name }}: {{ names|join(', ') }}</div>{% endfor %}

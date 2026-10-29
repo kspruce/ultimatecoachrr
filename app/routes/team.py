@@ -517,6 +517,13 @@ def player_detail(player_id):
                     for row in sorted(player.season_entries, key=lambda r: r.season.start_date, reverse=True)
                     if row.season_id != (role_season.id if role_season else None) and row.roles]
     role_history = [(season, names) for season, names in role_history if names]
+    # The plays their roles are in (playbook switched on)
+    role_plays = []
+    settings = TeamSettings.query.filter_by(team_id=player.team_organization_id).first()
+    if settings is None or settings.playbook_enabled:
+        by_role = team_roles_util.plays_by_role(player.team_organization_id)
+        role_plays = [(r.role, by_role[r.role_id]) for r in team_roles_util.player_roles(role_roster)
+                      if by_role.get(r.role_id)]
 
     return render_template(
         'team/player_detail.html',
@@ -534,6 +541,7 @@ def player_detail(player_id):
         wanted_roles=team_roles_util.player_roles(role_roster, 'preferred'),
         team_roles=team_roles_util.team_roles(player.team_organization_id),
         role_history=role_history,
+        role_plays=role_plays,
     )
 
 

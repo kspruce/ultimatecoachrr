@@ -91,9 +91,15 @@
         </div>
         <div class="gd-foot">
             <span class="small text-muted">{% if play.stage_count > 1 %}Swipe for each stage{% endif %}</span>
+            {% if my_path.get(play.id) %}
+            <a href="{{ url_for('playbook.view_play', play_id=play.id, role=my_path[play.id]) }}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-person-fill"></i> Your path
+            </a>
+            {% else %}
             <a href="{{ url_for('playbook.view_play', play_id=play.id) }}" class="btn btn-sm btn-outline-primary">
                 {% if play.stage_count > 1 %}<i class="bi bi-play-fill"></i> Watch it{% else %}Full play{% endif %}
             </a>
+            {% endif %}
         </div>
     </article>
     {% else %}

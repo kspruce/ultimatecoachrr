@@ -50,9 +50,7 @@ def index():
     season = roles_season(team_id)
     team = db.session.get(TeamOrganization, team_id)
     roles, unassigned = team_roles_util.board(team_id, season, team)
-    plays = dict(db.session.query(PlayAssignment.position_id, db.func.count(PlayAssignment.id))
-                 .filter(PlayAssignment.team_organization_id == team_id)
-                 .group_by(PlayAssignment.position_id).all())
+    plays = {role_id: len(found) for role_id, found in team_roles_util.plays_by_role(team_id).items()}
     return render_template('roles/index.html', title='Roles', season=season, roles=roles,
                            unassigned=unassigned, plays=plays, lines=PlayerPosition.LINES,
                            all_time=viewing_season(team_id) is None)
