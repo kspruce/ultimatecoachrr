@@ -21,13 +21,14 @@ from app import db, login
 from app.forms.playbook import LearnForm, PlayForm
 from app.models.clip import Clip
 from app.models.drill import SavedDrill
-from app.models.playbook import (Formation, Play, PlayAssignment, PlayerPosition, PlayerUsualRole, PlayLearned,
+from app.models.playbook import (Formation, Play, PlayAssignment, PlayerPosition, PlayLearned,
                                  PlayToLearn, PLAY_STATUSES, PLAY_TYPES)
 from app.models.team_settings import TeamSettings
 from app.models.theory import TheoryImage, TheorySection, TheoryTopic
 from app.utils import playbook as pb
 from app.utils import theory as hub
 from app.utils.editor_diagrams import save_editor_diagrams
+from app.utils.roles import drawing_role_ids, drawing_state, plays_by_role, team_roles
 from app.utils.team_filter import get_current_team_id
 
 bp = Blueprint('playbook', __name__, url_prefix='/playbook')
@@ -91,6 +92,22 @@ def play_or_404(play_id):
     if play.is_draft and not can_edit():
         abort(404)
     return play
+
+
+def my_role_ids(team_id):
+    """The signed-in player's roles this season (Team → Roles), main role first."""
+    from app.routes.roles import roles_season
+    from app.utils.roles import player_roles
+    from app.utils.season import roster_entry
+    player = current_user.player if current_user.is_authenticated else None
+    if player is None:
+        return []
+    return [r.role_id for r in player_roles(roster_entry(player, roles_season(team_id)))]
+
+
+def my_main_role(team_id):
+    ids = my_role_ids(team_id)
+    return db.session.get(PlayerPosition, ids[0]) if ids else None
 
 
 def export_plays(team_id):
@@ -335,7 +352,7 @@ def index():
                            grouped=not (q or type_filter),
                            learned=learned, to_learn=to_learn, learn_counts=learn_counts, team_size=team_size,
                            known=len([p for p in in_use if p.id in learned]), total_in_use=len(in_use),
-                           my_role=pb.usual_role(current_user.id, team_id),
+                           my_role=my_main_role(team_id),
                            has_retired=any(p.is_retired for p in every))
 
 
@@ -356,12 +373,15 @@ def view_play(play_id):
     play = play_or_404(play_id)
     team_id = play.team_organization_id
 
-    # Drawn in stages: the page plays them as an animation
-    animation = None
-    if play.editor_diagram:
-        state = json.loads(play.editor_diagram.editor_json)
-        if len(state.get('stages') or []) > 1:
-            animation = state
+    # Drawn in stages: the page plays them as an animation. Players given
+    # roles: pick a role to see just their path (one stage too).
+    state = drawing_state(play)
+    drawn_roles = drawing_role_ids(state)
+    animation = state if state and (len(state.get('stages') or []) > 1 or drawn_roles) else None
+    roles = team_roles(team_id)
+    said = {a.position_id: a for a in play.assignments}
+    who = [{'role': r, 'assignment': said.get(r.id), 'drawn': r.id in drawn_roles}
+           for r in roles if r.id in said or r.id in drawn_roles]
 
     # Previous / next among the same side's plays
     siblings = [p for p in team_plays(team_id).filter_by(type=play.type).order_by(*_play_order())
@@ -369,8 +389,10 @@ def view_play(play_id):
     ids = [p.id for p in siblings]
     i = ids.index(play.id) if play.id in ids else 0
 
-    my_role = pb.usual_role(current_user.id, team_id)
-    mine = next((a for a in play.assignments if my_role and a.position_id == my_role.id), None)
+    # The player's own role in it: the first of theirs it has (main role first)
+    mine_ids = my_role_ids(team_id)
+    mine = next(({'role': w['role'], 'assignment': w['assignment'], 'drawn': w['drawn']}
+                 for rid in mine_ids for w in who if w['role'].id == rid), None)
     learners = None
     if can_edit():
         learners = (PlayLearned.query.filter_by(play_id=play.id).count(), len(hub.team_readers(team_id)))
@@ -383,7 +405,8 @@ def view_play(play_id):
                            prev_play=siblings[i - 1] if i > 0 else None,
                            next_play=siblings[i + 1] if i + 1 < len(siblings) else None,
                            position=(i + 1, len(siblings)),
-                           my_role=my_role, mine=mine, is_learned=play.id in pb.learned_ids(current_user.id, team_id),
+                           who=who, animation_roles=[r for r in roles if r.id in drawn_roles],
+                           mine=mine, is_learned=play.id in pb.learned_ids(current_user.id, team_id),
                            learners=learners, topics=visible_topics(play),
                            clips=visible_clips(play.clips, team_id), reports=reports, sessions=sessions[:5])
 
@@ -439,47 +462,29 @@ def unassign(play_id):
     return redirect(url_for('playbook.learners', play_id=play.id))
 
 
-@bp.route('/roles')
-@bp.route('/roles/<int:position_id>')
+@bp.route('/positions')
+@bp.route('/positions/<int:position_id>')
 def position_view(position_id=None):
-    """A role's instructions across every play; and choosing your usual role."""
+    """By role: pick a role and see every play it's in, with what it does
+    and a link that shows just its path. A player with roles starts on their
+    main one."""
     team_id = get_current_team_id()
-    positions = pb.team_positions(team_id)
-    my_role = pb.usual_role(current_user.id, team_id)
+    positions = team_roles(team_id)
+    mine = my_role_ids(team_id)
+    if position_id is None and mine:
+        return redirect(url_for('playbook.position_view', position_id=mine[0]))
     selected = None
+    entries = []
     if position_id:
         selected = next((p for p in positions if p.id == position_id), None) or abort(404)
-    elif my_role:
-        selected = my_role
-    assignments = []
-    if selected:
-        assignments = [a for a in PlayAssignment.query.filter_by(position_id=selected.id, team_organization_id=team_id)
-                       .join(Play, PlayAssignment.play_id == Play.id)
-                       .order_by(Play.type.desc(), *_play_order())
-                       if a.play.status == 'active' or (a.play.is_draft and can_edit())]
-    return render_template('playbook/roles.html', title='Roles', positions=positions, selected=selected,
-                           assignments=assignments, my_role=my_role)
-
-
-@bp.route('/roles/mine', methods=['POST'])
-def set_my_role():
-    team_id = get_current_team_id()
-    position_id = request.form.get('position_id', type=int)
-    row = PlayerUsualRole.query.filter_by(user_id=current_user.id, team_organization_id=team_id).first()
-    if not position_id:
-        if row:
-            db.session.delete(row)
-        db.session.commit()
-        flash("You haven't got a usual role now.", 'success')
-        return redirect(url_for('playbook.position_view'))
-    position = PlayerPosition.query.filter_by(id=position_id, team_organization_id=team_id).first_or_404()
-    if row is None:
-        row = PlayerUsualRole(user_id=current_user.id, team_organization_id=team_id, position_id=position.id)
-        db.session.add(row)
-    row.position_id = position.id
-    db.session.commit()
-    flash(f'Plays will show what {position.name} does first.', 'success')
-    return redirect(url_for('playbook.position_view', position_id=position.id))
+        for play in plays_by_role(team_id).get(selected.id, []):
+            if play.is_draft and not can_edit() or play.is_retired:
+                continue
+            assignment = next((a for a in play.assignments if a.position_id == selected.id), None)
+            entries.append({'play': play, 'assignment': assignment,
+                            'drawn': selected.id in drawing_role_ids(drawing_state(play))})
+    return render_template('playbook/position_view.html', title='Plays by role', positions=positions,
+                           selected=selected, entries=entries, mine=mine)
 
 
 # ── Game-day cards: the playbook on a phone ──────────────────────
@@ -503,9 +508,16 @@ def cards():
         plays = [p for p in plays if p.type == type_filter]
     else:
         type_filter = None
+    # Each card shows the player's own role first, and links to their path
+    # when it's in the drawing
+    mine = my_role_ids(team_id)
+    my_path, my_part = {}, {}
+    for play in plays:
+        drawn = drawing_role_ids(drawing_state(play)) if mine else set()
+        my_path[play.id] = next((r for r in mine if r in drawn), None)
+        my_part[play.id] = next((a for r in mine for a in play.assignments if a.position_id == r), None)
     return render_template('playbook/cards.html', plays=plays, report=report, type_filter=type_filter,
-                           my_role=pb.usual_role(current_user.id, team_id),
-                           learned=pb.learned_ids(current_user.id, team_id))
+                           my_path=my_path, my_part=my_part, learned=pb.learned_ids(current_user.id, team_id))
 
 
 # ── Drawing a play in the drill editor ───────────────────────────
@@ -522,6 +534,8 @@ def draw_play(play_id=None):
             editor_state = json.loads(play.editor_diagram.editor_json)
     return render_template('playbook/play_editor.html', play=play, drill=None, editor_state=editor_state,
                            other_diagrams=[], statuses=PLAY_STATUSES,
+                           roles=[{'id': r.id, 'name': r.name, 'line': r.line or ''}
+                                  for r in team_roles(get_current_team_id())],
                            new_type=request.args.get('type') if request.args.get('type') in TYPES else 'offense')
 
 
@@ -605,23 +619,25 @@ def link_choices(team_id):
 
 
 def roles_from_form():
-    """[(role name, instructions)] from the form's role rows, and any problem."""
-    names = request.form.getlist('role_name')
+    """[(role id, instructions)] from the form's role rows, and any problem.
+    Roles are the team's (Team → Roles)."""
+    team = {r.id: r for r in team_roles(get_current_team_id())}
+    ids = request.form.getlist('role_id')
     texts = request.form.getlist('role_text')
     roles, seen = [], set()
-    for n, name in enumerate(names):
-        name = ' '.join(name.split())[:50]
+    for n, raw in enumerate(ids):
+        role = team.get(int(raw)) if raw.isdigit() else None
         text = (texts[n] if n < len(texts) else '').strip()
-        if not name and not text:
+        if role is None and not text:
             continue
-        if not name:
-            return roles, 'Give each role a name (e.g. Handler 1, Cup, Deep).'
+        if role is None:
+            return roles, 'Pick a role for each row.'
+        roles.append((role.id, text))
         if not text:
-            return roles, f'Say what {name} does, or remove the role.'
-        if name.lower() in seen:
-            return roles, f'{name} is in the list twice.'
-        seen.add(name.lower())
-        roles.append((name, text))
+            return roles, f'Say what {role.name} does, or remove it.'
+        if role.id in seen:
+            return roles, f'{role.name} is in the list twice.'
+        seen.add(role.id)
     if len(roles) > MAX_ROLES:
         return roles, f'A play can have up to {MAX_ROLES} roles.'
     return roles, None
@@ -630,12 +646,12 @@ def roles_from_form():
 def form_page(form, play=None, roles=None):
     team_id = get_current_team_id()
     if roles is None:
-        roles = [(a.position.name if a.position else '', a.instructions) for a in play.assignments] if play else []
+        roles = [(a.position_id, a.instructions) for a in play.assignments] if play else []
     topics, drills, clips = link_choices(team_id)
     tag_names = sorted({t.name for p in Play.query.filter_by(team_organization_id=team_id) for t in p.tags},
                        key=str.lower)
     return render_template('playbook/play_form.html', form=form, play=play, roles=roles,
-                           position_names=[p.name for p in pb.team_positions(team_id)], tag_names=tag_names,
+                           team_roles=team_roles(team_id), tag_names=tag_names,
                            topics=topics, drills=drills, clips=clips,
                            topic_items=[(t.id, t.name, t.section.name + ('' if t.published else ' · draft'))
                                         for t in topics],
@@ -677,12 +693,10 @@ def save_play(form, play):
             wanted = set(form.clips.data or [])
             play.clips = [c for c in clips if c.id in wanted]
 
-        positions = {p.name.lower(): p for p in pb.team_positions(team_id)}
-        old = {a.position.name.lower(): a for a in play.assignments if a.position}
+        old = {a.position_id: a for a in play.assignments}
         play.assignments = []
-        for n, (name, text) in enumerate(roles, start=1):
-            assignment = old.pop(name.lower(), None) or PlayAssignment(team_organization_id=team_id)
-            assignment.position = pb.position_for(name, team_id, positions)
+        for n, (role_id, text) in enumerate(roles, start=1):
+            assignment = old.pop(role_id, None) or PlayAssignment(team_organization_id=team_id, position_id=role_id)
             assignment.instructions = text
             assignment.order = n
             play.assignments.append(assignment)

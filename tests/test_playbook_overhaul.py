@@ -1,7 +1,7 @@
 """The playbook overhaul: offence and defence plays only (concepts moved to
 Theory), coaches and captains edit, roles and tags typed in, draft / in use
 / retired, links to theory, drills and clips both ways, plays inside theory
-articles, usual roles, learning plays, and session plans keeping their plays."""
+articles, your team role first, learning plays, and session plans keeping their plays."""
 import io
 from datetime import date
 
@@ -11,7 +11,7 @@ from PIL import Image
 from app import db
 from app.models.clip import Clip
 from app.models.drill import SavedDrill
-from app.models.playbook import (Formation, Play, PlayAssignment, PlayerPosition, PlayerUsualRole, PlayLearned, PlayTag,
+from app.models.playbook import (Formation, Play, PlayAssignment, PlayerPosition, PlayLearned, PlayTag,
                                  PlayToLearn)
 from app.models.session import SessionComponent, SessionPlan
 from app.models.team_settings import TeamSettings
@@ -45,9 +45,13 @@ def club(app):
                                       ('Old zone', 'defense', 'retired', 2)]:
         plays[name] = Play(name=name, type=kind, status=status, sort_order=order, team_organization_id=team.id)
     their_play = Play(name='Their play', type='offense', team_organization_id=other.id)
-    db.session.add_all(list(plays.values()) + [their_play])
+    handler = PlayerPosition(name='Handler 1', line='O', team_organization_id=team.id)
+    cutter = PlayerPosition(name='Iso cutter', line='O', team_organization_id=team.id)
+    their_role = PlayerPosition(name='Theirs', line='O', team_organization_id=other.id)
+    db.session.add_all(list(plays.values()) + [their_play, handler, cutter, their_role])
     db.session.commit()
     ids = {k: v.id for k, v in plays.items()}
+    ids.update(handler=handler.id, cutter=cutter.id, their_role=their_role.id)
     return {
         'team': team.id, 'other': other.id, 'why': why.id, 'secret': secret.id, 'drill': drill.id, 'clip': clip.id,
         'their_drill': their_drill.id, 'their_play': their_play.id, 'section': section.id, **ids,
@@ -62,10 +66,10 @@ def client(app, club, who, team='team'):
     return stats_data.Client(app, club[who], club[team])
 
 
-def form(**kw):
+def form(club, **kw):
     data = {'name': 'Iso', 'type': 'offense', 'status': 'active', 'call': 'Iso', 'signal': 'Fist',
             'description': 'Clear the break side.', 'notes': '', 'image_url': '', 'ultiplay_embed': '',
-            'tags': '', 'role_name': ['Handler 1', 'Iso cutter'],
+            'tags': '', 'role_id': [club['handler'], club['cutter']],
             'role_text': ['Swing it to the break side.', 'Cut under from the back.'], 'action': 'save'}
     data.update(kw)
     return data
@@ -140,7 +144,7 @@ def test_concepts_are_gone_and_their_links_go_to_theory(app, club):
 
 
 def test_search_and_filters(app, club):
-    db.session.add(PlayAssignment(play_id=club['Cup'], position=PlayerPosition(name='Wing', team_organization_id=club['team']),
+    db.session.add(PlayAssignment(play_id=club['Cup'], position_id=club['handler'],
                                   instructions='Take away the swing', team_organization_id=club['team']))
     play = db.session.get(Play, club['Hammer'])
     play.call = 'Thor'
@@ -158,7 +162,7 @@ def test_search_and_filters(app, club):
 
 def test_write_a_play_with_roles_tags_and_links(app, club):
     c = client(app, club, 'coach')
-    r = c.post('/playbook/plays/add', data=form(tags='iso, Endzone,iso', topics=[club['why']],
+    r = c.post('/playbook/plays/add', data=form(club, tags='iso, Endzone,iso', topics=[club['why']],
                                                 drills=[club['drill'], club['their_drill']], clips=[club['clip']]))
     assert r.status_code == 302, text(r)
     play = Play.query.filter_by(name='Iso').one()
@@ -180,43 +184,45 @@ def test_write_a_play_with_roles_tags_and_links(app, club):
     assert 'In the playbook' in text(client(app, club, 'player').get(f'/clips/{club["clip"]}'))
 
     # Edit: rename a role, drop one, drop a tag; unused roles and tags go
-    r = c.post(f'/playbook/plays/{play.id}/edit', data=form(tags='iso', role_name=['Handler 1'],
+    r = c.post(f'/playbook/plays/{play.id}/edit', data=form(club, tags='iso', role_id=[club['handler']],
                                                             role_text=['Swing it early.'], status='retired'))
     assert r.status_code == 302
     play = fresh(Play, play.id)
     assert [a.instructions for a in play.assignments] == ['Swing it early.'] and play.status == 'retired'
     assert [t.name for t in play.tags] == ['iso']
     assert PlayTag.query.filter_by(team_organization_id=club['team']).count() == 1
-    assert PlayerPosition.query.filter_by(team_organization_id=club['team']).count() == 1
+    # The team's roles stay (they're managed under Team → Roles)
+    assert PlayerPosition.query.filter_by(team_organization_id=club['team']).count() == 2
     assert play.theory_topics == [] and play.drills == []
 
 
 def test_role_mistakes_keep_the_page(app, club):
     c = client(app, club, 'coach')
-    r = c.post('/playbook/plays/add', data=form(role_name=['Cup', 'cup'], role_text=['a', 'b']))
-    assert r.status_code == 200 and 'cup is in the list twice' in text(r) and 'value="Iso"' in text(r)
-    r = c.post('/playbook/plays/add', data=form(role_name=['Cup'], role_text=['']))
-    assert 'Say what Cup does' in text(r)
+    r = c.post('/playbook/plays/add', data=form(club, role_id=[club['cutter'], club['cutter']], role_text=['a', 'b']))
+    assert r.status_code == 200 and 'Iso cutter is in the list twice' in text(r) and 'value="Iso"' in text(r)
+    r = c.post('/playbook/plays/add', data=form(club, role_id=[club['cutter']], role_text=['']))
+    assert 'Say what Iso cutter does' in text(r)
+    r = c.post('/playbook/plays/add', data=form(club, role_id=[club['their_role']], role_text=['x']))
+    assert 'Pick a role for each row' in text(r)
     assert Play.query.filter_by(name='Iso').count() == 0
 
 
 def test_save_and_draw(app, club):
-    r = client(app, club, 'coach').post('/playbook/plays/add', data=form(action='draw'))
+    r = client(app, club, 'coach').post('/playbook/plays/add', data=form(club, action='draw'))
     play = Play.query.filter_by(name='Iso').one()
     assert r.headers['Location'].endswith(f'/playbook/plays/{play.id}/draw')
 
 
 def test_deleting_takes_roles_and_learning_with_it(app, club):
     play = db.session.get(Play, club['Hammer'])
-    play.assignments = [PlayAssignment(position=PlayerPosition(name='Thrower', team_organization_id=club['team']),
-                                       instructions='Throw it', team_organization_id=club['team'])]
+    play.assignments = [PlayAssignment(position_id=club['handler'], instructions='Throw it',
+                                       team_organization_id=club['team'])]
     db.session.add_all([PlayLearned(user_id=club['player'], play_id=play.id, team_organization_id=club['team']),
                         PlayToLearn(play_id=play.id, team_organization_id=club['team'])])
     db.session.commit()
     r = client(app, club, 'coach').post(f'/playbook/plays/{club["Hammer"]}/delete')
     assert r.status_code == 302
     assert PlayAssignment.query.count() == 0 and PlayLearned.query.count() == 0 and PlayToLearn.query.count() == 0
-    assert PlayerPosition.query.count() == 0
 
 
 def test_reorder(app, club):
@@ -236,7 +242,7 @@ def test_photo_upload(app, club):
     url = r.get_json()['url']
     assert url.startswith('/playbook/image/') and c.get(url).status_code == 200
     assert client(app, club, 'other_coach', team='other').get(url).status_code == 404
-    r = c.post(f'/playbook/plays/{club["Hammer"]}/edit', data=form(name='Hammer', image_url=url))
+    r = c.post(f'/playbook/plays/{club["Hammer"]}/edit', data=form(club, name='Hammer', image_url=url))
     assert r.status_code == 302 and fresh(Play, club['Hammer']).image_url == url
     # It goes into the PDF inline
     from app.utils.playbook_export import _item
@@ -287,27 +293,29 @@ def test_read_the_why_hides_draft_topics_from_players(app, club):
 
 # ── Roles and learning ────────────────────────────────────────────────────
 
-def test_usual_role(app, club):
-    cup = PlayerPosition(name='Cup', team_organization_id=club['team'])
-    db.session.add(PlayAssignment(play_id=club['Cup'], position=cup, instructions='Stop the swing.',
+def test_your_role_comes_first(app, club):
+    """A player given a team role this season (Team → Roles) sees what it
+    does first, on the play and on the cards."""
+    from app.models.season import Season
+    from app.models.team_organization import TeamOrganization
+    from tests.test_feedback import make_user as make_player_user
+    year = date.today().year
+    db.session.add(Season(team_organization_id=club['team'], year=year, start_date=date(year, 1, 1),
+                          end_date=date(year, 12, 31), is_current=True))
+    db.session.add(PlayAssignment(play_id=club['Cup'], position_id=club['cutter'], instructions='Stop the swing.',
                                   team_organization_id=club['team'], order=1))
     db.session.commit()
-    p = client(app, club, 'player')
-    assert 'Pick your usual role' in text(p.get(f'/playbook/plays/{club["Cup"]}'))
-    p.post('/playbook/roles/mine', data={'position_id': cup.id})
-    assert PlayerUsualRole.query.one().position_id == cup.id
-    page = text(p.get(f'/playbook/plays/{club["Cup"]}'))
-    assert 'Your role: Cup' in page
-    assert 'You (Cup):' in text(p.get('/playbook/cards'))
-    roles = text(p.get('/playbook/roles'))
-    assert 'Stop the swing.' in roles and 'Not my role' in roles
-    p.post('/playbook/roles/mine', data={'position_id': ''})
-    assert PlayerUsualRole.query.count() == 0
-    # Another team's role can't be picked
-    theirs = PlayerPosition(name='X', team_organization_id=club['other'])
-    db.session.add(theirs)
+    team = db.session.get(TeamOrganization, club['team'])
+    player = stats_data.build_players(team, 1)[0]
+    ann = make_player_user(team, 'ann', 'player', player)
     db.session.commit()
-    assert p.post('/playbook/roles/mine', data={'position_id': theirs.id}).status_code == 404
+    ann_id, player_id = ann.id, player.id
+    client(app, club, 'coach').post(f'/team/roles/{club["cutter"]}/assign', data={'player_id': player_id})
+    a = stats_data.Client(app, ann_id, club['team'])
+    page = text(a.get(f'/playbook/plays/{club["Cup"]}'))
+    assert 'Your role: Iso cutter' in page and 'Stop the swing.' in page
+    assert 'You (Iso cutter):' in text(a.get('/playbook/cards'))
+    assert text(client(app, club, 'player').get(f'/playbook/plays/{club["Cup"]}')).count('Your role:') == 0
 
 
 def test_learning_plays(app, club):

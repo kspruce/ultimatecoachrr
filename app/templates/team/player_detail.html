@@ -24,6 +24,8 @@
         </div>
     </div>
 
+    {% include "team/_roles_card.html" %}
+
     <div class="row">
         <div class="col-md-4">
             <div class="card mb-4">
@@ -479,6 +481,15 @@ document.addEventListener('DOMContentLoaded', function() {
 {% block styles %}
 {{ fb.styles() }}
 <style>
+    /* Roles */
+    .pr-roles { display: flex; flex-wrap: wrap; gap: .4rem; }
+    .pr-role { border: 1px solid var(--rule); border-radius: 99px; padding: .3rem .75rem; font-weight: 600; font-size: .92rem; background: var(--card); }
+    .pr-role.main { border-color: var(--club-ink); background: var(--club-soft); }
+    .pr-role small { font-weight: 400; color: var(--ink-3); margin-left: .2rem; }
+    .pr-role .bi { color: var(--club-ink); }
+    .pr-pick { display: flex; align-items: center; gap: .75rem; padding: .35rem 0; border-bottom: 1px solid var(--rule); min-height: 40px; }
+    #roles details > summary { list-style: none; }
+    #roles details > summary::-webkit-details-marker { display: none; }
     /* Goal cards equal height */
     .card.h-100 { height: 100%; }
     details > summary { list-style: none; }

@@ -55,4 +55,5 @@
      data-drill-id="{{ play.id if play else '' }}"
      data-create-url="{{ url_for('playbook.create_drawn_play') }}"
      data-update-url="{{ url_for('playbook.update_drawn_play', play_id=play.id) if play else '' }}"></div>
+<script id="play-roles" type="application/json">{{ roles|tojson }}</script>
 {% endblock %}

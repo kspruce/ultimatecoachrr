@@ -49,7 +49,7 @@ def test_playbook_on_a_phone(app, team, live_server, browser, book):
     coach_id, player_id = book['coach'].id, book['player'].id
 
     page = phone_page(app, browser, live_server, db.session.get(User, coach_id), db.session.get(TeamOrganization, team_id))
-    for path in ('/playbook/', f'/playbook/plays/{book["play"]}', '/playbook/cards', '/playbook/roles',
+    for path in ('/playbook/', f'/playbook/plays/{book["play"]}', '/playbook/cards', '/playbook/positions',
                  f'/playbook/plays/{book["play"]}/edit', f'/playbook/plays/{book["play"]}/learners',
                  f'/theory/topic/{book["topic"]}'):
         page.goto(live_server + path)
@@ -65,7 +65,7 @@ def test_playbook_on_a_phone(app, team, live_server, browser, book):
     page.locator('[data-add-role]').click()
     rows = page.locator('.pb-role-row')
     assert rows.count() == 2
-    rows.nth(0).locator('[name="role_name"]').fill('Cup')
+    rows.nth(0).locator('[name="role_id"]').select_option(label='Handler 1')
     rows.nth(0).locator('[name="role_text"]').fill('Stop the swing.')
     rows.nth(1).locator('[data-remove-role]').click()
     assert page.locator('.pb-role-row').count() == 1
@@ -73,7 +73,7 @@ def test_playbook_on_a_phone(app, team, live_server, browser, book):
     page.locator('.th-actionbar button[value="save"]').click()
     page.wait_for_url('**/playbook/plays/*')
     play = Play.query.filter_by(name='Zone 7').one()
-    assert play.type == 'defense' and play.call == 'Seven' and [a.position.name for a in play.assignments] == ['Cup']
+    assert play.type == 'defense' and play.call == 'Seven' and [a.position.name for a in play.assignments] == ['Handler 1']
     assert page.evaluate("localStorage.getItem('playbook-draft:new')") is None
     no_sideways_scroll(page)
     assert page.errors == []

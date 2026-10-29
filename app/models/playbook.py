@@ -1,6 +1,7 @@
 """The playbook: offence and defence plays, drawn in the drill editor, with
 who does what in each (roles), tags, a call and a hand signal, links to
 theory topics, drills and clips, and who on the team has learned them.
+Who plays which role is in app/models/team_role.py.
 
 Plays are Draft (only coaches see them), In use, or Retired (kept, but off
 the cards and the PDF)."""
@@ -147,10 +148,22 @@ class Play(db.Model):
 
 
 class PlayerPosition(db.Model):
-    """A role in the team's plays (Handler 1, Cup, Deep...)."""
+    """A team role, such as "O-line initiation cutter". Coaches give players
+    roles each season (PlayerRole, Team → Roles), and plays say what each
+    role does (PlayAssignment). Kept under its old name and table: it was
+    the playbook's list of positions."""
+    LINES = [('O', 'O-line'), ('D', 'D-line'), ('', 'Either line')]
+
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), nullable=False)
+    line = db.Column(db.String(1))                    # 'O', 'D' or empty for either
+    description = db.Column(db.String(200))
+    sort_order = db.Column(db.Integer, nullable=False, default=0, server_default='0')
     team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'), nullable=True)
+
+    @property
+    def line_label(self):
+        return dict(self.LINES).get(self.line or '', 'Either line')
 
     def __repr__(self):
         return f'<Position {self.name}>'
@@ -170,19 +183,6 @@ class PlayAssignment(db.Model):
     # Relationships
     position = db.relationship('PlayerPosition')
     play = db.relationship('Play', back_populates='assignments')
-
-
-class PlayerUsualRole(db.Model):
-    """The role someone usually plays, so plays show theirs first."""
-    __tablename__ = 'player_usual_role'
-    __table_args__ = (db.UniqueConstraint('user_id', 'team_organization_id', name='uq_usual_role_user_team'),)
-
-    id = db.Column(db.Integer, primary_key=True)
-    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'), nullable=False, index=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
-    position_id = db.Column(db.Integer, db.ForeignKey('player_position.id', ondelete='CASCADE'), nullable=False)
-
-    position = db.relationship('PlayerPosition')
 
 
 class PlayLearned(db.Model):

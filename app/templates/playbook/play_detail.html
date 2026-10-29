@@ -100,26 +100,27 @@
   </details>
   {% endif %}
 
-  {# Who does what, yours first #}
+  {# Who does what, the player's own role first #}
   {% if mine %}
   <div class="pb-mine">
-    <div class="th-card-kicker">Your role: {{ mine.position.name }}</div>
-    <div class="md topic-content" style="font-size:1rem">{{ mine.instructions|markdown }}</div>
+    <div class="th-card-kicker">Your role: {{ mine.role.name }}</div>
+    {% if mine.assignment %}<div class="md topic-content" style="font-size:1rem">{{ mine.assignment.instructions|markdown }}</div>{% endif %}
+    {% if mine.drawn and animation %}<a href="{{ url_for('playbook.view_play', play_id=play.id, role=mine.role.id) }}#drill-animation" class="small js-show-role" data-role="{{ mine.role.id }}"><i class="bi bi-eye"></i> Show just your path</a>{% endif %}
   </div>
   {% endif %}
-  {% if play.assignments %}
+  {% if who %}
   <h2 class="th-label">Who does what</h2>
   <div class="pb-roles">
-    {% for a in play.assignments %}
-    <div class="pb-role {% if mine and a.id == mine.id %}me{% endif %}">
-      <h3>{{ a.position.name if a.position else 'Everyone' }}{% if mine and a.id == mine.id %} <span class="th-badge due">You</span>{% endif %}</h3>
-      <div class="md">{{ a.instructions|markdown }}</div>
+    {% for w in who %}
+    {% set me = mine and w.role.id == mine.role.id %}
+    <div class="pb-role {% if me %}me{% endif %}">
+      <h3>{{ w.role.name }} <span class="small text-muted fw-normal">{{ w.role.line_label }}</span>{% if me %} <span class="th-badge due">You</span>{% endif %}</h3>
+      {% if w.assignment %}<div class="md">{{ w.assignment.instructions|markdown }}</div>
+      {% else %}<p class="small text-muted mb-0">In the drawing; nothing written for this role yet.</p>{% endif %}
+      {% if w.drawn and animation %}<a href="{{ url_for('playbook.view_play', play_id=play.id, role=w.role.id) }}#drill-animation" class="small js-show-role" data-role="{{ w.role.id }}"><i class="bi bi-eye"></i> Show this role's path</a>{% endif %}
     </div>
     {% endfor %}
   </div>
-  {% if not my_role %}
-  <p class="small text-muted"><a href="{{ url_for('playbook.position_view') }}">Pick your usual role</a> and every play shows what you do first.</p>
-  {% endif %}
   {% endif %}
 
   {% if play.description %}
@@ -215,4 +216,17 @@
 <script src="{{ url_for('static', filename='js/drill_viewer.js') }}"></script>
 {% endif %}
 <script src="{{ url_for('static', filename='js/theory.js') }}"></script>
+<script>
+// "Show path" picks the role in the drawing above rather than reloading
+document.querySelectorAll('.js-show-role').forEach(function (link) {
+    link.addEventListener('click', function (e) {
+        var pick = document.querySelector('[data-animation="role"]');
+        if (!pick) return;
+        e.preventDefault();
+        pick.value = link.dataset.role;
+        pick.dispatchEvent(new Event('change'));
+        document.getElementById('drill-animation').scrollIntoView({behavior: 'smooth'});
+    });
+});
+</script>
 {% endblock %}

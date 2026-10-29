@@ -75,7 +75,7 @@
         {% endif %}
         <div class="gd-body">
             {% if play.call or play.signal %}<div class="gd-call">{% if play.call %}Call: <b>{{ play.call }}</b>{% endif %}{% if play.call and play.signal %} · {% endif %}{% if play.signal %}Signal: <b>{{ play.signal }}</b>{% endif %}</div>{% endif %}
-            {% set mine = play.assignments|selectattr('position_id', 'equalto', my_role.id)|first if my_role else none %}
+            {% set mine = my_part.get(play.id) %}
             {% if mine %}<div class="gd-mine"><b>You ({{ mine.position.name }}):</b> <span class="md">{{ mine.instructions|markdown }}</span></div>{% endif %}
             {% if play.description %}<div class="md">{{ play.description|markdown }}</div>{% endif %}
             {% if play.assignments %}
@@ -98,9 +98,15 @@
         </div>
         <div class="gd-foot">
             <span class="small text-muted">{% if play.stage_count > 1 %}Swipe for each stage{% endif %}</span>
+            {% if my_path.get(play.id) %}
+            <a href="{{ url_for('playbook.view_play', play_id=play.id, role=my_path[play.id]) }}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-person-fill"></i> Your path
+            </a>
+            {% else %}
             <a href="{{ url_for('playbook.view_play', play_id=play.id) }}" class="btn btn-sm btn-outline-primary">
                 {% if play.stage_count > 1 %}<i class="bi bi-play-fill"></i> Watch it{% else %}Full play{% endif %}
             </a>
+            {% endif %}
         </div>
     </article>
     {% else %}

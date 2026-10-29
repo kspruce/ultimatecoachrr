@@ -50,8 +50,8 @@
           <i class="bi bi-plus-lg"></i><span>New play</span>
         </button>
         <ul class="dropdown-menu dropdown-menu-end">
-          <li><a class="dropdown-item" href="{{ url_for('playbook.draw_play', type=type_filter) }}"><i class="bi bi-easel2 me-2"></i>Draw it on the field</a></li>
-          <li><a class="dropdown-item" href="{{ url_for('playbook.add_play', type=type_filter) }}"><i class="bi bi-pencil me-2"></i>Write it up first</a></li>
+          <li><a class="dropdown-item" href="{{ url_for('playbook.draw_play', type=type_filter) }}"><i class="bi bi-easel2 me-2"></i>Draw a Play</a></li>
+          <li><a class="dropdown-item" href="{{ url_for('playbook.add_play', type=type_filter) }}"><i class="bi bi-pencil me-2"></i>Write it up first, draw later</a></li>
         </ul>
       </div>
       {% endif %}
@@ -59,7 +59,7 @@
         <button class="th-icon-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="More"><i class="bi bi-three-dots"></i></button>
         <ul class="dropdown-menu dropdown-menu-end">
           <li><a class="dropdown-item" href="{{ url_for('playbook.cards') }}"><i class="bi bi-phone me-2"></i>Game-day cards</a></li>
-          <li><a class="dropdown-item" href="{{ url_for('playbook.position_view') }}"><i class="bi bi-person-badge me-2"></i>Roles{% if my_role %} · yours: {{ my_role.name }}{% endif %}</a></li>
+          <li><a class="dropdown-item" href="{{ url_for('playbook.position_view') }}"><i class="bi bi-person-badge me-2"></i>Plays by role{% if my_role %} · yours: {{ my_role.name }}{% endif %}</a></li>
           <li><a class="dropdown-item" href="#" data-export-pdf data-start-url="{{ url_for('playbook.export_start', type=type_filter) }}"><i class="bi bi-file-earmark-pdf me-2"></i>Download as PDF</a></li>
           {% if has_retired %}<li><a class="dropdown-item" href="{{ url_for('playbook.index', show=None if show_retired else 'retired') }}"><i class="bi bi-archive me-2"></i>{{ 'Back to plays in use' if show_retired else 'Retired plays' }}</a></li>{% endif %}
         </ul>

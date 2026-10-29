@@ -19,11 +19,18 @@
 {{ errors(field) }}
 {% endmacro %}
 
-{% macro role_row(name='', text='') %}
+{% macro role_row(role_id=none, text='') %}
 <div class="pb-role-row">
   <div class="top">
-    <input type="text" name="role_name" class="form-control" value="{{ name }}" placeholder="Role, e.g. Handler 1" list="pb-positions"
-           aria-label="Role" autocomplete="off" maxlength="50">
+    <select name="role_id" class="form-select" aria-label="Role">
+      <option value="">Choose a role…</option>
+      {% for line, label in [('O', 'O-line'), ('D', 'D-line'), ('', 'Either line')] %}
+      {% set group = team_roles|selectattr('line', 'in', [line] if line else ['', none])|list %}
+      {% if group %}<optgroup label="{{ label }}">
+        {% for r in group %}<option value="{{ r.id }}" {% if r.id == role_id %}selected{% endif %}>{{ r.name }}</option>{% endfor %}
+      </optgroup>{% endif %}
+      {% endfor %}
+    </select>
     <button type="button" class="th-icon-btn" data-remove-role aria-label="Remove this role"><i class="bi bi-trash"></i></button>
   </div>
   <textarea name="role_text" class="form-control" rows="2" placeholder="What they do" aria-label="What they do">{{ text }}</textarea>
@@ -72,7 +79,6 @@
     {{ form.hidden_tag() }}
     {# Enter in a text box submits with the first button: keep that a plain save #}
     <button type="submit" name="action" value="save" class="visually-hidden" tabindex="-1" aria-hidden="true"></button>
-    <datalist id="pb-positions">{% for name in position_names %}<option value="{{ name }}">{% endfor %}</datalist>
 
     <div class="th-form-card">
       <div class="mb-3">
@@ -138,11 +144,16 @@
 
     <div class="th-form-card">
       <label class="form-label d-block">Who does what</label>
+      {% if team_roles %}
       <div id="pb-roles">
-        {% for name, text in roles %}{{ role_row(name, text) }}{% endfor %}
+        {% for role_id, text in roles %}{{ role_row(role_id, text) }}{% endfor %}
       </div>
       <template id="pb-role-row">{{ role_row() }}</template>
       <button type="button" class="btn btn-outline-secondary th-btn" data-add-role><i class="bi bi-plus-lg"></i>Add a role</button>
+      <p class="small text-muted mt-2 mb-0">Roles come from <a href="{{ url_for('roles.index') }}">Team → Roles</a>. Tag players with them in the drawing to show each role's path.</p>
+      {% else %}
+      <p class="small text-muted mb-0">Your team has no roles yet. Set them up under <a href="{{ url_for('roles.index') }}">Team → Roles</a> (there's a starter list), then say what each does here.</p>
+      {% endif %}
     </div>
 
     <div class="th-form-card">

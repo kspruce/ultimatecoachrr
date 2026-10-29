@@ -21,14 +21,16 @@
 
   /* ── Roles ──────────────────────────────────────────────────── */
   var roles = document.getElementById('pb-roles');
-  form.querySelector('[data-add-role]').addEventListener('click', function () {
-    roles.appendChild(document.getElementById('pb-role-row').content.cloneNode(true));
-    roles.lastElementChild.querySelector('input').focus();
-  });
-  roles.addEventListener('click', function (e) {
-    var btn = e.target.closest('[data-remove-role]');
-    if (btn) { btn.closest('.pb-role-row').remove(); changed(); }
-  });
+  if (roles) {
+    form.querySelector('[data-add-role]').addEventListener('click', function () {
+      roles.appendChild(document.getElementById('pb-role-row').content.cloneNode(true));
+      roles.lastElementChild.querySelector('select').focus();
+    });
+    roles.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-remove-role]');
+      if (btn) { btn.closest('.pb-role-row').remove(); changed(); }
+    });
+  }
 
   /* ── Photo ──────────────────────────────────────────────────── */
   var coverFile = document.getElementById('th-cover-file');
@@ -116,9 +118,9 @@
   function snapshot() {
     var data = {};
     fields.forEach(function (f) { var el = document.getElementById(f); if (el) data[f] = el.value; });
-    data.roles = Array.from(roles.querySelectorAll('.pb-role-row')).map(function (row) {
-      return [row.querySelector('[name="role_name"]').value, row.querySelector('[name="role_text"]').value];
-    });
+    data.roles = roles ? Array.from(roles.querySelectorAll('.pb-role-row')).map(function (row) {
+      return [row.querySelector('[name="role_id"]').value, row.querySelector('[name="role_text"]').value];
+    }) : [];
     return data;
   }
   var initial = JSON.stringify(snapshot());
@@ -148,12 +150,12 @@
         var el = document.getElementById(f);
         if (el && saved.data[f] !== undefined) el.value = saved.data[f];
       });
-      if (saved.data.roles) {
+      if (saved.data.roles && roles) {
         roles.innerHTML = '';
         saved.data.roles.forEach(function (pair) {
           roles.appendChild(document.getElementById('pb-role-row').content.cloneNode(true));
           var row = roles.lastElementChild;
-          row.querySelector('[name="role_name"]').value = pair[0];
+          row.querySelector('[name="role_id"]').value = pair[0];
           row.querySelector('[name="role_text"]').value = pair[1];
         });
       }

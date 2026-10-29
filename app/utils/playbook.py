@@ -1,13 +1,12 @@
-"""Playbook helpers: tags and roles typed by name, who has learned what,
-someone's usual role, and plays shown inside theory articles."""
+"""Playbook helpers: tags typed by name, who has learned what, and plays
+shown inside theory articles. (Team roles: app/utils/roles.py.)"""
 import re
 
 from flask import render_template
 from markupsafe import Markup
 
 from app import db
-from app.models.playbook import (Play, PlayAssignment, PlayerPosition, PlayerUsualRole, PlayLearned, PlayTag,
-                                 PlayToLearn)
+from app.models.playbook import Play, PlayLearned, PlayTag, PlayToLearn
 from app.utils.theory import parse_tags
 
 
@@ -32,40 +31,17 @@ def tags_for(text, team_id):
     return tags
 
 
-def position_for(name, team_id, cache):
-    """The team's role called `name` (any case), added if it's new."""
-    key = name.lower()
-    if key not in cache:
-        position = PlayerPosition(name=name, team_organization_id=team_id)
-        db.session.add(position)
-        cache[key] = position
-    return cache[key]
-
-
-def team_positions(team_id):
-    return PlayerPosition.query.filter_by(team_organization_id=team_id).order_by(PlayerPosition.name).all()
-
-
 def tidy_up(team_id):
-    """Drop tags and roles nothing uses any more."""
+    """Drop tags nothing uses any more. (Roles stay: they're the team's,
+    managed under Team → Roles.)"""
     for tag in PlayTag.query.filter_by(team_organization_id=team_id):
         if not db.session.query(Play.id).filter(Play.tags.contains(tag)).first():
             db.session.delete(tag)
-    for position in team_positions(team_id):
-        used = (PlayAssignment.query.filter_by(position_id=position.id).first()
-                or PlayerUsualRole.query.filter_by(position_id=position.id).first())
-        if not used:
-            db.session.delete(position)
 
 
 def learned_ids(user_id, team_id):
     return {play_id for (play_id,) in db.session.query(PlayLearned.play_id)
             .filter_by(user_id=user_id, team_organization_id=team_id)}
-
-
-def usual_role(user_id, team_id):
-    row = PlayerUsualRole.query.filter_by(user_id=user_id, team_organization_id=team_id).first()
-    return row.position if row else None
 
 
 def to_learn_unlearned(user_id, team_id):

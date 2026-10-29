@@ -1,8 +1,8 @@
 """Playbook overhaul: concepts move to Theory; status, call and signal;
-links to theory, drills and clips; usual roles and learning plays
+links to theory, drills and clips; learning plays
 
 Revision ID: d7f9b1c3e5a7
-Revises: b2d4f6a8c0e3
+Revises: c3e5a7b9d1f4
 Create Date: 2026-10-29 12:00:00.000000
 
 - play: status (existing plays stay "In use"), call, signal, updated_by;
@@ -14,7 +14,7 @@ Create Date: 2026-10-29 12:00:00.000000
   keeps moved_to_topic_id so old links redirect. Nothing is deleted.
 - position instructions left behind by deleted plays are removed
 - play_topic / play_drill / play_clip link tables
-- player_usual_role, play_learned, play_to_learn
+- play_learned, play_to_learn (who's learned which play; plays to learn)
 """
 import re
 from datetime import datetime
@@ -25,7 +25,7 @@ from slugify import slugify
 
 
 revision = 'd7f9b1c3e5a7'
-down_revision = 'b2d4f6a8c0e3'
+down_revision = 'c3e5a7b9d1f4'
 branch_labels = None
 depends_on = None
 
@@ -125,15 +125,6 @@ def upgrade():
         sa.Column('clip_id', sa.Integer(), sa.ForeignKey('clip.id', ondelete='CASCADE'), primary_key=True),
     )
     op.create_table(
-        'player_usual_role',
-        sa.Column('id', sa.Integer(), primary_key=True),
-        sa.Column('team_organization_id', sa.Integer(), sa.ForeignKey('team_organization.id'), nullable=False),
-        sa.Column('user_id', sa.Integer(), sa.ForeignKey('user.id', ondelete='CASCADE'), nullable=False),
-        sa.Column('position_id', sa.Integer(), sa.ForeignKey('player_position.id', ondelete='CASCADE'), nullable=False),
-        sa.UniqueConstraint('user_id', 'team_organization_id', name='uq_usual_role_user_team'),
-    )
-    op.create_index('ix_player_usual_role_team_organization_id', 'player_usual_role', ['team_organization_id'])
-    op.create_table(
         'play_learned',
         sa.Column('id', sa.Integer(), primary_key=True),
         sa.Column('team_organization_id', sa.Integer(), sa.ForeignKey('team_organization.id'), nullable=False),
@@ -169,8 +160,6 @@ def downgrade():
     for column in ('team_organization_id', 'user_id', 'play_id'):
         op.drop_index(f'ix_play_learned_{column}', table_name='play_learned')
     op.drop_table('play_learned')
-    op.drop_index('ix_player_usual_role_team_organization_id', table_name='player_usual_role')
-    op.drop_table('player_usual_role')
     op.drop_table('play_clip_association')
     op.drop_table('play_drill_association')
     op.drop_table('play_topic_association')
