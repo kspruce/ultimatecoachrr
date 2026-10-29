@@ -543,8 +543,21 @@ def player_detail(player_id):
         role_history=role_history,
         role_plays=role_plays,
         focus=current_focus(player.id),
+        **development_for(player),
     )
 
+
+
+def development_for(player):
+    """Goals and reviews for the profile's Development tab (the player and
+    coaches only; nothing for anyone else)."""
+    from app.models.feedback import PlayerGoal
+    from app.utils import feedback as fbu
+    if not (current_user.is_coach or current_user.is_admin or (player.user_id and player.user_id == current_user.id)):
+        return {'goals_active': [], 'goals_done': [], 'reviews': [], 'goal_horizons': PlayerGoal.HORIZONS}
+    active, done = fbu.player_goals(player.id)
+    return {'goals_active': active, 'goals_done': done, 'goal_horizons': PlayerGoal.HORIZONS,
+            'reviews': fbu.player_reviews(player.id, shared_only=not current_user.is_coach)}
 
 
 def current_focus(player_id):
@@ -566,19 +579,16 @@ def update_player_goals(player_id):
         flash('You do not have permission to update goals for this player.', 'danger')
         return redirect(url_for('team.player_detail', player_id=player_id, _anchor='development'))
     
-    try:
-        # Update player goals
-        player.short_term_goals = request.form.get('short_term_goals')
-        player.mid_term_goals = request.form.get('mid_term_goals')
-        player.long_term_goals = request.form.get('long_term_goals')
-        player.skills_to_develop = request.form.get('skills_to_develop')
-        
-        db.session.commit()
-        flash('Player goals updated successfully!', 'success')
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Error updating goals: {str(e)}', 'danger')
-    
+    # The old boxes of goals: each line becomes a goal (goals are separate
+    # items now, added and changed on the profile's Development tab)
+    from app.utils.feedback import goals_from_text
+    made = []
+    for field, horizon in (('short_term_goals', 'short'), ('mid_term_goals', 'mid'),
+                           ('long_term_goals', 'long'), ('skills_to_develop', 'skill')):
+        made += goals_from_text(player, request.form.get(field), horizon, current_user.id)
+    db.session.commit()
+    flash(f'{len(made)} goal{"s" if len(made) != 1 else ""} added.' if made else 'Nothing to add.', 'success')
+
     return redirect(url_for('team.player_detail', player_id=player_id, _anchor='development'))
 
 @bp.route('/settings/features', methods=['GET', 'POST'])

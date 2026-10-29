@@ -48,7 +48,8 @@ def unread_replies(team_id):
 
 def follow_ups(players, today=None):
     """{player id: [reasons]} for the coaches: no focus set, a focus for an
-    event that's been, or nothing shared with them for a while."""
+    event that's been, nothing shared with them for a while, or no review
+    for a few months."""
     today = today or date.today()
     ids = [p.id for p in players]
     if not ids:
@@ -60,6 +61,10 @@ def follow_ups(players, today=None):
                        .filter(PlayerFeedback.player_id.in_(ids), PlayerFeedback.shared.is_(True))
                        .group_by(PlayerFeedback.player_id).all())
     quiet = datetime.utcnow() - timedelta(weeks=QUIET_WEEKS)
+    from app.models.feedback import PlayerReview
+    last_review = dict(db.session.query(PlayerReview.player_id, db.func.max(PlayerReview.created_at))
+                       .filter(PlayerReview.player_id.in_(ids)).group_by(PlayerReview.player_id).all())
+    review_due = datetime.utcnow() - timedelta(days=30 * REVIEW_MONTHS)
     out = {}
     for p in players:
         reasons = []
@@ -70,6 +75,45 @@ def follow_ups(players, today=None):
             reasons.append(f'Keep in mind was {f.for_label[0].lower()}{f.for_label[1:]}: time for a new one')
         if not last_shared.get(p.id) or last_shared[p.id] < quiet:
             reasons.append(f'Nothing shared with them in {QUIET_WEEKS}+ weeks')
+        if last_review.get(p.id) is None or last_review[p.id] < review_due:
+            reasons.append(f'No review in {REVIEW_MONTHS}+ months')
         if reasons:
             out[p.id] = reasons
     return out
+
+
+# ── Goals and reviews ──────────────────────────────────────────────────────
+
+REVIEW_MONTHS = 3  # no review for this long: worth one
+
+
+def goals_from_text(player, text, horizon, user_id=None):
+    """One goal per non-empty line of the old free-text boxes (used by the
+    migration's twin and by the old goals form)."""
+    from app.models.feedback import PlayerGoal
+    made = []
+    for line in (text or '').splitlines():
+        line = line.strip(' -•*\t')
+        if line:
+            goal = PlayerGoal(team_organization_id=player.team_organization_id, player_id=player.id,
+                              title=line[:200], horizon=horizon, created_by=user_id)
+            db.session.add(goal)
+            made.append(goal)
+    return made
+
+
+def player_goals(player_id):
+    """(active goals, finished goals): newest first within each."""
+    from app.models.feedback import PlayerGoal
+    order = {'short': 0, 'mid': 1, 'long': 2, 'skill': 3}
+    goals = PlayerGoal.query.filter_by(player_id=player_id).order_by(PlayerGoal.created_at.desc()).all()
+    active = sorted((g for g in goals if g.status == 'active'), key=lambda g: order.get(g.horizon, 9))
+    return active, [g for g in goals if g.status != 'active']
+
+
+def player_reviews(player_id, shared_only=False):
+    from app.models.feedback import PlayerReview
+    query = PlayerReview.query.filter_by(player_id=player_id)
+    if shared_only:
+        query = query.filter_by(shared=True)
+    return query.order_by(PlayerReview.created_at.desc()).all()

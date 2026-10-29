@@ -52,6 +52,8 @@ class PlayerFeedback(db.Model):
     # Context label: 'In-game', 'Drill', 'Debrief', 'Tournament', 'General'
     context_tag = db.Column(db.String(50), nullable=False, default='General')
     kind = db.Column(db.String(10), nullable=False, default='note', server_default='note')
+    # The goal it's about, if any
+    goal_id = db.Column(db.Integer, db.ForeignKey('player_goal.id', ondelete='SET NULL'), nullable=True, index=True)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
@@ -73,6 +75,7 @@ class PlayerFeedback(db.Model):
     game = db.relationship('Game', foreign_keys=[game_id])
     clip = db.relationship('Clip', foreign_keys=[clip_id])
 
+    goal = db.relationship('PlayerGoal', back_populates='notes')
     replies = db.relationship('FeedbackReply', back_populates='feedback', order_by='FeedbackReply.created_at',
                               cascade='all, delete-orphan', passive_deletes=True)
 
@@ -151,3 +154,59 @@ class PlayerFocus(db.Model):
 
     def is_past(self, today):
         return bool(self.event_date and self.event_date < today)
+
+
+class PlayerGoal(db.Model):
+    """One of a player's goals: theirs or set with their coaches. Notes can
+    be about a goal (PlayerFeedback.goal)."""
+    __tablename__ = 'player_goal'
+    HORIZONS = [('short', '1–3 months'), ('mid', '3–6 months'), ('long', '6+ months'), ('skill', 'Skill to develop')]
+    STATUSES = [('active', 'Working on it'), ('achieved', 'Achieved'), ('dropped', 'Dropped')]
+
+    id = db.Column(db.Integer, primary_key=True)
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'), nullable=False, index=True)
+    player_id = db.Column(db.Integer, db.ForeignKey('player.id', ondelete='CASCADE'), nullable=False, index=True)
+    title = db.Column(db.String(200), nullable=False)
+    detail = db.Column(db.Text)
+    horizon = db.Column(db.String(10), nullable=False, default='short')
+    status = db.Column(db.String(10), nullable=False, default='active')
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    done_at = db.Column(db.DateTime, nullable=True)  # achieved or dropped
+
+    player = db.relationship('Player')
+    author = db.relationship('User')
+    notes = db.relationship('PlayerFeedback', back_populates='goal', order_by='PlayerFeedback.created_at.desc()')
+
+    @property
+    def horizon_label(self):
+        return dict(self.HORIZONS).get(self.horizon, '')
+
+    @property
+    def status_label(self):
+        return dict(self.STATUSES).get(self.status, '')
+
+
+class PlayerReview(db.Model):
+    """A written review of how a player's going (mid-season, end of season):
+    what's gone well, what to work on, next steps. Coaches only until shared;
+    the player can add their own comment."""
+    __tablename__ = 'player_review'
+
+    id = db.Column(db.Integer, primary_key=True)
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'), nullable=False, index=True)
+    player_id = db.Column(db.Integer, db.ForeignKey('player.id', ondelete='CASCADE'), nullable=False, index=True)
+    coach_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
+    title = db.Column(db.String(120), nullable=False)
+    went_well = db.Column(db.Text)
+    work_on = db.Column(db.Text)
+    next_steps = db.Column(db.Text)
+    player_comment = db.Column(db.Text)
+    shared = db.Column(db.Boolean, nullable=False, default=False)
+    seen_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    player = db.relationship('Player')
+    coach = db.relationship('User')

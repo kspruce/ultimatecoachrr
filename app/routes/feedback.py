@@ -10,7 +10,7 @@ from sqlalchemy import func
 from app import db
 from app.models.session import SessionPlan
 from app.models.player import Player
-from app.models.feedback import FeedbackReply, PlayerFeedback, PlayerFocus
+from app.models.feedback import FeedbackReply, PlayerFeedback, PlayerFocus, PlayerGoal, PlayerReview
 from app.models.tournament import Tournament
 from app.utils import feedback as fbu
 from app.models.clip import Clip
@@ -63,7 +63,8 @@ def unseen_count(user):
                .filter(PlayerFeedback.player_id == player.id, PlayerFeedback.shared.is_(True),
                        FeedbackReply.from_player.is_(False), FeedbackReply.seen_at.is_(None)).count())
     focus = PlayerFocus.query.filter_by(player_id=player.id, active=True, seen_at=None).count()
-    return notes + replies + focus
+    reviews = PlayerReview.query.filter_by(player_id=player.id, shared=True, seen_at=None).count()
+    return notes + replies + focus + reviews
 
 
 @bp.app_context_processor
@@ -259,6 +260,7 @@ def player_feedback(player_id):
     return render_template(
         'feedback/player_feedback.html',
         focus=fbu.current_focus(player.id), focus_history=fbu.focus_history(player.id),
+        goals=fbu.player_goals(player.id)[0], reviews=fbu.player_reviews(player.id),
         coming_sessions=sessions, coming_tournaments=tournaments, new_reply_ids=new_reply_ids,
         kinds=PlayerFeedback.KINDS,
         player=player,
@@ -296,6 +298,7 @@ def add_feedback(player_id):
         content=content,
         context_tag=context_tag,
         kind=kind,
+        goal_id=_player_goal_id(player, request.form.get('goal_id')),
         shared=bool(request.form.get('shared')),
     ))
     db.session.commit()
@@ -344,6 +347,7 @@ def mine():
 
     return render_template('feedback/mine.html', player=player, entries=entries, new_ids=new_ids,
                            new_reply_ids=new_reply_ids, focus=focus, new_focus=new_focus,
+                           reviews=fbu.player_reviews(player.id, shared_only=True),
                            focus_history=fbu.focus_history(player.id))
 
 
@@ -453,3 +457,180 @@ def delete_feedback(feedback_id):
     flash('Feedback note deleted.', 'success')
     return redirect(_safe_next(request.form.get('next'),
                                url_for('feedback.player_feedback', player_id=player_id)))
+
+
+# ── Goals ────────────────────────────────────────────────────────────────────
+
+def _player_goal_id(player, raw):
+    try:
+        goal_id = int(raw)
+    except (TypeError, ValueError):
+        return None
+    goal = PlayerGoal.query.filter_by(id=goal_id, player_id=player.id).first()
+    return goal.id if goal else None
+
+
+def _own_or_coach(player):
+    """The player themself, or a coach."""
+    if not (current_user.is_coach or (player.user_id and player.user_id == current_user.id)):
+        abort(403)
+
+
+def _goal_or_404(goal_id):
+    goal = PlayerGoal.query.filter_by(id=goal_id, team_organization_id=get_current_team_id()).first_or_404()
+    _own_or_coach(goal.player)
+    return goal
+
+
+def _profile(player_id, anchor='development'):
+    return url_for('team.player_detail', player_id=player_id, _anchor=anchor)
+
+
+@bp.route('/players/<int:player_id>/goals', methods=['POST'])
+@login_required
+def add_goal(player_id):
+    player = team_row_or_404(Player, player_id)
+    _own_or_coach(player)
+    title = ' '.join((request.form.get('title') or '').split())[:200]
+    back = _safe_next(request.form.get('next'), _profile(player.id))
+    if not title:
+        flash('Give the goal a name.', 'warning')
+        return redirect(back)
+    horizon = request.form.get('horizon') if request.form.get('horizon') in dict(PlayerGoal.HORIZONS) else 'short'
+    db.session.add(PlayerGoal(team_organization_id=player.team_organization_id, player_id=player.id, title=title,
+                              detail=(request.form.get('detail') or '').strip()[:2000] or None, horizon=horizon,
+                              created_by=current_user.id))
+    db.session.commit()
+    flash('Goal added.', 'success')
+    return redirect(back)
+
+
+@bp.route('/goals/<int:goal_id>/edit', methods=['POST'])
+@login_required
+def edit_goal(goal_id):
+    goal = _goal_or_404(goal_id)
+    title = ' '.join((request.form.get('title') or '').split())[:200]
+    if title:
+        goal.title = title
+    goal.detail = (request.form.get('detail') or '').strip()[:2000] or None
+    if request.form.get('horizon') in dict(PlayerGoal.HORIZONS):
+        goal.horizon = request.form['horizon']
+    db.session.commit()
+    flash('Goal saved.', 'success')
+    return redirect(_safe_next(request.form.get('next'), _profile(goal.player_id)))
+
+
+@bp.route('/goals/<int:goal_id>/status', methods=['POST'])
+@login_required
+def goal_status(goal_id):
+    goal = _goal_or_404(goal_id)
+    status = request.form.get('status')
+    if status in dict(PlayerGoal.STATUSES):
+        goal.status = status
+        goal.done_at = datetime.utcnow() if status != 'active' else None
+        db.session.commit()
+        flash({'achieved': 'Goal achieved: well done!', 'dropped': 'Goal dropped.',
+               'active': 'Back to working on it.'}[status], 'success')
+    return redirect(_safe_next(request.form.get('next'), _profile(goal.player_id)))
+
+
+@bp.route('/goals/<int:goal_id>/delete', methods=['POST'])
+@login_required
+def delete_goal(goal_id):
+    goal = _goal_or_404(goal_id)
+    player_id = goal.player_id
+    db.session.delete(goal)
+    db.session.commit()
+    flash('Goal deleted.', 'success')
+    return redirect(_safe_next(request.form.get('next'), _profile(player_id)))
+
+
+# ── Reviews ──────────────────────────────────────────────────────────────────
+
+def _review_or_404(review_id):
+    review = PlayerReview.query.filter_by(id=review_id, team_organization_id=get_current_team_id()).first_or_404()
+    is_player = review.player.user_id and review.player.user_id == current_user.id
+    if not (current_user.is_coach or (is_player and review.shared)):
+        abort(404)
+    return review
+
+
+def _fill_review(review):
+    review.title = ' '.join((request.form.get('title') or '').split())[:120] or 'Review'
+    for field in ('went_well', 'work_on', 'next_steps'):
+        setattr(review, field, (request.form.get(field) or '').strip()[:5000] or None)
+    review.shared = bool(request.form.get('shared'))
+
+
+@bp.route('/players/<int:player_id>/reviews/new', methods=['GET', 'POST'])
+@login_required
+def new_review(player_id):
+    _require_coach()
+    player = team_row_or_404(Player, player_id)
+    if request.method == 'POST':
+        review = PlayerReview(team_organization_id=player.team_organization_id, player_id=player.id,
+                              coach_id=current_user.id)
+        _fill_review(review)
+        if not (review.went_well or review.work_on or review.next_steps):
+            flash('Write at least one part of the review.', 'warning')
+            return render_template('feedback/review_form.html', player=player, review=review)
+        db.session.add(review)
+        db.session.commit()
+        flash('Review saved and shared with ' + player.name + '.' if review.shared else 'Review saved (coaches only).',
+              'success')
+        return redirect(url_for('feedback.view_review', review_id=review.id))
+    goals_active, _ = fbu.player_goals(player.id)
+    recent = (PlayerFeedback.query.filter_by(player_id=player.id).order_by(PlayerFeedback.created_at.desc())
+              .limit(8).all())
+    return render_template('feedback/review_form.html', player=player, review=None, goals=goals_active, recent=recent)
+
+
+@bp.route('/reviews/<int:review_id>')
+@login_required
+def view_review(review_id):
+    review = _review_or_404(review_id)
+    is_player = review.player.user_id == current_user.id
+    if is_player and review.seen_at is None:
+        review.seen_at = datetime.utcnow()
+        db.session.commit()
+    return render_template('feedback/review.html', review=review, is_player=is_player)
+
+
+@bp.route('/reviews/<int:review_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_review(review_id):
+    _require_coach()
+    review = _review_or_404(review_id)
+    if request.method == 'POST':
+        was_shared = review.shared
+        _fill_review(review)
+        if review.shared and not was_shared:
+            review.seen_at = None
+        db.session.commit()
+        flash('Review saved.', 'success')
+        return redirect(url_for('feedback.view_review', review_id=review.id))
+    return render_template('feedback/review_form.html', player=review.player, review=review)
+
+
+@bp.route('/reviews/<int:review_id>/comment', methods=['POST'])
+@login_required
+def review_comment(review_id):
+    review = _review_or_404(review_id)
+    if review.player.user_id != current_user.id:
+        abort(403)
+    review.player_comment = (request.form.get('player_comment') or '').strip()[:5000] or None
+    db.session.commit()
+    flash('Your comment is saved: your coaches can read it.', 'success')
+    return redirect(url_for('feedback.view_review', review_id=review.id))
+
+
+@bp.route('/reviews/<int:review_id>/delete', methods=['POST'])
+@login_required
+def delete_review(review_id):
+    _require_coach()
+    review = _review_or_404(review_id)
+    player_id = review.player_id
+    db.session.delete(review)
+    db.session.commit()
+    flash('Review deleted.', 'success')
+    return redirect(_profile(player_id))

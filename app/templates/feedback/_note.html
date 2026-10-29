@@ -93,6 +93,7 @@
         {% if entry.game %}
         <a href="{{ url_for('game.detail', game_id=entry.game.id) }}"><i class="bi bi-controller me-1"></i>vs {{ entry.game.opponent }}</a>
         {% endif %}
+        {% if entry.goal %}<span><i class="bi bi-bullseye me-1"></i>{{ entry.goal.title|truncate(40) }}</span>{% endif %}
         {% if entry.clip %}
         <a href="{{ url_for('clip.view_clip', clip_id=entry.clip.id) }}"><i class="bi bi-camera-video me-1"></i>{{ entry.clip.title }}</a>
         {% endif %}
@@ -143,7 +144,7 @@
 {# A new note. Pass players to choose who it's for, or player for one player;
    game_id / clip_id / session_id link it; next is where to come back to. #}
 {% macro form(context_tags, player=None, players=None, games=None, game_id=None, clip_id=None,
-              session_id=None, next=None, default_tag='General') %}
+              session_id=None, next=None, default_tag='General', goals=None, goal_id=None) %}
 <form method="POST" class="fb-form"
       action="{{ url_for('feedback.add_feedback', player_id=player.id) if player else '' }}"
       {% if not player %}data-action-template="{{ url_for('feedback.add_feedback', player_id=0) }}"{% endif %}>
@@ -190,6 +191,12 @@
         <label for="kind-{{ fid }}-{{ value }}">{{ label }}</label>
         {% endfor %}
     </div>
+    {% if goals %}
+    <select name="goal_id" class="form-select form-select-sm mb-2" aria-label="About a goal">
+        <option value="">Not about a goal</option>
+        {% for g in goals %}<option value="{{ g.id }}" {% if g.id == goal_id %}selected{% endif %}>About: {{ g.title }}</option>{% endfor %}
+    </select>
+    {% endif %}
     <textarea name="content" class="form-control mb-2" rows="3" required
               placeholder="What did you see? What should they keep doing, or work on?"></textarea>
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">

@@ -235,52 +235,112 @@
     <div class="th-label mt-0 d-flex justify-content-between align-items-center"><span>Keep in mind</span>
       {% if current_user.is_coach %}<a href="{{ url_for('feedback.player_feedback', player_id=player.id, _anchor='focus') }}" style="text-transform:none;letter-spacing:0">{{ 'Change' if focus else 'Set it' }}</a>{% endif %}</div>
     {% if focus %}{{ fb.focus_card(focus, heading='Now') }}{% else %}{{ empty('Nothing set yet.' if current_user.is_coach else 'Nothing from your coaches yet.') }}{% endif %}
-    {% set goal_sets = [('Short-term Goals (1-3 months)', player.short_term_goals), ('Mid-term Goals (3-6 months)', player.mid_term_goals),
-                        ('Long-term Goals (6+ months)', player.long_term_goals)] %}
-    <div class="th-label mt-0 d-flex justify-content-between align-items-center">
+    {# Goals: each its own item; notes can be about one #}
+    <div class="th-label d-flex justify-content-between align-items-center">
       <span>Goals <span class="th-badge" style="text-transform:none;letter-spacing:0">Private</span></span>
     </div>
-    <div id="goalsViewSection" class="pp-section">
-      <div class="th-list">
-        {% for label, text in goal_sets %}
-        <div class="th-row" style="align-items:flex-start">
-          <div class="th-row-text">
-            <div class="th-row-title" style="font-size:.9rem">{{ label }}</div>
-            <div class="th-row-sub" style="-webkit-line-clamp:unset;white-space:pre-line">{{ text or 'Not set yet.' }}</div>
-          </div>
+    {% set can_goal = is_me or current_user.is_coach %}
+    {% if goals_active %}
+    <div class="th-list pp-section">
+      {% for g in goals_active %}
+      <div class="th-row" style="align-items:flex-start" id="goal-{{ g.id }}">
+        <i class="bi bi-bullseye mt-1" style="color:var(--club-ink)" aria-hidden="true"></i>
+        <div class="th-row-text">
+          <div class="th-row-title">{{ g.title }}</div>
+          <div class="th-row-meta"><span class="th-badge">{{ g.horizon_label }}</span>{% if g.notes %}<span class="th-badge due">{{ g.notes|length }} note{{ 's' if g.notes|length != 1 }}</span>{% endif %}</div>
+          {% if g.detail %}<div class="small mt-1" style="white-space:pre-wrap">{{ g.detail }}</div>{% endif %}
+          {% set seen_notes = g.notes if current_user.is_coach else g.notes|selectattr('shared')|list %}
+          {% if seen_notes %}
+          <details class="mt-1"><summary class="small" style="cursor:pointer;color:var(--club-ink)">Notes about it</summary>
+            {% for n in seen_notes[:5] %}<div class="small mt-1"><b>{{ n.created_at.strftime('%-d %b') }}{% if n.kind != 'note' %} · {{ n.kind_label }}{% endif %}:</b> {{ n.content }}</div>{% endfor %}
+          </details>
+          {% endif %}
         </div>
-        {% endfor %}
-        <div class="th-row" style="align-items:flex-start">
-          <div class="th-row-text">
-            <div class="th-row-title" style="font-size:.9rem">Skills to Develop</div>
-            {% if player.skills_to_develop %}
-            <ul class="mb-0 ps-3 small">{% for skill in player.skills_to_develop.split('\n') if skill.strip() %}<li>{{ skill }}</li>{% endfor %}</ul>
-            {% else %}<div class="th-row-sub">No specific skills identified yet.</div>{% endif %}
-          </div>
+        {% if can_goal %}
+        <div class="dropdown flex-shrink-0">
+          <button class="th-icon-btn sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Options for {{ g.title }}"><i class="bi bi-three-dots"></i></button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            {% for status, icon, label in [('achieved', 'bi-trophy', 'Achieved!'), ('dropped', 'bi-x-circle', 'Drop it')] %}
+            <li><form method="POST" action="{{ url_for('feedback.goal_status', goal_id=g.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="next" value="{{ request.path }}#development">
+              <button class="dropdown-item" name="status" value="{{ status }}"><i class="bi {{ icon }} me-2"></i>{{ label }}</button></form></li>
+            {% endfor %}
+            <li><a class="dropdown-item" href="#edit-goal-{{ g.id }}" data-bs-toggle="collapse"><i class="bi bi-pencil me-2"></i>Edit</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><form method="POST" action="{{ url_for('feedback.delete_goal', goal_id=g.id) }}" data-confirm="Delete this goal?">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="next" value="{{ request.path }}#development">
+              <button class="dropdown-item text-danger"><i class="bi bi-trash me-2"></i>Delete</button></form></li>
+          </ul>
         </div>
+        {% endif %}
       </div>
-      {% if current_user.is_admin or is_me or current_user.is_coach %}
-      <button class="btn btn-outline-primary th-btn mt-2" id="editGoalsBtn" type="button"><i class="bi bi-pencil"></i>Edit Goals</button>
-      {% endif %}
-    </div>
-    <div id="goalsEditSection" class="pp-section" hidden>
-      <form id="goalsForm" method="POST" action="{{ url_for('team.update_player_goals', player_id=player.id) }}" class="th-form-card">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        {% for name, label, value in [('short_term_goals', 'Short-term Goals (1-3 months)', player.short_term_goals),
-                                      ('mid_term_goals', 'Mid-term Goals (3-6 months)', player.mid_term_goals),
-                                      ('long_term_goals', 'Long-term Goals (6+ months)', player.long_term_goals),
-                                      ('skills_to_develop', 'Skills to Develop (one per line)', player.skills_to_develop)] %}
-        <div class="mb-3">
-          <label for="{{ name }}" class="form-label fw-bold">{{ label }}</label>
-          <textarea class="form-control" id="{{ name }}" name="{{ name }}" rows="3">{{ value or '' }}</textarea>
-        </div>
-        {% endfor %}
-        <div class="d-flex gap-2 justify-content-end">
-          <button type="button" class="btn btn-link" id="cancelGoalsBtn">Cancel</button>
-          <button type="submit" class="btn btn-primary th-btn px-4">Save Goals</button>
+      {% if can_goal %}
+      <form method="POST" action="{{ url_for('feedback.edit_goal', goal_id=g.id) }}" class="collapse th-form-card m-2" id="edit-goal-{{ g.id }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="next" value="{{ request.path }}#development">
+        <input name="title" class="form-control mb-2" value="{{ g.title }}" maxlength="200" aria-label="Goal">
+        <textarea name="detail" class="form-control mb-2" rows="2" placeholder="How you'll get there (optional)" aria-label="Detail">{{ g.detail or '' }}</textarea>
+        <div class="d-flex gap-2">
+          <select name="horizon" class="form-select" aria-label="When">{% for v, l in goal_horizons %}<option value="{{ v }}" {% if v == g.horizon %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+          <button class="btn btn-primary">Save</button>
         </div>
       </form>
+      {% endif %}
+      {% endfor %}
     </div>
+    {% else %}{{ empty('No goals yet.' if not can_goal else ('Set yourself a goal or two below.' if is_me else 'No goals yet: add one below.')) }}{% endif %}
+
+    {% if can_goal %}
+    <details class="pp-edit pp-section" {% if not goals_active %}open{% endif %}>
+      <summary class="btn btn-outline-primary th-btn"><i class="bi bi-plus-lg"></i>Add a goal</summary>
+      <form method="POST" action="{{ url_for('feedback.add_goal', player_id=player.id) }}" class="th-form-card mt-2 mb-0">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="next" value="{{ request.path }}#development">
+        <input name="title" class="form-control mb-2" maxlength="200" required placeholder="e.g. Throw a reliable flick huck" aria-label="Goal">
+        <textarea name="detail" class="form-control mb-2" rows="2" placeholder="How you'll get there (optional)" aria-label="Detail"></textarea>
+        <div class="d-flex gap-2">
+          <select name="horizon" class="form-select" aria-label="When">{% for v, l in goal_horizons %}<option value="{{ v }}">{{ l }}</option>{% endfor %}</select>
+          <button class="btn btn-primary">Add</button>
+        </div>
+      </form>
+    </details>
+    {% endif %}
+
+    {% if goals_done %}
+    <details class="pp-section">
+      <summary class="small text-muted" style="cursor:pointer">Achieved and dropped ({{ goals_done|length }})</summary>
+      <div class="th-list mt-2">
+        {% for g in goals_done %}
+        <div class="th-row">
+          <i class="bi {{ 'bi-trophy-fill' if g.status == 'achieved' else 'bi-x-circle' }}" style="color:var({{ '--ok' if g.status == 'achieved' else '--ink-3' }})" aria-hidden="true"></i>
+          <div class="th-row-text"><div class="th-row-title" style="font-size:.95rem">{{ g.title }}</div><div class="th-row-sub">{{ g.status_label }}{% if g.done_at %} · {{ g.done_at.strftime('%-d %b %Y') }}{% endif %}</div></div>
+          {% if can_goal %}
+          <form method="POST" action="{{ url_for('feedback.goal_status', goal_id=g.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="next" value="{{ request.path }}#development">
+            <button class="btn btn-sm btn-link" name="status" value="active">Bring back</button></form>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </details>
+    {% endif %}
+
+    {# Reviews #}
+    {% if reviews or current_user.is_coach %}
+    <div class="th-label d-flex justify-content-between align-items-center">
+      <span>Reviews</span>
+      {% if current_user.is_coach %}<a href="{{ url_for('feedback.new_review', player_id=player.id) }}" style="text-transform:none;letter-spacing:0">Write a review</a>{% endif %}
+    </div>
+    {% if reviews %}
+    <div class="th-list pp-section">
+      {% for r in reviews %}
+      <a class="th-row" href="{{ url_for('feedback.view_review', review_id=r.id) }}">
+        <i class="bi bi-journal-text" aria-hidden="true"></i>
+        <div class="th-row-text"><div class="th-row-title">{{ r.title }}</div><div class="th-row-sub">{{ r.created_at.strftime('%-d %b %Y') }}{% if r.player_comment %} · with {{ 'your' if is_me else 'their' }} comment{% endif %}</div></div>
+        {% if current_user.is_coach and not r.shared %}<span class="th-badge">Coaches only</span>{% elif is_me and not r.seen_at %}<span class="th-badge read">New</span>{% endif %}
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}{{ empty('No reviews yet.') }}{% endif %}
+    {% endif %}
 
     <div class="th-label d-flex justify-content-between align-items-center">
       <span>Coach Feedback</span>
@@ -290,7 +350,7 @@
     {% if current_user.is_coach %}
     <details class="pp-edit mb-3">
       <summary class="btn btn-outline-secondary th-btn"><i class="bi bi-plus-circle"></i>Add a note</summary>
-      <div class="mt-3">{{ fb.form(feedback_tags, player=player, next=request.path) }}</div>
+      <div class="mt-3">{{ fb.form(feedback_tags, player=player, next=request.path ~ '#development', goals=goals_active) }}</div>
     </details>
     {% endif %}
     {% for entry in recent_feedback %}

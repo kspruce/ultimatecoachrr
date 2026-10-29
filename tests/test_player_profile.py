@@ -10,7 +10,8 @@ def test_tabs_and_privacy(app, club):
     ann = db.session.get(Player, club['ann'])
     ann.birth_date = date(2000, 5, 17)
     ann.notes = 'Recovering from a hamstring'
-    ann.short_term_goals = 'Throw more break-side'
+    from app.models.feedback import PlayerGoal
+    db.session.add(PlayerGoal(team_organization_id=club['team'], player_id=ann.id, title='Throw more break-side'))
     db.session.commit()
 
     own = text(login(app, club, 'ann_user').get(f"/team/player/{club['ann']}"))
@@ -25,8 +26,11 @@ def test_tabs_and_privacy(app, club):
         assert bit not in mate, bit
 
     coach = text(login(app, club, 'coach').get(f"/team/player/{club['ann']}"))
-    assert 'Recovering from a hamstring' in coach and 'Edit Goals' in coach and 'View Feedback' in coach
+    assert 'Recovering from a hamstring' in coach and 'Add a goal' in coach and 'View Feedback' in coach
 
-    # Saving goals comes back to the Development tab
-    r = login(app, club, 'ann_user').post(f"/team/player/{club['ann']}/update_goals", data={'short_term_goals': 'x'})
+    # The old goals form still works: each line becomes a goal, back on the Development tab
+    r = login(app, club, 'ann_user').post(f"/team/player/{club['ann']}/update_goals",
+                                          data={'short_term_goals': 'Go deep\n\n- Mark tighter', 'skills_to_develop': 'Hammer'})
     assert r.headers['Location'].endswith('#development')
+    assert sorted((g.title, g.horizon) for g in PlayerGoal.query.filter(PlayerGoal.title != 'Throw more break-side')) == \
+        [('Go deep', 'short'), ('Hammer', 'skill'), ('Mark tighter', 'short')]
