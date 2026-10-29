@@ -1,4 +1,7 @@
 # app/routes/playbook.py
+import json
+from datetime import datetime
+
 from flask import (
     Blueprint, render_template, redirect, url_for, flash,
     request, jsonify, current_app, abort
@@ -9,6 +12,7 @@ from app.models.playbook import Play, Formation, PlayTag, PlayAssignment, Player
 from app.forms.playbook import PlayForm, FormationForm, PositionAssignmentForm
 from app.utils.utils import admin_required
 from app.utils.team_filter import get_current_team_id
+from app.utils.editor_diagrams import save_editor_diagrams
 
 bp = Blueprint('playbook', __name__, url_prefix='/playbook')
 
@@ -342,7 +346,118 @@ def view_play(play_id):
         team_organization_id=get_current_team_id()
     ).first_or_404()
 
-    return render_template('playbook/play_detail.html', play=play)
+    # Drawn in stages: the page plays them as an animation
+    animation = None
+    if play.editor_diagram:
+        state = json.loads(play.editor_diagram.editor_json)
+        if len(state.get('stages') or []) > 1:
+            animation = state
+
+    return render_template('playbook/play_detail.html', play=play, animation=animation)
+
+
+# ── Game-day cards: the playbook on a phone ──────────────────────
+@bp.route('/cards')
+@login_required
+def cards():
+    """One card per play, drawing first, for looking over before a game.
+    ?type=offense|defense filters; ?report=<scouting report> shows the plays
+    picked for that game."""
+    from app.models.scouting import ScoutingReport
+    team_id = get_current_team_id()
+    report = None
+    report_id = request.args.get('report', type=int)
+    if report_id:
+        report = ScoutingReport.query.filter_by(id=report_id, team_organization_id=team_id).first_or_404()
+        plays = report.plays_in_order
+    else:
+        plays = Play.query.filter_by(team_organization_id=team_id).order_by(Play.type.desc(), *_play_order()).all()
+    type_filter = request.args.get('type')
+    if type_filter in ('offense', 'defense'):
+        plays = [p for p in plays if p.type == type_filter]
+    else:
+        type_filter = None
+    return render_template('playbook/cards.html', plays=plays, report=report, type_filter=type_filter)
+
+
+# ── Drawing a play in the drill editor ───────────────────────────
+@bp.route('/plays/draw')
+@bp.route('/plays/<int:play_id>/draw')
+@login_required
+@admin_required
+def draw_play(play_id=None):
+    """Draw a play on the field, in stages, with the drill editor."""
+    play = None
+    editor_state = None
+    if play_id:
+        play = Play.query.filter_by(id=play_id, team_organization_id=get_current_team_id()).first_or_404()
+        if play.editor_diagram:
+            editor_state = json.loads(play.editor_diagram.editor_json)
+    formations = (Formation.query.filter_by(team_organization_id=get_current_team_id())
+                  .order_by(Formation.name).all())
+    return render_template('playbook/play_editor.html', play=play, drill=None, editor_state=editor_state,
+                           formations=formations, other_diagrams=[],
+                           new_type=request.args.get('type') if request.args.get('type') in ('offense', 'defense') else 'offense')
+
+
+def _apply_play_fields(play, data):
+    play.name = (data.get('title') or 'Untitled Play').strip()[:100]
+    play.description = data.get('description') or None
+    play.notes = data.get('notes') or None
+    if data.get('type') in ('offense', 'defense'):
+        play.type = data['type']
+    play.type = play.type or 'offense'
+    try:
+        formation_id = int(data.get('formation_id') or 0)
+    except (TypeError, ValueError):
+        formation_id = 0
+    formation = Formation.query.filter_by(id=formation_id, team_organization_id=get_current_team_id()).first() \
+        if formation_id else None
+    play.formation_id = formation.id if formation else None
+
+
+def _play_payload():
+    try:
+        data = json.loads(request.form.get('data') or '{}')
+    except ValueError:
+        abort(400)
+    return data if isinstance(data, dict) else {}
+
+
+def _play_saved(play, status=200):
+    return jsonify({'success': True, 'play_id': play.id,
+                    'editor_url': url_for('playbook.draw_play', play_id=play.id),
+                    'detail_url': url_for('playbook.view_play', play_id=play.id)}), status
+
+
+@bp.route('/api/plays', methods=['POST'])
+@login_required
+@admin_required
+def create_drawn_play():
+    play = Play(created_by=current_user.id, team_organization_id=get_current_team_id())
+    _apply_play_fields(play, _play_payload())
+    db.session.add(play)
+    error = save_editor_diagrams(play, source='Play editor')
+    if error:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': error}), 400
+    db.session.commit()
+    return _play_saved(play, 201)
+
+
+@bp.route('/api/plays/<int:play_id>', methods=['PUT'])
+@login_required
+@admin_required
+def update_drawn_play(play_id):
+    play = Play.query.filter_by(id=play_id, team_organization_id=get_current_team_id()).first_or_404()
+    _apply_play_fields(play, _play_payload())
+    error = save_editor_diagrams(play, source='Play editor')
+    if error:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': error}), 400
+    play.updated_at = datetime.utcnow()  # the PDF cache goes by it
+    db.session.commit()
+    return _play_saved(play)
 
 @bp.route('/plays/<int:play_id>/edit', methods=['GET', 'POST'])
 @login_required

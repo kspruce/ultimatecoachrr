@@ -61,7 +61,6 @@ class Player(db.Model):
 
     skills_to_develop = db.Column(db.Text)
 
-    coach_feedback = db.Column(db.Text)
 
     # Players choose whether their fitness PBs appear on the team leaderboard
     fitness_leaderboard = db.Column(db.Boolean, nullable=False, default=False,

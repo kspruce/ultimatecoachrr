@@ -106,7 +106,7 @@
       {{ errors(form.content) }}
     </div>
 
-    <details class="th-more" {% if form.tags.errors or videos or (form.related_drills.data) %}open{% endif %}>
+    <details class="th-more" {% if form.tags.errors or videos or form.related_drills.data or form.clips.data %}open{% endif %}>
       <summary>More options <i class="bi bi-chevron-down" aria-hidden="true"></i></summary>
       <div class="th-more-body">
 
@@ -131,6 +131,18 @@
           </button>
           {% else %}
           <p class="small text-muted mb-0">No drills saved yet. Drills you save in Sessions can be linked here.</p>
+          {% endif %}
+        </div>
+
+        <div class="th-field">
+          <label class="form-label d-block">Linked clips</label>
+          <div class="th-picked" id="th-clips-picked"></div>
+          {% if clips %}
+          <button type="button" class="btn btn-outline-secondary th-btn" data-bs-toggle="offcanvas" data-bs-target="#th-clip-sheet">
+            <i class="bi bi-camera-video"></i>Choose clips
+          </button>
+          {% else %}
+          <p class="small text-muted mb-0">No clips yet. Clips from the clip library can be linked here.</p>
           {% endif %}
         </div>
 
@@ -201,6 +213,29 @@
           <label data-drill-name="{{ d.title|lower }} {{ (d.focus_area or '')|lower }}">
             <input type="checkbox" class="form-check-input mt-0" name="related_drills" value="{{ d.id }}" {% if d.id in picked %}checked{% endif %} data-drill-title="{{ d.title }}">
             <span><strong>{{ d.title }}</strong>{% if d.focus_area %}<br><small class="text-muted">{{ d.focus_area }}</small>{% endif %}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    {# Linked clips: the same kind of sheet #}
+    {% if clips %}
+    <div class="offcanvas offcanvas-bottom th-sheet" tabindex="-1" id="th-clip-sheet" aria-labelledby="th-clip-title">
+      <div class="th-sheet-grip" aria-hidden="true"></div>
+      <div class="offcanvas-header">
+        <h5 class="offcanvas-title" id="th-clip-title">Link clips</h5>
+        <button type="button" class="btn btn-primary btn-sm" data-bs-dismiss="offcanvas">Done</button>
+      </div>
+      <div class="offcanvas-body pt-1">
+        <input type="search" class="form-control mb-2" placeholder="Search clips" aria-label="Search clips" data-clip-search autocomplete="off">
+        <div class="th-pick-list">
+          {% set picked_clips = form.clips.data or [] %}
+          {% for c in clips %}
+          <label data-clip-name="{{ (c.title or '')|lower }} {{ (c.game.opponent if c.game else '')|lower }}">
+            <input type="checkbox" class="form-check-input mt-0" name="clips" value="{{ c.id }}" {% if c.id in picked_clips %}checked{% endif %} data-clip-title="{{ c.title or 'Clip ' ~ c.id }}">
+            <span><strong>{{ c.title or 'Clip ' ~ c.id }}</strong>{% if c.game %}<br><small class="text-muted">vs {{ c.game.opponent }}</small>{% endif %}</span>
           </label>
           {% endfor %}
         </div>

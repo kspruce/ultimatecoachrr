@@ -54,15 +54,29 @@
   <div class="d-flex flex-wrap align-items-center justify-content-between py-3 mb-3 border-bottom gap-2"
        style="border-color: var(--uc-card-border) !important;">
     <div>
-      <div class="fw-bold" style="font-size:1.05rem;">{{ team.name }}</div>
-      <div class="text-muted" style="font-size:0.82rem;">Season Stats — all recorded games</div>
+      <div class="fw-bold" style="font-size:1.05rem;">{{ team.name }} · Game Day summary</div>
+      <div class="text-muted" style="font-size:0.82rem;">
+        {% if season %}The {{ season.name }} season{% else %}All seasons{% endif %}, from the Game Day tallies.
+        The full stats are on the <a href="{{ url_for('stats_dashboard.index') }}">Stats dashboard</a>.
+      </div>
     </div>
     <div class="d-flex flex-wrap gap-2">
-      <a href="{{ url_for('main.index') }}" class="btn btn-sm btn-outline-secondary">
-        <i class="bi bi-arrow-left"></i> Dashboard
+      <a href="{{ url_for('stats_dashboard.index') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Stats dashboard
       </a>
     </div>
   </div>
+
+  {% if tournaments %}
+  <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+    <span class="small text-muted fw-semibold">By tournament:</span>
+    {% for t in tournaments %}
+    <a href="{{ url_for('gameday.tournament_stats', tournament_id=t.id) }}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-trophy"></i> {{ t.name }}
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
 
   <!-- Key Stats Cards -->
   <div class="row mb-4">

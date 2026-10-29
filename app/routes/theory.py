@@ -19,7 +19,9 @@ from flask_login import current_user
 
 from app import db, login
 from app.forms.theory import TheoryAssignmentForm, TheorySectionForm, TheoryTopicForm
+from app.models.clip import Clip
 from app.models.drill import SavedDrill
+from app.routes.clip.helpers import sees_hidden_clips
 from app.models.team_settings import TeamSettings
 from app.models.theory import (TheoryAssignment, TheoryImage, TheoryRead, TheorySection, TheoryTag,
                                TheoryTopic, TheoryVideo, unique_slug, video_embed_url)
@@ -180,7 +182,7 @@ def topic(topic_id):
                            section_topics=topics, current_idx=i,
                            prev_topic=topics[i - 1] if i > 0 else None,
                            next_topic=topics[i + 1] if i + 1 < len(topics) else None,
-                           is_read=topic.id in read, read=read, readers=readers)
+                           is_read=topic.id in read, read=read, readers=readers, clips=visible_clips(topic))
 
 
 @bp.route('/topic/<int:topic_id>/read', methods=['POST'])
@@ -319,6 +321,16 @@ def team_drills(team_id):
     return SavedDrill.query.filter_by(team_organization_id=team_id).order_by(SavedDrill.title).all()
 
 
+def team_clips(team_id):
+    return Clip.query.filter_by(team_organization_id=team_id).order_by(Clip.created_at.desc()).all()
+
+
+def visible_clips(topic):
+    """The topic's clips this viewer may watch (hidden ones are for coaches)."""
+    return [c for c in topic.clips if c.team_organization_id == topic.team_organization_id
+            and (sees_hidden_clips() or not c.is_hidden)]
+
+
 def videos_from_form():
     """[(url, title)] from the form's video rows, and any problems."""
     urls = request.form.getlist('video_url')
@@ -345,6 +357,7 @@ def topic_form_page(form, topic=None, videos=None, drills=None):
     tag_names = sorted({t.name for t in TheoryTag.query.filter_by(team_organization_id=team_id)}, key=str.lower)
     return render_template('theory/topic_form.html', form=form, topic=topic, videos=videos,
                            drills=drills if drills is not None else team_drills(team_id), tag_names=tag_names,
+                           clips=team_clips(team_id),
                            title='Edit topic' if topic else 'New topic')
 
 
@@ -382,6 +395,8 @@ def _save_topic(form, topic):
 
     drill_ids = set(form.related_drills.data or [])
     topic.related_drills = [d for d in team_drills(team_id) if d.id in drill_ids]
+    clip_ids = set(form.clips.data or [])
+    topic.clips = [c for c in team_clips(team_id) if c.id in clip_ids]
     topic.tags = hub.tags_for(hub.parse_tags(form.tags.data), team_id)
 
     old = {v.url: v for v in topic.related_videos}
@@ -431,6 +446,7 @@ def edit_topic(topic_id):
     if request.method == 'GET':
         form.tags.data = ', '.join(t.name for t in topic.tags)
         form.related_drills.data = [d.id for d in topic.related_drills]
+        form.clips.data = [c.id for c in topic.clips]
     if form.validate_on_submit():
         was_published = topic.published
         error = save_topic(form, topic)

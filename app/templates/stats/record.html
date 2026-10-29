@@ -1175,8 +1175,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Show loading indicator
         showLoading(`Recording ${selectedCuttingType} cut (${outcome})...`);
         
-        // Use the correct endpoint
-        fetch(`/cutting-skills/record/{{ point.id }}`, {
+        fetch(`{{ url_for('stat.record_cutting_skill', point_id=point.id) }}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

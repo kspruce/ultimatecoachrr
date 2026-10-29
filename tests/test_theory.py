@@ -237,6 +237,27 @@ def test_tags_and_drills_belong_to_the_team(app, herd):
     assert TheoryTag.query.filter_by(team_organization_id=herd['team']).count() == 1
 
 
+def test_topics_link_clips_from_the_library(app, herd):
+    from app.models.clip import Clip
+    shown = Clip(title='Cup in the wind', team_organization_id=herd['team'])
+    hidden = Clip(title='Coaches only film', is_hidden=True, team_organization_id=herd['team'])
+    theirs = Clip(title='Their clip', team_organization_id=herd['other'])
+    db.session.add_all([shown, hidden, theirs])
+    db.session.commit()
+    c = client(app, herd, 'coach')
+    form = text(c.get(f'/theory/edit_topic/{herd["cup"]}'))
+    assert 'Cup in the wind' in form and 'Their clip' not in form
+    r = c.post(f'/theory/edit_topic/{herd["cup"]}', data=topic_form(
+        herd, name='Cup', action='save', clips=[shown.id, hidden.id, theirs.id]))
+    assert r.status_code == 302
+    assert sorted(cl.title for cl in fresh(TheoryTopic, herd['cup']).clips) == ['Coaches only film', 'Cup in the wind']
+    assert f'value="{shown.id}" checked' in text(c.get(f'/theory/edit_topic/{herd["cup"]}'))
+
+    player = text(client(app, herd, 'player').get(f'/theory/topic/{herd["cup"]}'))
+    assert 'See it in a game' in player and 'Cup in the wind' in player and 'Coaches only film' not in player
+    assert 'Coaches only film' in text(c.get(f'/theory/topic/{herd["cup"]}'))
+
+
 def test_sections_have_per_team_slugs(app, herd):
     c = client(app, herd, 'coach')
     c.post('/theory/add_section', data={'name': 'Defence', 'description': ''})

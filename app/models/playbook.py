@@ -8,8 +8,10 @@ play_tag_association = db.Table('play_tag_association',
 )
 
 class PlayTag(db.Model):
+    __table_args__ = (db.UniqueConstraint('team_organization_id', 'name', name='uq_play_tag_team_name'),)
+
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(30), unique=True)
+    name = db.Column(db.String(30))
     team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'), nullable=True)
     
     def __repr__(self):
@@ -45,6 +47,22 @@ class Play(db.Model):
     # Relationships
     formation = db.relationship('Formation', backref='plays')
     tags = db.relationship('PlayTag', secondary=play_tag_association)
+    # Drawn in the drill editor: one per stage, the first holding the drawing
+    diagrams = db.relationship('DrillDiagram', back_populates='play',
+                               order_by='DrillDiagram.order',
+                               cascade='all, delete-orphan')
+
+    @property
+    def editor_diagram(self):
+        return next((d for d in self.diagrams if d.editor_json), None)
+
+    @property
+    def editor_diagrams(self):
+        return [d for d in self.diagrams if d.editor_json]
+
+    @property
+    def stage_count(self):
+        return len(self.editor_diagrams)
     
     session_components = db.relationship('SessionComponent', 
                                         secondary='play_session_component',

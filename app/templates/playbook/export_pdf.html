@@ -78,6 +78,10 @@
                                                  text-align: left; vertical-align: top; }
     table.assignments th { background: #f3f4f6; font-size: 9pt; text-transform: uppercase;
                            letter-spacing: .04em; color: #6b7280; }
+    .stages { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 6px 0 10px; }
+    .stage { margin: 0; break-inside: avoid; }
+    .stage img { width: 100%; border: 1px solid #e5e7eb; border-radius: 4px; }
+    .stage figcaption, .stage-caption { font-size: 9px; color: #6b7280; margin-top: 2px; }
 </style>
 </head>
 <body>
@@ -125,7 +129,19 @@
         <div class="tags">Tags: {{ item.obj.tags|map(attribute='name')|join(', ') }}</div>
         {% endif %}
 
-        {% if item.image %}
+        {% if item.stages|length == 1 %}
+            <img class="diagram" src="{{ item.stages[0].src }}">
+            {% if item.stages[0].caption %}<div class="stage-caption">{{ item.stages[0].caption }}</div>{% endif %}
+        {% elif item.stages %}
+            <div class="stages">
+            {% for st in item.stages %}
+                <figure class="stage">
+                    <img src="{{ st.src }}">
+                    <figcaption><strong>{{ loop.index }}. {{ st.label or 'Stage ' ~ loop.index }}</strong>{% if st.caption %} – {{ st.caption }}{% endif %}</figcaption>
+                </figure>
+            {% endfor %}
+            </div>
+        {% elif item.image %}
             <img class="diagram" src="{{ item.image }}">
         {% else %}
             <div class="no-diagram">No diagram available</div>

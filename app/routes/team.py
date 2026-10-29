@@ -11,6 +11,7 @@ from app.models.point import LineUp
 from app.models.event import Event, Pull
 from app.models.scouting import OpponentPlayer
 from app.models.session import Attendance, SessionRSVP
+from app.models.feedback import PlayerFeedback
 from app.utils.utils import coach_required
 from app.utils.permissions import can_manage_account
 from app.models.team_organization import TeamOrganization
@@ -500,15 +501,23 @@ def player_detail(player_id):
     
     # Pass current date for filtering upcoming sessions
     now = datetime.now().date()
-    
+
+    # Coaches see every note; the player sees the ones shared with them
+    feedback = PlayerFeedback.query.filter_by(player_id=player.id)
+    if not current_user.is_coach:
+        feedback = feedback.filter_by(shared=True)
+    recent_feedback = feedback.order_by(PlayerFeedback.created_at.desc()).limit(5).all()
+
     return render_template(
-        'team/player_detail.html', 
-        player=player, 
+        'team/player_detail.html',
+        player=player,
         season_rows=player_seasons(player),
         now=now,
         games_played=games_played,
         points_played=points_played,
-        recent_games=recent_games
+        recent_games=recent_games,
+        recent_feedback=recent_feedback,
+        feedback_tags=PlayerFeedback.CONTEXT_TAGS,
     )
 
 
@@ -533,10 +542,6 @@ def update_player_goals(player_id):
         player.mid_term_goals = request.form.get('mid_term_goals')
         player.long_term_goals = request.form.get('long_term_goals')
         player.skills_to_develop = request.form.get('skills_to_develop')
-        
-        # Only admins and coaches can update feedback
-        if current_user.is_admin or (hasattr(current_user, 'role') and current_user.role == 'coach'):
-            player.coach_feedback = request.form.get('coach_feedback')
         
         db.session.commit()
         flash('Player goals updated successfully!', 'success')

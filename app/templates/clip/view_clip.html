@@ -708,6 +708,16 @@
                 <i class="bi bi-flag me-1"></i>Points
               </button>
             </li>
+            {% if clip_notes is defined %}
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="tab-feedback-btn"
+                      data-bs-toggle="tab" data-bs-target="#tab-feedback"
+                      type="button" role="tab"
+                      style="font-size:.78rem;font-weight:700;padding:.55rem .75rem">
+                <i class="bi bi-chat-square-text me-1"></i>Feedback{% if clip_notes %} <span class="badge bg-secondary">{{ clip_notes|length }}</span>{% endif %}
+              </button>
+            </li>
+            {% endif %}
           </ul>
         </div>
 
@@ -896,6 +906,22 @@
               </div>
             </div>
           </div>{# /tab-pane segments #}
+
+          {% if clip_notes is defined %}
+          {% import "feedback/_note.html" as fb %}
+          <div class="tab-pane fade" id="tab-feedback" role="tabpanel">
+            <div class="side-panel-body" style="padding:1rem">
+              <p class="small text-muted mb-2">A note for a player about this clip. Share it and they see it, with a link back here, under My Feedback.</p>
+              {{ fb.form(feedback_tags, players=note_players, clip_id=clip.id, game_id=clip.game_id, next=request.path) }}
+              {% if clip_notes %}<hr>{% endif %}
+              {% for entry in clip_notes %}
+                {{ fb.note(entry, coach=True, show_player=True, next=request.path) }}
+              {% endfor %}
+            </div>
+          </div>
+          {{ fb.styles() }}
+          {{ fb.picker_script() }}
+          {% endif %}
 
         </div>{# /tab-content #}
       </div>{# /side-panel #}

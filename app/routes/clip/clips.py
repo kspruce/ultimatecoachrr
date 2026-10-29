@@ -263,6 +263,21 @@ def add_clip():
     return render_template('clip/clip_form.html', form=form, title='Add Clip', tags_exist=tags_exist)
 
 
+def clip_feedback(clip, team_id):
+    """Coaches' notes about this clip, for its Feedback tab. The clip's own
+    players come first in the picker."""
+    if not current_user.is_coach:
+        return {}
+    from app.models.feedback import PlayerFeedback
+    in_clip = {p.id for p in clip.players}
+    players = Player.query.filter_by(team_organization_id=team_id, active=True).all()
+    players.sort(key=lambda p: (p.id not in in_clip, p.name))
+    notes = (PlayerFeedback.query.filter_by(clip_id=clip.id)
+             .order_by(PlayerFeedback.created_at.desc()).all())
+    return {'clip_notes': notes, 'note_players': players,
+            'feedback_tags': PlayerFeedback.CONTEXT_TAGS}
+
+
 @bp.route('/<int:clip_id>')
 @login_required
 def view_clip(clip_id):
@@ -320,7 +335,8 @@ def view_clip(clip_id):
                          annotations=annotations,
                          annotation_creators=annotation_creators,
                          ann_form=ann_form,
-                         team_users=team_users)
+                         team_users=team_users,
+                         **clip_feedback(clip, team_id))
 
 
 @bp.route('/edit/<int:clip_id>', methods=['GET', 'POST'])

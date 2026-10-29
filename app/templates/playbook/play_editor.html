@@ -1,0 +1,55 @@
+{% extends "session/drills/editor.html" %}
+{# The drill editor, drawing a playbook play (drill_editor.js, data-kind="play"). #}
+
+{% block title %}{{ play.name if play else 'New play' }} - Play Editor{% endblock %}
+
+{% block back_link %}
+<a class="nav-link" href="{{ url_for('playbook.view_play', play_id=play.id) if play else url_for('playbook.index') }}">
+    <i class="bi bi-arrow-left"></i> {{ 'Back to the play' if play else 'Back to the Playbook' }}
+</a>
+{% endblock %}
+
+{% block title_placeholder %}Untitled Play{% endblock %}
+{% block title_value %}{{ play.name if play else '' }}{% endblock %}
+
+{% block properties_title %}Play Details{% endblock %}
+{% block properties %}
+<div class="row mb-3">
+    <div class="col-6">
+        <label class="form-label" for="play-type">Type</label>
+        <select id="play-type" class="form-select">
+            {% set current_type = play.type if play else new_type %}
+            <option value="offense" {% if current_type == 'offense' %}selected{% endif %}>Offence</option>
+            <option value="defense" {% if current_type == 'defense' %}selected{% endif %}>Defence</option>
+        </select>
+    </div>
+    <div class="col-6">
+        <label class="form-label" for="play-formation">Formation</label>
+        <select id="play-formation" class="form-select">
+            <option value="">None</option>
+            {% for f in formations %}
+            <option value="{{ f.id }}" {% if play and play.formation_id == f.id %}selected{% endif %}>{{ f.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+<div class="mb-3">
+    <label class="form-label" for="drill-description">Description</label>
+    <textarea id="drill-description" class="form-control" rows="4"
+              placeholder="What the play is for and how it works (Markdown works)">{{ play.description if play and play.description else '' }}</textarea>
+</div>
+<div class="mb-3">
+    <label class="form-label" for="play-notes">Coaching notes</label>
+    <textarea id="play-notes" class="form-control" rows="3"
+              placeholder="Cues, reads, what goes wrong">{{ play.notes if play and play.notes else '' }}</textarea>
+</div>
+<p class="small text-muted mb-0">Tags, position assignments and the video link are on the play's Edit page.</p>
+{% endblock %}
+
+{% block editor_data %}
+<div id="drill-data" style="display: none;"
+     data-kind="play"
+     data-drill-id="{{ play.id if play else '' }}"
+     data-create-url="{{ url_for('playbook.create_drawn_play') }}"
+     data-update-url="{{ url_for('playbook.update_drawn_play', play_id=play.id) if play else '' }}"></div>
+{% endblock %}

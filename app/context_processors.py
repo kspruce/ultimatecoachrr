@@ -18,7 +18,7 @@ def team_info_processor():
     # jobs like the playbook PDF export) — treat it like an anonymous user.
     if not current_user or not current_user.is_authenticated:
         return {'current_team': None, 'available_teams': [], 'is_guest': False,
-                'nav_gameday_tournaments': [], **_theme()}
+                **_theme()}
 
     try:
         available_teams = accessible_teams(current_user)
@@ -37,21 +37,6 @@ def team_info_processor():
                 db.session.add(settings)
                 db.session.commit()
 
-        # Tournaments for the current team — used in nav "Game Day" links
-        nav_gameday_tournaments = []
-        if current_team:
-            try:
-                from app.models.tournament import Tournament
-                nav_gameday_tournaments = (
-                    Tournament.query
-                    .filter_by(team_organization_id=current_team.id)
-                    .order_by(Tournament.start_date.desc())
-                    .limit(8)
-                    .all()
-                )
-            except Exception:
-                pass
-
         from app.utils.season import season_context
         season_info = season_context() if current_team else {}
 
@@ -60,7 +45,6 @@ def team_info_processor():
             'current_team': current_team,
             'available_teams': available_teams,
             'is_guest': current_user.role == 'guest',
-            'nav_gameday_tournaments': nav_gameday_tournaments,
             **_theme(current_team.settings if current_team else None),
         }
 
@@ -74,6 +58,5 @@ def team_info_processor():
             'current_team': None,
             'available_teams': [],
             'is_guest': False,
-            'nav_gameday_tournaments': [],
             **_theme(),
         }

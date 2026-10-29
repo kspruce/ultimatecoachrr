@@ -6,7 +6,9 @@
 // animation); only the current stage is on the canvas, the others are kept
 // as plain objects. Saving posts the drill details, a PNG and an SVG of
 // every stage, and the drawing itself (so it can be edited again) to the
-// session blueprint's /api/drills routes.
+// session blueprint's /api/drills routes. The same editor draws plays for
+// the playbook (templates/playbook/play_editor.html, data-kind="play"),
+// saving to the playbook's /api/plays routes.
 document.addEventListener('DOMContentLoaded', function () {
     const DD = window.DrillDiagram;
     const {PX_PER_YARD, COLOURS, MOVERS, EXTRA_PROPS, mid} = DD;
@@ -28,6 +30,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const NON_USER = ['field', 'ghost'];
 
     const dataEl = document.getElementById('drill-data');
+    const kind = dataEl.dataset.kind || 'drill';   // 'drill' or 'play'
+    const Noun = kind === 'play' ? 'Play' : 'Drill';
     const createUrl = dataEl.dataset.createUrl;
     let drillId = dataEl.dataset.drillId || null;
     let updateUrl = dataEl.dataset.updateUrl || null;
@@ -1263,7 +1267,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Unsaved work is kept on this device too, in case the browser closes
     // the page (phones do this to background tabs)
-    const draftKey = () => `drill-editor-draft:${drillId || 'new'}`;
+    const draftKey = () => `${kind}-editor-draft:${drillId || 'new'}`;
     let draftTimer = null;
 
     function keepDraft() {
@@ -1552,7 +1556,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 },
             });
             const url = URL.createObjectURL(blob);
-            const name = (val('drill-title').trim() || 'drill').replace(/[^\w-]+/g, '_') + '.' + extension;
+            const name = (val('drill-title').trim() || kind).replace(/[^\w-]+/g, '_') + '.' + extension;
             status.textContent = 'Done.';
             const video = document.createElement('video');
             video.src = url;
@@ -1614,6 +1618,15 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function drillDetails() {
+        if (kind === 'play') {
+            return {
+                title: val('drill-title').trim() || 'Untitled Play',
+                description: val('drill-description'),
+                notes: val('play-notes'),
+                type: val('play-type'),
+                formation_id: val('play-formation'),
+            };
+        }
         return {
             title: val('drill-title').trim() || 'Untitled Drill',
             description: val('drill-description'),
@@ -1658,14 +1671,14 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!r.ok || !body.success) throw new Error(body.message || `HTTP ${r.status}`);
             forgetDraft();
             if (!drillId) {
-                drillId = body.drill_id;
+                drillId = body.drill_id || body.play_id;
                 updateUrl = `${createUrl}/${drillId}`;
                 window.history.replaceState({}, '', body.editor_url);
             }
             dirty = false;
-            showNotification('Drill saved.', 'success', body.detail_url);
+            showNotification(`${Noun} saved.`, 'success', body.detail_url);
         } catch (err) {
-            showNotification('Could not save the drill: ' + err.message, 'danger');
+            showNotification(`Could not save the ${kind}: ` + err.message, 'danger');
         } finally {
             saving = false;
         }
@@ -1689,7 +1702,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         const list = modal.querySelector('.preview-stages');
         list.innerHTML = '';
-        const base = (val('drill-title').trim() || 'drill').replace(/[^\w-]+/g, '_');
+        const base = (val('drill-title').trim() || kind).replace(/[^\w-]+/g, '_');
         images.forEach((img, i) => {
             const col = document.createElement('div');
             col.className = images.length > 1 ? 'col-lg-6' : 'col-12';
@@ -1728,7 +1741,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const a = document.createElement('a');
             a.href = link;
             a.className = 'alert-link';
-            a.textContent = 'View drill';
+            a.textContent = `View ${kind}`;
             note.appendChild(a);
         }
         document.body.appendChild(note);
@@ -2007,7 +2020,7 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
         const when = new Date(kept.savedAt).toLocaleString([], {dateStyle: 'medium', timeStyle: 'short'});
-        if (await ask(`You have unsaved changes to this drill from ${when}. Restore them?`, {ok: 'Restore'})) {
+        if (await ask(`You have unsaved changes to this ${kind} from ${when}. Restore them?`, {ok: 'Restore'})) {
             await start(DD.normaliseState(kept.state, newId), kept.title);
             history = [snapshot()];
             dirty = true;

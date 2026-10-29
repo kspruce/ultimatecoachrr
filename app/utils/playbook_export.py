@@ -26,6 +26,8 @@ from datetime import datetime
 
 from flask import current_app, render_template
 
+from app.utils.editor_diagrams import data_uri
+
 PDF_MARGIN = {'top': '14mm', 'bottom': '18mm', 'left': '12mm', 'right': '12mm'}
 MARKER_RE = re.compile(r'\[\[itm:([a-z0-9\-]+)\]\]')
 
@@ -62,10 +64,15 @@ def _qr_data_uri(url):
 def _item(kind, obj):
     """Dict the template consumes for one play/formation."""
     animation_url = extract_embed_url(obj.ultiplay_embed)
+    # Drawn in the drill editor: every stage, inline
+    stages = [{'label': d.step_label, 'caption': d.caption, 'src': data_uri(d)}
+              for d in getattr(obj, 'editor_diagrams', [])]
+    stages = [st for st in stages if st['src']]
     return {
         'kind': kind,                       # 'concept' or 'play'
         'key': f'{kind}-{obj.id}',
         'obj': obj,
+        'stages': stages,
         'image': getattr(obj, 'image_url', None) or getattr(obj, 'imgur_url', None) or None,
         'animation_url': animation_url,
         'qr': _qr_data_uri(animation_url) if animation_url else None,

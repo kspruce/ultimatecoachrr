@@ -130,6 +130,12 @@
           <li><a class="dropdown-item" href="{{ url_for('programmes.index') }}">
             <i class="bi bi-journal-check"></i> Programmes</a></li>
           {% endif %}
+          {% if current_user.is_authenticated and current_user.player %}
+          {% set unseen = unseen_feedback_count() %}
+          <li><a class="dropdown-item" href="{{ url_for('feedback.mine') }}">
+            <i class="bi bi-chat-square-heart-fill"></i> My Feedback
+            {% if unseen %}<span class="badge rounded-pill bg-success ms-1">{{ unseen }}</span>{% endif %}</a></li>
+          {% endif %}
           {% if not ts or ts.sessions_enabled %}
           {% if current_user.is_authenticated and current_user.player %}
           <li><a class="dropdown-item" href="{{ url_for('training.availability') }}">
@@ -205,18 +211,10 @@
             <i class="bi bi-people"></i> Team Stats</a></li>
           <li><a class="dropdown-item" href="{{ url_for('game.index') }}">
             <i class="bi bi-controller"></i> Game Stats</a></li>
-          {# Game Day Stats — team summary + per-tournament shortcuts #}
-          {% if nav_gameday_tournaments is defined %}
+          {% if current_user.is_authenticated and current_user.is_stat_taker %}
           <li><hr class="dropdown-divider"></li>
-          <li><h6 class="dropdown-header">
-            <i class="bi bi-lightning-charge-fill"></i> Game Day
-          </h6></li>
           <li><a class="dropdown-item" href="{{ url_for('gameday.team_stats') }}">
-            <i class="bi bi-bar-chart-line"></i> Season Summary</a></li>
-          {% for t in nav_gameday_tournaments %}
-          <li><a class="dropdown-item ps-4" href="{{ url_for('gameday.tournament_stats', tournament_id=t.id) }}" style="font-size:0.88rem;">
-            <i class="bi bi-trophy" style="opacity:.6;"></i> {{ t.name }}</a></li>
-          {% endfor %}
+            <i class="bi bi-lightning-charge-fill"></i> Game Day summary</a></li>
           {% endif %}
         </ul>
       </li>

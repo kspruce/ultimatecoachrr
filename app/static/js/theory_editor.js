@@ -1,7 +1,7 @@
 /* Theory hub: writing a topic, built for phones. Formatting buttons, a box
    that grows as you type, Write / Preview that keeps your place, photos
    from the camera or library (cover and inline), a draft kept on this
-   device until it's saved, videos, tags and the drill picker. */
+   device until it's saved, videos, tags and the drill and clip pickers. */
 (function () {
   'use strict';
 
@@ -203,34 +203,38 @@
     if (btn) { btn.closest('.th-video-row').remove(); changed(); }
   });
 
-  /* ── Drill picker ───────────────────────────────────────────── */
-  var picked = document.getElementById('th-drills-picked');
-  function showPicked() {
-    if (!picked) return;
-    picked.innerHTML = '';
-    form.querySelectorAll('input[name="related_drills"]:checked').forEach(function (box) {
-      var chip = document.createElement('span');
-      chip.className = 'th-badge';
-      chip.textContent = box.getAttribute('data-drill-title');
-      picked.appendChild(chip);
-    });
-    if (!picked.children.length) {
-      picked.innerHTML = '<span class="small text-muted">None linked</span>';
-    }
-  }
-  form.addEventListener('change', function (e) {
-    if (e.target.name === 'related_drills') showPicked();
-  });
-  var drillSearch = form.querySelector('[data-drill-search]');
-  if (drillSearch) {
-    drillSearch.addEventListener('input', function () {
-      var q = drillSearch.value.trim().toLowerCase();
-      form.querySelectorAll('[data-drill-name]').forEach(function (row) {
-        row.hidden = q && row.getAttribute('data-drill-name').indexOf(q) === -1;
+  /* ── Drill and clip pickers ─────────────────────────────────── */
+  function picker(field, kind) {
+    var picked = document.getElementById('th-' + kind + 's-picked');
+    function showPicked() {
+      if (!picked) return;
+      picked.innerHTML = '';
+      form.querySelectorAll('input[name="' + field + '"]:checked').forEach(function (box) {
+        var chip = document.createElement('span');
+        chip.className = 'th-badge';
+        chip.textContent = box.getAttribute('data-' + kind + '-title');
+        picked.appendChild(chip);
       });
+      if (!picked.children.length) {
+        picked.innerHTML = '<span class="small text-muted">None linked</span>';
+      }
+    }
+    form.addEventListener('change', function (e) {
+      if (e.target.name === field) showPicked();
     });
+    var search = form.querySelector('[data-' + kind + '-search]');
+    if (search) {
+      search.addEventListener('input', function () {
+        var q = search.value.trim().toLowerCase();
+        form.querySelectorAll('[data-' + kind + '-name]').forEach(function (row) {
+          row.hidden = q && row.getAttribute('data-' + kind + '-name').indexOf(q) === -1;
+        });
+      });
+    }
+    showPicked();
   }
-  showPicked();
+  picker('related_drills', 'drill');
+  picker('clips', 'clip');
 
   /* ── Draft kept on this device until saved ──────────────────── */
   var key = form.getAttribute('data-autosave-key');

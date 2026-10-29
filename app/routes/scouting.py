@@ -164,6 +164,12 @@ def opponent():
                                    'clips': _counts(ScoutingClip, [r.id for r in reports])})
 
 
+def _set_plays(report, form):
+    """The plays picked on the form (the form only offers the team's)."""
+    picked = set(form.play_ids.data or [])
+    report.plays = [p for p in form.plays if p.id in picked]
+
+
 @bp.route('/add', methods=['GET', 'POST'])
 @login_required
 @coach_required
@@ -183,6 +189,7 @@ def add_report():
     if form.validate_on_submit():
         report = ScoutingReport(team_organization_id=get_current_team_id())
         form.populate_obj(report)
+        _set_plays(report, form)
         db.session.add(report)
         db.session.commit()
         flash(f'Scouting report for "{report.team_name}" has been created!', 'success')
@@ -203,9 +210,12 @@ def add_report():
 def edit_report(report_id):
     report = _report_or_404(report_id)
     form = ScoutingReportForm(obj=report)
+    if request.method == 'GET':
+        form.play_ids.data = [p.id for p in report.plays]
 
     if form.validate_on_submit():
         form.populate_obj(report)
+        _set_plays(report, form)
         db.session.commit()
         flash(f'Scouting report for "{report.team_name}" has been updated!', 'success')
         return redirect(url_for('scouting.detail', report_id=report.id))
@@ -247,6 +257,7 @@ def copy_report(report_id):
     for column in ('offense_strategy', 'defense_strategy', 'strengths', 'weaknesses', 'notes',
                    'offense_tags', 'defense_tags', 'game_plan', 'o_line_plan', 'd_line_plan'):
         setattr(report, column, getattr(source, column))
+    report.plays = list(source.plays)
     db.session.add(report)
     db.session.flush()
     for player in _players(source):

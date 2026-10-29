@@ -29,6 +29,10 @@
 .form-fold > .fold-body { padding-bottom:.5rem }
 .form-section { font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em;
   color:var(--uc-gray-400); margin:1.5rem 0 .75rem; padding-bottom:.35rem; border-bottom:1px solid var(--uc-gray-100) }
+  .play-picks { display:flex; flex-wrap:wrap; gap:.4rem; }
+  .play-pick { display:inline-flex; align-items:center; gap:.4rem; border:1px solid var(--rule); border-radius:99px;
+               padding:.3rem .7rem; font-size:.88rem; cursor:pointer; min-height:36px; }
+  .play-pick input { margin:0; }
 </style>
 
 <div class="container py-4 scouting-page">
@@ -133,6 +137,22 @@
               <div class="col-md-6">{{ textarea(form.o_line_plan, 'Who starts, the set play to open, how we beat their D.') }}</div>
               <div class="col-md-6">{{ textarea(form.d_line_plan, 'Who starts, the force, the look to throw at them.') }}</div>
             </div>
+            {% if form.plays %}
+            <div class="mb-3" id="play_ids">
+              <label class="form-label">Plays to run against them</label>
+              <div class="play-picks">
+                {% for p in form.plays %}
+                <label class="play-pick">
+                  <input type="checkbox" class="form-check-input" name="play_ids" value="{{ p.id }}"
+                         {% if form.play_ids.data and p.id in form.play_ids.data %}checked{% endif %}>
+                  <span class="badge {{ 'bg-primary' if p.type == 'offense' else 'bg-danger' }}">{{ 'O' if p.type == 'offense' else 'D' }}</span>
+                  {{ p.name }}
+                </label>
+                {% endfor %}
+              </div>
+              <div class="form-text">They show in the game plan and on the playbook's game-day cards for this game.</div>
+            </div>
+            {% endif %}
             <p class="form-text mt-0">Who marks whom is planned on the {% if report %}<a href="{{ url_for('scouting.matchups', report_id=report.id) }}">matchup board</a>{% else %}matchup board once the report is saved{% endif %}.</p>
             </div>
             </details>

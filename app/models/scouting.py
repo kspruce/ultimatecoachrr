@@ -162,6 +162,8 @@ class ScoutingReport(db.Model):
     game = db.relationship('Game', backref='scouting_report', uselist=False)
     players = db.relationship('OpponentPlayer', backref='scouting_report', lazy='dynamic', cascade='all, delete-orphan')
     clips = db.relationship('ScoutingClip', backref='scouting_report', lazy='dynamic', cascade='all, delete-orphan')
+    # Playbook plays we'll run against them
+    plays = db.relationship('Play', secondary='scouting_report_play', backref='scouting_reports')
 
     def __repr__(self):
         return f'<ScoutingReport {self.team_name}>'
@@ -179,8 +181,14 @@ class ScoutingReport(db.Model):
         return opponent_key(self.team_name)
 
     @property
+    def plays_in_order(self):
+        """Offence first, then the playbook's own order."""
+        return sorted(self.plays, key=lambda p: (p.type != 'offense', p.sort_order is None,
+                                                 p.sort_order or 0, p.name))
+
+    @property
     def has_game_plan(self):
-        return bool(self.game_plan or self.o_line_plan or self.d_line_plan)
+        return bool(self.game_plan or self.o_line_plan or self.d_line_plan or self.plays)
 
 
 class OpponentPlayer(db.Model):
@@ -418,3 +426,11 @@ def suggest_matchups(opponents, defenders):
             suggestions[opponent.id] = (best, matchup_reasons(opponent, best))
             free.remove(best)
     return suggestions
+
+
+scouting_report_play = db.Table(
+    'scouting_report_play',
+    db.Column('scouting_report_id', db.Integer, db.ForeignKey('scouting_report.id', ondelete='CASCADE'),
+              primary_key=True),
+    db.Column('play_id', db.Integer, db.ForeignKey('play.id', ondelete='CASCADE'), primary_key=True),
+)

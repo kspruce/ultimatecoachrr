@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
-from flask_login import login_required
+from flask_login import current_user, login_required
 from flask_wtf import FlaskForm
 from sqlalchemy import or_, text
 from sqlalchemy.orm import joinedload
@@ -154,7 +154,20 @@ def detail(game_id):
                          delete_form=delete_form,
                          gameday_stats=gameday_stats,
                          has_positional_stats=has_positional_stats,
-                         progress=analysis_progress(game))
+                         progress=analysis_progress(game),
+                         **game_feedback(game, game_players or all_players))
+
+def game_feedback(game, players):
+    """Coaches' notes from this game, for its page."""
+    if not current_user.is_coach:
+        return {}
+    from app.models.feedback import PlayerFeedback
+    notes = (PlayerFeedback.query.filter_by(game_id=game.id)
+             .order_by(PlayerFeedback.created_at.desc()).all())
+    return {'game_notes': notes,
+            'note_players': sorted(players, key=lambda p: (p.jersey_number is None, p.jersey_number or 0, p.name)),
+            'feedback_tags': PlayerFeedback.CONTEXT_TAGS}
+
 
 def _picked_squad_id(form):
     """The squad picked on the form, else the tournament's."""
@@ -344,24 +357,11 @@ def delete(game_id):
         # Delete all points
         Point.query.filter_by(game_id=game_id, team_organization_id=get_current_team_id()).delete()
 
-        # Delete clips if any
-        if hasattr(game, 'clips'):
-            for clip in game.clips:
-                # Delete clip tags
-                db.session.execute(
-                    text("DELETE FROM clip_tag_relation WHERE clip_id = :clip_id AND team_organization_id = :team_id"),
-                    {"clip_id": clip.id, "team_id": get_current_team_id()}
-                )
-                # Delete clip players
-                db.session.execute(
-                    text("DELETE FROM clip_player WHERE clip_id = :clip_id AND team_organization_id = :team_id"),
-                    {"clip_id": clip.id, "team_id": get_current_team_id()}
-                )
-            # Delete clips
-            db.session.execute(
-                text("DELETE FROM clip WHERE game_id = :game_id AND team_organization_id = :team_id"),
-                {"game_id": game_id, "team_id": get_current_team_id()}
-            )
+        # Delete its clips the way the clip library does, so their tags,
+        # players, annotations and playlist places go with them
+        for clip in game.clips.all():
+            db.session.delete(clip)
+        db.session.flush()
 
         # Delete game player associations
         GamePlayer.query.filter_by(game_id=game_id, team_organization_id=get_current_team_id()).delete()

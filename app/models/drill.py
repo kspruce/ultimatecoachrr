@@ -80,7 +80,8 @@ class SavedDrill(db.Model):
 
 
 class DrillDiagram(db.Model):
-    """A diagram image for a SavedDrill. A drill can have several (e.g. Flik step panels).
+    """A diagram image for a SavedDrill (a drill can have several, e.g. Flik
+    step panels) or for a playbook Play drawn in the drill editor.
 
     Railway's disk is wiped on every deploy and S3 isn't in use, so the image
     itself is stored in the database (base64 text, so the JSON data exports
@@ -88,8 +89,11 @@ class DrillDiagram(db.Model):
     image_url / svg_url hold that route's URL.
     """
     id = db.Column(db.Integer, primary_key=True)
+    # A drill's diagram, or (drawn in the same editor) a playbook play's
     saved_drill_id = db.Column(db.Integer, db.ForeignKey('saved_drill.id', ondelete='CASCADE'),
-                               nullable=False, index=True)
+                               nullable=True, index=True)
+    play_id = db.Column(db.Integer, db.ForeignKey('play.id', ondelete='CASCADE'),
+                        nullable=True, index=True)
     order = db.Column(db.Integer, nullable=False, default=0)
     image_url = db.Column(db.String(500), nullable=True)
     svg_url = db.Column(db.String(500), nullable=True)
@@ -110,6 +114,7 @@ class DrillDiagram(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     saved_drill = db.relationship('SavedDrill', back_populates='diagrams')
+    play = db.relationship('Play', back_populates='diagrams')
 
     def __repr__(self):
         return f'<DrillDiagram {self.saved_drill_id}#{self.order}>'
