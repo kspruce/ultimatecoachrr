@@ -87,3 +87,36 @@ def test_playbook_on_a_phone(app, team, live_server, browser, book):
     assert 'Learned' in page.locator('.th-readbar .th-read-btn button').inner_text()
     assert PlayLearned.query.filter_by(user_id=player_id).count() == 1
     assert page.errors == []
+
+
+def test_save_and_use_a_setup(app, team, live_server, browser, book):
+    """In the drawing editor: lay out a stack, save it as a set-up, then start
+    a new play from it."""
+    from app.models.playbook import PlaySetup
+    from app.models.team_organization import TeamOrganization
+    from app.models.user import User
+    page = phone_page(app, browser, live_server, db.session.get(User, book['coach'].id),
+                      db.session.get(TeamOrganization, team.id))
+    page.goto(live_server + '/playbook/plays/draw')
+    page.wait_for_selector('.upper-canvas')
+    page.locator('#toggle-more').click()  # phones keep the set-up menu under More
+    page.get_by_role('button', name='Set up').click()
+    page.locator('[data-formation="vertical"]').click()
+    page.locator('#askModal .btn-outline-secondary').click()  # no defenders
+    page.wait_for_selector('#askModal', state='hidden')
+    page.get_by_role('button', name='Set up').click()
+    page.locator('#save-setup').click()
+    page.locator('#askModal .ask-input').fill('Our vert')
+    page.locator('#askModal .ask-ok').click()
+    page.wait_for_function("document.body.innerText.includes('Saved \"Our vert\"')")
+    setup = PlaySetup.query.one()
+    assert setup.name == 'Our vert' and setup.image_data
+    import json
+    assert len(json.loads(setup.state_json)['objects']) >= 8  # seven players and the disc
+
+    # It's in the menu now, and a new play can start from it
+    page.goto(live_server + f'/playbook/plays/draw?setup={setup.id}')
+    page.wait_for_selector('.upper-canvas')
+    assert page.locator(f'[data-setup="{setup.id}"]').count() == 1
+    assert page.evaluate("JSON.parse(document.getElementById('editor-state').textContent).stages[0].objects.length") >= 8
+    assert page.errors == []

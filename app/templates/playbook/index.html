@@ -61,7 +61,6 @@
         <button class="th-icon-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="More"><i class="bi bi-three-dots"></i></button>
         <ul class="dropdown-menu dropdown-menu-end">
           <li><a class="dropdown-item" href="{{ url_for('playbook.cards') }}"><i class="bi bi-phone me-2"></i>Game-day cards</a></li>
-          <li><a class="dropdown-item" href="{{ url_for('playbook.quiz') }}"><i class="bi bi-patch-question me-2"></i>Quiz yourself</a></li>
           {% if can_edit %}<li><a class="dropdown-item" href="{{ url_for('playbook.setups') }}"><i class="bi bi-people me-2"></i>Set-ups</a></li>{% endif %}
           <li><a class="dropdown-item" href="{{ url_for('playbook.position_view') }}"><i class="bi bi-person-badge me-2"></i>Plays by role{% if my_role %} · yours: {{ my_role.name }}{% endif %}</a></li>
           <li><a class="dropdown-item" href="#" data-export-pdf data-start-url="{{ url_for('playbook.export_start', type=type_filter) }}"><i class="bi bi-file-earmark-pdf me-2"></i>Download as PDF</a></li>

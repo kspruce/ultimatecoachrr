@@ -928,22 +928,6 @@ def add_to_session(play_id):
     return redirect(url_for('session.detail', session_id=session.id))
 
 
-# ── Quiz: see the drawing, name the play ─────────────────────────
-
-@bp.route('/quiz')
-def quiz():
-    team_id = get_current_team_id()
-    type_filter = request.args.get('type') if request.args.get('type') in TYPES else None
-    query = Play.query.filter_by(team_organization_id=team_id, status='active')
-    if type_filter:
-        query = query.filter_by(type=type_filter)
-    plays = [p for p in query.all() if p.thumbnail]
-    questions = [{'id': p.id, 'name': p.name, 'call': p.call or '', 'image': p.thumbnail, 'type': p.type_label,
-                  'url': url_for('playbook.view_play', play_id=p.id)} for p in plays]
-    return render_template('playbook/quiz.html', title='Quiz', questions=questions, type_filter=type_filter,
-                           learned=sorted(pb.learned_ids(current_user.id, team_id)))
-
-
 # ── Set-ups: starting positions saved from the editor ────────────
 
 @bp.route('/setups')

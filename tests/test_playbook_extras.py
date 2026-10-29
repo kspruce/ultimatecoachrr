@@ -1,5 +1,5 @@
 """Playbook extras: set-ups, learning for a tournament, core plays and
-situations, share links, plays to draw, the quiz, and adding a play to a
+situations, share links, plays to draw, and adding a play to a
 session."""
 import json
 from datetime import date, timedelta
@@ -83,7 +83,7 @@ def test_share_links(app, club):
     assert client(app, club, 'player').post(f'/playbook/plays/{club["Hammer"]}/share').status_code == 403
 
 
-def test_plays_to_draw_and_quiz(app, club):
+def test_plays_to_draw(app, club):
     c = client(app, club, 'coach')
     assert 'not drawn on the field yet' in text(c.get('/playbook/'))
     page = text(c.get('/playbook/redraw'))
@@ -93,14 +93,6 @@ def test_plays_to_draw_and_quiz(app, club):
     r = c.post(f'/playbook/plays/{club["Cup"]}/status', data={'status': 'active', 'next': 'https://evil.example/'})
     assert 'evil' not in r.headers['Location']
 
-    # The quiz needs pictures
-    assert 'at least two plays' in text(client(app, club, 'player').get('/playbook/quiz'))
-    db.session.expire_all()
-    for name in ('Side stack', 'Hammer'):
-        db.session.get(Play, club[name]).image_url = 'https://example.com/x.png'
-    db.session.commit()
-    quiz = text(client(app, club, 'player').get('/playbook/quiz'))
-    assert 'data-questions' in quiz and 'Hammer' in quiz and 'Secret set' not in quiz
 
 
 def test_add_a_play_to_a_session(app, club):

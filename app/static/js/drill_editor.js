@@ -1100,7 +1100,7 @@ document.addEventListener('DOMContentLoaded', function () {
             showNotification('Put some players on the field first.', 'warning');
             return;
         }
-        const name = (window.prompt('Name this set-up (e.g. "Side stack", "Pull play line-up")') || '').trim();
+        const name = await ask('Name this set-up (e.g. "Side stack", "Pull play line-up")', {input: '', ok: 'Save'});
         if (!name) return;
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
         try {
