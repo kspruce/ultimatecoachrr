@@ -24,6 +24,7 @@
       <ul class="dropdown-menu dropdown-menu-end">
         <li><a class="dropdown-item" href="{{ url_for('theory.add_topic') }}"><i class="bi bi-file-earmark-text me-2"></i>Topic</a></li>
         <li><a class="dropdown-item" href="{{ url_for('theory.add_section') }}"><i class="bi bi-folder-plus me-2"></i>Section</a></li>
+        <li><a class="dropdown-item" href="{{ url_for('theory.import_cards') }}"><i class="bi bi-upload me-2"></i>Import cards</a></li>
       </ul>
     </div>
     {% endif %}
@@ -214,6 +215,7 @@
     {% if can_edit %}
     <p class="mb-3">Start with a section (e.g. Offence, Defence, Throwing), then add topics to it.</p>
     <a href="{{ url_for('theory.add_section') }}" class="btn btn-primary th-btn"><i class="bi bi-folder-plus"></i>Create the first section</a>
+    <a href="{{ url_for('theory.import_cards') }}" class="btn btn-outline-secondary th-btn ms-1"><i class="bi bi-upload"></i>Import cards</a>
     {% else %}
     <p class="mb-0">Nothing here yet. Your coaches' guides will show up here.</p>
     {% endif %}

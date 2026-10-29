@@ -121,6 +121,26 @@ def test_stats_and_homepage_count_this_season_only(club):
     assert club['veteran'].name in csv
 
 
+def test_gameday_stats_count_this_season_only(club):
+    from app.models.gameday import GameDayPlayerStats
+
+    team = club['team']
+    for game in Game.query.all():
+        db.session.add(GameDayPlayerStats(player_id=club['regular'].id, game_id=game.id, goals=1,
+                                          team_organization_id=team.id))
+    db.session.add(GameDayPlayerStats(player_id=club['veteran'].id, game_id=Game.query.filter_by(
+        opponent='Old friends').one().id, goals=3, team_organization_id=team.id))
+    db.session.commit()
+    client = club['client']
+
+    page = client.get('/gameday/team-stats').get_data(as_text=True)
+    assert club['veteran'].name not in page  # only played last season
+    assert 'Old friends' not in client.get('/gameday/').get_data(as_text=True)
+
+    client.get('/team/seasons/view?season=all')
+    assert club['veteran'].name in client.get('/gameday/team-stats').get_data(as_text=True)
+
+
 def test_starting_a_new_season_keeps_everything_and_updates_the_roster(club):
     team, client = club['team'], club['client']
     client.get('/')  # set the seasons up
