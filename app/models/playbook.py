@@ -75,10 +75,23 @@ class Play(db.Model):
     )    
     
 class PlayerPosition(db.Model):
+    """A team role, such as "O-line initiation cutter". Coaches give players
+    roles each season (PlayerRole, Team → Roles), and plays say what each
+    role does (PlayAssignment). Kept under its old name and table: it was
+    the playbook's list of positions."""
+    LINES = [('O', 'O-line'), ('D', 'D-line'), ('', 'Either line')]
+
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), nullable=False)
+    line = db.Column(db.String(1))                    # 'O', 'D' or empty for either
+    description = db.Column(db.String(200))
+    sort_order = db.Column(db.Integer, nullable=False, default=0, server_default='0')
     team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'), nullable=True)
-    
+
+    @property
+    def line_label(self):
+        return dict(self.LINES).get(self.line or '', 'Either line')
+
     def __repr__(self):
         return f'<Position {self.name}>'
 

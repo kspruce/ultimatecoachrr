@@ -25,8 +25,8 @@
 
     <div class="uc-page-header mb-4">
         <div>
-            <h2>Playbook by Position</h2>
-            <p>Pick a position to see its instructions across every play</p>
+            <h2>Playbook by role</h2>
+            <p>Pick a role to see what it does in every play</p>
         </div>
         <a href="{{ url_for('playbook.index') }}" class="btn btn-outline-secondary">
             <i class="bi bi-arrow-left me-1"></i>Back to Playbook
@@ -44,7 +44,7 @@
     </div>
     {% else %}
     <div class="alert alert-info">
-        No positions defined yet. Positions are created when managing play assignments.
+        No roles yet. Coaches set them up under Club → Roles.
     </div>
     {% endif %}
 
@@ -84,7 +84,7 @@
         </div>
         {% endif %}
     {% elif positions %}
-    <p class="text-muted">Select a position above to get started.</p>
+    <p class="text-muted">Pick a role above.</p>
     {% endif %}
 
 </div>

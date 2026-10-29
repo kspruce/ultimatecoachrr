@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+
+{% block title %}Roles{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<style>
+.rl-wrap { max-width: 980px; }
+.rl-line { margin: 1.5rem 0 .6rem; font-size: .78rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
+.rl-grid { display: grid; gap: .9rem; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
+.rl-card { background: var(--card); border: 1px solid var(--rule); border-radius: var(--radius, 14px); padding: .9rem 1rem; display: grid; gap: .55rem; align-content: start; scroll-margin-top: 80px; }
+.rl-card:target { border-color: var(--club-ink); box-shadow: 0 0 0 2px var(--club-soft); }
+.rl-head { display: flex; align-items: baseline; justify-content: space-between; gap: .5rem; }
+.rl-head h3 { font-size: 1.05rem; font-weight: 700; margin: 0; }
+.rl-desc { color: var(--ink-2); font-size: .88rem; margin: 0; }
+.rl-warn { font-size: .72rem; font-weight: 700; border-radius: 99px; padding: .12rem .55rem; background: var(--warn-soft); color: var(--ink); white-space: nowrap; }
+.rl-holders { list-style: none; margin: 0; padding: 0; display: grid; gap: .3rem; }
+.rl-holder { display: flex; align-items: center; gap: .45rem; padding: .3rem .4rem; border-radius: 9px; background: var(--sunken); min-height: 44px; }
+.rl-depth { width: 1.6rem; height: 1.6rem; border-radius: 50%; display: inline-grid; place-items: center; font-size: .78rem; font-weight: 700; background: var(--card); flex: none; }
+.rl-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); text-decoration: none; }
+.rl-name small { color: var(--ink-3); }
+.rl-holder form { margin: 0; }
+.rl-icon { border: 0; background: none; color: var(--ink-2); width: 34px; height: 34px; border-radius: 8px; display: inline-grid; place-items: center; }
+.rl-icon:hover { background: var(--card); color: var(--ink); }
+.rl-icon.on { color: var(--accent-ink, #b8860b); }
+.rl-add { display: flex; gap: .4rem; }
+.rl-add select { flex: 1; min-width: 0; }
+.rl-wants { font-size: .82rem; color: var(--ink-2); }
+.rl-chips { display: flex; flex-wrap: wrap; gap: .35rem; }
+.rl-chip { border: 1px solid var(--rule); border-radius: 99px; padding: .2rem .65rem; font-size: .85rem; color: var(--ink); text-decoration: none; background: var(--card); }
+.rl-card details summary { font-size: .82rem; color: var(--ink-2); cursor: pointer; }
+.rl-panel { background: var(--card); border: 1px solid var(--rule); border-radius: var(--radius, 14px); padding: .9rem 1rem; }
+</style>
+{% endblock %}
+
+{% macro role_fields(role=None) %}
+<div class="row g-2">
+  <div class="col-sm-7"><input name="name" class="form-control form-control-sm" maxlength="50" required placeholder="e.g. Initiation cutter" value="{{ role.name if role else '' }}" aria-label="Name"></div>
+  <div class="col-sm-5">
+    <select name="line" class="form-select form-select-sm" aria-label="Line">
+      {% for value, label in lines %}<option value="{{ value }}" {% if role and (role.line or '') == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-12"><input name="description" class="form-control form-control-sm" maxlength="200" placeholder="What they do (optional)" value="{{ role.description or '' if role else '' }}" aria-label="Description"></div>
+</div>
+{% endmacro %}
+
+{% block content %}
+<div class="rl-wrap">
+  <div class="uc-page-header">
+    <div>
+      <h1>Roles{% if season %} · {{ season.name }}{% endif %}</h1>
+      <p>Who plays which role this season, first choice first. Players' roles show on their profiles, and the playbook says what each role does in each play.</p>
+    </div>
+  </div>
+
+  {% if all_time %}
+  <div class="alert alert-info py-2">You're viewing all seasons, so this shows the current season. Pick a season from the season menu to see its roles.</div>
+  {% endif %}
+
+  {% if not season %}
+  <div class="rl-panel">There's no season yet. Set one up under <a href="{{ url_for('seasons.index') }}">Seasons &amp; squads</a> first.</div>
+  {% else %}
+
+  {% if not roles %}
+  <div class="rl-panel mb-3">
+    <p class="mb-2">No roles yet. Start from a suggested set of O-line and D-line roles and change them to match how you play, or add your own below.</p>
+    <form method="post" action="{{ url_for('roles.starter') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn btn-primary" type="submit"><i class="bi bi-stars me-1"></i>Start with suggested roles</button>
+    </form>
+  </div>
+  {% endif %}
+
+  {% if unassigned %}
+  <div class="rl-panel mb-2">
+    <div class="small fw-semibold mb-2">Not in a role yet ({{ unassigned|length }})</div>
+    <div class="rl-chips">
+      {% for r in unassigned %}<a class="rl-chip" href="{{ url_for('team.player_detail', player_id=r.player.id) }}#roles">{{ r.player.name }}</a>{% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% set current_line = namespace(value=none) %}
+  {% for item in roles %}
+    {% set role = item.role %}
+    {% if current_line.value != (role.line or '') %}
+      {% if not loop.first %}</div>{% endif %}
+      <h2 class="rl-line">{{ role.line_label }}</h2>
+      <div class="rl-grid">
+      {% set current_line.value = role.line or '' %}
+    {% endif %}
+    <section class="rl-card" id="role-{{ role.id }}">
+      <div class="rl-head">
+        <h3>{{ role.name }}</h3>
+        {% if item.warning %}<span class="rl-warn">{{ item.warning }}</span>{% endif %}
+      </div>
+      {% if role.description %}<p class="rl-desc">{{ role.description }}</p>{% endif %}
+
+      <ol class="rl-holders">
+        {% for row in item.rows %}
+        {% set p = row.roster.player %}
+        {% set top, bottom = loop.first, loop.last %}
+        <li class="rl-holder">
+          <span class="rl-depth" title="Choice {{ loop.index }}">{{ loop.index }}</span>
+          <a class="rl-name" href="{{ url_for('team.player_detail', player_id=p.id) }}">{{ p.name }}{% if p.gender %} <small>{{ 'W' if p.gender == 'female' else 'M' if p.gender == 'male' else '' }}</small>{% endif %}</a>
+          {% for action, icon, label in [('main', 'bi-star-fill' if row.is_main else 'bi-star', 'Main role for ' ~ p.name), ('up', 'bi-arrow-up', 'Move up'), ('down', 'bi-arrow-down', 'Move down'), ('remove', 'bi-x-lg', 'Take ' ~ p.name ~ ' out of this role')] %}
+          {% if not (action == 'up' and top) and not (action == 'down' and bottom) %}
+          <form method="post" action="{{ url_for('roles.holder', row_id=row.id, action=action) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="rl-icon{{ ' on' if action == 'main' and row.is_main }}" type="submit" title="{{ label }}" aria-label="{{ label }}"><i class="bi {{ icon }}"></i></button>
+          </form>
+          {% endif %}
+          {% endfor %}
+        </li>
+        {% endfor %}
+      </ol>
+
+      {% if item.wanted_by %}
+      <div class="rl-wants"><i class="bi bi-hand-index-thumb me-1"></i>Would like it: {% for r in item.wanted_by %}{{ r.player.name }}{{ ', ' if not loop.last }}{% endfor %}</div>
+      {% endif %}
+
+      {% if item.free %}
+      <form method="post" action="{{ url_for('roles.assign', role_id=role.id) }}" class="rl-add">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <select name="player_id" class="form-select form-select-sm" required aria-label="Add a player to {{ role.name }}">
+          <option value="">Add a player…</option>
+          {% set wanted_ids = item.wanted_by|map(attribute='id')|list %}
+          {% for r in item.free %}<option value="{{ r.player.id }}">{{ r.player.name }}{% if r.id in wanted_ids %} (would like it){% endif %}</option>{% endfor %}
+        </select>
+        <button class="btn btn-sm btn-outline-primary" type="submit">Add</button>
+      </form>
+      {% endif %}
+
+      <div class="small">
+        {% if plays.get(role.id) %}
+        <a href="{{ url_for('playbook.position_view', position_id=role.id) }}"><i class="bi bi-book me-1"></i>In {{ plays[role.id] }} play{{ 's' if plays[role.id] != 1 }}</a>
+        {% else %}<span class="text-muted">Not in any plays yet</span>{% endif %}
+      </div>
+
+      <details>
+        <summary>Edit role</summary>
+        <form method="post" action="{{ url_for('roles.edit_role', role_id=role.id) }}" class="mt-2">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          {{ role_fields(role) }}
+          <button class="btn btn-sm btn-primary mt-2" type="submit">Save</button>
+        </form>
+        <div class="d-flex flex-wrap gap-2 mt-2">
+          {% for direction, label in [('up', 'Earlier'), ('down', 'Later')] %}
+          <form method="post" action="{{ url_for('roles.order_role', role_id=role.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="direction" value="{{ direction }}">
+            <button class="btn btn-sm btn-outline-secondary" type="submit"><i class="bi bi-arrow-{{ direction }}"></i> {{ label }}</button>
+          </form>
+          {% endfor %}
+          <form method="post" action="{{ url_for('roles.delete_role', role_id=role.id) }}"
+                data-confirm="Delete {{ role.name }}? Players lose it, and so does every play that says what it does."
+                onsubmit="return confirm(this.dataset.confirm);">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i> Delete</button>
+          </form>
+        </div>
+      </details>
+    </section>
+    {% if loop.last %}</div>{% endif %}
+  {% endfor %}
+
+  <div class="rl-panel mt-4" id="add-role">
+    <div class="fw-semibold mb-2">Add a role</div>
+    <form method="post" action="{{ url_for('roles.add_role') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      {{ role_fields() }}
+      <button class="btn btn-primary btn-sm mt-2" type="submit"><i class="bi bi-plus-lg"></i> Add role</button>
+    </form>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

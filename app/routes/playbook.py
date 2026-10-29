@@ -10,7 +10,8 @@ from flask_login import login_required, current_user
 from app import db
 from app.models.playbook import Play, Formation, PlayTag, PlayAssignment, PlayerPosition
 from app.forms.playbook import PlayForm, FormationForm, PositionAssignmentForm
-from app.utils.utils import admin_required
+from app.utils.roles import team_roles
+from app.utils.utils import admin_required, coach_required
 from app.utils.team_filter import get_current_team_id
 from app.utils.editor_diagrams import save_editor_diagrams
 
@@ -223,8 +224,7 @@ def export_pdf():
 def position_view(position_id=None):
     """Per-position view: pick a position, see its instructions across all plays."""
     team_id = get_current_team_id()
-    positions = PlayerPosition.query.filter_by(team_organization_id=team_id) \
-        .order_by(PlayerPosition.name).all()
+    positions = team_roles(team_id)
 
     selected = None
     assignments = []
@@ -690,7 +690,7 @@ def view_formation(formation_id):
 
 @bp.route('/plays/<int:play_id>/assignments', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@coach_required
 def manage_assignments(play_id):
     play = Play.query.filter_by(
         id=play_id,
@@ -700,9 +700,7 @@ def manage_assignments(play_id):
     form = PositionAssignmentForm()
 
     # Get all positions for the dropdown (filter by team)
-    form.position_id.choices = [(p.id, p.name) for p in PlayerPosition.query.filter_by(
-        team_organization_id=get_current_team_id()
-    ).order_by(PlayerPosition.name).all()]
+    form.position_id.choices = [(r.id, f'{r.name} ({r.line_label})') for r in team_roles(get_current_team_id())]
 
     if form.validate_on_submit():
         # Check if assignment for this position already exists
@@ -740,7 +738,7 @@ def manage_assignments(play_id):
 
 @bp.route('/plays/<int:play_id>/assignments/<int:assignment_id>/delete', methods=['POST'])
 @login_required
-@admin_required
+@coach_required
 def delete_assignment(play_id, assignment_id):
     # Verify the play belongs to the current team
     play = Play.query.filter_by(

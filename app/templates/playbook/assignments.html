@@ -4,7 +4,7 @@
 <div class="container">
     <div class="row mb-4">
         <div class="col-md-8">
-            <h1>Position Assignments</h1>
+            <h1>Who does what</h1>
             <h4>{{ play.name }}</h4>
         </div>
         <div class="col-md-4 text-end">
@@ -27,7 +27,7 @@
                             <table class="table">
                                 <thead>
                                     <tr>
-                                        <th>Position</th>
+                                        <th>Role</th>
                                         <th>Instructions</th>
                                         <th>Actions</th>
                                     </tr>
@@ -51,7 +51,7 @@
                             </table>
                         </div>
                     {% else %}
-                        <p class="text-muted">No position assignments created yet.</p>
+                        <p class="text-muted">Nothing yet: say what each role does in this play.</p>
                     {% endif %}
                 </div>
             </div>
@@ -59,9 +59,12 @@
             <!-- Add/Edit Assignment Form -->
             <div class="card">
                 <div class="card-header">
-                    <h5 class="mb-0">Add Position Assignment</h5>
+                    <h5 class="mb-0">What a role does</h5>
                 </div>
                 <div class="card-body">
+                    {% if not form.position_id.choices %}
+                    <p class="mb-0">Your team has no roles yet. Set them up under <a href="{{ url_for('roles.index') }}">Club → Roles</a>, then come back to say what each one does in this play.</p>
+                    {% else %}
                     <form method="POST">
                         {{ form.hidden_tag() }}
                         
@@ -73,13 +76,14 @@
                         <div class="mb-3">
                             {{ form.instructions.label(class="form-label") }}
                             {{ form.instructions(class="form-control", rows=3) }}
-                            <div class="form-text">Describe what this position should do during the play.</div>
+                            <div class="form-text">What this role does in this play. Saving a role that's already listed replaces it.</div>
                         </div>
                         
                         <div class="d-flex justify-content-between">
                             {{ form.submit(class="btn btn-primary") }}
                         </div>
                     </form>
+                    {% endif %}
                 </div>
             </div>
         </div>

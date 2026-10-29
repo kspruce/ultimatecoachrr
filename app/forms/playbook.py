@@ -52,6 +52,6 @@ class FormationForm(FlaskForm):
                        validators=[Optional(), URL()])
 
 class PositionAssignmentForm(FlaskForm):
-    position_id = SelectField('Position', coerce=int, validators=[DataRequired()])
+    position_id = SelectField('Role', coerce=int, validators=[DataRequired()])
     instructions = TextAreaField('Instructions', validators=[DataRequired()])
     submit = SubmitField('Save Assignment')

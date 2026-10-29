@@ -355,6 +355,21 @@
 
   {% if current_user.is_authenticated and current_user.is_coach %}
   <div class="htu-feat">
+    <div class="htu-feat-icon ic-blue"><i class="bi bi-diagram-3"></i></div>
+    <div class="htu-feat-name">Roles</div>
+    <div class="htu-feat-desc">Your team's roles, like O-line initiation cutter, and who plays each one this season.</div>
+    <ol class="htu-feat-steps">
+      <li>Start from the suggested roles under Club → Roles, then rename and add your own</li>
+      <li>Add players to each role, first choice first; the star marks each player's main role</li>
+      <li>Watch for roles with nobody, only one player, or only one gender</li>
+      <li>Players say which roles they'd like on their profile; the playbook says what each role does in each play</li>
+    </ol>
+    <a href="{{ url_for('roles.index') }}" class="btn btn-sm btn-outline-primary mt-auto" style="border-radius:7px;font-size:.79rem;width:fit-content">Roles</a>
+  </div>
+  {% endif %}
+
+  {% if current_user.is_authenticated and current_user.is_coach %}
+  <div class="htu-feat">
     <div class="htu-feat-icon ic-purple"><i class="bi bi-layers"></i></div>
     <div class="htu-feat-name">Seasons &amp; Squads</div>
     <div class="htu-feat-desc">Start a new season without losing anything; every page shows the season you pick.</div>

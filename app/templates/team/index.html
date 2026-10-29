@@ -297,6 +297,8 @@
                                         <a href="{{ url_for('team.player_detail', player_id=player.id) }}" class="player-name">
                                             {{ player.name }}
                                         </a>
+                                        {% set main_role = (entries.get(player.id).roles if entries.get(player.id) else [])|selectattr('kind', 'equalto', 'assigned')|selectattr('is_main')|first %}
+                                        {% if main_role %}<div class="small text-muted"><i class="bi bi-diagram-3 me-1"></i>{{ main_role.role.name }}</div>{% endif %}
                                     </td>
                                     <td>
                                         {% set pos = (entry.position if entry and entry.position else player.position) %}

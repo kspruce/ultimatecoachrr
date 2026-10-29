@@ -1,0 +1,72 @@
+{# A player's roles this season (team/player_detail.html). Coaches and
+   captains set them; the player says which they'd like. #}
+{% set is_me = current_user.id == player.user_id %}
+<div class="card mb-4" id="roles">
+  <div class="card-header d-flex flex-wrap gap-2 justify-content-between align-items-center">
+    <h5 class="mb-0"><i class="bi bi-diagram-3 me-2"></i>Roles{% if role_season %} · {{ role_season.name }}{% endif %}</h5>
+    {% if current_user.is_coach %}<a href="{{ url_for('roles.index') }}" class="btn btn-sm btn-outline-secondary">All roles</a>{% endif %}
+  </div>
+  <div class="card-body">
+    {% if my_roles %}
+    <div class="pr-roles mb-2">
+      {% for r in my_roles %}
+      <span class="pr-role{{ ' main' if r.is_main }}" title="{{ r.role.description or '' }}">
+        {% if r.is_main %}<i class="bi bi-star-fill" aria-label="Main role"></i>{% endif %}
+        {{ r.role.name }} <small>{{ r.role.line_label }}{% if r.depth %} · choice {{ r.depth }}{% endif %}</small>
+      </span>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-muted mb-2">{% if is_me %}No roles yet this season.{% else %}No roles this season yet.{% endif %}</p>
+    {% endif %}
+
+    {% if wanted_roles %}
+    <div class="small text-muted mb-2"><i class="bi bi-hand-index-thumb me-1"></i>{{ 'You’d' if is_me else 'Would' }} like: {% for r in wanted_roles %}{{ r.role.name }}{{ ', ' if not loop.last }}{% endfor %}</div>
+    {% endif %}
+
+    {% if role_history %}
+    <div class="small text-muted mb-2">
+      {% for season, names in role_history %}<div>{{ season.name }}: {{ names|join(', ') }}</div>{% endfor %}
+    </div>
+    {% endif %}
+
+    {% if team_roles and on_role_roster and (current_user.is_coach or is_me) %}
+    {% if current_user.is_coach %}
+    <details class="mt-2">
+      <summary class="btn btn-sm btn-outline-primary">Set roles</summary>
+      <form method="post" action="{{ url_for('roles.player', player_id=player.id) }}" class="mt-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="kind" value="assigned">
+        {% set have = my_roles|map(attribute='role_id')|list %}
+        {% set main = (my_roles|selectattr('is_main')|map(attribute='role_id')|list or [none])[0] %}
+        {% for role in team_roles %}
+        <div class="pr-pick">
+          <label class="form-check-label flex-grow-1"><input type="checkbox" class="form-check-input me-2" name="role_id" value="{{ role.id }}" {% if role.id in have %}checked{% endif %}>{{ role.name }} <small class="text-muted">{{ role.line_label }}</small></label>
+          <label class="small text-muted"><input type="radio" name="main_role_id" value="{{ role.id }}" class="form-check-input me-1" {% if role.id == main %}checked{% endif %}>Main</label>
+        </div>
+        {% endfor %}
+        <button type="submit" class="btn btn-primary btn-sm mt-2">Save roles</button>
+        <span class="small text-muted ms-2">New roles go last in each role's order; change the order on the Roles page.</span>
+      </form>
+    </details>
+    {% endif %}
+    {% if is_me %}
+    <details class="mt-2">
+      <summary class="btn btn-sm btn-outline-secondary">Roles I’d like</summary>
+      <form method="post" action="{{ url_for('roles.player', player_id=player.id) }}" class="mt-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="kind" value="preferred">
+        {% set want = wanted_roles|map(attribute='role_id')|list %}
+        {% for role in team_roles %}
+        <div class="pr-pick">
+          <label class="form-check-label flex-grow-1"><input type="checkbox" class="form-check-input me-2" name="role_id" value="{{ role.id }}" {% if role.id in want %}checked{% endif %}>{{ role.name }} <small class="text-muted">{{ role.line_label }}</small></label>
+        </div>
+        {% endfor %}
+        <button type="submit" class="btn btn-primary btn-sm mt-2">Save</button>
+        <span class="small text-muted ms-2">Your coaches see this on the Roles page.</span>
+      </form>
+    </details>
+    {% endif %}
+    {% endif %}
+  </div>
+</div>
