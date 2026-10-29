@@ -186,3 +186,20 @@ def test_writing_on_a_phone(app, team, live_server, browser, hub):
     assert page.evaluate("localStorage.getItem('theory-draft:new')") is None
     assert '?saved' not in page.url
     assert page.errors == []
+
+
+def test_organising_on_a_phone(app, team, live_server, browser, hub):
+    """Moving a topic to a new section from the Organise page."""
+    page = phone_page(app, browser, live_server, hub['coach'], team)
+    page.goto(live_server + '/theory/organise')
+    no_sideways_scroll(page)
+    page.fill('#new-section', 'Zones')
+    page.locator('button', has_text='Add section').click()
+    page.wait_for_selector('.th-label:has-text("Zones")')
+    page.select_option(f'select[name="section_{hub["second"]}"]', label='Zones')
+    page.locator('button', has_text='Save moves').click()
+    page.wait_for_selector('text=Moved 1 topic')
+    no_sideways_scroll(page)
+    db.session.expire_all()
+    assert db.session.get(TheoryTopic, hub['second']).section.name == 'Zones'
+    assert not page.errors
