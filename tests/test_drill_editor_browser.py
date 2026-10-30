@@ -225,6 +225,54 @@ def test_phone_portrait_touch(app, team, live_server, browser):
     db.session.remove()
 
 
+def test_canvas_views(app, team, live_server, browser):
+    """Besides the whole field and its parts, the editor shows the endzone
+    alone, a stretch of sideline, or plain grass with no lines; a player
+    tapped there lands where it was tapped, and the view is saved."""
+    coach = make_user(team, 'viewcoach', role='coach')
+    page = logged_in_page(app, browser, live_server, coach, team)
+    page.goto(live_server + '/sessions/drills/editor')
+    page.wait_for_selector('.upper-canvas')
+    lines = """view => DrillDiagram.fieldParts(DrillDiagram.withDefaults({view}))
+        .filter(o => o.stroke === '#ffffff').length"""
+    assert page.evaluate(lines, 'full') > 0
+
+    def to_screen(x, y):
+        # As the editor fits the view: the attacking end at the right
+        # (anchor 'end'), otherwise centred
+        return page.evaluate("""([x, y]) => {
+            const el = document.querySelector('.upper-canvas').getBoundingClientRect();
+            const v = DrillDiagram.viewRect(DrillDiagram.withDefaults({view: document.getElementById('field-view').value}));
+            const z = Math.min(el.width / v.w, el.height / v.h);
+            const left = v.anchor === 'end' ? el.width - (v.x + v.w) * z : (el.width - v.w * z) / 2 - v.x * z;
+            const top = (el.height - v.h * z) / 2 - v.y * z;
+            return [el.left + left + x * z, el.top + top + y * z];
+        }""", [x, y])
+
+    for view, (x, y) in {'endzone-only': (1000, 200), 'sideline': (550, 330), 'blank': (550, 200)}.items():
+        page.select_option('#field-view', view)
+        assert (page.evaluate(lines, view) == 0) == (view == 'blank')
+        page.click('.tool-btn[data-tool="player-o"]')
+        page.mouse.click(*to_screen(x, y))
+    page.fill('#drill-title', 'Footwork')
+    page.click('#save-drill')
+    page.wait_for_selector('.alert-success')
+    assert page.errors == []
+
+    drill = SavedDrill.query.filter_by(title='Footwork').one()
+    state = json.loads(drill.editor_diagram.editor_json)
+    assert state['field']['view'] == 'blank'
+    placed = [(o['left'], o['top']) for o in state['stages'][0]['objects'] if o.get('herdType') == 'player-o']
+    assert all(abs(px - x) < 3 and abs(py - y) < 3
+               for (px, py), (x, y) in zip(placed, [(1000, 200), (550, 330), (550, 200)]))
+    assert len(placed) == 3
+
+    # The saved picture is just the patch of grass shown (30 by 20 yards)
+    diagram = drill.editor_diagram
+    assert 'width="300"' in diagram.svg_data and 'height="200"' in diagram.svg_data
+    db.session.remove()
+
+
 def test_draw_a_play(app, team, live_server, browser):
     """The same editor draws a playbook play: saved as a play, with its
     stages, and played back on the play's page."""
