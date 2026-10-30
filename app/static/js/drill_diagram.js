@@ -10,7 +10,8 @@
 (function () {
     const PX_PER_YARD = 10;
     const COLOURS = {offense: '#e03131', defense: '#1c7ed6', disc: '#ffffff',
-                     cone: '#fd7e14', line: '#212529', field: '#5a9e4b'};
+                     cone: '#fd7e14', line: '#212529', field: '#5a9e4b',
+                     apron: '#7f9f72'};
     const LINE_STYLES = {
         cut: {dash: null, width: 3},
         throw: {dash: [8, 6], width: 2.5},
@@ -273,15 +274,44 @@
         return rotated ? {w: h, h: w} : {w, h};
     }
 
-    // The part of the field shown: all of it, the attacking half, or the
-    // attacking endzone and 25 yards in front of it
+    // The part of the field shown: all of it, the attacking half, the
+    // attacking endzone and 25 yards in front of it, the attacking endzone
+    // alone, a stretch of the near sideline (with the ground beyond it), or a
+    // small patch of plain grass with no lines, for footwork and the like.
+    // `anchor` 'end' keeps the attacking end at the edge of the screen.
+    const SIDELINE_APRON = 6;  // yards of ground shown beyond the sideline
     function viewRect(field, rotated) {
+        const Y = PX_PER_YARD;
         const {w, h} = logicalSize(field);
-        let x = 0;
-        if (field.view === 'half') x = (field.endzone + field.length / 2) * PX_PER_YARD;
-        if (field.view === 'endzone') x = Math.max(0, (field.endzone + field.length - 25) * PX_PER_YARD);
-        return rotated ? {x: 0, y: 0, w: h, h: w - x} : {x, y: 0, w: w - x, h};
+        const goal = (field.endzone + field.length) * Y;
+        const mid = (field.endzone + field.length / 2) * Y;
+        let r = {x: 0, y: 0, w, h};
+        if (field.view === 'half') r = {x: mid, y: 0, w: w - mid, h, anchor: 'end'};
+        if (field.view === 'endzone') {
+            const x = Math.max(0, goal - 25 * Y);
+            r = {x, y: 0, w: w - x, h, anchor: 'end'};
+        }
+        if (field.view === 'endzone-only') {
+            const x = Math.max(0, goal - 3 * Y);
+            r = {x, y: 0, w: w - x, h, anchor: 'end'};
+        }
+        if (field.view === 'sideline') {
+            const long = Math.min(40 * Y, w), deep = Math.min(15 * Y, h);
+            r = {x: mid - long / 2, y: h - deep, w: long, h: deep + SIDELINE_APRON * Y};
+        }
+        if (field.view === 'blank') {
+            const long = Math.min(30 * Y, w), deep = Math.min(20 * Y, h);
+            r = {x: (w - long) / 2, y: (h - deep) / 2, w: long, h: deep};
+        }
+        if (!rotated) return r;
+        // Turned with the field (see rotation): x across, attacking the top
+        return {x: r.y, y: w - (r.x + r.w), w: r.h, h: r.w, anchor: r.anchor};
     }
+
+    const noLines = field => field.view === 'blank';
+    // Views that frame a small area: what's outside the frame is dimmed in
+    // the editor (pictures and the drill page show the frame alone)
+    const FRAMED = ['endzone-only', 'sideline', 'blank'];
 
     // Landscape (saved) to portrait (shown) and back
     function rotation(field, back) {
@@ -341,28 +371,48 @@
         };
         const y = PX_PER_YARD;
         const ez = field.endzone * y;
-        const parts = [rect(0, 0, w, h, {fill: COLOURS.field, strokeWidth: 0})];
+        const parts = [];
+        // The ground beyond the sideline, a little duller than the field
+        if (field.view === 'sideline') {
+            const a = SIDELINE_APRON * y;
+            parts.push(rect(-a, -a, w + 2 * a, h + 2 * a, {fill: COLOURS.apron, strokeWidth: 0}));
+        }
+        parts.push(rect(0, 0, w, h, {fill: COLOURS.field, strokeWidth: 0}));
         if (field.grid) {
             const grid = {stroke: 'rgba(255,255,255,0.18)', strokeWidth: 1};
             for (let x = 5 * y; x < w; x += 5 * y) parts.push(line(x, 0, x, h, grid));
             for (let gy = 5 * y; gy < h; gy += 5 * y) parts.push(line(0, gy, w, gy, grid));
         }
         const white = {stroke: '#ffffff', strokeWidth: 2};
-        parts.push(rect(1, 1, w - 2, h - 2, {fill: '', ...white}));
-        parts.push(line(ez, 0, ez, h, white));
-        parts.push(line(w - ez, 0, w - ez, h, white));
-        // Brick marks, 20 yards out from each endzone line
-        [ez + 20 * y, w - ez - 20 * y].forEach(bx => {
-            if (bx > ez && bx < w - ez) parts.push(text('×', bx, h / 2, {fontSize: 18, fill: '#ffffff'}));
-        });
-        if (field.markers) {
+        if (!noLines(field)) {
+            parts.push(rect(1, 1, w - 2, h - 2, {fill: '', ...white}));
+            parts.push(line(ez, 0, ez, h, white));
+            parts.push(line(w - ez, 0, w - ez, h, white));
+            // Brick marks, 20 yards out from each endzone line
+            [ez + 20 * y, w - ez - 20 * y].forEach(bx => {
+                if (bx > ez && bx < w - ez) parts.push(text('×', bx, h / 2, {fontSize: 18, fill: '#ffffff'}));
+            });
+        }
+        if (field.markers && !noLines(field)) {
             for (let yd = 10; yd < field.length; yd += 10) {
                 parts.push(text(String(yd), ez + yd * y, 10, {fontSize: 11, fill: 'rgba(255,255,255,0.8)'}));
             }
         }
+        if (FRAMED.includes(field.view)) {
+            const v = viewRect(field), far = 10000;
+            const dim = {fill: 'rgba(255,255,255,0.75)', strokeWidth: 0};
+            parts.push(rect(-far, -far, 2 * far + w, far + v.y, dim));
+            parts.push(rect(-far, v.y + v.h, 2 * far + w, far, dim));
+            parts.push(rect(-far, v.y, far + v.x, v.h, dim));
+            parts.push(rect(v.x + v.w, v.y, far, v.h, dim));
+        }
         if (FORCES[field.force]) {
+            // Bottom left of what's shown, on the field and clear of the
+            // defending endzone
             const view = viewRect(field, rotated);
-            const at = rotated ? {left: 8, top: view.h - 8} : {left: Math.max(view.x, ez) + 8, top: h - 8};
+            const at = rotated ? {left: Math.max(view.x, 0) + 8, top: Math.min(view.y + view.h, w - ez) - 8}
+                               : {left: Math.max(view.x, noLines(field) ? 0 : ez) + 8,
+                                  top: Math.min(view.y + view.h, h) - 8};
             parts.push(fieldObject(new fabric.Text(FORCES[field.force], {
                 ...at, fontSize: 13, fontWeight: 'bold', originY: 'bottom',
                 fontFamily: 'Arial', fill: '#ffffff', backgroundColor: 'rgba(0,0,0,0.35)',

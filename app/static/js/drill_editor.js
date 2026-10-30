@@ -110,14 +110,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function fitToScreen() {
         const view = DD.viewRect(field, rotated);
-        const whole = DD.logicalSize(field, rotated);
         const cw = holder.clientWidth;
         const ch = holder.clientHeight || cw * view.h / view.w;
         baseZoom = Math.min(cw / view.w, ch / view.h);
         canvas.setDimensions({width: cw, height: ch});
         // Part of the field: keep the attacking end at the edge (right, or
         // top in portrait), so any spare space shows more field, not blank
-        const partial = view.w < whole.w || view.h < whole.h;
+        const partial = view.anchor === 'end';
         const left = partial && !rotated ? cw - (view.x + view.w) * baseZoom
                                          : (cw - view.w * baseZoom) / 2 - view.x * baseZoom;
         const top = partial && rotated ? -view.y * baseZoom
@@ -633,11 +632,12 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     function placeAt(p) {
-        // Keep new things on the field
+        // Keep new things on the field, or on what's shown beyond it
         const {w, h} = displaySize();
+        const view = DD.viewRect(field, rotated);
         const s = snapGrid(p);
-        const x = Math.min(w - 8, Math.max(8, s.x));
-        const y = Math.min(h - 8, Math.max(8, s.y));
+        const x = Math.min(Math.max(w, view.x + view.w) - 8, Math.max(Math.min(0, view.x) + 8, s.x));
+        const y = Math.min(Math.max(h, view.y + view.h) - 8, Math.max(Math.min(0, view.y) + 8, s.y));
         const obj = makeObject(currentTool, x, y);
         canvas.add(obj);
         if (currentTool === 'text') {
