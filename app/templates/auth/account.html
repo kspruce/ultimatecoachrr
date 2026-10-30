@@ -60,7 +60,7 @@
       <input type="hidden" name="action" value="notifications">
       <label class="form-check mb-2">
         <input class="form-check-input" type="checkbox" name="email_event_updates" value="1" {% if current_user.email_event_updates %}checked{% endif %}>
-        Email me when a tournament needs a reply, when the squad is announced and with my game times
+        Email me when a tournament needs a reply, when the squad is announced and with my game times (and, when I'm new, one reminder of what's left to set up)
       </label>
       {% if not has_real_email %}<p class="ac-hint">Add an email address above to get these.</p>{% endif %}
       <button type="submit" class="ac-btn">Save</button>

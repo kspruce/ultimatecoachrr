@@ -1,0 +1,5 @@
+{# "How it works" for an empty page: include with guide_key set to a help_guide feature key #}
+<span class="uc-guide-link" style="display:block;margin-top:.5rem;font-size:.85rem">
+  <i class="bi bi-question-circle"></i>
+  New to this? <a href="{{ url_for('main.how_to_use', _anchor=guide_key) }}">See how it works</a>
+</span>

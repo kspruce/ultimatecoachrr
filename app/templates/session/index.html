@@ -256,6 +256,7 @@
                         {% else %}
                             Contact an administrator to add sessions.
                         {% endif %}
+                        {% with guide_key='sessions' %}{% include 'partials/guide_link.html' %}{% endwith %}
                     </p>
                     {% endif %}
                 </div>

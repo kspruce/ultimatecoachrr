@@ -167,6 +167,7 @@
                 {% else %}
                     Contact an administrator to add drills.
                 {% endif %}
+                {% with guide_key='drills' %}{% include 'partials/guide_link.html' %}{% endwith %}
             </div>
         </div>
         {% endfor %}

@@ -696,6 +696,7 @@
             {% if current_user.is_admin %}
               <a href="{{ url_for('clip.add_clip') }}">Add the first clip</a>
             {% endif %}
+            {% with guide_key='clips' %}{% include 'partials/guide_link.html' %}{% endwith %}
           {% endif %}
         </p>
       </div>

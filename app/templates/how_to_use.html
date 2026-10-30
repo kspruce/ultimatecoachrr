@@ -2,90 +2,109 @@
 
 {% block styles %}
 <style>
-  /* ─── Page layout ──────────────────────────────────────── */
+  /* ─── Hero ─────────────────────────────────────────────── */
   .htu-hero {
     background: var(--club);
     border-radius: var(--uc-radius); padding: 2rem 2.5rem 2.25rem;
-    color: var(--on-club); margin-bottom: 1.75rem; position: relative; overflow: hidden;
+    color: var(--on-club); margin-bottom: 1.5rem; position: relative; overflow: hidden;
   }
   .htu-hero::before {
     content:''; position:absolute; top:-70px; right:-50px; width:280px; height:280px;
     background:rgba(255,255,255,.06); border-radius:50%; pointer-events:none;
   }
-  .htu-hero-inner { position:relative; z-index:1; }
+  .htu-hero-inner { position:relative; z-index:1; max-width:760px; }
+  .htu-kicker { font-size:.72rem; font-weight:700; letter-spacing:.09em; text-transform:uppercase; opacity:.65; margin-bottom:.3rem; }
+  .htu-hero h1 { font-size:1.75rem; font-weight:700; letter-spacing:-.02em; margin-bottom:.4rem; color:var(--on-club); }
+  .htu-hero p { opacity:.85; margin:0; font-size:.95rem; }
+  .htu-search { margin-top:1.1rem; position:relative; max-width:460px; }
+  .htu-search i { position:absolute; left:.85rem; top:50%; transform:translateY(-50%); color:var(--uc-gray-400); }
+  .htu-search input {
+    width:100%; border:0; border-radius:50px; padding:.6rem 1rem .6rem 2.4rem;
+    font-size:.9rem; background:var(--card); color:var(--ink);
+  }
 
-  /* ─── Quick-nav pills ──────────────────────────────────── */
-  .htu-quicknav {
-    display:flex; flex-wrap:wrap; gap:.5rem; margin-bottom:1.75rem;
+  /* ─── Outcome tiles ────────────────────────────────────── */
+  .htu-tiles { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:.75rem; margin-bottom:1.75rem; }
+  .htu-tile {
+    background:var(--uc-card-bg); border:1px solid var(--uc-card-border); border-radius:var(--uc-radius);
+    padding:1rem 1.1rem; text-decoration:none; color:inherit; display:flex; flex-direction:column; gap:.3rem;
+    transition:box-shadow .2s,transform .2s;
   }
-  .htu-qn-pill {
-    display:inline-flex; align-items:center; gap:.4rem;
-    background:var(--uc-card-bg); border:1px solid var(--uc-card-border);
-    border-radius:50px; padding:.32rem .85rem;
-    font-size:.8rem; font-weight:600; color:var(--uc-gray-600);
-    text-decoration:none; transition:background .15s,border-color .15s,color .15s;
-  }
-  .htu-qn-pill:hover { background:var(--uc-blue); border-color:var(--uc-blue); color:white; text-decoration:none; }
+  .htu-tile:hover { box-shadow:var(--uc-shadow-md); transform:translateY(-2px); text-decoration:none; color:inherit; }
+  .htu-tile i { font-size:1.2rem; color:var(--club-ink); }
+  .htu-tile b { font-size:.92rem; color:var(--ink); }
+  .htu-tile span { font-size:.8rem; color:var(--ink-2); line-height:1.45; }
+  .htu-tile small { font-size:.72rem; color:var(--ink-3); margin-top:auto; padding-top:.3rem; }
 
   /* ─── Section dividers (matching index.html) ───────────── */
-  .uc-section      { display:flex; align-items:center; gap:.75rem; margin:2rem 0 1rem; }
+  .uc-section      { display:flex; align-items:center; gap:.75rem; margin:2rem 0 .35rem; }
   .uc-section-text { font-size:.68rem; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--uc-gray-400); white-space:nowrap; }
   .uc-section-line { flex:1; height:1px; background:var(--uc-gray-200); }
-
-  /* ─── Step cards (onboarding flow) ────────────────────── */
-  .htu-steps { display:flex; flex-direction:column; gap:0; }
-  .htu-step {
-    display:flex; gap:1.25rem; padding:1.125rem 0;
-    border-bottom:1px solid var(--uc-gray-100);
-  }
-  .htu-step:last-child { border-bottom:none; }
-  .htu-step-num {
-    width:36px; height:36px; border-radius:50%; flex-shrink:0;
-    background:var(--club);
-    color:var(--on-club); display:flex; align-items:center; justify-content:center;
-    font-weight:700; font-size:.85rem; margin-top:.1rem;
-  }
-  .htu-step-title { font-weight:700; color:var(--uc-gray-800); font-size:.9rem; margin-bottom:.2rem; }
-  .htu-step-desc  { font-size:.83rem; color:var(--uc-gray-600); line-height:1.5; margin-bottom:.5rem; }
+  .htu-pitch { font-size:.88rem; color:var(--ink-2); margin:0 0 1rem; }
+  section[id], .htu-feat[id] { scroll-margin-top:90px; }
 
   /* ─── Feature cards ────────────────────────────────────── */
-  .htu-feat-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:.875rem; }
+  .htu-feat-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); gap:.875rem; }
   .htu-feat {
     background:var(--uc-card-bg); border:1px solid var(--uc-card-border); border-radius:var(--uc-radius);
-    padding:1.25rem; text-decoration:none; color:inherit; display:flex; flex-direction:column; gap:.5rem;
-    transition:box-shadow .2s,transform .2s,border-color .2s;
+    padding:1.25rem; color:inherit; display:flex; flex-direction:column; gap:.5rem;
   }
-  .htu-feat:hover { box-shadow:var(--uc-shadow-md); transform:translateY(-2px); border-color:transparent; text-decoration:none; color:inherit; }
-  .htu-feat-icon { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1.1rem; flex-shrink:0; }
-  .htu-feat-name { font-weight:700; font-size:.9rem; color:var(--uc-gray-800); }
-  .htu-feat-desc { font-size:.8rem; color:var(--uc-gray-400); line-height:1.45; }
-  .htu-feat-steps { padding-left:1rem; margin:0; }
+  .htu-feat:target { border-color:var(--club-ink); box-shadow:0 0 0 3px var(--club-soft); }
+  .htu-feat.off { background:transparent; border-style:dashed; }
+  .htu-feat.off .htu-feat-icon, .htu-feat.off .htu-feat-steps { opacity:.55; }
+  .htu-feat-head { display:flex; align-items:center; gap:.65rem; }
+  .htu-feat-icon { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1.1rem; flex-shrink:0; background:var(--club-soft); color:var(--club-ink); }
+  .htu-feat-name { font-weight:700; font-size:.92rem; color:var(--uc-gray-800); }
+  .htu-feat-desc { font-size:.82rem; color:var(--ink-2); line-height:1.45; }
+  .htu-feat-steps { padding-left:1.1rem; margin:0; }
   .htu-feat-steps li { font-size:.8rem; color:var(--uc-gray-600); margin-bottom:.25rem; }
+  .htu-feat-steps li.coach::marker { color:var(--uc-green); }
+  .htu-sub { font-size:.68rem; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--ink-3); margin-top:.25rem; }
+  .htu-badge { font-size:.66rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; border-radius:50px; padding:.12rem .5rem; }
+  .htu-badge.coach { background:var(--ok-soft); color:var(--uc-green); }
+  .htu-badge.off { background:var(--uc-gray-100); color:var(--ink-3); }
+  .htu-feat .btn { border-radius:7px; font-size:.79rem; width:fit-content; margin-top:auto; }
 
   /* ─── Info cards ───────────────────────────────────────── */
   .htu-card {
     background:var(--uc-card-bg); border:1px solid var(--uc-card-border); border-radius:var(--uc-radius);
     padding:1.5rem; box-shadow:var(--uc-shadow-sm); margin-bottom:1.25rem;
   }
+  .htu-card h2 { font-size:1.05rem; font-weight:700; margin:0 0 .35rem; }
+  .htu-card > p { font-size:.85rem; color:var(--ink-2); }
+  .htu-start { display:grid; grid-template-columns:1.3fr 1fr; gap:1.5rem; align-items:start; }
+  .htu-can { list-style:none; padding:0; margin:.5rem 0 0; }
+  .htu-can li { padding:.3rem 0; color:var(--ink-2); font-size:.86rem; display:flex; gap:.5rem; }
+  .htu-can li i { color:var(--club-ink); }
+  .ob-bar { height:6px; border-radius:99px; background:var(--rule); overflow:hidden; margin:.35rem 0 .9rem; }
+  .ob-bar > i { display:block; height:100%; background:var(--club-ink); border-radius:99px; }
+  .htu-roles { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:.75rem; margin-top:.75rem; }
+  .htu-role-card { border:1px solid var(--rule); border-radius:10px; padding:.8rem .95rem; }
+  .htu-role-card b { font-size:.86rem; color:var(--ink); }
+  .htu-role-card.me { border-color:var(--club-ink); background:var(--club-soft); }
+  .htu-role-card ul { padding-left:1rem; margin:.3rem 0 0; }
+  .htu-role-card li { font-size:.78rem; color:var(--ink-2); }
+  details.htu-details summary { cursor:pointer; font-weight:700; font-size:.9rem; color:var(--ink); }
   .htu-tip {
     border-radius:9px; padding:.875rem 1.125rem; font-size:.83rem; line-height:1.55;
-    display:flex; gap:.75rem; align-items:flex-start;
+    display:flex; gap:.75rem; align-items:flex-start; background:var(--club-soft); color:var(--ink); margin-top:.75rem;
   }
-  .htu-tip.coach  { background:var(--ok-soft); color:var(--ink); }
-  .htu-tip.player { background:var(--club-soft); color:var(--ink); }
-  .htu-tip.admin  { background:var(--club-soft); color:var(--ink); }
-  .htu-tip-icon   { font-size:1.1rem; flex-shrink:0; margin-top:.1rem; }
+  .htu-tip-icon { font-size:1.1rem; flex-shrink:0; margin-top:.1rem; }
 
-  /* ─── Role badge ───────────────────────────────────────── */
-  .htu-role {
-    display:inline-flex; align-items:center; gap:.35rem;
-    border-radius:50px; padding:.2rem .7rem; font-size:.74rem; font-weight:700;
-  }
-  .htu-role.coach  { background:var(--ok-soft); color:var(--uc-green); }
-  .htu-role.player { background:var(--club-soft); color:var(--uc-blue); }
-  .htu-role.admin  { background:var(--club-soft); color:var(--uc-purple); }
+  /* ─── Make it yours ────────────────────────────────────── */
+  .htu-mine { display:grid; grid-template-columns:1fr 1fr; gap:1.25rem; }
+  .htu-mine-list { list-style:none; padding:0; margin:.5rem 0 0; }
+  .htu-mine-item { display:grid; grid-template-columns:34px 1fr auto; gap:.75rem; align-items:center; padding:.7rem 0; border-top:1px solid var(--rule); }
+  .htu-mine-item:first-child { border-top:0; }
+  .htu-mine-item > i { width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:var(--club-soft); color:var(--club-ink); }
+  .htu-mine-item b { display:block; font-size:.88rem; color:var(--ink); }
+  .htu-mine-item span { font-size:.8rem; color:var(--ink-2); line-height:1.4; }
+  .htu-mine-item a, .htu-mine-item button { font-size:.8rem; font-weight:700; white-space:nowrap; }
+
+  .htu-empty { display:none; text-align:center; color:var(--ink-3); padding:2rem 0; }
 
   /* ─── Responsive ───────────────────────────────────────── */
+  @media(max-width:860px) { .htu-start, .htu-mine { grid-template-columns:1fr; } }
   @media(max-width:640px) {
     .htu-hero { padding:1.5rem 1.25rem; }
     .htu-feat-grid { grid-template-columns:1fr; }
@@ -94,608 +113,323 @@
 {% endblock %}
 
 {% block content %}
-{# Feature settings shortcut — same logic as index.html #}
-{% set s = current_team.settings if (current_team and current_team.settings) else none %}
-{% set show_season_plan = s and s.season_plan_enabled and season_plan_nav() %}
-{% set show_training = not s or s.sessions_enabled or s.fitness_enabled or s.drills_enabled or show_season_plan %}
-{% set show_strategy = not s or s.playbook_enabled or s.scouting_enabled %}
-{% set show_analysis = not s or s.stats_enabled    or s.clip_enabled %}
-{% set show_theory   = not s or s.theory_enabled %}
-{% set show_gameday  = not s or s.gameday_enabled %}
+{% set logged_in = current_user.is_authenticated %}
+{% set coach = logged_in and current_user.is_coach %}
+{% set me_player = current_user.player if logged_in else none %}
 
 {# ══════ HERO ════════════════════════════════════════════ #}
 <div class="htu-hero">
   <div class="htu-hero-inner">
-    <p style="font-size:.72rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;opacity:.65;margin-bottom:.3rem">
-      Help &amp; Onboarding
-    </p>
-    <h1 style="font-size:1.75rem;font-weight:700;letter-spacing:-.02em;margin-bottom:.3rem">How to Use Ultimate Coach</h1>
-    <p style="opacity:.8;margin:0;font-size:.95rem">
-      {% if current_team %}
-        Guides and quick-start steps for {{ current_team.name }} — only the features your team has enabled are shown.
-      {% else %}
-        A complete guide to getting the most out of Ultimate Coach.
+    <p class="htu-kicker">Help &amp; guide</p>
+    <h1>How to Use Ultimate Coach</h1>
+    <p>
+      Ultimate Coach runs your ultimate team in one place: plan training, teach your plays,
+      record games from the sideline and see the numbers, all in your club's colours.
+      {% if team %}
+        {% if coach %}This guide shows what {{ team.name }} uses, plus the features you could turn on.
+        {% else %}This guide shows the parts {{ team.name }} uses.{% endif %}
       {% endif %}
     </p>
+    <div class="htu-search">
+      <i class="bi bi-search"></i>
+      <input type="search" id="htu-search" placeholder="Search the guide, e.g. RSVP, colours, video" aria-label="Search the guide">
+    </div>
   </div>
 </div>
 
-{# ══════ QUICK NAV ═══════════════════════════════════════ #}
-<div class="htu-quicknav">
-  <a href="#getting-started" class="htu-qn-pill"><i class="bi bi-rocket-takeoff-fill"></i> Getting Started</a>
-  <a href="#organisation"   class="htu-qn-pill"><i class="bi bi-people-fill"></i> Club &amp; Roster</a>
-  {% if show_training %}
-  <a href="#training"  class="htu-qn-pill"><i class="bi bi-lightning-charge-fill"></i> Training</a>
-  {% endif %}
-  {% if show_strategy %}
-  <a href="#strategy"  class="htu-qn-pill"><i class="bi bi-lightbulb-fill"></i> Strategy</a>
-  {% endif %}
-  {% if show_analysis %}
-  <a href="#analysis"  class="htu-qn-pill"><i class="bi bi-graph-up"></i> Analysis</a>
-  {% endif %}
-  {% if show_theory %}
-  <a href="#theory"    class="htu-qn-pill"><i class="bi bi-mortarboard-fill"></i> Theory</a>
-  {% endif %}
-  {% if show_gameday %}
-  <a href="#gameday"   class="htu-qn-pill"><i class="bi bi-controller"></i> Game Day</a>
-  {% endif %}
+{# ══════ WHAT YOU CAN DO (outcome tiles, also the quick nav) ═════ #}
+<div class="htu-tiles js-hide-on-search">
+  <a href="#getting-started" class="htu-tile">
+    <i class="bi bi-rocket-takeoff-fill"></i><b>Getting started</b>
+    <span>{% if logged_in %}Your role, your checklist and who can do what.{% else %}Who it's for and how to get your team on.{% endif %}</span>
+  </a>
+  {% for section, items in guide %}
+  <a href="#{{ section.key }}" class="htu-tile">
+    <i class="bi {{ section.icon }}"></i><b>{{ section.title }}</b>
+    <span>{{ section.pitch }}</span>
+    <small>{{ items|map('first')|map(attribute='title')|join(' · ') }}</small>
+  </a>
+  {% endfor %}
+  <a href="#make-it-yours" class="htu-tile">
+    <i class="bi bi-palette-fill"></i><b>Make it yours</b>
+    <span>{% if coach %}Your team's colours, features and notifications, and{% else %}Calendar sync, emails, dark mode and{% endif %} your own settings.</span>
+  </a>
 </div>
 
-
 {# ══════ GETTING STARTED ════════════════════════════════ #}
-<section id="getting-started">
+<section id="getting-started" class="js-hide-on-search">
 <div class="uc-section" style="margin-top:.25rem">
   <span class="uc-section-text">Getting Started</span>
   <span class="uc-section-line"></span>
 </div>
 
-{% if current_user.is_authenticated and not current_user.is_guest %}
 <div class="htu-card">
-  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+  {% if logged_in and role %}
+  <div class="htu-start">
     <div>
-      <div style="font-weight:700;font-size:.9rem;color:var(--uc-gray-800)">Your personal checklist</div>
-      <div style="font-size:.83rem;color:var(--uc-gray-600)">Steps for your role that tick themselves off as you go.</div>
+      <h2>You're {{ 'an' if role.name[0] in 'AEIOU' else 'a' }} {{ role.name|lower }}{% if team %} on {{ team.name }}{% endif %}</h2>
+      <p style="font-size:.86rem;color:var(--ink-2);margin:0">{{ role.intro }}</p>
+      <ul class="htu-can">
+        {% for line in role.can %}<li><i class="bi bi-check2"></i>{{ line }}</li>{% endfor %}
+      </ul>
     </div>
-    <a href="{{ url_for('onboarding.welcome') }}" class="btn btn-sm btn-primary" style="border-radius:7px;font-size:.8rem">
-      <i class="bi bi-flag me-1"></i>Getting started
-    </a>
+    <div>
+      {% if checklist %}
+      <div style="font-weight:700;font-size:.9rem;color:var(--ink)">Your getting-started checklist</div>
+      <div style="font-size:.82rem;color:var(--ink-2)">{{ checklist.done }} of {{ checklist.total }} done. Steps tick themselves off as you go.</div>
+      <div class="ob-bar" role="progressbar" aria-valuenow="{{ checklist.percent }}" aria-valuemin="0" aria-valuemax="100"
+           aria-label="Getting started progress"><i style="width:{{ checklist.percent }}%"></i></div>
+      <a href="{{ url_for('onboarding.welcome') }}" class="btn btn-sm btn-primary" style="border-radius:7px;font-size:.8rem">
+        <i class="bi bi-list-check me-1"></i>{{ 'Look at your checklist' if checklist.complete else 'Carry on with your checklist' }}
+      </a>
+      {% else %}
+      <div style="font-size:.85rem;color:var(--ink-2)">There's nothing to set up for your account. Have a look round the sections below.</div>
+      {% endif %}
+    </div>
   </div>
-</div>
-{% endif %}
+  {% elif logged_in %}
+  <h2>Have a look round</h2>
+  <p class="mb-0">You're looking at a read-only demo. Everything below is open to browse; nothing you do is saved.</p>
+  {% else %}
+  <h2>Who it's for</h2>
+  <p>Each person on the team gets their own login, and sees the parts that matter to their role.</p>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{{ url_for('auth.register') }}" class="btn btn-sm btn-primary" style="border-radius:7px">Get your team started</a>
+    <a href="{{ url_for('auth.login') }}" class="btn btn-sm btn-outline-secondary" style="border-radius:7px">Log in</a>
+  </div>
+  {% endif %}
 
-<div class="htu-card">
-  <div style="font-weight:700;font-size:.9rem;color:var(--uc-gray-800);margin-bottom:.5rem">Who can do what</div>
-  <div class="htu-steps">
-    <div class="htu-step"><div><div class="htu-step-title">Captain &amp; Team Admin</div>
-      <div class="htu-step-desc">Run everything for their own team: roster, users (coaches and other roles below them), colours, features, Discord, sessions, tournaments, selection and stats. They can't see or change other teams.</div></div></div>
-    <div class="htu-step"><div><div class="htu-step-title">Coach</div>
-      <div class="htu-step-desc">Plan sessions and drills, manage the roster and players' accounts, add tournaments and games, pick squads and record stats.</div></div></div>
-    <div class="htu-step"><div><div class="htu-step-title">Stat Taker</div>
-      <div class="htu-step-desc">Record stats on game day and view the team's numbers.</div></div></div>
-    <div class="htu-step"><div><div class="htu-step-title">Player</div>
-      <div class="htu-step-desc">RSVP, see their stats, learn the playbook and track fitness goals.</div></div></div>
-    <div class="htu-step"><div><div class="htu-step-title">Superadmin</div>
-      <div class="htu-step-desc">Site owner. Creates and manages every team, controls team sign-up and site-wide backups.</div></div></div>
-  </div>
-</div>
+  {% if logged_in %}
+  <details class="htu-details mt-3">
+    <summary>Who can do what</summary>
+  {% endif %}
+    <div class="htu-roles">
+      {% for key, info in roles.items() %}
+      <div class="htu-role-card{% if logged_in and current_user.role == key %} me{% endif %}">
+        <b>{{ info.name }}</b>{% if logged_in and current_user.role == key %} <span class="htu-badge coach">You</span>{% endif %}
+        <ul>{% for line in info.can %}<li>{{ line }}</li>{% endfor %}</ul>
+      </div>
+      {% endfor %}
+      <div class="htu-role-card">
+        <b>Site owner</b>
+        <ul><li>Creates and manages every team</li><li>Controls team sign-up and site-wide backups</li></ul>
+      </div>
+    </div>
+  {% if logged_in %}
+  </details>
+  {% endif %}
 
-{% if current_user.is_authenticated and current_user.is_coach %}
-{# ── ADMIN / COACH ONBOARDING ─── #}
-<div class="htu-card">
-  <div class="d-flex align-items-center gap-2 mb-1">
-    <span class="htu-role admin"><i class="bi bi-shield-fill"></i> Captain / Admin / Coach</span>
-    <span style="font-weight:700;font-size:.9rem;color:var(--uc-gray-800)">Setting up a new team</span>
-  </div>
-  <p style="font-size:.83rem;color:var(--uc-gray-600);margin-bottom:1rem">
-    Follow these steps to go from a brand-new team to a fully set-up squad in minutes.
-  </p>
-  <div class="htu-steps">
-    <div class="htu-step">
-      <div class="htu-step-num">1</div>
-      <div>
-        <div class="htu-step-title">Create the team <span style="color:var(--uc-gray-400);font-weight:400">(superadmin only)</span></div>
-        <div class="htu-step-desc">In the top-right user menu → Manage Teams → Add Team. Give it a name and division.</div>
-        <a href="{{ url_for('team_organization.index') }}" class="btn btn-sm btn-outline-primary" style="border-radius:7px;font-size:.8rem">Manage Teams</a>
-      </div>
-    </div>
-    <div class="htu-step">
-      <div class="htu-step-num">2</div>
-      <div>
-        <div class="htu-step-title">Import your roster</div>
-        <div class="htu-step-desc">
-          Use <strong>Bulk Import</strong> to paste a spreadsheet of players in one go — far faster than adding one by one.
-          The CSV format is: <code>name, jersey, position, email, gender_match, line_preference</code>.<br>
-          Tick <em>"Auto-create login accounts"</em> to generate usernames and temporary passwords for all players with email addresses in the same step.
-        </div>
-        <div class="d-flex gap-2 flex-wrap">
-          <a href="{{ url_for('team.bulk_import') }}" class="btn btn-sm btn-primary" style="border-radius:7px;font-size:.8rem">
-            <i class="bi bi-upload me-1"></i>Bulk Import Players
-          </a>
-          <a href="{{ url_for('team.add_player') }}" class="btn btn-sm btn-outline-secondary" style="border-radius:7px;font-size:.8rem">Add Single Player</a>
-        </div>
-      </div>
-    </div>
-    <div class="htu-step">
-      <div class="htu-step-num">3</div>
-      <div>
-        <div class="htu-step-title">Share login credentials with players</div>
-        <div class="htu-step-desc">
-          If you auto-created accounts in step 2, the results page shows a one-time credentials table — copy it
-          and paste into a team chat or email. Players log in and can change their password from their profile.
-          If you didn't create accounts yet, go to <strong>User Management</strong> to add or link accounts individually.
-        </div>
-        <a href="{{ url_for('auth.users') }}" class="btn btn-sm btn-outline-primary" style="border-radius:7px;font-size:.8rem">User Management</a>
-      </div>
-    </div>
-    <div class="htu-step">
-      <div class="htu-step-num">4</div>
-      <div>
-        <div class="htu-step-title">Choose which features to show</div>
-        <div class="htu-step-desc">
-          Toggle features on/off for your team so players only see what's relevant. Access this from
-          the user menu → Feature Settings at any time.
-        </div>
-        <a href="{{ url_for('team.feature_settings') }}" class="btn btn-sm btn-outline-primary" style="border-radius:7px;font-size:.8rem">
-          <i class="bi bi-sliders me-1"></i>Feature Settings
-        </a>
-      </div>
-    </div>
-    <div class="htu-step">
-      <div class="htu-step-num">5</div>
-      <div>
-        <div class="htu-step-title">Add your first game or tournament</div>
-        <div class="htu-step-desc">
-          Once the roster is set, create an upcoming tournament or game. Players can RSVP, and you can
-          start recording points and stats from game day.
-        </div>
-        <div class="d-flex gap-2 flex-wrap">
-          <a href="{{ url_for('tournament.index') }}" class="btn btn-sm btn-outline-primary" style="border-radius:7px;font-size:.8rem">Tournaments</a>
-          <a href="{{ url_for('game.index') }}" class="btn btn-sm btn-outline-primary" style="border-radius:7px;font-size:.8rem">Games</a>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="htu-tip admin mt-3">
+  {% if logged_in and current_user.is_superadmin %}
+  <div class="htu-tip">
     <i class="bi bi-shield-check htu-tip-icon"></i>
-    <div>As a superadmin you can switch between teams from the user menu → Switch Team. The team badge in the top-right shows which team you're currently managing — all data you add or view belongs to that team.</div>
+    <div>As the site owner you can switch between teams from the user menu → Switch Team. The team badge in the top-right shows which team you're managing; everything you add or view belongs to that team.</div>
   </div>
-
-  <div class="htu-tip mt-3">
+  {% endif %}
+  {% if logged_in %}
+  <div class="htu-tip">
     <i class="bi bi-people htu-tip-icon"></i>
-    <div>On more than one team? Keep one login: open the other team's join link or invite while logged in and it's added to your account, with its own role and player profile. Switch between your teams from the user menu → Switch Team. A coach on one of your teams can change your role and player there, but not your username, email or password.</div>
+    <div>On more than one team? Keep one login: open the other team's join link or invite while logged in and it's added to your account, with its own role and player profile. Switch between your teams from the user menu → Switch Team.</div>
   </div>
+  {% endif %}
 </div>
-
-{% else %}
-{# ── PLAYER ONBOARDING ─── #}
-<div class="htu-card">
-  <div class="d-flex align-items-center gap-2 mb-1">
-    <span class="htu-role player"><i class="bi bi-person-fill"></i> Player</span>
-    <span style="font-weight:700;font-size:.9rem;color:var(--uc-gray-800)">Getting started as a player</span>
-  </div>
-  <div class="htu-steps">
-    <div class="htu-step">
-      <div class="htu-step-num">1</div>
-      <div>
-        <div class="htu-step-title">Link your player profile</div>
-        <div class="htu-step-desc">Your coach will have added you to the roster. Go to your profile to link your account to your player record so your stats and attendance appear on your dashboard.</div>
-        <a href="{{ url_for('auth.profile') }}" class="btn btn-sm btn-outline-primary" style="border-radius:7px;font-size:.8rem">My Profile</a>
-      </div>
-    </div>
-    <div class="htu-step">
-      <div class="htu-step-num">2</div>
-      <div>
-        <div class="htu-step-title">Check upcoming events</div>
-        <div class="htu-step-desc">Your home page shows upcoming games, practices and tournaments. RSVP to let your coach know you're coming.</div>
-        <a href="{{ url_for('main.index') }}" class="btn btn-sm btn-outline-primary" style="border-radius:7px;font-size:.8rem">Home</a>
-      </div>
-    </div>
-    <div class="htu-step">
-      <div class="htu-step-num">3</div>
-      <div>
-        <div class="htu-step-title">Explore your stats and resources</div>
-        <div class="htu-step-desc">Use the navigation above to explore statistics, training resources, and any other features your coach has enabled for the team.</div>
-      </div>
-    </div>
-  </div>
-  <div class="htu-tip player mt-3">
-    <i class="bi bi-info-circle-fill htu-tip-icon"></i>
-    <div>The features available to you depend on what your coach has switched on. If you expect to see something that isn't there, ask your coach to enable it in Feature Settings.</div>
-  </div>
-</div>
-{% endif %}
 </section>
 
-
-{# ══════ ORGANISATION ═══════════════════════════════════ #}
-<section id="organisation">
+{# ══════ FEATURES, BY WHEN YOU USE THEM ═════════════════ #}
+{% for section, items in guide %}
+<section id="{{ section.key }}" class="js-search-group">
 <div class="uc-section">
-  <span class="uc-section-text">Club &amp; Organisation</span>
+  <span class="uc-section-text">{{ section.title }}</span>
   <span class="uc-section-line"></span>
 </div>
+<p class="htu-pitch">{{ section.pitch }}</p>
 <div class="htu-feat-grid">
-
-  <div class="htu-feat">
-    <div class="htu-feat-icon ic-indigo"><i class="bi bi-people-fill"></i></div>
-    <div class="htu-feat-name">Team Roster</div>
-    <div class="htu-feat-desc">Manage all player profiles, positions, and linked accounts.</div>
-    <ol class="htu-feat-steps">
-      <li>Go to Club → Team Roster</li>
-      <li>Add players individually or use <strong>Import Players</strong> for bulk upload</li>
-      <li>Click a player to view their profile and stats</li>
-    </ol>
-    <a href="{{ url_for('team.index') }}" class="btn btn-sm btn-outline-primary mt-auto" style="border-radius:7px;font-size:.79rem;width:fit-content">Open Roster</a>
-  </div>
-
-  <div class="htu-feat">
-    <div class="htu-feat-icon ic-blue"><i class="bi bi-controller"></i></div>
-    <div class="htu-feat-name">Games</div>
-    <div class="htu-feat-desc">Record results, add points, and review post-game stats.</div>
-    <ol class="htu-feat-steps">
-      <li>Create a game with date, opponent, and location</li>
-      <li>On game day use the Live Gameday tracker to record each point</li>
-      <li>View full stats and analysis after the game</li>
-    </ol>
-    <a href="{{ url_for('game.index') }}" class="btn btn-sm btn-outline-primary mt-auto" style="border-radius:7px;font-size:.79rem;width:fit-content">View Games</a>
-  </div>
-
-  <div class="htu-feat">
-    <div class="htu-feat-icon ic-amber"><i class="bi bi-trophy"></i></div>
-    <div class="htu-feat-name">Tournaments</div>
-    <div class="htu-feat-desc">One page per tournament: who's coming, the squad, the games and the stats.</div>
-    <ol class="htu-feat-steps">
-      <li>Create a tournament with dates, location and a reply-by date</li>
-      <li>Players answer I'm in / Maybe / Can't on its Overview</li>
-      <li>Coaches pick the squad on the Squad tab and set each game's line-up on Games</li>
-      <li>Stat takers find the tournament's Game Day numbers on its Stats tab</li>
-    </ol>
-    <a href="{{ url_for('tournament.index') }}" class="btn btn-sm btn-outline-primary mt-auto" style="border-radius:7px;font-size:.79rem;width:fit-content">View Tournaments</a>
-  </div>
-
-  {% if current_user.is_authenticated and current_user.is_coach %}
-  <div class="htu-feat">
-    <div class="htu-feat-icon ic-blue"><i class="bi bi-diagram-3"></i></div>
-    <div class="htu-feat-name">Roles</div>
-    <div class="htu-feat-desc">Your team's roles, like O-line initiation cutter, and who plays each one this season.</div>
-    <ol class="htu-feat-steps">
-      <li>Start from the suggested roles under Club → Roles, then rename and add your own</li>
-      <li>Add players to each role, first choice first; the star marks each player's main role</li>
-      <li>Watch for roles with nobody, only one player, or only one gender</li>
-      <li>Players say which roles they'd like on their profile; the playbook says what each role does in each play</li>
-    </ol>
-    <a href="{{ url_for('roles.index') }}" class="btn btn-sm btn-outline-primary mt-auto" style="border-radius:7px;font-size:.79rem;width:fit-content">Roles</a>
-  </div>
-  {% endif %}
-
-  {% if current_user.is_authenticated and current_user.is_coach %}
-  <div class="htu-feat">
-    <div class="htu-feat-icon ic-purple"><i class="bi bi-layers"></i></div>
-    <div class="htu-feat-name">Seasons &amp; Squads</div>
-    <div class="htu-feat-desc">Start a new season without losing anything; every page shows the season you pick.</div>
-    <ol class="htu-feat-steps">
-      <li>Pick a season (or All time) from the season menu at the top</li>
-      <li>Start a new season from Seasons &amp; squads: last season's roster carries over</li>
-      <li>Add squads (1s, 2s) so sessions, tournaments and stats can be split by squad</li>
-    </ol>
-    <a href="{{ url_for('seasons.index') }}" class="btn btn-sm btn-outline-primary mt-auto" style="border-radius:7px;font-size:.79rem;width:fit-content">Seasons &amp; Squads</a>
-  </div>
-  {% endif %}
-
-  <div class="htu-feat">
-    <div class="htu-feat-icon ic-teal"><i class="bi bi-calendar3"></i></div>
-    <div class="htu-feat-name">Team Calendar</div>
-    <div class="htu-feat-desc">See all games, practices and events in one calendar view.</div>
-    <ol class="htu-feat-steps">
-      <li>Browse upcoming events by month</li>
-      <li>Click any event for details and RSVP options</li>
-      <li>Subscribe from Google, Apple or Outlook calendar so your sessions and tournaments show on your phone</li>
-    </ol>
-    <a href="{{ url_for('calendar.index') }}" class="btn btn-sm btn-outline-primary mt-auto" style="border-radius:7px;font-size:.79rem;width:fit-content">Open Calendar</a>
-  </div>
-
-</div>
-</section>
-
-
-{# ══════ TRAINING ════════════════════════════════════════ #}
-{% if show_training %}
-<section id="training">
-<div class="uc-section">
-  <span class="uc-section-text">Training</span>
-  <span class="uc-section-line"></span>
-</div>
-<div class="htu-feat-grid">
-
-  {% if not s or s.sessions_enabled %}
-  <div class="htu-feat">
-    <div class="htu-feat-icon ic-green"><i class="bi bi-calendar-check-fill"></i></div>
-    <div class="htu-feat-name">Session Plans</div>
-    <div class="htu-feat-desc">Regular training dates, who's coming, plans and attendance.</div>
-    <ol class="htu-feat-steps">
-      <li>Coaches set up a Training Schedule (e.g. Saturdays for everyone, Wednesdays for the 1s) and the dates appear</li>
-      <li>Players answer under My Availability, for one date or as their usual</li>
-      <li>Who's Coming shows everyone's answers at once; Maybes get one reminder</li>
-      <li>Build the plan from the library's drills, then take the register from the answers</li>
-    </ol>
-    <a href="{{ url_for('session.index') }}" class="btn btn-sm btn-outline-primary mt-auto" style="border-radius:7px;font-size:.79rem;width:fit-content">Session Plans</a>
-  </div>
-  {% endif %}
-
-  {% if show_season_plan %}
-  <div class="htu-feat">
-    <div class="htu-feat-icon ic-green"><i class="bi bi-calendar-range-fill"></i></div>
-    <div class="htu-feat-name">Season Plan</div>
-    <div class="htu-feat-desc">The season's phases, every week's joint, 1s and 2s themes, and the full session notes.</div>
-    <ol class="htu-feat-steps">
-      <li>Open the overview to see this week and what's coming up</li>
-      <li>Filter the week list by phase or squad</li>
-      <li>Open a week for its full session notes</li>
-      <li>Open Classroom for each off-pitch session's prep, join link, recording and summary</li>
-      {% if current_user.is_coach %}<li>Choose what players can see under Player access</li>{% endif %}
-    </ol>
-    <a href="{{ url_for('season_plan.index') }}" class="btn btn-sm btn-outline-primary mt-auto" style="border-radius:7px;font-size:.79rem;width:fit-content">Season Plan</a>
-  </div>
-  {% endif %}
-
-  {% if not s or s.drills_enabled %}
-  <div class="htu-feat">
-    <div class="htu-feat-icon ic-green"><i class="bi bi-clipboard2-check"></i></div>
-    <div class="htu-feat-name">Drill Library</div>
-    <div class="htu-feat-desc">Store and reuse drills across sessions — add animations or diagrams.</div>
-    <ol class="htu-feat-steps">
-      <li>Add a drill with description, category, and diagram</li>
-      <li>Draw it in stages: press <em>Next stage</em> and players move to the ends of their arrows; the drill page plays the stages as an animation</li>
-      <li>Attach drills to session plans</li>
-      <li>Browse the library to find drills by type</li>
-    </ol>
-    <a href="{{ url_for('session.drills') }}" class="btn btn-sm btn-outline-primary mt-auto" style="border-radius:7px;font-size:.79rem;width:fit-content">Drill Library</a>
-  </div>
-  {% endif %}
-
-  {% if programmes_nav() %}
-  <div class="htu-feat">
-    <div class="htu-feat-icon ic-green"><i class="bi bi-journal-check"></i></div>
-    <div class="htu-feat-name">Programmes</div>
-    <div class="htu-feat-desc">Off-season and gym programmes, week by week, with each player's log.</div>
-    <ol class="htu-feat-steps">
-      <li>Open a programme to see this week and what's next</li>
-      <li>Log each session as you do it, from your phone</li>
-      <li>Coaches build programmes, publish new versions, and see who's keeping up on the dashboard</li>
-    </ol>
-    <a href="{{ url_for('programmes.index') }}" class="btn btn-sm btn-outline-primary mt-auto" style="border-radius:7px;font-size:.79rem;width:fit-content">Programmes</a>
-  </div>
-  {% endif %}
-
-  {% if current_user.is_authenticated and (current_user.is_coach or current_user.player) %}
-  <div class="htu-feat">
-    <div class="htu-feat-icon ic-blue"><i class="bi bi-chat-square-heart-fill"></i></div>
-    <div class="htu-feat-name">Player Feedback</div>
-    <div class="htu-feat-desc">Coaches' notes on each player. They stay with the coaches until a coach shares them.</div>
-    <ol class="htu-feat-steps">
-      <li>Coaches write notes from a session (Quick Feedback), a game, a clip's Feedback tab or the player's page</li>
-      <li>Tick <em>Share with the player</em> for the ones they should read</li>
-      <li>Players read shared notes under Training → My Feedback; new ones show on the home page</li>
-    </ol>
-    <a href="{{ url_for('feedback.hub') if current_user.is_coach else url_for('feedback.mine') }}" class="btn btn-sm btn-outline-primary mt-auto" style="border-radius:7px;font-size:.79rem;width:fit-content">{{ 'Player Feedback' if current_user.is_coach else 'My Feedback' }}</a>
-  </div>
-  {% endif %}
-
-  {% if handbook_nav() %}
-  <div class="htu-feat">
-    <div class="htu-feat-icon ic-amber"><i class="bi bi-book"></i></div>
-    <div class="htu-feat-name">Leadership Handbook</div>
-    <div class="htu-feat-desc">How we lead, coach and build the team, for captains and coaches.</div>
-    <ol class="htu-feat-steps">
-      <li>Read it section by section, or search it</li>
-      <li>Edit a page when the way you do things changes</li>
-    </ol>
-    <a href="{{ url_for('handbook.index') }}" class="btn btn-sm btn-outline-primary mt-auto" style="border-radius:7px;font-size:.79rem;width:fit-content">Handbook</a>
-  </div>
-  {% endif %}
-
-  {% if not s or s.fitness_enabled %}
-  <div class="htu-feat">
-    <div class="htu-feat-icon ic-red"><i class="bi bi-heart-pulse"></i></div>
-    <div class="htu-feat-name">Fitness</div>
-    <div class="htu-feat-desc">Four ultimate fitness tests, everyone's PBs and an opt-in leaderboard.</div>
-    <ol class="htu-feat-steps">
-      <li>Run a test day: 10 m sprint, pro agility, broad jump and the Yo-Yo test</li>
-      <li>Players log their own results and set targets</li>
-      <li>Players choose whether to appear on the leaderboard</li>
-    </ol>
-    <a href="{{ url_for('fitness.index') }}" class="btn btn-sm btn-outline-primary mt-auto" style="border-radius:7px;font-size:.79rem;width:fit-content">Fitness</a>
-  </div>
-  {% endif %}
-
-</div>
-</section>
-{% endif %}
-
-
-{# ══════ STRATEGY ════════════════════════════════════════ #}
-{% if show_strategy %}
-<section id="strategy">
-<div class="uc-section">
-  <span class="uc-section-text">Strategy</span>
-  <span class="uc-section-line"></span>
-</div>
-<div class="htu-feat-grid">
-
-  {% if not s or s.playbook_enabled %}
-  <div class="htu-feat">
-    <div class="htu-feat-icon ic-purple"><i class="bi bi-book-fill"></i></div>
-    <div class="htu-feat-name">Playbook</div>
-    <div class="htu-feat-desc">Your offence and defence plays, drawn on the field in stages so players can watch them move.</div>
-    <ol class="htu-feat-steps">
-      <li><em>New play</em> → <em>Draw a Play</em> opens the drill editor: place players, draw cuts and throws, add a stage for each step; right-click or long-press a player to give them a team role</li>
-      <li><em>Edit details</em> adds the call, the hand signal, what each role does, and links to theory, drills and clips</li>
-      <li>Players see their own role first, pick a role to see just that path, fade or hide the defence, mark plays as learned and flick through the Game-day cards</li>
-      <li>Tap a play's picture in the list, a session or a card to watch it there; <em>Video</em> under the animation saves it to send in a chat</li>
-      <li>Moving plays over from Ultiplays: <em>New play</em> → <em>Add from Ultiplays</em> adds them as drafts to redraw</li>
-      <li>Coaches ask the team to learn a play by a date, see who has, and retire plays they stop using</li>
-      <li>Before a game, pick its plays on the game's <em>Call sheet</em>; in Game Day, choose the <em>Play called</em> each point, and <em>How our plays went</em> shows what's working</li>
-    </ol>
-    <a href="{{ url_for('playbook.index') }}" class="btn btn-sm btn-outline-primary mt-auto" style="border-radius:7px;font-size:.79rem;width:fit-content">Playbook</a>
-  </div>
-  {% endif %}
-
-  {% if not s or s.scouting_enabled %}
-  <div class="htu-feat">
-    <div class="htu-feat-icon ic-orange"><i class="bi bi-binoculars-fill"></i></div>
-    <div class="htu-feat-name">Scouting Reports</div>
-    <div class="htu-feat-desc">Build dossiers on upcoming opponents to help prepare your team.</div>
-    <ol class="htu-feat-steps">
-      <li>Create a scouting report linked to an upcoming game</li>
-      <li>Log their looks, key players and who marks them on the matchup board</li>
-      <li>Write the game plan and pick the plays to run against them; they become the Game-day cards for that game</li>
-      <li>Open the report's phone card on the sideline</li>
-    </ol>
-    <a href="{{ url_for('scouting.index') }}" class="btn btn-sm btn-outline-primary mt-auto" style="border-radius:7px;font-size:.79rem;width:fit-content">Scouting Reports</a>
-  </div>
-  {% endif %}
-
-</div>
-</section>
-{% endif %}
-
-
-{# ══════ ANALYSIS ════════════════════════════════════════ #}
-{% if show_analysis %}
-<section id="analysis">
-<div class="uc-section">
-  <span class="uc-section-text">Analysis</span>
-  <span class="uc-section-line"></span>
-</div>
-<div class="htu-feat-grid">
-
-  {% if not s or s.stats_enabled %}
-  <div class="htu-feat">
-    <div class="htu-feat-icon ic-indigo"><i class="bi bi-graph-up"></i></div>
-    <div class="htu-feat-name">Statistics</div>
-    <div class="htu-feat-desc">Deep-dive into player and team performance metrics, PER ratings, and heatmaps.</div>
-    <ol class="htu-feat-steps">
-      <li>Stats are built automatically as you record game points</li>
-      <li>Visit the Stats dashboard for team-wide metrics, for the season you've picked</li>
-      <li>Click any player to see their profile, where they turn it over and what to work on</li>
-      <li>Stat takers find the quick Game Day tallies under Stats → Game Day summary</li>
-    </ol>
-    <a href="{{ url_for('stats_dashboard.index') }}" class="btn btn-sm btn-outline-primary mt-auto" style="border-radius:7px;font-size:.79rem;width:fit-content">Stats Dashboard</a>
-  </div>
-  {% endif %}
-
-  {% if not s or s.clip_enabled %}
-  <div class="htu-feat">
-    <div class="htu-feat-icon ic-sky"><i class="bi bi-camera-video-fill"></i></div>
-    <div class="htu-feat-name">Clip Library</div>
-    <div class="htu-feat-desc">Upload and annotate video clips for review and coaching feedback.</div>
-    <ol class="htu-feat-steps">
-      <li>Add a clip from a YouTube or video link, with start and end times</li>
-      <li>Add time-stamped annotations and comments</li>
-      <li>Line clips up in a playlist and watch them back to back</li>
-      <li>Coaches leave a player a note about a clip from its Feedback tab</li>
-    </ol>
-    <a href="{{ url_for('clip.index') }}" class="btn btn-sm btn-outline-primary mt-auto" style="border-radius:7px;font-size:.79rem;width:fit-content">Clip Library</a>
-  </div>
-  {% endif %}
-
-</div>
-</section>
-{% endif %}
-
-
-{# ══════ THEORY ══════════════════════════════════════════ #}
-{% if show_theory %}
-<section id="theory">
-<div class="uc-section">
-  <span class="uc-section-text">Learning</span>
-  <span class="uc-section-line"></span>
-</div>
-<div class="htu-feat-grid">
-
-  {% if not s or s.theory_enabled %}
-  <div class="htu-feat">
-    <div class="htu-feat-icon ic-amber"><i class="bi bi-mortarboard-fill"></i></div>
-    <div class="htu-feat-name">Theory</div>
-    <div class="htu-feat-desc">The ideas behind how you play, written down so everyone learns the same game.</div>
-    <ol class="htu-feat-steps">
-      <li>Read it section by section with Previous / Next, or search it</li>
-      <li>Each topic links the drills that practise it and clips that show it</li>
-      <li>Coaches add sections and topics, written in Markdown</li>
-    </ol>
-    <a href="{{ url_for('theory.index') }}" class="btn btn-sm btn-outline-primary mt-auto" style="border-radius:7px;font-size:.79rem;width:fit-content">Theory</a>
-  </div>
-  {% endif %}
-
-</div>
-</section>
-{% endif %}
-
-
-{# ══════ GAME DAY ════════════════════════════════════════ #}
-{% if show_gameday %}
-<section id="gameday">
-<div class="uc-section">
-  <span class="uc-section-text">Game Day</span>
-  <span class="uc-section-line"></span>
-</div>
-<div class="htu-card">
-  <div class="d-flex align-items-center gap-2 mb-3">
-    <div class="htu-feat-icon ic-blue"><i class="bi bi-controller"></i></div>
-    <div>
-      <div class="htu-feat-name">Live Gameday Tracker</div>
-      <div class="htu-feat-desc mb-0">Record points in real time during a game, including lines, throws, and outcomes.</div>
-    </div>
-  </div>
-  <div class="htu-steps">
-    <div class="htu-step">
-      <div class="htu-step-num">1</div>
+  {% for feature, state in items %}
+  {% set show_coach_steps = coach or not logged_in %}
+  <div class="htu-feat js-searchable{% if state == 'off' %} off{% endif %}" id="{{ feature.key }}">
+    <div class="htu-feat-head">
+      <div class="htu-feat-icon"><i class="bi {{ feature.icon }}"></i></div>
       <div>
-        <div class="htu-step-title">Open the game</div>
-        <div class="htu-step-desc">Go to Club → Games, find the game you're about to play, and click "Start Gameday".</div>
+        <div class="htu-feat-name">{{ feature.title }}</div>
+        {% if state == 'off' %}<span class="htu-badge off">Off for {{ team.name if team else 'your team' }}</span>
+        {% elif feature.coach_only %}<span class="htu-badge coach">Coaches</span>{% endif %}
       </div>
     </div>
-    <div class="htu-step">
-      <div class="htu-step-num">2</div>
-      <div>
-        <div class="htu-step-title">Select your line</div>
-        <div class="htu-step-desc">Before each point, pick which 7 players are on the field. The system remembers frequent lines.</div>
-      </div>
-    </div>
-    <div class="htu-step">
-      <div class="htu-step-num">3</div>
-      <div>
-        <div class="htu-step-title">Record the point</div>
-        <div class="htu-step-desc">Log throws, catches, turnovers and the point outcome. Stats update immediately.</div>
-      </div>
-    </div>
-    <div class="htu-step">
-      <div class="htu-step-num">4</div>
-      <div>
-        <div class="htu-step-title">Review post-game</div>
-        <div class="htu-step-desc">After the game, the full stats dashboard is populated automatically. Share with the team from the Stats section.</div>
-      </div>
-    </div>
-  </div>
-  <div class="htu-tip coach mt-2">
-    <i class="bi bi-lightbulb-fill htu-tip-icon"></i>
-    <div>Assign a dedicated stat-taker role so a coach or manager can focus on recording while others coach. You can set roles in User Management.</div>
-  </div>
-</div>
-</section>
-{% endif %}
-
-
-{# ══════ FOOTER TIP ══════════════════════════════════════ #}
-<div class="htu-tip player mb-5 mt-3">
-  <i class="bi bi-question-circle-fill htu-tip-icon"></i>
-  <div>
-    <strong>Something not showing up?</strong>
-    Features are controlled by your team's Feature Settings. Coaches can enable or disable any feature from the user menu → Feature Settings.
-    {% if current_user.is_authenticated and current_user.is_coach %}
-    <a href="{{ url_for('team.feature_settings') }}" style="color:inherit;text-decoration:underline">Configure now →</a>
+    <div class="htu-feat-desc">{{ feature.summary }}</div>
+    {% if feature.steps or (show_coach_steps and feature.coach_steps) %}
+    <ol class="htu-feat-steps">
+      {% for step in feature.steps %}<li>{{ step }}</li>{% endfor %}
+      {% if coach %}{% for step in feature.coach_steps %}<li class="coach">{{ step }}</li>{% endfor %}{% endif %}
+    </ol>
+    {% if not logged_in and feature.coach_steps %}
+    <div class="htu-sub">Coaches can also</div>
+    <ol class="htu-feat-steps">{% for step in feature.coach_steps %}<li class="coach">{{ step }}</li>{% endfor %}</ol>
+    {% endif %}
+    {% endif %}
+    {% if state == 'off' %}
+    <a href="{{ url_for('team.feature_settings', _anchor='row-' ~ feature.flag) }}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-toggle-off me-1"></i>Turn on in Features
+    </a>
+    {% elif logged_in %}
+    <a href="{{ url_for(feature.coach_endpoint if coach and feature.coach_endpoint else feature.endpoint) }}" class="btn btn-sm btn-outline-primary">
+      {{ feature.coach_link_label if coach and feature.coach_link_label else feature.link_label }}
+    </a>
     {% endif %}
   </div>
+  {% endfor %}
 </div>
+</section>
+{% endfor %}
 
+{# ══════ MAKE IT YOURS ══════════════════════════════════ #}
+<section id="make-it-yours" class="js-search-group">
+<div class="uc-section">
+  <span class="uc-section-text">Make it yours</span>
+  <span class="uc-section-line"></span>
+</div>
+<p class="htu-pitch">
+  {% if coach %}Shape the site around how {{ team.name if team else 'your team' }} works, then set it up the way you like it.
+  {% elif logged_in %}Set the site up the way you like it. Your coaches choose the team's colours and which features are on.
+  {% else %}Every team picks its own colours and features, and everyone sets up their own account.{% endif %}
+</p>
+{% set ts = settings %}
+<div class="htu-mine">
+  {% if coach or not logged_in %}
+  <div class="htu-card">
+    <h2>For your team</h2>
+    <p class="mb-1">{% if logged_in %}Coaches, captains and team admins can change these.{% else %}Set by the team's coaches and captains.{% endif %}</p>
+    <ul class="htu-mine-list">
+      <li class="htu-mine-item js-searchable"><i class="bi bi-sliders"></i>
+        <div><b>Choose your features</b><span>Turn off what you don't use so the menus stay short, or start from a preset like Training team or Stats only.</span></div>
+        {% if logged_in %}<a href="{{ url_for('team.feature_settings') }}">Features</a>{% endif %}</li>
+      <li class="htu-mine-item js-searchable"><i class="bi bi-palette"></i>
+        <div><b>Colours &amp; crest</b><span>Your club colours and crest go on every page, so it feels like your club.</span></div>
+        {% if logged_in %}<a href="{{ url_for('team.colour_settings') }}">Colours</a>{% endif %}</li>
+      <li class="htu-mine-item js-searchable"><i class="bi bi-calendar-check"></i>
+        <div><b>Training privacy &amp; reminders</b><span>Whether players see who's coming, when plans become visible, and when Maybes get reminded.</span></div>
+        {% if logged_in %}<a href="{{ url_for('training.settings') }}">Sessions</a>{% endif %}</li>
+      <li class="htu-mine-item js-searchable"><i class="bi bi-calendar3"></i>
+        <div><b>Seasons &amp; squads</b><span>Start a new season and split sessions, tournaments and stats by squad.</span></div>
+        {% if logged_in %}<a href="{{ url_for('seasons.index') }}">Seasons</a>{% endif %}</li>
+      <li class="htu-mine-item js-searchable"><i class="bi bi-person-badge"></i>
+        <div><b>Members &amp; roles</b><span>Invite players with a join link, add coaches and stat takers, and set what each person can do.</span></div>
+        {% if logged_in %}<a href="{{ url_for('auth.users') }}">Members</a>{% endif %}</li>
+      {% if has_endpoint('discord.settings') and (not logged_in or current_user.is_admin) %}
+      <li class="htu-mine-item js-searchable"><i class="bi bi-discord"></i>
+        <div><b>Discord</b><span>Post training to your team's Discord with Yes / Maybe / No buttons, and choose which posts go out.</span></div>
+        {% if logged_in %}<a href="{{ url_for('discord.settings') }}">Discord</a>{% endif %}</li>
+      {% endif %}
+      {% if logged_in and ts and ts.season_plan_enabled %}
+      <li class="htu-mine-item js-searchable"><i class="bi bi-eye"></i>
+        <div><b>What players see of the season plan</b><span>Choose which parts of the plan players can open.</span></div>
+        <a href="{{ url_for('season_plan.access') }}">Player access</a></li>
+      {% endif %}
+    </ul>
+  </div>
+  {% endif %}
+
+  <div class="htu-card">
+    <h2>For you</h2>
+    <p class="mb-1">{% if logged_in %}Only you see these.{% else %}Everyone sets these up for themselves.{% endif %}</p>
+    <ul class="htu-mine-list">
+      <li class="htu-mine-item js-searchable"><i class="bi bi-moon-stars"></i>
+        <div><b>Dark mode</b><span>Easier on the eyes at night. The moon at the top of every page switches it.</span></div>
+        {% if logged_in %}<button type="button" class="btn btn-link p-0" id="htu-theme">Switch now</button>{% endif %}</li>
+      <li class="htu-mine-item js-searchable"><i class="bi bi-phone"></i>
+        <div><b>Calendar on your phone</b><span>Subscribe in Google, Apple or Outlook calendar and your sessions and tournaments appear there.</span></div>
+        {% if logged_in %}<a href="{{ url_for('calendar.index') }}">Calendar</a>{% endif %}</li>
+      <li class="htu-mine-item js-searchable"><i class="bi bi-envelope"></i>
+        <div><b>Emails</b><span>Add your email to reset your own password, and choose whether you get tournament emails.</span></div>
+        {% if logged_in %}<a href="{{ url_for('auth.account') }}">Account</a>{% endif %}</li>
+      <li class="htu-mine-item js-searchable"><i class="bi bi-shield-lock"></i>
+        <div><b>Two-step sign-in</b><span>Ask for a code from your phone as well as your password.</span></div>
+        {% if logged_in %}<a href="{{ url_for('auth.account') }}">Account</a>{% endif %}</li>
+      {% if not logged_in or not current_user.is_guest %}
+      <li class="htu-mine-item js-searchable"><i class="bi bi-person-check"></i>
+        <div><b>Your player profile</b><span>Link your login to your name on the roster so your stats, RSVPs and feedback are yours.</span></div>
+        {% if logged_in %}<a href="{{ url_for('team.player_detail', player_id=me_player.id) if me_player else url_for('auth.link_player') }}">{{ 'Your profile' if me_player else 'Link it' }}</a>{% endif %}</li>
+      {% endif %}
+      {% if not logged_in or (me_player and (not ts or ts.sessions_enabled)) %}
+      <li class="htu-mine-item js-searchable"><i class="bi bi-hand-thumbs-up"></i>
+        <div><b>Your usual availability</b><span>Say once which training days you normally make, and change single dates when you can't.</span></div>
+        {% if logged_in %}<a href="{{ url_for('training.availability') }}">My Availability</a>{% endif %}</li>
+      {% endif %}
+      {% if not logged_in or me_player %}
+      <li class="htu-mine-item js-searchable"><i class="bi bi-diagram-3"></i>
+        <div><b>Roles you'd like</b><span>Tell the coaches which roles you'd like to play, from your player page.</span></div>
+        {% if logged_in %}<a href="{{ url_for('team.player_detail', player_id=me_player.id, _anchor='roles') }}">Your roles</a>{% endif %}</li>
+      {% endif %}
+      {% if not logged_in or (not ts or ts.playbook_enabled) %}
+      <li class="htu-mine-item js-searchable"><i class="bi bi-book"></i>
+        <div><b>Your position in the playbook</b><span>Pick the role you usually play and every play shows your path first.</span></div>
+        {% if logged_in %}<a href="{{ url_for('playbook.position_view') }}">Playbook</a>{% endif %}</li>
+      {% endif %}
+      {% if not logged_in or (me_player and (not ts or ts.fitness_enabled)) %}
+      <li class="htu-mine-item js-searchable"><i class="bi bi-trophy"></i>
+        <div><b>Fitness leaderboard</b><span>Choose whether your results appear on the team leaderboard.</span></div>
+        {% if logged_in %}<a href="{{ url_for('fitness.index') }}">Fitness</a>{% endif %}</li>
+      {% endif %}
+      {% if not logged_in or (has_endpoint('discord.connect') and discord_ready() and ts and ts.discord_enabled) %}
+      <li class="htu-mine-item js-searchable"><i class="bi bi-discord"></i>
+        <div><b>Link your Discord</b><span>Answer with the buttons in your team's Discord and get reminders there.</span></div>
+        {% if logged_in %}<a href="{{ url_for('discord.connect') }}">Connect</a>{% endif %}</li>
+      {% endif %}
+    </ul>
+  </div>
+</div>
+</section>
+
+<div class="htu-empty" id="htu-empty">Nothing in the guide matches that. Try another word.</div>
+
+{# ══════ FOOTER TIP ══════════════════════════════════════ #}
+<div class="htu-tip js-hide-on-search" style="margin-top:1.5rem">
+  <i class="bi bi-question-circle htu-tip-icon"></i>
+  <div>
+    <strong>Something not showing up?</strong>
+    {% if coach %}
+    Each feature can be turned on or off for your team. <a href="{{ url_for('team.feature_settings') }}" style="color:inherit;text-decoration:underline">Choose your features →</a>
+    {% elif logged_in %}
+    Your coaches choose which features your team uses. If you expect to see something that isn't there, ask them to turn it on.
+    {% else %}
+    Each team chooses which features it uses, so you'll only see the ones your team has turned on.
+    {% endif %}
+    Every page also has a help button (<i class="bi bi-question-circle"></i>) at the top that opens its part of this guide.
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  // Search: show only the cards and settings that mention every word typed
+  var box = document.getElementById('htu-search');
+  var empty = document.getElementById('htu-empty');
+  function filter() {
+    var words = box.value.toLowerCase().split(/\s+/).filter(Boolean);
+    var any = false;
+    document.querySelectorAll('.js-search-group').forEach(function (group) {
+      var shown = 0;
+      group.querySelectorAll('.js-searchable').forEach(function (item) {
+        var text = item.textContent.toLowerCase();
+        var match = words.every(function (w) { return text.indexOf(w) !== -1; });
+        item.style.display = match ? '' : 'none';
+        if (match) shown++;
+      });
+      group.style.display = shown ? '' : 'none';
+      group.querySelectorAll('.htu-card').forEach(function (card) {
+        card.style.display = card.querySelector('.js-searchable:not([style*="none"])') ? '' : 'none';
+      });
+      if (shown) any = true;
+    });
+    document.querySelectorAll('.js-hide-on-search').forEach(function (el) {
+      el.style.display = words.length ? 'none' : '';
+    });
+    empty.style.display = any ? 'none' : 'block';
+  }
+  if (box) box.addEventListener('input', filter);
+
+  var theme = document.getElementById('htu-theme');
+  var toggle = document.getElementById('uc-theme-toggle');
+  if (theme && toggle) theme.addEventListener('click', function () { toggle.click(); });
+});
+</script>
 {% endblock %}

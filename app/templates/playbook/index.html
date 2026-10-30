@@ -181,6 +181,7 @@
     {% else %}
     <p class="mb-0">No plays here yet. Your coaches' plays will show up here.</p>
     {% endif %}
+    {% if not (q or tag or situation or core_only) %}{% with guide_key='playbook' %}{% include 'partials/guide_link.html' %}{% endwith %}{% endif %}
   </div>
   {% endif %}
 </div>

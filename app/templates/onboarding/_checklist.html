@@ -11,6 +11,7 @@
   .ob-item.done .ob-t { color: var(--ink-3); text-decoration: line-through; }
   .ob-d { color: var(--ink-2); font-size: .82rem; line-height: 1.45; margin-top: .1rem; }
   .ob-opt { font-size: .66rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); margin-left: .35rem; }
+  .ob-more { font-weight: 700; white-space: nowrap; }
   .ob-go { font-size: .8rem; font-weight: 700; text-decoration: none; white-space: nowrap; }
   .ob-wait { font-size: .78rem; color: var(--ink-3); white-space: nowrap; }
 </style>
@@ -24,7 +25,9 @@
     <span class="ob-ico">{% if item.done %}<i class="bi bi-check-lg"></i>{% else %}<i class="bi {{ step.icon }}"></i>{% endif %}</span>
     <div>
       <div class="ob-t">{{ step.title }}{% if step.optional %}<span class="ob-opt">Optional</span>{% endif %}</div>
-      {% if not item.done %}<div class="ob-d">{{ step.description }}</div>{% endif %}
+      {% if not item.done %}<div class="ob-d">{{ step.description }}
+        {%- set guide = help_for_endpoint(step.endpoint) %}
+        {%- if guide %} <a class="ob-more" href="{{ url_for('main.how_to_use', _anchor=guide.key) }}">How it works</a>{% endif %}</div>{% endif %}
     </div>
     {% if item.blocked %}
     <span class="ob-wait">Link your profile first</span>

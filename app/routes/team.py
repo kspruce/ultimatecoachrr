@@ -607,23 +607,18 @@ def feature_settings():
     settings = team.settings
 
     if request.method == 'POST':
-        settings.stats_enabled = bool(request.form.get('stats_enabled'))
-        settings.gameday_enabled = bool(request.form.get('gameday_enabled'))
-        settings.playbook_enabled = bool(request.form.get('playbook_enabled'))
-        settings.theory_enabled = bool(request.form.get('theory_enabled'))
-        settings.drills_enabled = bool(request.form.get('drills_enabled'))
-        settings.sessions_enabled = bool(request.form.get('sessions_enabled'))
-        settings.clip_enabled = bool(request.form.get('clip_enabled'))
-        settings.scouting_enabled = bool(request.form.get('scouting_enabled'))
-        settings.fitness_enabled = bool(request.form.get('fitness_enabled'))
-        settings.season_plan_enabled = bool(request.form.get('season_plan_enabled'))
-        settings.leadership_handbook_enabled = bool(request.form.get('leadership_handbook_enabled'))
+        from app.help_guide import FLAGS
+        for flag in FLAGS:
+            setattr(settings, flag, bool(request.form.get(flag)))
 
         db.session.commit()
         flash('Feature visibility updated.', 'success')
         return redirect(url_for('team.feature_settings'))
 
-    return render_template('team/feature_settings.html', team=team)
+    from app import help_guide
+    return render_template('team/feature_settings.html', team=team,
+                           groups=help_guide.FEATURE_GROUPS, labels=help_guide.FLAG_LABELS,
+                           features=help_guide.BY_FLAG, presets=help_guide.PRESETS)
 
 
 def _keeps_account_without(team_id):

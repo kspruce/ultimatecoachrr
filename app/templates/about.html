@@ -1,16 +1,89 @@
 {% extends "base.html" %}
 
-{% block content %}
-<h1>About Ultimate Coach</h1>
-<p>Ultimate Coach is a comprehensive web application designed to help Ultimate Frisbee coaches manage their teams, track game statistics, analyze performance, and plan training sessions.</p>
+{% block styles %}
+<style>
+  .ab-hero { background: var(--club); color: var(--on-club); border-radius: var(--uc-radius); padding: 2.25rem 2.5rem; margin-bottom: 1.75rem; }
+  .ab-hero .kicker { font-size: .72rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; opacity: .7; }
+  .ab-hero h1 { color: var(--on-club); font-size: clamp(1.7rem, 3.6vw, 2.4rem); margin: .4rem 0 .5rem; letter-spacing: -.02em; }
+  .ab-hero p { margin: 0 0 1.1rem; max-width: 680px; opacity: .9; }
+  .ab-hero .btn { border-radius: 8px; }
+  .ab-section { margin: 2rem 0 .75rem; }
+  .ab-section h2 { font-size: 1.25rem; margin: 0 0 .2rem; display: flex; align-items: center; gap: .5rem; }
+  .ab-section h2 i { color: var(--club-ink); }
+  .ab-section p { color: var(--ink-2); margin: 0; font-size: .92rem; }
+  .ab-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: .75rem; }
+  .ab-feat { background: var(--card); border: 1px solid var(--rule); border-radius: 12px; padding: 1rem 1.1rem; text-decoration: none; color: inherit; }
+  .ab-feat:hover { border-color: var(--club-ink); text-decoration: none; color: inherit; }
+  .ab-feat b { display: flex; align-items: center; gap: .45rem; font-size: .92rem; color: var(--ink); }
+  .ab-feat b i { color: var(--club-ink); }
+  .ab-feat span { display: block; font-size: .82rem; color: var(--ink-2); margin-top: .25rem; line-height: 1.45; }
+  .ab-tag { font-size: .64rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; border-radius: 50px; padding: .1rem .45rem; background: var(--ok-soft); color: var(--uc-green); }
+  .ab-cta { background: var(--card); border: 1px solid var(--rule); border-radius: var(--uc-radius); padding: 1.5rem; margin-top: 2rem; text-align: center; }
+  @media (max-width: 640px) { .ab-hero { padding: 1.5rem 1.25rem; } }
+</style>
+{% endblock %}
 
-<h2>Features</h2>
-<ul>
-    <li><strong>Team Management:</strong> Manage your roster, assign roles, and track player information.</li>
-    <li><strong>Game Management:</strong> Track game results, record detailed statistics, and analyze performance.</li>
-    <li><strong>Statistics:</strong> View comprehensive statistics and visualizations of team and player performance.</li>
-    <li><strong>Clip Library:</strong> Store and organize video clips of games and plays.</li>
-    <li><strong>Scouting Reports:</strong> Create and manage scouting reports for opposing teams.</li>
-    <li><strong>Session Plans:</strong> Create and manage practice plans and drills.</li>
-</ul>
+{% block content %}
+<div class="ab-hero">
+  <div class="kicker">About Ultimate Coach</div>
+  <h1>Everything your ultimate team runs on, in one place.</h1>
+  <p>Plan the season and every session, teach your plays with animations, record games from the sideline
+     and see the numbers straight away. Players RSVP, learn the playbook and follow their own stats.
+     It's all in your club's colours, and you only switch on the parts you need.</p>
+  {% if current_user.is_authenticated %}
+  <a href="{{ url_for('main.how_to_use') }}" class="btn btn-light">Open the How to Use guide</a>
+  {% else %}
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{{ url_for('auth.register') }}" class="btn btn-light">Get your team started</a>
+    <a href="{{ url_for('main.how_to_use') }}" class="btn btn-outline-light">How it works</a>
+  </div>
+  {% endif %}
+</div>
+
+{% for section, items in guide %}
+<div class="ab-section">
+  <h2><i class="bi {{ section.icon }}"></i>{{ section.title }}</h2>
+  <p>{{ section.pitch }}</p>
+</div>
+<div class="ab-grid">
+  {% for feature, state in items %}
+  <a class="ab-feat" href="{{ url_for('main.how_to_use', _anchor=feature.key) }}">
+    <b><i class="bi {{ feature.icon }}"></i>{{ feature.title }}{% if feature.coach_only %} <span class="ab-tag">Coaches</span>{% endif %}</b>
+    <span>{{ feature.summary }}</span>
+  </a>
+  {% endfor %}
+</div>
+{% endfor %}
+
+<div class="ab-section">
+  <h2><i class="bi bi-palette-fill"></i>Make it yours</h2>
+  <p>Each team sets the site up for how it works, and each person sets it up for themselves.</p>
+</div>
+<div class="ab-grid">
+  <div class="ab-feat"><b><i class="bi bi-palette"></i>Your colours and crest</b><span>Pick your club colours and the whole site follows.</span></div>
+  <div class="ab-feat"><b><i class="bi bi-sliders"></i>Only the features you use</b><span>Turn parts on or off, or start from a preset such as Training team or Stats only.</span></div>
+  <div class="ab-feat"><b><i class="bi bi-discord"></i>Discord and email</b><span>Training posts with RSVP buttons in your Discord, and tournament emails with game times.</span></div>
+  <div class="ab-feat"><b><i class="bi bi-phone"></i>On your phone</b><span>Subscribe to the team calendar, log fitness and watch plays from the sideline.</span></div>
+</div>
+
+<div class="ab-section">
+  <h2><i class="bi bi-people-fill"></i>Who it's for</h2>
+  <p>Everyone on the team gets their own login and sees the parts that matter to their role.</p>
+</div>
+<div class="ab-grid">
+  {% for key, info in roles.items() %}
+  <div class="ab-feat"><b>{{ info.name }}</b><span>{{ info.can|join(' · ') }}</span></div>
+  {% endfor %}
+</div>
+
+{% if not current_user.is_authenticated %}
+<div class="ab-cta">
+  <h2 style="font-size:1.2rem">Ready to try it?</h2>
+  <p style="color:var(--ink-2)">Set up your team in a few minutes, or log in if your coach has already added you.</p>
+  <div class="d-flex gap-2 justify-content-center flex-wrap">
+    <a href="{{ url_for('auth.register') }}" class="btn btn-primary">Get started</a>
+    <a href="{{ url_for('auth.login') }}" class="btn btn-outline-secondary">Log in</a>
+  </div>
+</div>
+{% endif %}
 {% endblock %}

@@ -243,6 +243,14 @@
         <i class="bi bi-moon-fill" id="uc-theme-icon"></i>
       </button>
 
+      {# Help: opens this page's card in the How to Use guide #}
+      {% set help_feature = help_for_endpoint(request.endpoint) %}
+      <a class="uc-theme-btn" href="{{ url_for('main.how_to_use', _anchor=help_feature.key if help_feature else none) }}"
+         title="{{ 'How ' ~ help_feature.title ~ ' works' if help_feature else 'How to use Ultimate Coach' }}"
+         aria-label="{{ 'How ' ~ help_feature.title ~ ' works' if help_feature else 'How to use Ultimate Coach' }}">
+        <i class="bi bi-question-circle"></i>
+      </a>
+
       {% if current_user.is_authenticated %}
 
       {# Season (and squad) switcher: pages show this season unless told otherwise #}
@@ -435,6 +443,8 @@
 
 <footer class="footer mt-5 py-4 text-center">
     <span>Ultimate Coach &copy; 2026</span>
+    <span class="mx-2">&middot;</span><a href="{{ url_for('main.about') }}">What it does</a>
+    <span class="mx-2">&middot;</span><a href="{{ url_for('main.how_to_use') }}">How to use</a>
     <span class="mx-2">&middot;</span><a href="{{ url_for('main.privacy') }}">Privacy</a>
 </footer>
 

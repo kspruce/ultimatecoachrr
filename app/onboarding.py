@@ -8,7 +8,7 @@ already done the work never have to tick anything. Steps that are only
 checklist; that's the only progress we store, in UserOnboarding.
 """
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Callable, Optional
 
 from flask import current_app, url_for
@@ -398,3 +398,64 @@ def roster_signup(team_id):
                .order_by(Player.name).all())
     waiting = [p for p in players if p.user_id is None]
     return {'active': len(players), 'joined': len(players) - len(waiting), 'waiting': waiting}
+
+
+# ── Reminder email ───────────────────────────────────────────
+
+# New users who haven't finished their checklist get one email, this many
+# days after their account was made; older accounts never get one.
+NUDGE_AFTER_DAYS = 3
+NUDGE_WITHIN_DAYS = 30
+
+
+def _nudge_body(user, team, checklist, base):
+    left = [i['step'] for i in checklist['items'] if not i['done'] and not i['step'].optional]
+    lines = [f'Hi {user.username},', '',
+             f"You're set up on {team.name}'s Ultimate Coach. "
+             f"{len(left)} thing{'s' if len(left) != 1 else ''} on your getting-started list "
+             f"{'are' if len(left) != 1 else 'is'} still to do:", '']
+    for step in left:
+        lines += [f'- {step.title}: {step.description}']
+    lines += ['', f'Your checklist: {base}/welcome',
+              f'What everything does, and how to make the site yours: {base}/how-to-use',
+              '', "This is the only reminder we'll send. You can turn emails off on your account page."]
+    return '\n'.join(lines)
+
+
+def send_nudges(now=None):
+    """Email each new user whose checklist isn't done, once. The daily
+    background job (app/scheduler.py) runs this. Returns how many were sent."""
+    from app.models.team_organization import TeamOrganization
+    from app.models.user import User
+    from app.utils.email import email_configured, send_email
+
+    if not email_configured():
+        return 0
+    base = (current_app.config.get('BASE_URL') or '').rstrip('/')
+    if not base:
+        return 0
+    now = now or datetime.utcnow()
+    users = User.query.filter(User.created_at <= now - timedelta(days=NUDGE_AFTER_DAYS),
+                              User.created_at >= now - timedelta(days=NUDGE_WITHIN_DAYS),
+                              User.email.isnot(None), User.email_event_updates.is_(True)).all()
+    sent = 0
+    # The checklist builds its links with url_for, which needs a request
+    with current_app.test_request_context(base_url=base):
+        for user in users:
+            if not is_real_email(user.email) or user.role not in ROLES:
+                continue
+            record = get_record(user)
+            if record and (record.nudged_at or record.dismissed_at):
+                continue
+            team = db.session.get(TeamOrganization, user.team_organization_id)
+            if team is None:
+                continue
+            checklist = progress(user, team, record)
+            if not checklist or checklist['complete']:
+                continue
+            subject = f'Getting started with {team.name} on Ultimate Coach'
+            if send_email(user.email, subject, _nudge_body(user, team, checklist, base)):
+                get_record(user, create=True).nudged_at = now
+                sent += 1
+        db.session.commit()
+    return sent

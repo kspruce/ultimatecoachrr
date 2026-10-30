@@ -74,12 +74,39 @@ def privacy():
 
 @bp.route('/about')
 def about():
-    return render_template('about.html', title='About')
+    """The public tour: everything the site does, for people deciding whether to use it."""
+    from app import help_guide
+    return render_template('about.html', title='About', guide=help_guide.guide_for(None, None),
+                           roles=onboarding.ROLES)
+
+
+def _guide_nav():
+    """The nav checks for features that only show when there's something in them."""
+    from app.routes.handbook import handbook_nav
+    from app.routes.programmes import programme_nav
+    from app.routes.season_plan import season_plan_nav
+    return {**handbook_nav(), **programme_nav(), **season_plan_nav()}
+
 
 @bp.route('/how-to-use')
 def how_to_use():
-    """Display the How to Use guide page."""
-    return render_template('how_to_use.html', title='How to Use Ultimate Coach')
+    """The guide: what the site offers, how to use each part and how to make
+    it yours, for this reader's role and the features their team has on."""
+    from app import help_guide
+    from app.models.team_organization import TeamOrganization
+
+    team = checklist = role = None
+    if current_user.is_authenticated:
+        team_id = get_current_team_id()
+        team = db.session.get(TeamOrganization, team_id) if team_id else None
+        role = onboarding.role_info(current_user)
+        if team and not current_user.is_guest:
+            checklist = onboarding.progress(current_user, team)
+    settings = team.settings if team else None
+    return render_template('how_to_use.html', title='How to Use Ultimate Coach',
+                           guide=help_guide.guide_for(current_user, settings, _guide_nav()),
+                           team=team, settings=settings, checklist=checklist, role=role,
+                           roles=onboarding.ROLES)
 
 @bp.route('/admin/data-management')
 def data_management():

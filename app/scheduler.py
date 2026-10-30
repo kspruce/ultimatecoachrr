@@ -5,7 +5,9 @@
 - every hour, players on Maybe (or with no answer) get their reminder, and
   teams that want it get their weekly Discord post on their chosen day;
 - every hour from 9am, players who haven't replied to a tournament whose
-  reply-by date is two days away get one reminder.
+  reply-by date is two days away get one reminder;
+- every night, new users who haven't finished their getting-started
+  checklist get one email listing what's left.
 
 The scheduler starts on the first request, so `flask` commands (migrations,
 imports) never start it. Everything it does is safe to repeat, and
@@ -25,6 +27,7 @@ def run_jobs(app, daily=True):
     """Run the jobs once. Returns a short summary."""
     from app import db
     from app.discord.notify import due_week_posts
+    from app.onboarding import send_nudges
     from app.utils.reminders import send_all
     from app.utils.event_notify import send_due_reminders
     from app.utils.schedules import extend_all
@@ -37,7 +40,8 @@ def run_jobs(app, daily=True):
     with app.app_context():
         for name, job in (('dates', extend_all if daily else None), ('reminded', send_all),
                           ('week posts', lambda: len(due_week_posts())),
-                          ('tournament reminders', tournament_reminders)):
+                          ('tournament reminders', tournament_reminders),
+                          ('getting-started emails', send_nudges if daily else None)):
             if job is None:
                 continue
             try:
