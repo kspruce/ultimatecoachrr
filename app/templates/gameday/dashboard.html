@@ -35,6 +35,11 @@
           <i class="bi bi-binoculars"></i><span class="d-none d-sm-inline ms-1">Scout</span>
         </a>
         {% endif %}
+        {% if call_plays or other_plays %}
+        <a href="{{ url_for('playbook.call_sheet', game_id=game.id) }}" class="btn btn-sm btn-outline-secondary" title="Call sheet">
+          <i class="bi bi-clipboard-check"></i><span class="d-none d-sm-inline ms-1">Calls</span>
+        </a>
+        {% endif %}
         <a href="{{ url_for('game.detail', game_id=game.id) }}" class="btn btn-sm btn-outline-secondary">
           <i class="bi bi-arrow-left"></i><span class="d-none d-sm-inline ms-1">Back</span>
         </a>
@@ -71,6 +76,27 @@
             <input type="radio" class="btn-check" name="line_type" id="d-line" value="D-line">
             <label class="btn btn-outline-secondary" for="d-line"><i class="bi bi-shield me-1"></i>D-Line</label>
           </div>
+
+          {% if call_plays or other_plays %}
+          <!-- Play called (the playbook): saved with the point -->
+          <span class="section-label">Play called <span class="text-muted fw-normal">(optional)</span></span>
+          <style>.gd-calls { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; } .gd-calls .btn { min-height: 38px; }</style>
+          <div class="gd-calls mb-3" id="play-called" role="radiogroup" aria-label="Play called">
+            <input type="radio" class="btn-check" name="called_play" id="call-none" value="" checked>
+            <label class="btn btn-outline-secondary btn-sm" for="call-none">None</label>
+            {% for p in call_plays %}
+            <input type="radio" class="btn-check" name="called_play" id="call-{{ p.id }}" value="{{ p.id }}" data-type="{{ p.type }}">
+            <label class="btn btn-outline-secondary btn-sm" for="call-{{ p.id }}" data-type="{{ p.type }}">{% if p.is_core %}★ {% endif %}{{ p.call or p.name }}</label>
+            {% endfor %}
+            {% if other_plays %}
+            <select class="form-select form-select-sm" id="call-other" aria-label="Another play" style="width:auto;max-width:12rem">
+              <option value="">{{ 'Other play…' if call_plays else 'Choose a play…' }}</option>
+              {% for p in other_plays %}<option value="{{ p.id }}" data-type="{{ p.type }}">{{ p.name }}{% if p.call %} (“{{ p.call }}”){% endif %}</option>{% endfor %}
+            </select>
+            {% endif %}
+          </div>
+          {% if not call_plays %}<p class="small text-muted mt-n2 mb-3"><a href="{{ url_for('playbook.call_sheet', game_id=game.id) }}">Make a call sheet</a> to have this game's plays here.</p>{% endif %}
+          {% endif %}
 
           <!-- Gender Format -->
           <span class="section-label">Gender Format</span>
@@ -641,6 +667,49 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('undo-last-event').disabled = false;
   }
 
+  // ── Play called (the playbook) ─────────────────────────────────
+  // Only the plays for the line on the field show; "Other…" covers the rest.
+  function calledPlayId() {
+    const other = document.getElementById('call-other');
+    if (other && other.value) return other.value;
+    const picked = document.querySelector('input[name="called_play"]:checked');
+    return picked && picked.value ? picked.value : null;
+  }
+  function showCallsForLine() {
+    const box = document.getElementById('play-called');
+    if (!box) return;
+    const lineEl = document.querySelector('input[name="line_type"]:checked');
+    const side = lineEl && lineEl.value === 'D-line' ? 'defense' : 'offense';
+    box.querySelectorAll('[data-type]').forEach(el => {
+      const show = el.dataset.type === side;
+      if (el.tagName === 'OPTION') el.hidden = !show; else el.style.display = show ? '' : 'none';
+      if (!show && el.tagName === 'INPUT' && el.checked) document.getElementById('call-none').checked = true;
+    });
+    const other = document.getElementById('call-other');
+    if (other && other.selectedOptions[0] && other.selectedOptions[0].hidden) other.value = '';
+  }
+  function clearCalledPlay() {
+    const none = document.getElementById('call-none');
+    if (none) none.checked = true;
+    const other = document.getElementById('call-other');
+    if (other) other.value = '';
+  }
+  // (this script may run after DOMContentLoaded, so wire up straight away when it has)
+  function wireCalls() {
+    document.querySelectorAll('input[name="line_type"]').forEach(r => r.addEventListener('change', showCallsForLine));
+    document.querySelectorAll('input[name="called_play"]').forEach(r => r.addEventListener('change', () => {
+      const other = document.getElementById('call-other');
+      if (other) other.value = '';
+    }));
+    const other = document.getElementById('call-other');
+    if (other) other.addEventListener('change', () => {
+      if (other.value) document.querySelectorAll('input[name="called_play"]').forEach(r => { r.checked = false; });
+      else document.getElementById('call-none').checked = true;
+    });
+    showCallsForLine();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wireCalls); else wireCalls();
+
   function endPoint(outcome) {
     pointEvents.push({ type: 'point_outcome', outcome: outcome, timestamp: new Date().toISOString() });
     
@@ -651,7 +720,8 @@ document.addEventListener('DOMContentLoaded', function() {
       gender_ratio: document.querySelector('input[name="gender_ratio"]:checked').value,
       players: selectedPlayers.map(p => p.id),
       events: pointEvents,
-      outcome: outcome
+      outcome: outcome,
+      play_id: calledPlayId()
     };
     
     // Use OfflineQueue.fetch so the point is saved even if connectivity is lost
@@ -717,6 +787,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // We scored → we kick off → we play D next.
         // They scored → they kick off → we play O next.
         const nextLineType = outcome === 'scored' ? 'D-line' : 'O-line';
+        clearCalledPlay();
         const nextRadio = document.querySelector(`input[name="line_type"][value="${nextLineType}"]`);
         if (nextRadio) { nextRadio.checked = true; nextRadio.dispatchEvent(new Event('change')); }
 

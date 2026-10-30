@@ -1,5 +1,13 @@
-from app import db
+"""The playbook: offence and defence plays, drawn in the drill editor, with
+who does what in each (roles), tags, a call and a hand signal, links to
+theory topics, drills and clips, and who on the team has learned them.
+Who plays which role is in app/models/team_role.py.
+
+Plays are Draft (only coaches see them), In use, or Retired (kept, but off
+the cards and the PDF)."""
 from datetime import datetime
+
+from app import db
 
 # Association table must be defined before the models that use it
 play_tag_association = db.Table('play_tag_association',
@@ -7,15 +15,45 @@ play_tag_association = db.Table('play_tag_association',
     db.Column('tag_id', db.Integer, db.ForeignKey('play_tag.id'))
 )
 
+play_topic_association = db.Table('play_topic_association',
+    db.Column('play_id', db.Integer, db.ForeignKey('play.id', ondelete='CASCADE'), primary_key=True),
+    db.Column('topic_id', db.Integer, db.ForeignKey('theory_topic.id', ondelete='CASCADE'), primary_key=True)
+)
+
+play_drill_association = db.Table('play_drill_association',
+    db.Column('play_id', db.Integer, db.ForeignKey('play.id', ondelete='CASCADE'), primary_key=True),
+    db.Column('drill_id', db.Integer, db.ForeignKey('saved_drill.id', ondelete='CASCADE'), primary_key=True)
+)
+
+play_clip_association = db.Table('play_clip_association',
+    db.Column('play_id', db.Integer, db.ForeignKey('play.id', ondelete='CASCADE'), primary_key=True),
+    db.Column('clip_id', db.Integer, db.ForeignKey('clip.id', ondelete='CASCADE'), primary_key=True)
+)
+
+PLAY_TYPES = (('offense', 'Offence'), ('defense', 'Defence'))
+PLAY_STATUSES = (('draft', 'Draft'), ('active', 'In use'), ('retired', 'Retired'))
+# When a play is for: filters on the playbook, the cards and the call sheet
+SITUATIONS = (('pull', 'Pull play'), ('hold', 'Hold point'), ('break', 'Break point'),
+              ('endzone', 'Endzone'), ('timeout', 'After a timeout'), ('vs_zone', 'Against zone'),
+              ('vs_person', 'Against person'), ('upwind', 'Upwind'), ('downwind', 'Downwind'))
+
+
 class PlayTag(db.Model):
+    __table_args__ = (db.UniqueConstraint('team_organization_id', 'name', name='uq_play_tag_team_name'),)
+
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(30), unique=True)
+    name = db.Column(db.String(30))
     team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'), nullable=True)
-    
+
     def __repr__(self):
         return f'<PlayTag {self.name}>'
 
+
 class Formation(db.Model):
+    """Team concepts used to live in the playbook. They were moved into
+    Theory (an "Our system" section) by migration d7f9b1c3e5a7, which
+    records the topic here so old links still lead somewhere. Nothing
+    creates them any more."""
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     type = db.Column(db.String(20))  # offense/defense
@@ -26,53 +64,211 @@ class Formation(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     imgur_url = db.Column(db.String(255))
     team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'), nullable=True)
-    
+    moved_to_topic_id = db.Column(db.Integer, db.ForeignKey('theory_topic.id', ondelete='SET NULL'), nullable=True)
+
+
 class Play(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     type = db.Column(db.String(20))  # offense/defense
+    status = db.Column(db.String(10), nullable=False, default='active', server_default='active')
+    call = db.Column(db.String(60))     # what's shouted on the line
+    signal = db.Column(db.String(100))  # the hand signal
+    is_core = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())  # everyone must know it
+    situations = db.Column(db.String(200))  # comma-separated SITUATIONS keys
+    share_token = db.Column(db.String(43), unique=True, nullable=True)  # a link that shows it without signing in
     description = db.Column(db.Text)
-    formation_id = db.Column(db.Integer, db.ForeignKey('formation.id'))
+    formation_id = db.Column(db.Integer, db.ForeignKey('formation.id'))  # concepts: see Formation
     notes = db.Column(db.Text)
     ultiplay_embed = db.Column(db.Text)
-    image_url = db.Column(db.String(255))  # static diagram (e.g. ImgBB link) shown online + used in PDF export
+    image_url = db.Column(db.String(500))  # a photo or linked image, when it isn't drawn
     sort_order = db.Column(db.Integer)  # manual ordering in playbook + PDF (lower = first)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    updated_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'), nullable=True)
-    
+
     # Relationships
     formation = db.relationship('Formation', backref='plays')
-    tags = db.relationship('PlayTag', secondary=play_tag_association)
-    
-    session_components = db.relationship('SessionComponent', 
+    tags = db.relationship('PlayTag', secondary=play_tag_association, order_by='PlayTag.name')
+    assignments = db.relationship('PlayAssignment', back_populates='play', cascade='all, delete-orphan',
+                                  order_by='PlayAssignment.order')
+    theory_topics = db.relationship('TheoryTopic', secondary=play_topic_association,
+                                    backref=db.backref('plays', order_by='Play.name'))
+    drills = db.relationship('SavedDrill', secondary=play_drill_association, order_by='SavedDrill.title',
+                             backref=db.backref('plays', lazy='dynamic'))
+    clips = db.relationship('Clip', secondary=play_clip_association,
+                            backref=db.backref('plays', lazy='dynamic'))
+    learned = db.relationship('PlayLearned', back_populates='play', cascade='all, delete-orphan')
+    to_learn = db.relationship('PlayToLearn', back_populates='play', uselist=False, cascade='all, delete-orphan')
+    editor = db.relationship('User', foreign_keys=[updated_by])
+    author = db.relationship('User', foreign_keys=[created_by])
+    # Drawn in the drill editor: one per stage, the first holding the drawing
+    diagrams = db.relationship('DrillDiagram', back_populates='play',
+                               order_by='DrillDiagram.order',
+                               cascade='all, delete-orphan')
+
+    @property
+    def editor_diagram(self):
+        return next((d for d in self.diagrams if d.editor_json), None)
+
+    @property
+    def editor_diagrams(self):
+        return [d for d in self.diagrams if d.editor_json]
+
+    @property
+    def stage_count(self):
+        return len(self.editor_diagrams)
+
+    @property
+    def thumbnail(self):
+        """The first drawn stage, else the play's photo or linked image."""
+        first = self.editor_diagram
+        return (first.image_url if first else None) or self.image_url
+
+    @property
+    def type_label(self):
+        return dict(PLAY_TYPES).get(self.type, 'Play')
+
+    @property
+    def status_label(self):
+        return dict(PLAY_STATUSES).get(self.status, 'In use')
+
+    @property
+    def situation_keys(self):
+        return [k for k in (self.situations or '').split(',') if k in dict(SITUATIONS)]
+
+    @property
+    def situation_labels(self):
+        names = dict(SITUATIONS)
+        return [names[k] for k in self.situation_keys]
+
+    @property
+    def is_draft(self):
+        return self.status == 'draft'
+
+    @property
+    def is_retired(self):
+        return self.status == 'retired'
+
+    session_components = db.relationship('SessionComponent',
                                         secondary='play_session_component',
                                         backref=db.backref('plays', lazy='dynamic'))
-    
+
     # Create association table
     play_session_component = db.Table('play_session_component',
         db.Column('play_id', db.Integer, db.ForeignKey('play.id')),
         db.Column('component_id', db.Integer, db.ForeignKey('session_component.id'))
-    )    
-    
+    )
+
+
 class PlayerPosition(db.Model):
+    """A team role, such as "O-line initiation cutter". Coaches give players
+    roles each season (PlayerRole, Team → Roles), and plays say what each
+    role does (PlayAssignment). Kept under its old name and table: it was
+    the playbook's list of positions."""
+    LINES = [('O', 'O-line'), ('D', 'D-line'), ('', 'Either line')]
+
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), nullable=False)
+    line = db.Column(db.String(1))                    # 'O', 'D' or empty for either
+    description = db.Column(db.String(200))
+    sort_order = db.Column(db.Integer, nullable=False, default=0, server_default='0')
     team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'), nullable=True)
-    
+
+    @property
+    def line_label(self):
+        return dict(self.LINES).get(self.line or '', 'Either line')
+
     def __repr__(self):
         return f'<Position {self.name}>'
 
+
 class PlayAssignment(db.Model):
+    """What one role does in one play."""
     id = db.Column(db.Integer, primary_key=True)
     play_id = db.Column(db.Integer, db.ForeignKey('play.id'))
     position_id = db.Column(db.Integer, db.ForeignKey('player_position.id'))
     instructions = db.Column(db.Text, nullable=False)
+    order = db.Column(db.Integer)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'), nullable=True)
-    
+
     # Relationships
     position = db.relationship('PlayerPosition')
-    play = db.relationship('Play', backref='assignments')
+    play = db.relationship('Play', back_populates='assignments')
+
+
+class PlayLearned(db.Model):
+    """Someone has marked a play as learned."""
+    __tablename__ = 'play_learned'
+    __table_args__ = (db.UniqueConstraint('user_id', 'play_id', name='uq_play_learned_user_play'),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False, index=True)
+    play_id = db.Column(db.Integer, db.ForeignKey('play.id', ondelete='CASCADE'), nullable=False, index=True)
+    learned_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    play = db.relationship('Play', back_populates='learned')
+
+
+class PlayToLearn(db.Model):
+    """A play the coaches have asked the team to learn (by a date)."""
+    __tablename__ = 'play_to_learn'
+
+    id = db.Column(db.Integer, primary_key=True)
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'), nullable=False, index=True)
+    play_id = db.Column(db.Integer, db.ForeignKey('play.id', ondelete='CASCADE'), nullable=False, unique=True)
+    assigned_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    tournament_id = db.Column(db.Integer, db.ForeignKey('tournament.id', ondelete='SET NULL'), nullable=True)
+    due_date = db.Column(db.Date, nullable=True)
+    note = db.Column(db.String(200), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    play = db.relationship('Play', back_populates='to_learn')
+    tournament = db.relationship('Tournament')
+
+    @property
+    def label(self):
+        """'Learn for Nationals (Sat 14 Nov)' / 'Learn by Sat 14 Nov' / ''."""
+        when = self.due_date.strftime('%a %-d %b') if self.due_date else ''
+        if self.tournament:
+            return f'Learn for {self.tournament.name}' + (f' ({when})' if when else '')
+        return f'Learn by {when}' if when else ''
+
+
+class PlaySetup(db.Model):
+    """A starting position saved from the drawing editor (a team's own
+    stack, a pull play's line-up...). New plays can start from one, and any
+    stage can be set from one."""
+    __tablename__ = 'play_setup'
+
+    id = db.Column(db.Integer, primary_key=True)
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'), nullable=False, index=True)
+    name = db.Column(db.String(80), nullable=False)
+    type = db.Column(db.String(20))           # offense / defense / empty for either
+    state_json = db.Column(db.Text, nullable=False)  # {"field": ..., "objects": [...]} in the editor's format
+    image_data = db.Column(db.Text)           # base64 PNG of the stage, for the list
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class GameCallPlay(db.Model):
+    """A play on a game's call sheet: the plays the coaches plan to call in
+    that game, in order. Which play was called each point is Point.called_play."""
+    __tablename__ = 'game_call_play'
+    __table_args__ = (db.UniqueConstraint('game_id', 'play_id', name='uq_game_call_play'),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'), nullable=False, index=True)
+    game_id = db.Column(db.Integer, db.ForeignKey('game.id', ondelete='CASCADE'), nullable=False, index=True)
+    play_id = db.Column(db.Integer, db.ForeignKey('play.id', ondelete='CASCADE'), nullable=False)
+    order = db.Column(db.Integer, nullable=False, default=0)
+    note = db.Column(db.String(120))  # e.g. "after a timeout", "if they zone"
+
+    play = db.relationship('Play')
+    game = db.relationship('Game', backref=db.backref('call_sheet', order_by='GameCallPlay.order',
+                                                      cascade='all, delete-orphan', passive_deletes=True))

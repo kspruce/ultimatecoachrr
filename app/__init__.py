@@ -212,6 +212,9 @@ def create_app(config_class=Config):
     from app.routes.seasons import bp as seasons_bp
     app.register_blueprint(seasons_bp)
 
+    from app.routes.roles import bp as roles_bp
+    app.register_blueprint(roles_bp)
+
     from app.routes.tournament import bp as tournament_bp
     app.register_blueprint(tournament_bp)
 
@@ -250,9 +253,6 @@ def create_app(config_class=Config):
     from app.routes.theory import bp as theory_bp
     app.register_blueprint(theory_bp)
 
-    from app.routes.cutting_skill import bp as cutting_skill_bp
-    app.register_blueprint(cutting_skill_bp)
-
     from app.routes.data_management_routes import bp as data_management_bp
     app.register_blueprint(data_management_bp)
 
@@ -264,10 +264,6 @@ def create_app(config_class=Config):
 
     from app.routes.team_organization import bp as team_organization_bp
     app.register_blueprint(team_organization_bp)
-
-    # IMPORTANT: Register off_season blueprint
-    from app.routes.off_season import bp as off_season_bp
-    app.register_blueprint(off_season_bp)
 
     from app.routes.programmes import bp as programmes_bp
     app.register_blueprint(programmes_bp)

@@ -121,6 +121,26 @@ def test_stats_and_homepage_count_this_season_only(club):
     assert club['veteran'].name in csv
 
 
+def test_gameday_stats_count_this_season_only(club):
+    from app.models.gameday import GameDayPlayerStats
+
+    team = club['team']
+    for game in Game.query.all():
+        db.session.add(GameDayPlayerStats(player_id=club['regular'].id, game_id=game.id, goals=1,
+                                          team_organization_id=team.id))
+    db.session.add(GameDayPlayerStats(player_id=club['veteran'].id, game_id=Game.query.filter_by(
+        opponent='Old friends').one().id, goals=3, team_organization_id=team.id))
+    db.session.commit()
+    client = club['client']
+
+    page = client.get('/gameday/team-stats').get_data(as_text=True)
+    assert club['veteran'].name not in page  # only played last season
+    assert 'Old friends' not in client.get('/gameday/').get_data(as_text=True)
+
+    client.get('/team/seasons/view?season=all')
+    assert club['veteran'].name in client.get('/gameday/team-stats').get_data(as_text=True)
+
+
 def test_starting_a_new_season_keeps_everything_and_updates_the_roster(club):
     team, client = club['team'], club['client']
     client.get('/')  # set the seasons up
@@ -312,3 +332,24 @@ def test_players_added_any_way_join_the_current_roster(club):
     db.session.expire_all()
     assert Player.query.filter_by(name='Imported Player').one().active
     assert Player.query.filter_by(name='Form Player').one().active
+
+
+def test_game_day_summary_counts_the_season_being_viewed(club):
+    from app.models.gameday import GameDayPlayerStats
+    team, regular = club['team'], club['regular']
+    old = Game.query.filter_by(opponent='Old rivals').one()
+    new = Game.query.filter_by(opponent='New rivals').one()
+    db.session.add_all([
+        GameDayPlayerStats(player_id=regular.id, game_id=old.id, goals=5, team_organization_id=team.id),
+        GameDayPlayerStats(player_id=regular.id, game_id=new.id, goals=2, team_organization_id=team.id),
+        Game(opponent='Not played yet', date=date(THIS_YEAR, 12, 30), team_organization_id=team.id),
+    ])
+    db.session.commit()
+    client = club['client']
+    page = client.get('/gameday/team-stats').get_data(as_text=True)
+    assert 'New rivals' in page and 'Old rivals' not in page and 'Not played yet' not in page
+    assert 'By tournament:' not in page  # last year's tournament is in last year
+
+    client.get('/team/seasons/view?season=all')
+    page = client.get('/gameday/team-stats').get_data(as_text=True)
+    assert 'All seasons' in page and 'Old rivals' in page and 'Old open' in page

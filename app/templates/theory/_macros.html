@@ -1,0 +1,77 @@
+{# Theory hub: coach menus shared by the pages #}
+
+{% macro topic_menu(topic, next=None, show_move=False, first=False, last=False, move_class='') %}
+<div class="dropdown">
+  <button class="th-icon-btn sm" type="button" data-bs-toggle="dropdown" aria-expanded="false"
+          aria-label="Options for {{ topic.name }}"><i class="bi bi-three-dots"></i></button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><a class="dropdown-item" href="{{ url_for('theory.edit_topic', topic_id=topic.id) }}"><i class="bi bi-pencil me-2"></i>Edit</a></li>
+    <li><a class="dropdown-item" href="{{ url_for('theory.readers', topic_id=topic.id) }}"><i class="bi bi-people me-2"></i>Who's read it{% if topic.published %} · assign{% endif %}</a></li>
+    <li><a class="dropdown-item" href="{{ url_for('theory.organise', _anchor='topic-' ~ topic.id) }}"><i class="bi bi-folder-symlink me-2"></i>Move to another section</a></li>
+    {% if show_move %}
+    <li class="{{ move_class }}">
+      <form method="POST" action="{{ url_for('theory.move_topic', topic_id=topic.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="direction" value="up"><input type="hidden" name="next" value="{{ next or '' }}">
+        <button class="dropdown-item" {% if first %}disabled{% endif %}><i class="bi bi-arrow-up me-2"></i>Move up</button>
+      </form>
+    </li>
+    <li class="{{ move_class }}">
+      <form method="POST" action="{{ url_for('theory.move_topic', topic_id=topic.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="direction" value="down"><input type="hidden" name="next" value="{{ next or '' }}">
+        <button class="dropdown-item" {% if last %}disabled{% endif %}><i class="bi bi-arrow-down me-2"></i>Move down</button>
+      </form>
+    </li>
+    {% endif %}
+    <li><hr class="dropdown-divider"></li>
+    <li>
+      <form method="POST" action="{{ url_for('theory.delete_topic', topic_id=topic.id) }}"
+            data-confirm="Delete &quot;{{ topic.name }}&quot;? This can't be undone.">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="dropdown-item text-danger"><i class="bi bi-trash me-2"></i>Delete</button>
+      </form>
+    </li>
+  </ul>
+</div>
+{% endmacro %}
+
+{# Arrows beside a row from 576px; on phones they're in the row's menu instead #}
+{% macro move_buttons(url, label, first, last, next=None) %}
+<form method="POST" action="{{ url }}" class="d-none d-sm-inline">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="next" value="{{ next or '' }}">
+  <button class="th-icon-btn sm" name="direction" value="up" aria-label="Move {{ label }} up" {% if first %}disabled{% endif %}><i class="bi bi-arrow-up"></i></button>
+  <button class="th-icon-btn sm" name="direction" value="down" aria-label="Move {{ label }} down" {% if last %}disabled{% endif %}><i class="bi bi-arrow-down"></i></button>
+</form>
+{% endmacro %}
+
+{% macro section_menu(section, n_topics, first=True, last=True) %}
+<div class="dropdown">
+  <button class="th-icon-btn sm" type="button" data-bs-toggle="dropdown" aria-expanded="false"
+          aria-label="Options for {{ section.name }}"><i class="bi bi-three-dots"></i></button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><a class="dropdown-item" href="{{ url_for('theory.add_topic', section_id=section.id) }}"><i class="bi bi-plus-lg me-2"></i>Add topic here</a></li>
+    <li><a class="dropdown-item" href="{{ url_for('theory.edit_section', section_id=section.id) }}"><i class="bi bi-pencil me-2"></i>Edit section</a></li>
+    <li><a class="dropdown-item" href="{{ url_for('theory.organise', _anchor='section-' ~ section.id) }}"><i class="bi bi-folder-symlink me-2"></i>Move topics between sections</a></li>
+    {% if not (first and last) %}
+    {% for direction, icon, label, off in [('up', 'bi-arrow-up', 'Move up', first), ('down', 'bi-arrow-down', 'Move down', last)] %}
+    <li class="d-sm-none">
+      <form method="POST" action="{{ url_for('theory.move_section', section_id=section.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="dropdown-item" name="direction" value="{{ direction }}" {% if off %}disabled{% endif %}><i class="bi {{ icon }} me-2"></i>{{ label }}</button>
+      </form>
+    </li>
+    {% endfor %}
+    {% endif %}
+    <li><hr class="dropdown-divider"></li>
+    <li>
+      <form method="POST" action="{{ url_for('theory.delete_section', section_id=section.id) }}"
+            data-confirm="Delete the &quot;{{ section.name }}&quot; section{% if n_topics %} and its {{ n_topics }} topic{{ 's' if n_topics != 1 }}{% endif %}? This can't be undone.">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="dropdown-item text-danger"><i class="bi bi-trash me-2"></i>Delete section</button>
+      </form>
+    </li>
+  </ul>
+</div>
+{% endmacro %}

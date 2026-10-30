@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{# A review of how a player's going, and the player's own comment on it. #}
+{% block title %}{{ review.title }} · {{ review.player.name }}{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/theory.css') }}">
+<style>.rv-part { white-space: pre-wrap; } .rv-player { background: var(--club-soft); }</style>
+{% endblock %}
+
+{% block content %}
+<div class="container th-page" style="max-width:760px">
+  <nav class="th-crumbs" aria-label="Breadcrumb">
+    <a href="{{ url_for('feedback.mine') if is_player else url_for('team.player_detail', player_id=review.player_id, _anchor='development') }}">{{ 'My Feedback' if is_player else review.player.name }}</a>
+  </nav>
+  <div class="th-head">
+    <div>
+      <h1>{{ review.title }}</h1>
+      <p>{{ review.player.name }} · {{ review.created_at.strftime('%-d %b %Y') }} · by {{ review.coach.username if review.coach else 'the coaches' }}
+        {% if not is_player %}· {% if review.shared %}<span class="th-badge read">Shared{% if review.seen_at %} · seen{% endif %}</span>{% else %}<span class="th-badge">Coaches only</span>{% endif %}{% endif %}</p>
+    </div>
+    {% if current_user.is_coach %}
+    <div class="dropdown flex-shrink-0">
+      <button class="th-icon-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Review options"><i class="bi bi-three-dots"></i></button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        <li><a class="dropdown-item" href="{{ url_for('feedback.edit_review', review_id=review.id) }}"><i class="bi bi-pencil me-2"></i>Edit{% if not review.shared %} or share{% endif %}</a></li>
+        <li><form method="POST" action="{{ url_for('feedback.delete_review', review_id=review.id) }}" data-confirm="Delete this review?">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="dropdown-item text-danger"><i class="bi bi-trash me-2"></i>Delete</button></form></li>
+      </ul>
+    </div>
+    {% endif %}
+  </div>
+
+  {% for field, label in [('went_well', 'What has gone well'), ('work_on', 'What to work on'), ('next_steps', 'Next steps')] %}
+  {% if review[field] %}
+  <div class="th-label mt-0">{{ label }}</div>
+  <div class="th-form-card rv-part">{{ review[field] }}</div>
+  {% endif %}
+  {% endfor %}
+
+  <div class="th-label mt-0">{{ 'Your comment' if is_player else review.player.name ~ "'s comment" }}</div>
+  {% if is_player %}
+  <form method="POST" action="{{ url_for('feedback.review_comment', review_id=review.id) }}" class="th-form-card rv-player">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <textarea name="player_comment" class="form-control mb-2" rows="3" placeholder="How do you see it? Anything you'd add?">{{ review.player_comment or '' }}</textarea>
+    <button class="btn btn-primary th-btn">Save my comment</button>
+  </form>
+  {% elif review.player_comment %}
+  <div class="th-form-card rv-part rv-player">{{ review.player_comment }}</div>
+  {% else %}
+  <div class="th-list th-empty py-3">{{ 'No comment yet.' if review.shared else 'Share the review and they can add a comment.' }}</div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/theory.js') }}"></script>
+{% endblock %}

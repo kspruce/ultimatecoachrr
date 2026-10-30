@@ -1,0 +1,103 @@
+"""Playbook helpers: tags typed by name, who has learned what, and plays
+shown inside theory articles. (Team roles: app/utils/roles.py.)"""
+import re
+
+from flask import render_template
+from markupsafe import Markup
+
+from app import db
+from app.models.playbook import Play, PlayLearned, PlayTag, PlayToLearn
+from app.utils.theory import parse_tags
+
+
+def in_order():
+    """Manual order first (lower = first), then name."""
+    return (db.func.coalesce(Play.sort_order, 999999), Play.name, Play.id)
+
+
+def tags_for(text, team_id):
+    """The team's PlayTags for comma-separated names, adding new ones."""
+    existing = {t.name.lower(): t for t in PlayTag.query.filter_by(team_organization_id=team_id)}
+    tags = []
+    for name in parse_tags(text):
+        name = name[:30]
+        tag = existing.get(name.lower())
+        if tag is None:
+            tag = PlayTag(name=name, team_organization_id=team_id)
+            db.session.add(tag)
+            existing[name.lower()] = tag
+        if tag not in tags:
+            tags.append(tag)
+    return tags
+
+
+def tidy_up(team_id):
+    """Drop tags nothing uses any more. (Roles stay: they're the team's,
+    managed under Team → Roles.)"""
+    for tag in PlayTag.query.filter_by(team_organization_id=team_id):
+        if not db.session.query(Play.id).filter(Play.tags.contains(tag)).first():
+            db.session.delete(tag)
+
+
+def learned_ids(user_id, team_id):
+    return {play_id for (play_id,) in db.session.query(PlayLearned.play_id)
+            .filter_by(user_id=user_id, team_organization_id=team_id)}
+
+
+def to_learn_unlearned(user_id, team_id):
+    """[PlayToLearn] the team's been asked to learn and this person hasn't,
+    soonest due first (plays in use only)."""
+    learned = learned_ids(user_id, team_id)
+    rows = (PlayToLearn.query.join(Play, Play.id == PlayToLearn.play_id)
+            .filter(PlayToLearn.team_organization_id == team_id, Play.status == 'active').all())
+    rows = [r for r in rows if r.play_id not in learned]
+    return sorted(rows, key=lambda r: (r.due_date is None, r.due_date, r.created_at))
+
+
+# ── Plays inside theory articles: [[play:12]] on a line of its own ─────────
+
+PLAY_EMBED = re.compile(r'(?:<p>\s*)?\[\[play:(\d+)\]\](?:\s*</p>)?')
+
+
+def embed_plays(html, team_id, include_drafts=False):
+    """Swap each [[play:<id>]] in rendered markdown for the play's card
+    (the team's plays only; drafts only for coaches)."""
+    html = str(html)
+    ids = {int(i) for i in PLAY_EMBED.findall(html)}
+    if not ids:
+        return Markup(html)
+    query = Play.query.filter(Play.id.in_(ids), Play.team_organization_id == team_id)
+    if not include_drafts:
+        query = query.filter(Play.status != 'draft')
+    plays = {p.id: p for p in query}
+
+    def card(match):
+        play = plays.get(int(match.group(1)))
+        return render_template('playbook/_embed.html', play=play) if play else ''
+    return Markup(PLAY_EMBED.sub(card, html))
+
+
+# ── How called plays went ──────────────────────────────────────────────────
+
+def play_results(points):
+    """{play id: {'called', 'scored', 'o': {'called', 'scored'}, 'd': {...}}}
+    from points with a called play. O-line points scored are holds, D-line
+    points scored are breaks."""
+    results = {}
+    for point in points:
+        if not point.called_play_id or point.point_outcome not in ('scored', 'conceded'):
+            continue
+        row = results.setdefault(point.called_play_id, {'called': 0, 'scored': 0,
+                                                        'o': {'called': 0, 'scored': 0},
+                                                        'd': {'called': 0, 'scored': 0}})
+        line = row['o'] if point.our_line_type == 'O-line' else row['d']
+        won = point.point_outcome == 'scored'
+        for counts in (row, line):
+            counts['called'] += 1
+            counts['scored'] += won
+    return results
+
+
+def rate(counts):
+    """'3 of 4 (75%)' style numbers for a {'called', 'scored'} dict."""
+    return round(counts['scored'] / counts['called'] * 100) if counts['called'] else None

@@ -45,6 +45,7 @@
 {% set is_coach = current_user.is_coach %}
 {% set status_badge = {'attending': 'bg-success', 'maybe': 'bg-warning text-dark', 'not_attending': 'bg-secondary'} %}
 <div class="container" id="tournament-hub" data-tournament-id="{{ tournament.id }}">
+  {% set kind, row_id = 'tournament', tournament.id %}{% include 'feedback/_my_focus.html' %}
   <div class="th-head mb-3">
     <div>
       <h1 class="mb-1">{{ tournament.name }}</h1>
@@ -71,6 +72,10 @@
     {% endif %}
     <li class="nav-item"><a class="nav-link {% if tab == 'games' %}active{% endif %}" href="{{ url_for('tournament.detail', tournament_id=tournament.id, tab='games') }}">
       Games <span class="badge bg-secondary">{{ games|length }}</span></a></li>
+    {% if current_user.is_stat_taker and games %}
+    <li class="nav-item"><a class="nav-link" href="{{ url_for('gameday.tournament_stats', tournament_id=tournament.id) }}">
+      <i class="bi bi-bar-chart-line"></i> Stats</a></li>
+    {% endif %}
   </ul>
 
   {# ───────────────────────── Overview ───────────────────────── #}

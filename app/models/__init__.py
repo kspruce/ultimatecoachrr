@@ -15,8 +15,13 @@ from app.models.session import (
     SessionRSVP
 )
 from app.models.schedule import TrainingSchedule, ScheduleAvailability, SessionTemplate, SessionReminder
-from app.models.playbook import Play, Formation, PlayTag, PlayerPosition, PlayAssignment
-from app.models.theory import TheorySection, TheoryTopic, TheoryVideo, TheoryTag
+from app.models.playbook import (
+    Play, Formation, PlayTag, PlayerPosition, PlayAssignment, PlayLearned, PlayToLearn, PlaySetup, GameCallPlay,
+)
+from app.models.team_role import PlayerRole
+from app.models.theory import (
+    TheorySection, TheoryTopic, TheoryVideo, TheoryTag, TheoryImage, TheoryRead, TheoryAssignment,
+)
 from app.models.season_plan import (
     SeasonPlan, SeasonPhase, SeasonWeek, SeasonPage, SeasonMilestone,
     ClassroomSession, ClassroomResource,
@@ -56,20 +61,7 @@ from app.models.team_signup_invite import TeamSignupInvite
 from app.models.site_settings import SiteSettings
 
 # Coach feedback
-from app.models.feedback import PlayerFeedback
-
-# Off-Season Training
-from app.models.off_season import (
-    TrackWorkoutWeek,
-    OffSeasonPhase,
-    PhaseMetric,
-    PhaseSchedule,
-    ScheduleSession,
-    WorkoutPlan,
-    UserSessionCompletion,
-    SMARTGoal,
-    UserSchedulePreference
-)
+from app.models.feedback import PlayerFeedback, FeedbackReply, PlayerFocus, PlayerGoal, PlayerReview
 
 # Training programmes (any club's off-season plans, built on the website)
 from app.models.programme import (
@@ -92,9 +84,10 @@ __all__ = [
     'ClassroomSession', 'ClassroomResource',
     'HandbookPage',
     # Playbook
-    'Play', 'Formation', 'PlayTag', 'PlayerPosition', 'PlayAssignment',
+    'Play', 'Formation', 'PlayTag', 'PlayerPosition', 'PlayAssignment', 'PlayerRole', 'PlayLearned', 'PlayToLearn', 'PlaySetup', 'GameCallPlay',
     # Theory
-    'TheorySection', 'TheoryTopic', 'TheoryVideo', 'TheoryTag',
+    'TheorySection', 'TheoryTopic', 'TheoryVideo', 'TheoryTag', 'TheoryImage', 'TheoryRead',
+    'TheoryAssignment',
     # Tournaments & Games
     'Tournament', 'TournamentRSVP', 'Game', 'Point', 'LineUp',
     # Events & Actions
@@ -116,11 +109,7 @@ __all__ = [
     # Site settings
     'SiteSettings',
     # Coach feedback
-    'PlayerFeedback',
-    # Off-Season
-    'TrackWorkoutWeek', 'OffSeasonPhase', 'PhaseMetric', 'PhaseSchedule',
-    'ScheduleSession', 'WorkoutPlan', 'UserSessionCompletion', 'SMARTGoal',
-    'UserSchedulePreference',
+    'PlayerFeedback', 'FeedbackReply', 'PlayerFocus', 'PlayerGoal', 'PlayerReview',
     # Training programmes
     'Programme', 'ProgrammeVersion', 'ProgrammeTrack', 'ProgrammeWeek', 'ProgrammeSession',
     'ProgrammeExercise', 'PerformanceTest', 'ProgrammeMilestone', 'ProgrammeEnrolment', 'SessionLog',

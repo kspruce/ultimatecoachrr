@@ -78,6 +78,9 @@ def test_names_cannot_break_out_of_chart_scripts(season):
 
 
 def test_dropdowns_only_list_this_teams_rows(season):
+    from app.models.scouting import ScoutingReport
+    db.session.add(ScoutingReport(team_name='Ka-Pow', team_organization_id=season['team']))
+    db.session.commit()  # the filters show once there's a report
     page = season['coach'].get('/scouting/').get_data(as_text=True)
     assert 'alpha Tour 1' in page and 'Bravo Secret Cup' not in page
 

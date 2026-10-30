@@ -1,459 +1,219 @@
 {# templates/theory/topic.html #}
 {% extends "base.html" %}
+{% from "theory/_macros.html" import topic_menu %}
 
 {% block styles %}
 {{ super() }}
-<style>
-/* ── Reading progress bar (top of page) ──────────────── */
-#reading-progress {
-    position: fixed; top: 0; left: 0; z-index: 9999;
-    height: 3px; width: 0%; background: var(--uc-blue);
-    transition: width .1s linear;
-    box-shadow: 0 0 6px color-mix(in srgb, var(--club-ink) 40%, transparent);
-}
-
-/* ── Topic content typography ──────────────────────── */
-.topic-content h2 {
-    font-size: 1.15rem; font-weight: 700; color: var(--uc-gray-800);
-    border-bottom: 1px solid var(--uc-gray-200);
-    padding-bottom: .45rem; margin-top: 2.25rem; margin-bottom: .9rem;
-    scroll-margin-top: 1.5rem;
-}
-.topic-content h3 {
-    font-size: 1rem; font-weight: 700; color: var(--uc-blue);
-    margin-top: 1.75rem; margin-bottom: .6rem;
-    scroll-margin-top: 1.5rem;
-}
-.topic-content p  { font-size: .925rem; line-height: 1.8; color: var(--uc-gray-800); margin-bottom: 1rem; }
-.topic-content ul,
-.topic-content ol { padding-left: 1.4rem; margin-bottom: 1rem; }
-.topic-content li { margin-bottom: .4rem; font-size: .925rem; line-height: 1.65; }
-.topic-content blockquote {
-    border-left: 3px solid var(--uc-blue); padding: .75rem 1.1rem;
-    background: color-mix(in srgb, var(--club-ink) 4%, transparent); border-radius: 0 10px 10px 0;
-    margin: 1.25rem 0; color: var(--uc-gray-600); font-style: italic;
-}
-.topic-content code {
-    background: var(--uc-gray-100); padding: .15rem .4rem;
-    border-radius: 5px; font-size: .85em; color: var(--uc-indigo);
-}
-.topic-content pre {
-    background: var(--uc-gray-50); border: 1px solid var(--uc-gray-200);
-    border-radius: var(--uc-radius); padding: 1rem 1.25rem; overflow-x: auto;
-}
-.topic-content pre code { background: none; padding: 0; }
-/* Content images — !important overrides any inline width/height attrs from imgbb */
-.topic-content img {
-    max-width: 100% !important;
-    width: auto !important;
-    height: auto !important;
-    display: block;
-    margin: 1.5rem auto;
-    border-radius: var(--uc-radius);
-    box-shadow: var(--uc-shadow-md);
-    cursor: zoom-in;
-}
-.topic-content a { color: var(--uc-blue); }
-
-/* ── Hero image wrapper ───────────────────────── */
-.theory-img-wrap {
-    background: var(--uc-gray-50);
-    border-radius: var(--uc-radius);
-    box-shadow: var(--uc-shadow-md);
-    overflow: hidden;
-    cursor: zoom-in;
-    text-align: center;
-}
-.theory-hero-img {
-    max-width: 100%;
-    width: auto;
-    height: auto;
-    max-height: 500px;
-    object-fit: contain;
-    display: block;
-    margin: 0 auto;
-}
-
-/* ── Lightbox ─────────────────────────────────── */
-#img-lightbox {
-    display: none; position: fixed; inset: 0; z-index: 10000;
-    background: rgba(0,0,0,.9); align-items: center; justify-content: center;
-    padding: 1.5rem; cursor: zoom-out;
-}
-#img-lightbox.open { display: flex; }
-#img-lightbox-img {
-    max-width: min(100%, 1100px);
-    max-height: 88vh;
-    width: auto; height: auto;
-    object-fit: contain;
-    border-radius: 10px;
-    box-shadow: 0 12px 60px rgba(0,0,0,.6);
-    cursor: default;
-}
-#img-lightbox-close {
-    position: fixed; top: 1rem; right: 1.5rem;
-    color: rgba(255,255,255,.65); font-size: 2rem; cursor: pointer;
-    line-height: 1; font-weight: 300; transition: color .15s;
-    z-index: 10001;
-}
-#img-lightbox-close:hover { color: #fff; }
-#img-lightbox-caption {
-    position: fixed; bottom: 1.25rem; left: 50%; transform: translateX(-50%);
-    color: rgba(255,255,255,.45); font-size: .78rem;
-    max-width: 80vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.topic-content a:hover { text-decoration: underline; }
-.topic-content table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; font-size: .875rem; }
-.topic-content th,
-.topic-content td { padding: .5rem .75rem; border: 1px solid var(--uc-gray-200); }
-.topic-content th { background: var(--uc-gray-50); font-weight: 600; }
-
-/* ── Sidebar ───────────────────────────────────────── */
-@media (min-width: 992px) { .theory-sidebar { position: sticky; top: 1.5rem; } }
-
-/* ── TOC links ─────────────────────────────────────── */
-.toc-link {
-    display: block; padding: .3rem 0; font-size: .8rem; font-weight: 500;
-    color: var(--uc-gray-500); text-decoration: none;
-    border-left: 2px solid transparent; padding-left: .75rem;
-    transition: color .15s, border-color .15s;
-}
-.toc-link:hover { color: var(--uc-blue); }
-.toc-link.active { color: var(--uc-blue); border-left-color: var(--uc-blue); font-weight: 600; }
-.toc-link.h3 { padding-left: 1.5rem; font-size: .78rem; }
-
-/* ── Section nav ────────────────────────────────────── */
-.section-nav-link {
-    display: flex; align-items: center; gap: .6rem;
-    padding: .45rem .75rem; font-size: .82rem; font-weight: 500;
-    color: var(--uc-gray-600); text-decoration: none;
-    border-radius: 8px; transition: background .15s, color .15s;
-}
-.section-nav-link:hover { background: var(--uc-gray-50); color: var(--uc-gray-800); }
-.section-nav-link.active {
-    background: color-mix(in srgb, var(--club-ink) 8%, transparent); color: var(--uc-blue); font-weight: 600;
-}
-.section-nav-num {
-    width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center;
-    font-size: .68rem; font-weight: 700; background: var(--uc-gray-100);
-    color: var(--uc-gray-400);
-}
-.section-nav-link.active .section-nav-num {
-    background: var(--uc-blue); color: #fff;
-}
-
-/* ── Prev/Next nav ──────────────────────────────────── */
-.topic-nav-btn {
-    display: flex; align-items: center; gap: .75rem;
-    padding: 1rem 1.25rem; border-radius: var(--uc-radius);
-    border: 1px solid var(--uc-gray-200); text-decoration: none;
-    background: var(--uc-white); transition: border-color .15s, box-shadow .15s, transform .15s;
-    min-width: 0; flex: 1;
-}
-.topic-nav-btn:hover {
-    border-color: var(--uc-blue); box-shadow: var(--uc-shadow-sm);
-    transform: translateY(-1px);
-}
-.topic-nav-btn.next { flex-direction: row-reverse; text-align: right; }
-.topic-nav-label { font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--uc-gray-400); }
-.topic-nav-title { font-size: .875rem; font-weight: 600; color: var(--uc-gray-800); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.topic-nav-arrow { font-size: 1.1rem; color: var(--uc-gray-300); flex-shrink: 0; }
-.topic-nav-btn:hover .topic-nav-arrow { color: var(--uc-blue); }
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/theory.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/playbook.css') }}">
 {% endblock %}
 
+{% macro read_form(extra_class='') %}
+<form method="POST" action="{{ url_for('theory.mark_read', topic_id=topic.id) }}" data-read-form class="th-read-btn {{ extra_class }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="read" value="{{ '0' if is_read else '1' }}">
+  <button type="submit" class="btn th-btn w-100 {{ 'btn-outline-secondary is-read' if is_read else 'btn-primary' }}" aria-pressed="{{ 'true' if is_read else 'false' }}">
+    {% if is_read %}<i class="bi bi-check-circle-fill"></i> Read{% else %}<i class="bi bi-check-circle"></i> Mark as read{% endif %}
+  </button>
+</form>
+{% endmacro %}
+
 {% block content %}
-<!-- Reading progress bar -->
-<div id="reading-progress"></div>
+<div id="th-progress-bar" aria-hidden="true"></div>
+{% if request.args.get('saved') %}<div hidden data-clear-drafts="theory-draft:{{ topic.id }} theory-draft:new"></div>{% endif %}
 
-<div class="container py-4">
+<div class="container th-page">
 
-    <!-- Breadcrumb + position indicator -->
-    <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-0" style="font-size:.82rem">
-                <li class="breadcrumb-item"><a href="{{ url_for('theory.index') }}" style="color:var(--uc-blue)">Theory</a></li>
-                <li class="breadcrumb-item"><a href="{{ url_for('theory.section', slug=topic.section.slug) }}" style="color:var(--uc-blue)">{{ topic.section.name }}</a></li>
-                <li class="breadcrumb-item active" style="color:var(--uc-gray-400)">{{ topic.name }}</li>
-            </ol>
-        </nav>
-        {% if section_topics %}
-        <span style="font-size:.78rem;color:var(--uc-gray-400);font-weight:600;white-space:nowrap">
-            {{ current_idx + 1 }} of {{ section_topics|length }}
-        </span>
+  {# Compact header once the title has scrolled away (phones) #}
+  <div class="th-sticky-head" aria-hidden="true">
+    <a class="th-icon-btn sm" href="{{ url_for('theory.section', slug=topic.section.slug) }}" tabindex="-1" aria-label="Back to {{ topic.section.name }}"><i class="bi bi-arrow-left"></i></a>
+    <div class="title">{{ topic.name }}</div>
+    <button type="button" class="btn btn-outline-secondary btn-sm th-btn" data-toc hidden tabindex="-1"
+            data-bs-toggle="offcanvas" data-bs-target="#th-toc-sheet"><i class="bi bi-list-ul"></i>Contents</button>
+  </div>
+
+  <nav class="th-crumbs" aria-label="Breadcrumb">
+    <a href="{{ url_for('theory.index') }}">Theory</a><span aria-hidden="true">›</span>
+    <a href="{{ url_for('theory.section', slug=topic.section.slug) }}">{{ topic.section.name }}</a>
+    {% if section_topics|length > 1 %}<span aria-hidden="true">·</span><span>{{ current_idx + 1 }} of {{ section_topics|length }}</span>{% endif %}
+  </nav>
+
+  {% if not topic.published %}
+  <div class="th-draft-banner">
+    <i class="bi bi-eye-slash" aria-hidden="true"></i>
+    <div class="flex-grow-1">Draft: only coaches can see this.</div>
+    <form method="POST" action="{{ url_for('theory.publish', topic_id=topic.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn btn-sm btn-primary">Publish</button>
+    </form>
+  </div>
+  {% endif %}
+
+  <div class="row g-4">
+    <article class="col-lg-8" id="th-article">
+
+      <div class="th-head mb-2">
+        <h1 id="th-title">{{ topic.name }}</h1>
+        {% if can_edit %}
+        <div class="d-flex gap-2 flex-shrink-0">
+          <a href="{{ url_for('theory.edit_topic', topic_id=topic.id) }}" class="th-icon-btn sm" aria-label="Edit {{ topic.name }}"><i class="bi bi-pencil"></i></a>
+          {{ topic_menu(topic, next=url_for('theory.topic', topic_id=topic.id), show_move=True,
+                        first=current_idx == 0, last=current_idx + 1 >= section_topics|length) }}
+        </div>
         {% endif %}
-    </div>
+      </div>
+      <div class="th-meta mb-3">
+        <button type="button" class="th-badge border-0 d-lg-none" data-toc hidden data-bs-toggle="offcanvas" data-bs-target="#th-toc-sheet"><i class="bi bi-list-ul"></i>Contents</button>
+        {% if topic.last_edited_by %}<span>Updated {{ topic.last_edited_at.strftime('%-d %b %Y') }} by {{ topic.last_edited_by.username }}</span>{% endif %}
+        {% if readers %}<a href="{{ url_for('theory.readers', topic_id=topic.id) }}" class="th-badge"><i class="bi bi-people"></i>{{ readers[0] }} of {{ readers[1] }} read</a>{% endif %}
+        {% if topic.assignment and topic.assignment.due_date %}<span class="th-badge due"><i class="bi bi-calendar-event"></i>Read by {{ topic.assignment.due_date.strftime('%a %-d %b') }}</span>{% endif %}
+        {% for tag in topic.tags %}<a href="{{ url_for('theory.index', tag=tag.name) }}" class="th-badge">{{ tag.name }}</a>{% endfor %}
+      </div>
 
-    <div class="row g-4">
+      {% if topic.image_url %}
+      <button type="button" class="th-hero d-block border-0 p-0" data-lightbox="{{ topic.image_url }}" data-caption="{{ topic.name }}"
+              aria-label="Enlarge the photo">
+        <img src="{{ topic.image_url }}" alt="">
+      </button>
+      {% endif %}
 
-        <!-- ── Main content ─────────────────────────────── -->
-        <div class="col-lg-8" id="article-body">
-
-            <!-- Topic header -->
-            <div class="mb-4">
-                <div class="d-flex align-items-start justify-content-between gap-3 mb-2">
-                    <h1 style="font-size:1.65rem;font-weight:800;color:var(--uc-gray-900);line-height:1.25;margin:0">{{ topic.name }}</h1>
-                    {% if current_user.is_admin %}
-                    <a href="{{ url_for('theory.edit_topic', topic_id=topic.id) }}"
-                       class="btn btn-sm btn-outline-secondary flex-shrink-0">
-                        <i class="bi bi-pencil me-1"></i>Edit
-                    </a>
-                    {% endif %}
-                </div>
-                <!-- Tags -->
-                {% if topic.tags %}
-                <div class="d-flex flex-wrap gap-1 mt-2">
-                    {% for tag in topic.tags %}
-                    <span class="badge" style="background:var(--uc-gray-100);color:var(--uc-gray-600);font-size:.72rem;font-weight:600">{{ tag.name }}</span>
-                    {% endfor %}
-                </div>
-                {% endif %}
-            </div>
-
-            <!-- Hero image -->
-            {% if topic.image_url %}
-            <div class="mb-4">
-                <div class="theory-img-wrap"
-                     onclick="openLightbox('{{ topic.image_url|e }}','{{ topic.name|e }}')">
-                    <img src="{{ topic.image_url }}" alt="{{ topic.name }}"
-                         class="theory-hero-img">
-                </div>
-                <div class="text-center mt-1">
-                    <span style="font-size:.7rem;color:var(--uc-gray-300)">
-                        <i class="bi bi-zoom-in me-1"></i>Click to enlarge
-                    </span>
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- Article content -->
-            <div class="card mb-4">
-                <div class="card-body p-4 p-md-5">
-                    <div class="topic-content">
-                        {{ topic.content|markdown|safe }}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Related videos -->
-            {% if topic.related_videos %}
-            <div class="card mb-4">
-                <div class="card-body p-0">
-                    <div class="px-4 pt-4 pb-3" style="border-bottom:1px solid var(--uc-gray-100)">
-                        <h5 class="mb-0" style="font-weight:700;font-size:1rem">
-                            <i class="bi bi-camera-video me-2" style="color:var(--uc-sky)"></i>Related Videos
-                        </h5>
-                    </div>
-                    <div class="p-4">
-                        {% for video in topic.related_videos %}
-                        <div class="{% if not loop.last %}mb-4 pb-4{% endif %}"
-                             {% if not loop.last %}style="border-bottom:1px solid var(--uc-gray-100)"{% endif %}>
-                            <div class="ratio ratio-16x9" style="border-radius:10px;overflow:hidden;background:var(--uc-gray-900)">
-                                <iframe src="{{ video.url }}" allowfullscreen loading="lazy"></iframe>
-                            </div>
-                            <h6 class="mt-3 mb-0" style="font-weight:700">{{ video.title }}</h6>
-                            {% if video.description %}
-                            <p class="text-muted mt-1 mb-0" style="font-size:.85rem">{{ video.description }}</p>
-                            {% endif %}
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- Prev / Next navigation -->
-            {% if prev_topic or next_topic %}
-            <div class="d-flex gap-3 mt-2">
-                {% if prev_topic %}
-                <a href="{{ url_for('theory.topic', topic_id=prev_topic.id) }}" class="topic-nav-btn">
-                    <i class="bi bi-arrow-left topic-nav-arrow"></i>
-                    <div style="min-width:0">
-                        <div class="topic-nav-label">Previous</div>
-                        <div class="topic-nav-title">{{ prev_topic.name }}</div>
-                    </div>
-                </a>
-                {% else %}
-                <div style="flex:1"></div>
-                {% endif %}
-
-                {% if next_topic %}
-                <a href="{{ url_for('theory.topic', topic_id=next_topic.id) }}" class="topic-nav-btn next">
-                    <i class="bi bi-arrow-right topic-nav-arrow"></i>
-                    <div style="min-width:0">
-                        <div class="topic-nav-label">Next</div>
-                        <div class="topic-nav-title">{{ next_topic.name }}</div>
-                    </div>
-                </a>
-                {% else %}
-                <a href="{{ url_for('theory.section', slug=topic.section.slug) }}" class="topic-nav-btn next">
-                    <i class="bi bi-check-circle topic-nav-arrow" style="color:var(--uc-green)"></i>
-                    <div style="min-width:0">
-                        <div class="topic-nav-label">Section complete</div>
-                        <div class="topic-nav-title">Back to {{ topic.section.name }}</div>
-                    </div>
-                </a>
-                {% endif %}
-            </div>
-            {% endif %}
-
+      <div class="th-article">
+        <div class="topic-content">
+          {% if topic.content %}{{ body }}{% else %}<p class="text-muted">Nothing written yet.</p>{% endif %}
         </div>
+      </div>
 
-        <!-- ── Sidebar ───────────────────────────────────── -->
-        <div class="col-lg-4">
-            <div class="theory-sidebar">
-
-                <!-- Table of contents (populated by JS) -->
-                <div class="card mb-3 d-none" id="toc-card">
-                    <div class="card-body p-0">
-                        <div class="px-4 pt-3 pb-2" style="border-bottom:1px solid var(--uc-gray-100)">
-                            <div style="font-size:.72rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--uc-gray-400)">
-                                On this page
-                            </div>
-                        </div>
-                        <div class="px-3 py-2" id="toc-list"></div>
-                    </div>
-                </div>
-
-                <!-- Section progress + topics -->
-                <div class="card mb-3">
-                    <div class="card-body p-0">
-                        <!-- Section header link -->
-                        <a href="{{ url_for('theory.section', slug=topic.section.slug) }}"
-                           class="d-flex align-items-center justify-content-between px-4 pt-3 pb-3 text-decoration-none"
-                           style="border-bottom:1px solid var(--uc-gray-100)">
-                            <div style="font-size:.75rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--uc-gray-400)">
-                                {{ topic.section.name }}
-                            </div>
-                            {% if section_topics %}
-                            <span style="font-size:.7rem;font-weight:700;color:var(--uc-blue);background:color-mix(in srgb, var(--club-ink) 8%, transparent);padding:.15rem .5rem;border-radius:20px">
-                                {{ current_idx + 1 }}/{{ section_topics|length }}
-                            </span>
-                            {% endif %}
-                        </a>
-                        <!-- Progress bar -->
-                        {% if section_topics|length > 1 %}
-                        <div style="height:3px;background:var(--uc-gray-100)">
-                            <div style="height:100%;background:var(--uc-blue);width:{{ ((current_idx + 1) / section_topics|length * 100)|round|int }}%;transition:width .4s"></div>
-                        </div>
-                        {% endif %}
-                        <!-- Topic list -->
-                        <div class="py-2">
-                            {% for t in section_topics %}
-                            <a href="{{ url_for('theory.topic', topic_id=t.id) }}"
-                               class="section-nav-link {% if t.id == topic.id %}active{% endif %}">
-                                <span class="section-nav-num">{{ loop.index }}</span>
-                                <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ t.name }}</span>
-                            </a>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Related drills -->
-                {% if topic.related_drills %}
-                <div class="card">
-                    <div class="card-body p-0">
-                        <div class="px-4 pt-3 pb-2" style="border-bottom:1px solid var(--uc-gray-100)">
-                            <div style="font-size:.72rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--uc-gray-400)">
-                                <i class="bi bi-list-check me-1" style="color:var(--uc-green)"></i>Related Drills
-                            </div>
-                        </div>
-                        <div class="py-2">
-                            {% for drill in topic.related_drills %}
-                            <a href="{{ url_for('session.drill_detail', drill_id=drill.id) }}"
-                               class="section-nav-link">
-                                <i class="bi bi-arrow-right-short" style="color:var(--uc-gray-300);font-size:1rem;flex-shrink:0"></i>
-                                {{ drill.title }}
-                            </a>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
-
-            </div>
+      {% if topic.related_videos %}
+      <h2 class="th-label">Watch</h2>
+      {% for video in topic.related_videos %}
+      <div class="th-video">
+        {% if video.embed_url %}
+        <div class="ratio ratio-16x9">
+          <iframe src="{{ video.embed_url }}" title="{{ video.title }}" loading="lazy" allowfullscreen
+                  allow="accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                  referrerpolicy="strict-origin-when-cross-origin"></iframe>
         </div>
-    </div>
+        {% endif %}
+        <h3>{{ video.title }}</h3>
+        {% if video.description %}<p class="text-muted mb-0" style="font-size:.9rem">{{ video.description }}</p>{% endif %}
+      </div>
+      {% endfor %}
+      {% endif %}
+
+      {% if topic.related_drills %}
+      <h2 class="th-label">Drills for this</h2>
+      <div class="th-list mb-3">
+        {% for drill in topic.related_drills %}
+        <a class="th-row" href="{{ url_for('session.drill_detail', drill_id=drill.id) }}">
+          <i class="bi bi-list-check" style="color:var(--ok);font-size:1.2rem" aria-hidden="true"></i>
+          <div class="th-row-text">
+            <div class="th-row-title">{{ drill.title }}</div>
+            {% if drill.focus_area or drill.recommended_duration %}<div class="th-row-sub">{{ drill.focus_area or '' }}{% if drill.focus_area and drill.recommended_duration %} · {% endif %}{% if drill.recommended_duration %}{{ drill.recommended_duration }} min{% endif %}</div>{% endif %}
+          </div>
+          <i class="bi bi-chevron-right th-chev" aria-hidden="true"></i>
+        </a>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if plays %}
+      <h2 class="th-label">Plays that use this</h2>
+      <div class="th-list mb-3">
+        {% for play in plays %}
+        <a class="th-row" href="{{ url_for('playbook.view_play', play_id=play.id) }}">
+          {% if play.thumbnail %}<img src="{{ play.thumbnail }}" alt="" class="pb-thumb" loading="lazy">{% else %}<i class="bi bi-journal-richtext" style="color:var(--club-ink);font-size:1.2rem" aria-hidden="true"></i>{% endif %}
+          <div class="th-row-text">
+            <div class="th-row-title">{{ play.name }}</div>
+            <div class="th-row-sub">{{ play.type_label }}{% if play.call %} · “{{ play.call }}”{% endif %}{% if play.is_draft %} · draft{% elif play.is_retired %} · retired{% endif %}</div>
+          </div>
+          <i class="bi bi-chevron-right th-chev" aria-hidden="true"></i>
+        </a>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if clips %}
+      <h2 class="th-label">See it in a game</h2>
+      <div class="th-list mb-3">
+        {% for clip in clips %}
+        <a class="th-row" href="{{ url_for('clip.view_clip', clip_id=clip.id) }}">
+          <i class="bi bi-camera-video" style="color:var(--club-ink);font-size:1.2rem" aria-hidden="true"></i>
+          <div class="th-row-text">
+            <div class="th-row-title">{{ clip.title or 'Clip' }}</div>
+            {% if clip.game %}<div class="th-row-sub">vs {{ clip.game.opponent }}</div>{% endif %}
+          </div>
+          <i class="bi bi-chevron-right th-chev" aria-hidden="true"></i>
+        </a>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {# Previous / mark as read / next: pinned to the bottom on phones #}
+      <div class="th-readbar">
+        {% if prev_topic %}
+        <a href="{{ url_for('theory.topic', topic_id=prev_topic.id) }}" class="th-icon-btn d-lg-none" aria-label="Previous: {{ prev_topic.name }}"><i class="bi bi-arrow-left"></i></a>
+        {% else %}
+        <a href="{{ url_for('theory.section', slug=topic.section.slug) }}" class="th-icon-btn d-lg-none" aria-label="Back to {{ topic.section.name }}"><i class="bi bi-grid"></i></a>
+        {% endif %}
+        {{ read_form() }}
+        {% if next_topic %}
+        <a href="{{ url_for('theory.topic', topic_id=next_topic.id) }}" class="th-icon-btn d-lg-none" data-next-topic aria-label="Next: {{ next_topic.name }}"><i class="bi bi-arrow-right"></i></a>
+        {% else %}
+        <a href="{{ url_for('theory.section', slug=topic.section.slug) }}" class="th-icon-btn d-lg-none" aria-label="Back to {{ topic.section.name }}"><i class="bi bi-check2-all"></i></a>
+        {% endif %}
+      </div>
+
+      <div class="d-none d-lg-flex gap-3">
+        {% if prev_topic %}
+        <a href="{{ url_for('theory.topic', topic_id=prev_topic.id) }}" class="th-nav-btn">
+          <i class="bi bi-arrow-left" aria-hidden="true"></i><div style="min-width:0"><small>Previous</small><span>{{ prev_topic.name }}</span></div>
+        </a>
+        {% else %}<div style="flex:1"></div>{% endif %}
+        {% if next_topic %}
+        <a href="{{ url_for('theory.topic', topic_id=next_topic.id) }}" class="th-nav-btn next">
+          <i class="bi bi-arrow-right" aria-hidden="true"></i><div style="min-width:0"><small>Next</small><span>{{ next_topic.name }}</span></div>
+        </a>
+        {% else %}
+        <a href="{{ url_for('theory.section', slug=topic.section.slug) }}" class="th-nav-btn next">
+          <i class="bi bi-check2-all" aria-hidden="true" style="color:var(--ok)"></i><div style="min-width:0"><small>End of section</small><span>Back to {{ topic.section.name }}</span></div>
+        </a>
+        {% endif %}
+      </div>
+      <div class="th-readbar-spacer"></div>
+    </article>
+
+    <aside class="col-lg-4 d-none d-lg-block">
+      <div class="th-sidebar">
+        <div data-toc hidden>
+          <div class="th-label mt-0">On this page</div>
+          <nav data-toc-list aria-label="On this page" class="mb-3"></nav>
+        </div>
+        <div class="th-label mt-0">{{ topic.section.name }}</div>
+        <div class="th-list">
+          {% for t in section_topics %}
+          <a class="th-row" href="{{ url_for('theory.topic', topic_id=t.id) }}" style="min-height:48px;padding:.5rem .75rem" {% if t.id == topic.id %}aria-current="page"{% endif %}>
+            <span class="th-row-num {% if t.id in read %}done{% endif %}" style="width:24px;height:24px;font-size:.7rem">{% if t.id in read %}<i class="bi bi-check-lg"></i>{% else %}{{ loop.index }}{% endif %}</span>
+            <div class="th-row-text"><div class="th-row-title" style="font-size:.88rem;{% if t.id == topic.id %}color:var(--club-ink){% endif %}">{{ t.name }}{% if not t.published %} <span class="th-badge draft">Draft</span>{% endif %}</div></div>
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+    </aside>
+  </div>
 </div>
 
-<!-- Lightbox overlay -->
-<div id="img-lightbox" onclick="closeLightbox(event)">
-    <span id="img-lightbox-close" onclick="closeLightbox()">&times;</span>
-    <img id="img-lightbox-img" src="" alt="">
-    <div id="img-lightbox-caption"></div>
+{# Contents sheet (phones) #}
+<div class="offcanvas offcanvas-bottom th-sheet" tabindex="-1" id="th-toc-sheet" aria-labelledby="th-toc-title">
+  <div class="th-sheet-grip" aria-hidden="true"></div>
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title" id="th-toc-title">Contents</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+  </div>
+  <div class="offcanvas-body pt-0"><nav data-toc-list aria-label="Contents"></nav></div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 {{ super() }}
-<script>
-(function () {
-    /* ── Reading progress bar ─────────────────────── */
-    const bar     = document.getElementById('reading-progress');
-    const article = document.getElementById('article-body');
-    function updateProgress() {
-        if (!article || !bar) return;
-        const rect  = article.getBoundingClientRect();
-        const total = article.offsetHeight - window.innerHeight;
-        const scrolled = Math.max(0, -rect.top);
-        bar.style.width = Math.min(100, total > 0 ? (scrolled / total) * 100 : 100) + '%';
-    }
-    window.addEventListener('scroll', updateProgress, { passive: true });
-    updateProgress();
-
-    /* ── Lightbox ────────────────────────────────── */
-    function openLightbox(src, alt) {
-        document.getElementById('img-lightbox-img').src = src;
-        document.getElementById('img-lightbox-caption').textContent = alt || '';
-        document.getElementById('img-lightbox').classList.add('open');
-        document.body.style.overflow = 'hidden';
-    }
-    function closeLightbox(e) {
-        // Clicking the image itself shouldn't close the box
-        if (e && e.target.id === 'img-lightbox-img') return;
-        document.getElementById('img-lightbox').classList.remove('open');
-        document.getElementById('img-lightbox-img').src = '';
-        document.body.style.overflow = '';
-    }
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
-
-    // Make every image inside the article content clickable
-    document.querySelectorAll('.topic-content img').forEach(img => {
-        img.addEventListener('click', () => openLightbox(img.src, img.alt));
-    });
-
-    /* ── Table of contents ────────────────────────── */
-    const content = document.querySelector('.topic-content');
-    const tocCard = document.getElementById('toc-card');
-    const tocList = document.getElementById('toc-list');
-    if (content && tocCard && tocList) {
-        const headings = Array.from(content.querySelectorAll('h2, h3'));
-        if (headings.length >= 2) {
-            headings.forEach((h, i) => {
-                if (!h.id) h.id = 'h-' + i;
-                const a = document.createElement('a');
-                a.href        = '#' + h.id;
-                a.textContent = h.textContent;
-                a.className   = 'toc-link' + (h.tagName === 'H3' ? ' h3' : '');
-                a.dataset.id  = h.id;
-                tocList.appendChild(a);
-            });
-            tocCard.classList.remove('d-none');
-
-            /* Active TOC link on scroll */
-            const tocLinks = tocList.querySelectorAll('.toc-link');
-            const observer = new IntersectionObserver(entries => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        tocLinks.forEach(l => l.classList.toggle('active', l.dataset.id === entry.target.id));
-                    }
-                });
-            }, { rootMargin: '0px 0px -60% 0px', threshold: 0 });
-            headings.forEach(h => observer.observe(h));
-        }
-    }
-})();
-</script>
+<script src="{{ url_for('static', filename='js/theory.js') }}"></script>
 {% endblock %}

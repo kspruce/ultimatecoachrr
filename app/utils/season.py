@@ -268,6 +268,8 @@ def start_new_season(team_id, year, start_date, end_date, entries, previous=None
                 row.left_date = left_date or previous.end_date
     db.session.flush()
     _copy_roster_to_players(season, keep)
+    from app.utils.roles import copy_roles
+    copy_roles(previous, season, keep)
     set_current(season)
     return season
 

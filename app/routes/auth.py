@@ -49,9 +49,9 @@ SIGNUP_LIMIT = '10 per hour'
 TEAM_SIGNUP_LIMIT = '5 per hour'
 RESET_REQUEST_LIMIT = '5 per 15 minutes'
 
-# Tables whose user column can't be emptied but whose rows belong to the
-# team rather than the person: when the user is deleted, the rows move to
-# whoever deleted them instead of being lost.
+# Tables whose rows belong to the team rather than the person: when the
+# user is deleted, the rows move to whoever deleted them instead of being
+# lost or losing their author.
 _REASSIGN_ON_USER_DELETE = {('player_feedback', 'coach_id')}
 
 # ---------------------------------------
@@ -184,10 +184,10 @@ def _detach_user_rows(user_id):
             if fk.column.table.name != 'user' or table.name == 'user':
                 continue
             column = fk.parent
-            if column.nullable:
-                values = {column.name: None}
-            elif (table.name, column.name) in _REASSIGN_ON_USER_DELETE:
+            if (table.name, column.name) in _REASSIGN_ON_USER_DELETE:
                 values = {column.name: current_user.id}
+            elif column.nullable:
+                values = {column.name: None}
             else:
                 db.session.execute(table.delete().where(column == user_id))
                 continue

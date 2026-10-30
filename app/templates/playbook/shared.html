@@ -1,0 +1,44 @@
+{# templates/playbook/shared.html: one play, opened from a share link (no sign-in) #}
+{% extends "base.html" %}
+
+{% block styles %}
+{{ super() }}
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/theory.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/playbook.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container th-page" style="max-width:860px">
+  <div class="th-head mb-1"><h1>{{ play.name }}</h1></div>
+  <div class="th-meta mb-2">
+    <span class="pb-side {{ play.type }}">{{ play.type_label }}</span>
+    {% if play.is_retired %}<span class="th-badge">Retired</span>{% endif %}
+    {% for label in play.situation_labels %}<span class="th-badge">{{ label }}</span>{% endfor %}
+  </div>
+  {% if play.call or play.signal %}
+  <div class="pb-call">{% if play.call %}<span>Call: <b>{{ play.call }}</b></span>{% endif %}{% if play.signal %}<span>Signal: <b>{{ play.signal }}</b></span>{% endif %}</div>
+  {% endif %}
+
+  {% for st in stages %}
+  <figure class="pb-drawing">
+    <img src="{{ st.src }}" alt="{{ play.name }}{% if stages|length > 1 %}, stage {{ loop.index }}{% endif %}">
+    {% if stages|length > 1 or st.caption %}<figcaption>{% if stages|length > 1 %}<b>{{ loop.index }}. {{ st.label or 'Stage ' ~ loop.index }}</b>{% endif %}{% if st.caption %} – {{ st.caption }}{% endif %}</figcaption>{% endif %}
+  </figure>
+  {% endfor %}
+
+  {% if play.assignments %}
+  <h2 class="th-label">Who does what</h2>
+  <div class="pb-roles">
+    {% for a in play.assignments if a.position %}
+    <div class="pb-role"><div class="pb-role-name">{{ a.position.name }}</div><div class="md">{{ a.instructions|markdown }}</div></div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% if play.description %}
+  <h2 class="th-label">How it works</h2>
+  <div class="th-article"><div class="topic-content">{{ play.description|markdown }}</div></div>
+  {% endif %}
+  <p class="small text-muted">Shared from a team's playbook on Ultimate Coach.</p>
+</div>
+{% endblock %}

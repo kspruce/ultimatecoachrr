@@ -1,0 +1,199 @@
+{# templates/playbook/call_sheet.html: the plays planned for a game, and how each went #}
+{% extends "base.html" %}
+{% from "playbook/_macros.html" import side_badge, thumb %}
+
+{% block styles %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/theory.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/playbook.css') }}">
+<style>
+  .cs-row { display: grid; grid-template-columns: 1fr auto; gap: .5rem; align-items: center; padding: .7rem 1rem;
+            border-bottom: 1px solid var(--rule); }
+  .cs-row:last-child { border-bottom: 0; }
+  .cs-name { font-weight: 800; font-size: 1.05rem; }
+  .cs-call { font-size: .9rem; color: var(--ink-2); }
+  .cs-stat { text-align: right; font-size: .85rem; color: var(--ink-2); white-space: nowrap; }
+  .cs-stat b { font-size: 1.05rem; color: var(--ink); }
+  .cs-edit .cs-row { grid-template-columns: 1fr auto; }
+  .cs-edit input.form-control { min-height: 40px; font-size: .9rem; }
+  @media print {
+    .uc-navbar, .footer, .th-crumbs, .cs-noprint { display: none !important; }
+    .cs-row { padding: .35rem 0; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container th-page" style="max-width:760px">
+  <nav class="th-crumbs" aria-label="Breadcrumb">
+    <a href="{{ url_for('gameday.game_dashboard', game_id=game.id) if current_user.is_stat_taker else url_for('playbook.index') }}">{{ 'Game Day' if current_user.is_stat_taker else 'Playbook' }}</a>
+  </nav>
+  <div class="th-head">
+    <div>
+      <h1>Call sheet vs {{ game.opponent }}</h1>
+      <p>{% if game.date %}{{ game.date.strftime('%a %-d %b %Y') }} · {% endif %}{% if game.our_score or game.their_score %}{{ game.our_score }}–{{ game.their_score }}{% else %}Plays we plan to call{% endif %}</p>
+    </div>
+    <button type="button" class="th-icon-btn cs-noprint flex-shrink-0" onclick="window.print()" aria-label="Print the call sheet"><i class="bi bi-printer"></i></button>
+  </div>
+
+  {# ── The sheet ─────────────────────────────────────────────── #}
+  {% for side, label in TYPES.items() %}
+  {% set group = rows|selectattr('play.type', 'equalto', side)|list %}
+  {% if group %}
+  <div class="th-label">{{ label }}</div>
+  <div class="th-list mb-3">
+    {% for r in group %}
+    {% set res = results.get(r.play_id) %}
+    <div class="cs-row">
+      <a href="{{ url_for('playbook.view_play', play_id=r.play_id) }}" class="text-decoration-none" style="color:inherit;min-width:0">
+        <div class="cs-name">{% if r.play.is_core %}<span style="color:var(--warn)">★</span> {% endif %}{{ r.play.name }}</div>
+        <div class="cs-call">{% if r.play.call %}“{{ r.play.call }}”{% endif %}{% if r.play.call and r.play.signal %} · {% endif %}{{ r.play.signal or '' }}{% if r.note %}{% if r.play.call or r.play.signal %} · {% endif %}<em>{{ r.note }}</em>{% endif %}</div>
+        {% if my_part.get(r.play_id) %}<div class="small mt-1" style="color:var(--club-ink)">You: {{ my_part[r.play_id].instructions|striptags|truncate(90) }}</div>{% endif %}
+      </a>
+      <div class="cs-stat">{% if res %}<b>{{ res.scored }}/{{ res.called }}</b><br>scored{% else %}not called{% endif %}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endfor %}
+
+  {% if not rows %}
+  <div class="th-list th-empty mb-3">
+    <i class="bi bi-clipboard"></i>
+    <p class="mb-0">No plays on the sheet yet.{% if not can_edit %} Your coaches pick them before the game.{% endif %}</p>
+  </div>
+  {% endif %}
+
+  {% if called_off_sheet %}
+  <div class="th-label">Also called</div>
+  <div class="th-list mb-3">
+    {% for p in called_off_sheet %}
+    {% set res = results.get(p.id) %}
+    <div class="cs-row">
+      <a href="{{ url_for('playbook.view_play', play_id=p.id) }}" class="text-decoration-none" style="color:inherit"><div class="cs-name">{{ p.name }}</div><div class="cs-call">{{ p.type_label }}</div></a>
+      <div class="cs-stat"><b>{{ res.scored }}/{{ res.called }}</b><br>scored</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {# ── Coaches: choose the plays ─────────────────────────────── #}
+  {% if can_edit %}
+  <div class="cs-noprint">
+    {% if report and report.plays and not rows %}
+    <form method="POST" class="mb-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn btn-outline-primary th-btn w-100" name="action" value="from_plan"><i class="bi bi-binoculars"></i>Use the {{ report.plays|length }} play{{ 's' if report.plays|length != 1 }} from the game plan vs {{ report.team_name }}</button>
+    </form>
+    {% endif %}
+
+    <details class="th-more" {% if not rows %}open{% endif %}>
+      <summary>{{ 'Change the plays' if rows else 'Choose the plays' }} <i class="bi bi-chevron-down" aria-hidden="true"></i></summary>
+      <div class="th-more-body">
+        <form method="POST" id="cs-form" class="cs-edit">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="action" value="save">
+          <div class="th-list mb-2" id="cs-picked">
+            {% for r in game.call_sheet %}
+            <div class="cs-row" data-play="{{ r.play_id }}">
+              <div style="min-width:0">
+                <input type="hidden" name="play_id" value="{{ r.play_id }}">
+                <div class="fw-bold">{{ r.play.name }} <span class="pb-side {{ r.play.type }}">{{ r.play.type_label }}</span></div>
+                <input type="text" class="form-control mt-1" name="note_{{ r.play_id }}" value="{{ r.note or '' }}" maxlength="120" placeholder="Note, e.g. after a timeout" aria-label="Note for {{ r.play.name }}">
+              </div>
+              <div class="d-flex gap-1">
+                <button type="button" class="th-icon-btn sm" data-cs-move="-1" aria-label="Move {{ r.play.name }} up"><i class="bi bi-arrow-up"></i></button>
+                <button type="button" class="th-icon-btn sm" data-cs-move="1" aria-label="Move {{ r.play.name }} down"><i class="bi bi-arrow-down"></i></button>
+                <button type="button" class="th-icon-btn sm" data-cs-remove aria-label="Take {{ r.play.name }} off the sheet"><i class="bi bi-x-lg"></i></button>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          <p class="small text-muted" id="cs-empty" {% if game.call_sheet %}hidden{% endif %}>Nothing picked yet.</p>
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-secondary th-btn flex-grow-1" data-bs-toggle="offcanvas" data-bs-target="#cs-add"><i class="bi bi-plus-lg"></i>Add plays</button>
+            <button class="btn btn-primary th-btn flex-grow-1"><i class="bi bi-check-lg"></i>Save</button>
+          </div>
+        </form>
+      </div>
+    </details>
+
+    <div class="offcanvas offcanvas-bottom th-sheet" tabindex="-1" id="cs-add" aria-labelledby="cs-add-title">
+      <div class="th-sheet-grip" aria-hidden="true"></div>
+      <div class="offcanvas-header">
+        <h5 class="offcanvas-title" id="cs-add-title">Add plays</h5>
+        <button type="button" class="btn btn-primary btn-sm" data-bs-dismiss="offcanvas">Done</button>
+      </div>
+      <div class="offcanvas-body pt-1">
+        <div class="th-pick-list">
+          {% for p in choices %}
+          <button type="button" class="btn btn-link text-start w-100 d-flex align-items-center gap-2 px-1" style="min-height:48px;text-decoration:none;border-bottom:1px solid var(--rule)"
+                  data-cs-add="{{ p.id }}" data-name="{{ p.name }}" data-type="{{ p.type }}" data-type-label="{{ p.type_label }}">
+            <span class="pb-side {{ p.type }}">{{ p.type_label }}</span>
+            <span>{% if p.is_core %}★ {% endif %}{{ p.name }}{% if p.call %} <small class="text-muted">“{{ p.call }}”</small>{% endif %}{% if p.is_draft %} <small class="text-muted">· draft</small>{% endif %}</span>
+          </button>
+          {% else %}
+          <p class="small text-muted">No plays in the playbook yet.</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/theory.js') }}"></script>
+{% if can_edit %}
+<script>
+(function () {
+  var list = document.getElementById('cs-picked');
+  if (!list) return;
+  var empty = document.getElementById('cs-empty');
+  function refresh() {
+    empty.hidden = !!list.children.length;
+    document.querySelectorAll('[data-cs-add]').forEach(function (b) {
+      b.disabled = !!list.querySelector('[data-play="' + b.dataset.csAdd + '"]');
+    });
+  }
+  list.addEventListener('click', function (e) {
+    var btn = e.target.closest('button');
+    if (!btn) return;
+    var row = btn.closest('.cs-row');
+    if (btn.hasAttribute('data-cs-remove')) row.remove();
+    else if (btn.dataset.csMove === '-1' && row.previousElementSibling) list.insertBefore(row, row.previousElementSibling);
+    else if (btn.dataset.csMove === '1' && row.nextElementSibling) list.insertBefore(row.nextElementSibling, row);
+    refresh();
+  });
+  document.querySelectorAll('[data-cs-add]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var id = b.dataset.csAdd;
+      if (list.querySelector('[data-play="' + id + '"]')) return;
+      var row = document.createElement('div');
+      row.className = 'cs-row';
+      row.dataset.play = id;
+      row.innerHTML = '<div style="min-width:0"><input type="hidden" name="play_id"><div class="fw-bold"></div>' +
+        '<input type="text" class="form-control mt-1" maxlength="120" placeholder="Note, e.g. after a timeout"></div>' +
+        '<div class="d-flex gap-1"><button type="button" class="th-icon-btn sm" data-cs-move="-1" aria-label="Move up"><i class="bi bi-arrow-up"></i></button>' +
+        '<button type="button" class="th-icon-btn sm" data-cs-move="1" aria-label="Move down"><i class="bi bi-arrow-down"></i></button>' +
+        '<button type="button" class="th-icon-btn sm" data-cs-remove aria-label="Take it off the sheet"><i class="bi bi-x-lg"></i></button></div>';
+      row.querySelector('[name="play_id"]').value = id;
+      row.querySelector('.fw-bold').textContent = b.dataset.name + ' ';
+      var side = document.createElement('span');
+      side.className = 'pb-side ' + b.dataset.type;
+      side.textContent = b.dataset.typeLabel;
+      row.querySelector('.fw-bold').appendChild(side);
+      var note = row.querySelector('input[type="text"]');
+      note.name = 'note_' + id;
+      note.setAttribute('aria-label', 'Note for ' + b.dataset.name);
+      list.appendChild(row);
+      refresh();
+    });
+  });
+  refresh();
+})();
+</script>
+{% endif %}
+{% endblock %}

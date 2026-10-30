@@ -240,6 +240,50 @@ def import_handbook_command(path, team_slug, dry_run, replace):
         click.echo('The Leadership handbook feature is off for this team: switch it on in Team settings > Features.')
 
 
+@click.command('import-theory')
+@click.argument('path', type=click.Path(exists=True, dir_okay=False))
+@click.option('--team', 'team_slug', required=True, help='Slug of the team to import into')
+@click.option('--dry-run', is_flag=True, help='Parse and report, but write nothing')
+@click.option('--replace', is_flag=True, help='Overwrite cards already on the site with the file\'s wording')
+@with_appcontext
+def import_theory_command(path, team_slug, dry_run, replace):
+    """Load a markdown file of theory cards (e.g.
+    imports/theory-cards/herd-theory-cards.md) into a team's Theory hub
+    as drafts, the same as Theory > New > Import cards on the site.
+
+    Re-running adds new cards and moves cards already on the site into the
+    file's sections, but leaves their wording as coaches edited it unless
+    --replace is given.
+    """
+    from app.models.team_organization import TeamOrganization
+    from app.utils.theory_import import decode, import_cards, TheoryImportError
+
+    team = TeamOrganization.query.filter_by(slug=team_slug).first()
+    if team is None:
+        raise click.ClickException(f'No team with slug {team_slug!r}')
+
+    with open(path, 'rb') as f:
+        raw = f.read()
+    try:
+        report = import_cards(decode(raw), team.id, dry_run=dry_run, replace=replace)
+    except TheoryImportError as e:
+        db.session.rollback()
+        click.echo(f'Import failed, nothing was written ({len(e.errors)} problems):', err=True)
+        for error in e.errors:
+            click.echo(f'  - {error}', err=True)
+        raise SystemExit(1)
+    if dry_run:
+        db.session.rollback()
+    else:
+        db.session.commit()
+
+    click.echo(f'{team.name} ({team.slug})')
+    click.echo(report.text())
+    settings = team.settings
+    if not dry_run and settings and not settings.theory_enabled:
+        click.echo('The Theory feature is off for this team: switch it on in Team settings > Features.')
+
+
 @click.command('import-programme')
 @click.argument('folder', type=click.Path(exists=True, file_okay=False))
 @click.option('--team', 'team_slug', required=True, help='Slug of the team to import into')
@@ -347,6 +391,7 @@ def register_commands(app):
     app.cli.add_command(import_season_command)
     app.cli.add_command(import_season_plan_command)
     app.cli.add_command(import_handbook_command)
+    app.cli.add_command(import_theory_command)
     app.cli.add_command(import_programme_command)
     app.cli.add_command(import_data)
     app.cli.add_command(show_models)

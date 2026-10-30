@@ -12,7 +12,6 @@ from app.models.event import Event
 from app.models.fitness import FitnessMetric
 from app.models.game import Game
 from app.models.game_player import GamePlayer
-from app.models.off_season import TrackWorkoutWeek
 from app.models.onboarding import UserOnboarding
 from app.models.playbook import Play
 from app.models.point import Point
@@ -155,12 +154,6 @@ def test_quick_checkin_is_for_your_own_session_and_players(app, teams):
     assert Attendance.query.one().player_id == teams['other_player']
 
 
-def test_track_weeks_only_link_your_sessions(app, teams):
-    client(app, teams).post('/off-season/track-workout/add', data={
-        'week_number': 1, 'title': 'Week one', 'session_plan_id': teams['herd_session']})
-    assert TrackWorkoutWeek.query.one().session_plan_id is None
-
-
 def test_drill_search_filters_your_library(app, teams):
     c = client(app, teams, 'coach')
     everything = page(c, '/sessions/drills')
@@ -173,5 +166,31 @@ def test_drill_search_filters_your_library(app, teams):
     assert 'Zone drill' in beginner and 'Huck drill' not in beginner
 
 
-def test_off_season_goals_page_opens(app, teams):
-    page(client(app, teams, 'coach'), '/off-season/goals')
+def test_sections_and_tags_are_named_per_team(app, teams):
+    from app.models.playbook import PlayTag
+    from app.models.theory import TheorySection, TheoryTag
+    db.session.add_all([
+        TheorySection(name='Defence', slug='defence', team_organization_id=teams['herd']),
+        TheoryTag(name='Zone', team_organization_id=teams['herd']),
+        PlayTag(name='Herd secret tag', team_organization_id=teams['herd']),
+    ])
+    db.session.commit()
+
+    c = client(app, teams, 'coach')
+    for _ in range(2):
+        assert c.post('/theory/add_section', data={'name': 'Defence'}).status_code == 302
+    mine = TheorySection.query.filter_by(team_organization_id=teams['other']).order_by(TheorySection.id)
+    assert [s.slug for s in mine] == ['defence', 'defence-2']
+    assert 'Defence' in page(c, '/theory/section/defence')
+
+    # The same tag names can be used by both teams
+    db.session.add_all([TheoryTag(name='Zone', team_organization_id=teams['other']),
+                        PlayTag(name='Herd secret tag', team_organization_id=teams['other'])])
+    db.session.commit()
+    assert TheoryTag.query.filter_by(name='Zone').count() == 2
+
+    # The play form only offers your own tags
+    other_tag = PlayTag.query.filter_by(team_organization_id=teams['other']).one()
+    herd_tag = PlayTag.query.filter_by(team_organization_id=teams['herd']).one()
+    form = page(client(app, teams), '/playbook/plays/add')
+    assert f'value="{other_tag.id}"' in form and f'value="{herd_tag.id}"' not in form

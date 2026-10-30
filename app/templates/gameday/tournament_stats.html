@@ -81,8 +81,8 @@
       <a href="{{ url_for('gameday.team_stats') }}" class="btn btn-sm btn-outline-secondary">
         <i class="bi bi-bar-chart-line"></i> Season Summary
       </a>
-      <a href="{{ url_for('game.index') }}" class="btn btn-sm btn-outline-secondary">
-        <i class="bi bi-arrow-left"></i> Games
+      <a href="{{ url_for('tournament.detail', tournament_id=tournament.id) }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> {{ tournament.name }}
       </a>
     </div>
   </div>

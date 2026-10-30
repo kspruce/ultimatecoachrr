@@ -1,0 +1,10 @@
+{# The signed-in player's "keep in mind" on a session or tournament page:
+   set kind ('session' / 'tournament') and row_id before including. #}
+{% set f = my_focus_for(kind, row_id) %}
+{% if f %}
+<div class="mb-3" style="border:2px solid var(--club-ink);background:var(--club-soft);border-radius:14px;padding:.75rem 1rem">
+  <div style="font-size:.75rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--club-ink)"><i class="bi bi-lightbulb me-1"></i>Keep in mind{% if f.for_label %} · <span style="text-transform:none;letter-spacing:0">{{ f.for_label }}</span>{% endif %}</div>
+  <div style="white-space:pre-wrap;margin-top:.25rem">{{ f.content }}</div>
+  <a href="{{ url_for('feedback.mine') }}" class="small">My feedback →</a>
+</div>
+{% endif %}

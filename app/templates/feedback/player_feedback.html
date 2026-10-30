@@ -1,86 +1,17 @@
 {% extends "base.html" %}
+{% import "feedback/_note.html" as fb %}
 
 {% block title %}Coach Feedback — {{ player.name }}{% endblock %}
 
 {% block styles %}
 {{ super() }}
+{{ fb.styles() }}
 <style>
-/* ── Feedback view ───────────────────────────────────────── */
-.fb-entry {
-    border-left: 3px solid var(--uc-blue);
-    padding: 0.65rem 1rem;
-    margin-bottom: 0.5rem;
-    background: var(--uc-card-bg);
-    border-radius: 0 8px 8px 0;
-    box-shadow: var(--uc-shadow-sm);
-    transition: border-color 0.15s;
-}
-
-.fb-entry:hover { border-left-color: var(--uc-indigo); }
-
-.fb-meta {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.4rem;
-    margin-bottom: 0.4rem;
-}
-
-.fb-date {
-    font-size: 0.78rem;
-    color: var(--uc-gray-400);
-    font-weight: 600;
-}
-
-.fb-session-link {
-    font-size: 0.78rem;
-    color: var(--uc-blue);
-    text-decoration: none;
-    font-weight: 600;
-}
-
-.fb-session-link:hover { text-decoration: underline; }
-
-.fb-coach {
-    font-size: 0.78rem;
-    color: var(--uc-gray-400);
-}
-
-.fb-tag {
-    font-size: 0.72rem;
-    font-weight: 700;
-    padding: 0.18rem 0.55rem;
-    border-radius: 99px;
-    letter-spacing: .04em;
-    text-transform: uppercase;
-}
-
-.fb-content {
-    font-size: 0.92rem;
-    color: var(--uc-gray-800);
-    line-height: 1.55;
-    white-space: pre-wrap;
-    word-break: break-word;
-}
-
-.delete-form button {
-    font-size: 0.75rem;
-    padding: 0.2rem 0.55rem;
-}
-
-/* Tag colour map */
-.tag-ingame     { background: var(--warn-soft); color: var(--ink); }
-.tag-drill      { background: var(--club-soft); color: var(--uc-blue); }
-.tag-debrief    { background: var(--ok-soft); color: var(--ink); }
-.tag-tournament { background: var(--club-soft); color: var(--ink); }
-.tag-general    { background: var(--sunken); color: var(--ink); }
-
-/* Section header per session group */
 .session-group-header {
     background: var(--uc-gray-100);
     border-radius: 6px;
     padding: 0.45rem 0.75rem;
-    margin-bottom: 0.5rem;
+    margin: 1rem 0 0.5rem;
     font-weight: 700;
     font-size: 0.85rem;
     color: var(--uc-gray-600);
@@ -89,160 +20,104 @@
 {% endblock %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="container mt-4" style="max-width: 860px;">
 
-    <!-- Page header -->
-    <div class="row mb-3 align-items-center">
-        <div class="col">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <div>
             <h2 class="mb-0">
-                <i class="bi bi-chat-square-text-fill text-primary me-2"></i>
-                Coach Feedback
+                <i class="bi bi-chat-square-text-fill text-primary me-2"></i>Coach Feedback
             </h2>
             <p class="text-muted mb-0">
                 {{ player.name }}
-                {% if player.jersey_number %}
-                  <span class="badge bg-secondary ms-1">#{{ player.jersey_number }}</span>
-                {% endif %}
+                {% if player.jersey_number %}<span class="badge bg-secondary ms-1">#{{ player.jersey_number }}</span>{% endif %}
             </p>
         </div>
-        <div class="col-auto d-flex gap-2">
-            <a href="{{ url_for('team.player_detail', player_id=player.id) }}"
-               class="btn btn-outline-secondary btn-sm">
-                <i class="bi bi-arrow-left"></i> Player Profile
-            </a>
-        </div>
+        <a href="{{ url_for('team.player_detail', player_id=player.id) }}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left"></i> Player Profile
+        </a>
     </div>
 
-    <!-- Summary row -->
-    <div class="row g-2 mb-4">
-        <div class="col-6 col-sm-3">
-            <div class="card text-center py-2 shadow-sm">
-                <div class="h4 mb-0">{{ entries|length }}</div>
-                <div class="text-muted small">Total Notes</div>
-            </div>
-        </div>
-        {% set tag_counts = {} %}
-        {% for e in entries %}
-            {% if e.context_tag in tag_counts %}
-                {# Jinja can't mutate dicts inline, handled below #}
+    <div class="card mb-4" id="focus">
+        <div class="card-body">
+            <h6 class="mb-2"><i class="bi bi-lightbulb me-1"></i>Keep in mind</h6>
+            {% if focus %}{{ fb.focus_card(focus, heading='Now') }}{% endif %}
+            <details {% if not focus %}open{% endif %}>
+                <summary class="btn btn-sm btn-outline-primary mb-2">{{ 'Change it' if focus else 'Set what to keep in mind' }}</summary>
+                {{ fb.focus_form(player, focus, coming_sessions, coming_tournaments, next=request.path ~ '#focus') }}
+            </details>
+            {% if focus %}
+            <form method="POST" action="{{ url_for('feedback.clear_focus', player_id=player.id) }}" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="next" value="{{ request.path }}#focus">
+                <button class="btn btn-link btn-sm text-danger px-0">Clear it</button>
+            </form>
             {% endif %}
-        {% endfor %}
-        {% for tag in ['In-game', 'Drill', 'Debrief', 'Tournament', 'General'] %}
-        {% set count = entries | selectattr('context_tag', 'equalto', tag) | list | length %}
-        {% if count > 0 %}
-        <div class="col-6 col-sm-3">
-            <div class="card text-center py-2 shadow-sm">
-                <div class="h4 mb-0">{{ count }}</div>
-                <div class="text-muted small">{{ tag }}</div>
-            </div>
+            {% if focus_history %}
+            <details class="mt-2">
+                <summary class="small text-muted" style="cursor:pointer">Earlier ones ({{ focus_history|length }})</summary>
+                {% for f in focus_history %}
+                <div class="small mt-2"><b>{{ f.created_at.strftime('%-d %b %Y') }}{% if f.for_label %} · {{ f.for_label }}{% endif %}</b><div style="white-space:pre-wrap">{{ f.content }}</div></div>
+                {% endfor %}
+            </details>
+            {% endif %}
         </div>
-        {% endif %}
-        {% endfor %}
     </div>
 
-    <!-- Group entries by session, then no-session -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h6 class="mb-2">Add a note</h6>
+            {{ fb.form(context_tags, player=player, games=games, game_id=game_id, goals=goals) }}
+            <p class="text-muted small mb-0 mt-2">
+                Notes stay with the coaches unless you share them.
+                {% if player.user_id %}Shared notes show under My Feedback for {{ player.name }}.{% else %}{{ player.name }} has no login yet, so shared notes wait until they join.{% endif %}
+            </p>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="mb-0"><i class="bi bi-bullseye me-1"></i>Goals and reviews</h6>
+                <a href="{{ url_for('feedback.new_review', player_id=player.id) }}" class="btn btn-sm btn-outline-primary">Write a review</a>
+            </div>
+            {% if goals %}<ul class="small ps-3 mb-2">{% for g in goals %}<li>{{ g.title }} <span class="text-muted">({{ g.horizon_label }}{% if g.notes %} · {{ g.notes|length }} note{{ 's' if g.notes|length != 1 }}{% endif %})</span></li>{% endfor %}</ul>
+            {% else %}<p class="small text-muted mb-2">No goals yet.</p>{% endif %}
+            {% for r in reviews %}<div class="small"><a href="{{ url_for('feedback.view_review', review_id=r.id) }}">{{ r.title }}</a> · {{ r.created_at.strftime('%-d %b %Y') }}{% if not r.shared %} · coaches only{% endif %}{% if r.player_comment %} · they commented{% endif %}</div>{% endfor %}
+            <a class="small" href="{{ url_for('team.player_detail', player_id=player.id, _anchor='development') }}">Goals on their profile →</a>
+        </div>
+    </div>
+
+    {% set shared = entries | selectattr('shared') | list %}
+    <div class="row g-2 mb-3">
+        <div class="col-4">
+            <div class="card text-center py-2 shadow-sm">
+                <div class="h4 mb-0">{{ entries|length }}</div><div class="text-muted small">Notes</div>
+            </div>
+        </div>
+        <div class="col-4">
+            <div class="card text-center py-2 shadow-sm">
+                <div class="h4 mb-0">{{ shared|length }}</div><div class="text-muted small">Shared</div>
+            </div>
+        </div>
+        <div class="col-4">
+            <div class="card text-center py-2 shadow-sm">
+                <div class="h4 mb-0">{{ shared | selectattr('seen_at') | list | length }}</div><div class="text-muted small">Seen</div>
+            </div>
+        </div>
+    </div>
+
     {% if entries %}
-
-        {# Collect unique session objects (preserving order) #}
-        {% set seen_sessions = [] %}
-        {% for e in entries %}
-            {% if e.session and e.session.id not in seen_sessions %}
-                {% if seen_sessions.append(e.session.id) %}{% endif %}
+        {% for entry in entries %}
+            {% set month = entry.created_at.strftime('%B %Y') %}
+            {% if loop.first or loop.previtem.created_at.strftime('%B %Y') != month %}
+            <div class="session-group-header"><i class="bi bi-calendar3 me-1"></i>{{ month }}</div>
             {% endif %}
+            {{ fb.note(entry, coach=True, can_reply=entry.shared, new_reply_ids=new_reply_ids, next=request.path) }}
         {% endfor %}
-
-        {# --- Per-session groups --- #}
-        {% for session_id in seen_sessions %}
-            {% set session_entries = entries | selectattr('session_id', 'equalto', session_id) | list %}
-            {% set sess = session_entries[0].session %}
-            <div class="session-group-header">
-                <i class="bi bi-calendar-event me-1"></i>
-                <a href="{{ url_for('session.detail', session_id=sess.id) }}"
-                   class="text-reset text-decoration-none fw-bold">
-                    {{ sess.title }}
-                </a>
-                {% if sess.date %}
-                  <span class="fw-normal text-muted ms-1">— {{ sess.date.strftime('%-d %b %Y') }}</span>
-                {% endif %}
-                <span class="badge bg-secondary ms-2 fw-normal">{{ session_entries|length }} note{{ 's' if session_entries|length != 1 }}</span>
-            </div>
-
-            {% for entry in session_entries %}
-            <div class="fb-entry mb-3">
-                <div class="fb-meta">
-                    <span class="fb-date">
-                        <i class="bi bi-clock me-1"></i>
-                        {{ entry.created_at.strftime('%-d %b %Y, %H:%M') }}
-                    </span>
-                    <span class="fb-tag tag-{{ entry.context_tag|lower|replace('-','') }}">
-                        {{ entry.context_tag }}
-                    </span>
-                    <span class="fb-coach">
-                        <i class="bi bi-person me-1"></i>{{ entry.coach.username }}
-                    </span>
-                </div>
-                <div class="fb-content">{{ entry.content }}</div>
-                <div class="mt-2 text-end">
-                    <form method="POST"
-                          action="{{ url_for('feedback.delete_feedback', feedback_id=entry.id) }}"
-                          class="delete-form d-inline"
-                          onsubmit="return confirm('Delete this note?');">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="btn btn-outline-danger btn-sm">
-                            <i class="bi bi-trash"></i> Delete
-                        </button>
-                    </form>
-                </div>
-            </div>
-            {% endfor %}
-        {% endfor %}
-
-        {# --- Notes not linked to any session --- #}
-        {% set no_session_entries = entries | selectattr('session_id', 'none') | list %}
-        {% if no_session_entries %}
-        <div class="session-group-header">
-            <i class="bi bi-journal me-1"></i> General / No session
-            <span class="badge bg-secondary ms-2 fw-normal">{{ no_session_entries|length }} note{{ 's' if no_session_entries|length != 1 }}</span>
-        </div>
-
-        {% for entry in no_session_entries %}
-        <div class="fb-entry mb-3">
-            <div class="fb-meta">
-                <span class="fb-date">
-                    <i class="bi bi-clock me-1"></i>
-                    {{ entry.created_at.strftime('%-d %b %Y, %H:%M') }}
-                </span>
-                <span class="fb-tag tag-{{ entry.context_tag|lower|replace('-','') }}">
-                    {{ entry.context_tag }}
-                </span>
-                <span class="fb-coach">
-                    <i class="bi bi-person me-1"></i>{{ entry.coach.username }}
-                </span>
-            </div>
-            <div class="fb-content">{{ entry.content }}</div>
-            <div class="mt-2 text-end">
-                <form method="POST"
-                      action="{{ url_for('feedback.delete_feedback', feedback_id=entry.id) }}"
-                      class="delete-form d-inline"
-                      onsubmit="return confirm('Delete this note?');">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-outline-danger btn-sm">
-                        <i class="bi bi-trash"></i> Delete
-                    </button>
-                </form>
-            </div>
-        </div>
-        {% endfor %}
-        {% endif %}
-
     {% else %}
-    <!-- Empty state -->
     <div class="text-center py-5 text-muted">
         <i class="bi bi-journal-x" style="font-size:2.5rem"></i>
-        <p class="mt-2">No coaching notes recorded for {{ player.name }} yet.</p>
-        <a href="{{ url_for('session.index') }}" class="btn btn-outline-primary btn-sm mt-1">
-            Go to Sessions
-        </a>
+        <p class="mt-2">No coaching notes for {{ player.name }} yet.</p>
     </div>
     {% endif %}
 

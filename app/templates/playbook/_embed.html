@@ -1,0 +1,9 @@
+{# A play inside a theory article ([[play:<id>]]): its drawing and a link #}
+<a class="pb-embed" href="{{ url_for('playbook.view_play', play_id=play.id) }}">
+  {% if play.thumbnail %}<img src="{{ play.thumbnail }}" alt="{{ play.name }}" loading="lazy">{% endif %}
+  <span class="pb-embed-body">
+    <span class="pb-side {{ play.type }}">{{ play.type_label }}</span>
+    <b>{{ play.name }}{% if play.call %} · “{{ play.call }}”{% endif %}</b>
+    {% if play.stage_count > 1 %}<span class="th-badge"><i class="bi bi-play-fill"></i>Watch it</span>{% else %}<i class="bi bi-chevron-right"></i>{% endif %}
+  </span>
+</a>

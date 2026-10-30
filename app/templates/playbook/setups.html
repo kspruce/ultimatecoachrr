@@ -1,0 +1,65 @@
+{# templates/playbook/setups.html: starting positions saved from the drawing editor #}
+{% extends "base.html" %}
+
+{% block styles %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/theory.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/playbook.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container th-page" style="max-width:860px">
+  <nav class="th-crumbs" aria-label="Breadcrumb"><a href="{{ url_for('playbook.index') }}">Playbook</a></nav>
+  <div class="th-head">
+    <div>
+      <h1>Set-ups</h1>
+      <p>Starting positions your team uses. Start a new play from one, or set any stage from one in the drawing's <em>Set up</em> menu.</p>
+    </div>
+  </div>
+
+  {% if setups %}
+  <div class="row g-3">
+    {% for x in setups %}
+    <div class="col-sm-6">
+      <div class="th-card h-100 d-flex flex-column">
+        {% if x.image_data %}<img src="{{ url_for('playbook.setup_image', setup_id=x.id) }}" alt="{{ x.name }}" class="pb-thumb mb-2" style="width:100%;height:auto">{% endif %}
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <strong class="flex-grow-1">{{ x.name }}</strong>
+          {% if x.type %}<span class="pb-side {{ x.type }}">{{ TYPES[x.type] }}</span>{% endif %}
+        </div>
+        <div class="d-flex gap-2 mt-auto">
+          <a href="{{ url_for('playbook.draw_play', setup=x.id, type=x.type or None) }}" class="btn btn-primary th-btn flex-grow-1"><i class="bi bi-easel2"></i>New play from it</a>
+          <div class="dropdown">
+            <button class="th-icon-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Options for {{ x.name }}"><i class="bi bi-three-dots"></i></button>
+            <div class="dropdown-menu dropdown-menu-end p-3" style="min-width:16rem">
+              <form method="POST" action="{{ url_for('playbook.rename_setup', setup_id=x.id) }}" class="mb-2">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <label class="form-label small" for="rename-{{ x.id }}">Rename</label>
+                <div class="d-flex gap-2"><input id="rename-{{ x.id }}" name="name" class="form-control form-control-sm" value="{{ x.name }}" maxlength="80"><button class="btn btn-sm btn-outline-secondary">Save</button></div>
+              </form>
+              <form method="POST" action="{{ url_for('playbook.delete_setup', setup_id=x.id) }}" data-confirm="Delete the &quot;{{ x.name }}&quot; set-up?">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-sm btn-link text-danger px-0"><i class="bi bi-trash me-1"></i>Delete</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="th-list th-empty">
+    <i class="bi bi-people"></i>
+    <p class="mb-3">No set-ups yet. In the drawing editor, put the players where your team lines up, then <em>Set up → Save this stage as a set-up</em>.
+      The editor also has a vertical stack, horizontal stack, zone and endzone stack ready to go.</p>
+    <a href="{{ url_for('playbook.draw_play') }}" class="btn btn-primary th-btn"><i class="bi bi-easel2"></i>Draw a Play</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/theory.js') }}"></script>
+{% endblock %}

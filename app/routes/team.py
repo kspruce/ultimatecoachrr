@@ -11,6 +11,7 @@ from app.models.point import LineUp
 from app.models.event import Event, Pull
 from app.models.scouting import OpponentPlayer
 from app.models.session import Attendance, SessionRSVP
+from app.models.feedback import PlayerFeedback
 from app.utils.utils import coach_required
 from app.utils.permissions import can_manage_account
 from app.models.team_organization import TeamOrganization
@@ -500,17 +501,68 @@ def player_detail(player_id):
     
     # Pass current date for filtering upcoming sessions
     now = datetime.now().date()
-    
+
+    # Coaches see every note; the player sees the ones shared with them
+    feedback = PlayerFeedback.query.filter_by(player_id=player.id)
+    if not current_user.is_coach:
+        feedback = feedback.filter_by(shared=True)
+    recent_feedback = feedback.order_by(PlayerFeedback.created_at.desc()).limit(5).all()
+
+    # Roles this season, what they'd like, and earlier seasons' roles
+    from app.routes.roles import roles_season
+    from app.utils import roles as team_roles_util
+    role_season = roles_season(player.team_organization_id)
+    role_roster = roster_entry(player, role_season)
+    role_history = [(row.season, [r.role.name for r in team_roles_util.player_roles(row)])
+                    for row in sorted(player.season_entries, key=lambda r: r.season.start_date, reverse=True)
+                    if row.season_id != (role_season.id if role_season else None) and row.roles]
+    role_history = [(season, names) for season, names in role_history if names]
+    # The plays their roles are in (playbook switched on)
+    role_plays = []
+    settings = TeamSettings.query.filter_by(team_id=player.team_organization_id).first()
+    if settings is None or settings.playbook_enabled:
+        by_role = team_roles_util.plays_by_role(player.team_organization_id)
+        role_plays = [(r.role, by_role[r.role_id]) for r in team_roles_util.player_roles(role_roster)
+                      if by_role.get(r.role_id)]
+
     return render_template(
-        'team/player_detail.html', 
-        player=player, 
+        'team/player_detail.html',
+        player=player,
         season_rows=player_seasons(player),
         now=now,
         games_played=games_played,
         points_played=points_played,
-        recent_games=recent_games
+        recent_games=recent_games,
+        recent_feedback=recent_feedback,
+        feedback_tags=PlayerFeedback.CONTEXT_TAGS,
+        role_season=role_season,
+        on_role_roster=role_roster is not None,
+        my_roles=team_roles_util.player_roles(role_roster),
+        wanted_roles=team_roles_util.player_roles(role_roster, 'preferred'),
+        team_roles=team_roles_util.team_roles(player.team_organization_id),
+        role_history=role_history,
+        role_plays=role_plays,
+        focus=current_focus(player.id),
+        **development_for(player),
     )
 
+
+
+def development_for(player):
+    """Goals and reviews for the profile's Development tab (the player and
+    coaches only; nothing for anyone else)."""
+    from app.models.feedback import PlayerGoal
+    from app.utils import feedback as fbu
+    if not (current_user.is_coach or current_user.is_admin or (player.user_id and player.user_id == current_user.id)):
+        return {'goals_active': [], 'goals_done': [], 'reviews': [], 'goal_horizons': PlayerGoal.HORIZONS}
+    active, done = fbu.player_goals(player.id)
+    return {'goals_active': active, 'goals_done': done, 'goal_horizons': PlayerGoal.HORIZONS,
+            'reviews': fbu.player_reviews(player.id, shared_only=not current_user.is_coach)}
+
+
+def current_focus(player_id):
+    from app.utils.feedback import current_focus as focus_now
+    return focus_now(player_id)
 
 
 @bp.route('/player/<int:player_id>/update_goals', methods=['POST'])
@@ -525,26 +577,19 @@ def update_player_goals(player_id):
     if not (current_user.is_admin or current_user.id == player.user_id or 
             (hasattr(current_user, 'role') and current_user.role == 'coach')):
         flash('You do not have permission to update goals for this player.', 'danger')
-        return redirect(url_for('team.player_detail', player_id=player_id))
+        return redirect(url_for('team.player_detail', player_id=player_id, _anchor='development'))
     
-    try:
-        # Update player goals
-        player.short_term_goals = request.form.get('short_term_goals')
-        player.mid_term_goals = request.form.get('mid_term_goals')
-        player.long_term_goals = request.form.get('long_term_goals')
-        player.skills_to_develop = request.form.get('skills_to_develop')
-        
-        # Only admins and coaches can update feedback
-        if current_user.is_admin or (hasattr(current_user, 'role') and current_user.role == 'coach'):
-            player.coach_feedback = request.form.get('coach_feedback')
-        
-        db.session.commit()
-        flash('Player goals updated successfully!', 'success')
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Error updating goals: {str(e)}', 'danger')
-    
-    return redirect(url_for('team.player_detail', player_id=player_id))
+    # The old boxes of goals: each line becomes a goal (goals are separate
+    # items now, added and changed on the profile's Development tab)
+    from app.utils.feedback import goals_from_text
+    made = []
+    for field, horizon in (('short_term_goals', 'short'), ('mid_term_goals', 'mid'),
+                           ('long_term_goals', 'long'), ('skills_to_develop', 'skill')):
+        made += goals_from_text(player, request.form.get(field), horizon, current_user.id)
+    db.session.commit()
+    flash(f'{len(made)} goal{"s" if len(made) != 1 else ""} added.' if made else 'Nothing to add.', 'success')
+
+    return redirect(url_for('team.player_detail', player_id=player_id, _anchor='development'))
 
 @bp.route('/settings/features', methods=['GET', 'POST'])
 @login_required

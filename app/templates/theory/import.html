@@ -1,0 +1,58 @@
+{# templates/theory/import.html #}
+{% extends "base.html" %}
+
+{% block styles %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/theory.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container th-page" style="max-width:720px">
+  <nav class="th-crumbs" aria-label="Breadcrumb">
+    <a href="{{ url_for('theory.index') }}">Theory</a>
+  </nav>
+  <div class="th-head">
+    <div>
+      <h1>{{ title }}</h1>
+      <p>Upload a Markdown file of cards. Each one becomes a draft topic you can edit here, then publish when the team should read it.</p>
+    </div>
+  </div>
+
+  {% if errors %}
+  <div class="alert alert-danger" role="alert">
+    <p class="fw-semibold mb-1">Nothing was imported. {{ errors|length }} thing{{ 's' if errors|length != 1 }} to fix in the file:</p>
+    <ul class="mb-0">{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+
+  <form method="POST" enctype="multipart/form-data" class="th-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="th-form-card">
+      <div class="mb-3">
+        <label class="form-label" for="file">Cards file (.md)</label>
+        <input type="file" class="form-control" id="file" name="file" accept=".md,.markdown,.txt,text/markdown,text/plain" required>
+      </div>
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" id="replace" name="replace" value="1">
+        <label class="form-check-label" for="replace">Overwrite cards already here with the file's wording</label>
+        <div class="form-text">Off: cards with the same title are left as you've edited them, and only new ones are added.</div>
+      </div>
+    </div>
+    <div class="th-actionbar">
+      <a href="{{ url_for('theory.index') }}" class="btn btn-link px-2">Cancel</a>
+      <span class="grow"></span>
+      <button type="submit" class="btn btn-primary th-btn px-4"><i class="bi bi-upload"></i>Import</button>
+    </div>
+  </form>
+
+  <div class="th-form-card mt-3 small">
+    <p class="fw-semibold mb-1">The format</p>
+    <ul class="mb-0">
+      <li>Each <code># Throw and catch</code> line starts a section (made if there isn't one by that name yet).</li>
+      <li>Each <code>## Card 4 · Grip, pivot and fakes</code> heading under it starts a topic in that section, titled with the words after the number. Everything under it, up to the next heading, is the topic.</li>
+      <li>A <code>##</code> heading before a section's first card (such as “How to use these cards”) is kept as a draft note for coaches.</li>
+      <li>Uploading again adds new cards and moves cards already here (matched on title) into the section the file gives them. A section left empty by those moves is removed.</li>
+    </ul>
+  </div>
+</div>
+{% endblock %}

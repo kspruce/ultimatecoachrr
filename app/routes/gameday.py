@@ -11,6 +11,8 @@ from app.models.point import Point, LineUp
 from app.models.gameday import GameDayEvent, GameDayPlayerStats, LineTemplate, LineTemplatePlayer
 from app.models.team_organization import TeamOrganization  # Add this import
 from app.utils.utils import stat_taker_required
+from app.models.tournament import Tournament
+from app.utils.season import scope_games, scope_tournaments, viewing_season
 
 bp = Blueprint('gameday', __name__, url_prefix='/gameday')
 
@@ -24,8 +26,7 @@ def index():
     from sqlalchemy import desc
     from datetime import date
     games = (
-        Game.query
-        .filter_by(team_organization_id=get_current_team_id())
+        scope_games(Game.query.filter_by(team_organization_id=get_current_team_id()))
         .order_by(desc(Game.date), desc(Game.id))
         .limit(30)
         .all()
@@ -94,6 +95,7 @@ def game_dashboard(game_id):
     next_point_number = (max_point_number or 0) + 1
     
     linked_report, other_reports = scouting_for_game(game)
+    call_plays, other_plays = called_play_choices(game)
 
     return render_template('gameday/dashboard.html', 
                           game=game,
@@ -101,8 +103,34 @@ def game_dashboard(game_id):
                           mmp_players=mmp_players,
                           fmp_players=fmp_players,
                           line_templates=line_templates,
-                          next_point_number=next_point_number)
+                          next_point_number=next_point_number,
+                          call_plays=call_plays, other_plays=other_plays)
 
+
+
+def called_play_choices(game):
+    """(the call sheet's plays, the other plays in use) for Game Day's "Play
+    called", or ([], []) when the team has the Playbook off."""
+    from app.models.playbook import Play
+    from app.models.team_settings import TeamSettings
+    settings = TeamSettings.query.filter_by(team_id=game.team_organization_id).first()
+    if settings is not None and not settings.playbook_enabled:
+        return [], []
+    sheet = [r.play for r in game.call_sheet if r.play and r.play.status != 'draft']
+    on_sheet = {p.id for p in sheet}
+    others = (Play.query.filter_by(team_organization_id=game.team_organization_id, status='active')
+              .order_by(Play.name).all())
+    return sheet, [p for p in others if p.id not in on_sheet]
+
+
+def called_play_id(raw, team_id):
+    """The team's play with this id, for a point's "Play called"; None otherwise."""
+    from app.models.playbook import Play
+    try:
+        play_id = int(raw)
+    except (TypeError, ValueError):
+        return None
+    return play_id if Play.query.filter_by(id=play_id, team_organization_id=team_id).first() else None
 
 
 @bp.route('/api/record-point', methods=['POST'])
@@ -162,6 +190,7 @@ def record_point():
             starting_position='offense' if line_type == 'O-line' else 'defense',
             point_outcome=outcome,
             gender_ratio=gender_ratio,
+            called_play_id=called_play_id(data.get('play_id'), team_id),
             team_organization_id=team_id
         )
 
@@ -887,15 +916,16 @@ def team_stats():
     # Get current team ID
     team_id = get_current_team_id()
     
-    # Get all games for this team
-    games = Game.query.filter_by(
-        team_organization_id=team_id
-    ).order_by(Game.date.desc()).all()
-    
-    # Get all player stats for this team
-    all_player_stats = GameDayPlayerStats.query.filter_by(
-        team_organization_id=team_id
+    # The season (and squad) being viewed, like the rest of the stats
+    games = (scope_games(Game.query.filter_by(team_organization_id=team_id), team_id)
+             .order_by(Game.date.desc()).all())
+    all_player_stats = GameDayPlayerStats.query.filter(
+        GameDayPlayerStats.team_organization_id == team_id,
+        GameDayPlayerStats.game_id.in_([g.id for g in games] or [-1]),
     ).all()
+    # Games not played yet (no score, no stats) aren't part of the record
+    with_stats = {st.game_id for st in all_player_stats}
+    games = [g for g in games if (g.our_score or 0) + (g.their_score or 0) > 0 or g.id in with_stats]
     
     # Group stats by player
     player_stats_by_id = {}
@@ -961,11 +991,11 @@ def team_stats():
     # Calculate team totals
     team_totals = {
         'games_played': len(games),
-        'wins': sum(1 for game in games if game.our_score > game.their_score),
-        'losses': sum(1 for game in games if game.our_score < game.their_score),
-        'points_played': sum(game.our_score + game.their_score for game in games),
-        'points_scored': sum(game.our_score for game in games),
-        'points_conceded': sum(game.their_score for game in games),
+        'wins': sum(1 for game in games if (game.our_score or 0) > (game.their_score or 0)),
+        'losses': sum(1 for game in games if (game.our_score or 0) < (game.their_score or 0)),
+        'points_played': sum((game.our_score or 0) + (game.their_score or 0) for game in games),
+        'points_scored': sum(game.our_score or 0 for game in games),
+        'points_conceded': sum(game.their_score or 0 for game in games),
         'goals': sum(stats['goals'] for stats in player_stats),
         'assists': sum(stats['assists'] for stats in player_stats),
         'blocks': sum(stats['blocks'] for stats in player_stats),
@@ -993,7 +1023,10 @@ def team_stats():
         team=team,
         games=games,
         player_stats=player_stats,
-        team_totals=team_totals
+        team_totals=team_totals,
+        season=viewing_season(team_id),
+        tournaments=scope_tournaments(Tournament.query.filter_by(team_organization_id=team_id), team_id)
+            .order_by(Tournament.start_date.desc()).all(),
     )
 
 from app.utils.team_filter import get_current_team_id

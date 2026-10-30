@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{# A coach writing or changing a review of how a player's going. #}
+{% block title %}{{ 'Edit review' if review and review.id else 'New review' }} · {{ player.name }}{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/theory.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container th-page" style="max-width:760px">
+  <nav class="th-crumbs" aria-label="Breadcrumb">
+    <a href="{{ url_for('team.player_detail', player_id=player.id, _anchor='development') }}">{{ player.name }}</a>
+  </nav>
+  <div class="th-head"><div><h1>{{ 'Edit review' if review and review.id else 'Review' }}</h1><p>How {{ player.name }} is going: what's gone well, what to work on, and what's next.</p></div></div>
+
+  <form method="POST" class="th-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="th-form-card">
+      <label class="form-label" for="title">Title</label>
+      <input id="title" name="title" class="form-control" maxlength="120" value="{{ review.title if review else 'Mid-season review' }}" placeholder="e.g. Mid-season review">
+    </div>
+    {% for field, label, hint in [('went_well', 'What has gone well', 'Strengths, progress, moments that stood out'),
+                                  ('work_on', 'What to work on', 'One to three things, specific enough to practise'),
+                                  ('next_steps', 'Next steps', 'What happens next: drills, roles, goals to set')] %}
+    <div class="th-form-card">
+      <label class="form-label" for="{{ field }}">{{ label }}</label>
+      <textarea id="{{ field }}" name="{{ field }}" class="form-control" rows="4" placeholder="{{ hint }}">{{ review[field] if review and review[field] else '' }}</textarea>
+    </div>
+    {% endfor %}
+    <div class="th-form-card">
+      <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" role="switch" id="shared" name="shared" value="1" {% if review and review.shared %}checked{% endif %}>
+        <label class="form-check-label" for="shared"><strong>Share with {{ player.name }}</strong>: they can read it and add a comment</label>
+      </div>
+    </div>
+    <div class="th-actionbar">
+      <a href="{{ url_for('feedback.view_review', review_id=review.id) if review and review.id else url_for('team.player_detail', player_id=player.id, _anchor='development') }}" class="btn btn-link px-2">Cancel</a>
+      <span class="grow"></span>
+      <button type="submit" class="btn btn-primary th-btn px-4"><i class="bi bi-check-lg"></i>Save review</button>
+    </div>
+  </form>
+
+  {% if goals or recent %}
+  <details class="th-more mt-3" open>
+    <summary>For reference <i class="bi bi-chevron-down" aria-hidden="true"></i></summary>
+    <div class="th-more-body small">
+      {% if goals %}<div class="fw-bold mb-1">Goals they're working on</div>
+      <ul class="ps-3">{% for g in goals %}<li>{{ g.title }} <span class="text-muted">({{ g.horizon_label }})</span></li>{% endfor %}</ul>{% endif %}
+      {% if recent %}<div class="fw-bold mb-1">Recent notes</div>
+      <ul class="ps-3 mb-0">{% for n in recent %}<li>{% if n.kind != 'note' %}<b>{{ n.kind_label }}:</b> {% endif %}{{ n.content|truncate(140) }} <span class="text-muted">{{ n.created_at.strftime('%-d %b') }}</span></li>{% endfor %}</ul>{% endif %}
+    </div>
+  </details>
+  {% endif %}
+</div>
+{% endblock %}

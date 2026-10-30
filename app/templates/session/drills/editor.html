@@ -333,8 +333,8 @@
                 <input type="text" id="drill-title" 
                        class="form-control form-control-lg border-0 bg-transparent"
                        style="width: 300px; font-size: 1.5rem;" 
-                       placeholder="Untitled Drill"
-                       value="{{ drill.title if drill else '' }}">
+                       placeholder="{% block title_placeholder %}Untitled Drill{% endblock %}"
+                       value="{% block title_value %}{{ drill.title if drill else '' }}{% endblock %}">
             </div>
             <div class="d-flex gap-2">
                 <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#drillPropertiesModal">
@@ -511,6 +511,7 @@
                                 <li><button class="dropdown-item" type="button" data-formation="horizontal">Horizontal stack</button></li>
                                 <li><button class="dropdown-item" type="button" data-formation="zone">Zone (against a cup)</button></li>
                                 <li><button class="dropdown-item" type="button" data-formation="endzone">Endzone stack</button></li>
+                                {% block setup_items %}{% endblock %}
                                 <li><hr class="dropdown-divider"></li>
                                 <li><button class="dropdown-item" type="button" id="match-defenders">Match defenders (uses the force)</button></li>
                             </ul>
@@ -711,10 +712,11 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Drill Properties</h5>
+                <h5 class="modal-title">{% block properties_title %}Drill Properties{% endblock %}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
+                {% block properties %}
                 <div class="mb-3">
                     <label class="form-label">Description</label>
                     <textarea id="drill-description" class="form-control" rows="3"
@@ -778,6 +780,7 @@
                         <label class="form-check-label">Make this drill public</label>
                     </div>
                 </div>
+                {% endblock %}
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -860,10 +863,12 @@
 </div>
 
 <!-- Hidden data for initialization -->
+{% block editor_data %}
 <div id="drill-data" style="display: none;"
      data-drill-id="{{ drill.id if drill else '' }}"
      data-create-url="{{ url_for('session.create_drill') }}"
      data-update-url="{{ url_for('session.manage_drill', drill_id=drill.id) if drill else '' }}"></div>
+{% endblock %}
 <script id="editor-state" type="application/json">{{ editor_state|tojson }}</script>
 {% endblock %}
 

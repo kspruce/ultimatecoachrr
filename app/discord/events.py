@@ -39,6 +39,8 @@ def register():
 
     for model in (SessionPlan, Tournament, Game, Clip, TheoryTopic):
         event.listen(model, 'after_insert', _noted)
+    # A theory draft is announced when it's published
+    event.listen(TheoryTopic, 'after_update', _published)
     event.listen(OrmSession, 'after_commit', _after_commit)
     event.listen(OrmSession, 'after_rollback', lambda session: session.info.pop('discord_new', None))
 
@@ -47,6 +49,8 @@ def _noted(mapper, connection, target):
     name = type(target).__name__
     team_id = getattr(target, 'team_organization_id', None)
     if not team_id or (name == 'SessionPlan' and target.schedule_id):
+        return
+    if name == 'TheoryTopic' and not target.published:
         return
     from app.models.team_settings import TeamSettings
     table = TeamSettings.__table__
@@ -58,6 +62,13 @@ def _noted(mapper, connection, target):
     session = object_session(target)
     if session is not None:
         session.info.setdefault('discord_new', []).append((name, target.id))
+
+
+def _published(mapper, connection, target):
+    from sqlalchemy import inspect
+    if target.published and True in inspect(target).attrs.published.history.added \
+            and False in inspect(target).attrs.published.history.deleted:
+        _noted(mapper, connection, target)
 
 
 def _after_commit(session):
@@ -105,5 +116,5 @@ def announce(name, row_id):
     elif name == 'Clip':
         payload = messages.announcement(f'🎬 New clip: {row.title}', None, link('clip.view_clip', clip_id=row.id))
     else:
-        payload = messages.announcement(f'📚 New theory: {row.title}', None, link('theory.topic', topic_id=row.id))
+        payload = messages.announcement(f'📚 New theory: {row.name}', None, link('theory.topic', topic_id=row.id))
     return notify.post(row.team_organization_id, payload)

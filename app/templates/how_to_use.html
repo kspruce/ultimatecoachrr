@@ -343,14 +343,44 @@
   <div class="htu-feat">
     <div class="htu-feat-icon ic-amber"><i class="bi bi-trophy"></i></div>
     <div class="htu-feat-name">Tournaments</div>
-    <div class="htu-feat-desc">Organise weekend tournaments with RSVPs and squad selection.</div>
+    <div class="htu-feat-desc">One page per tournament: who's coming, the squad, the games and the stats.</div>
     <ol class="htu-feat-steps">
-      <li>Create a tournament with dates and location</li>
-      <li>Players RSVP — view attendance on the RSVP page</li>
-      <li>Assign players to specific games within the tournament</li>
+      <li>Create a tournament with dates, location and a reply-by date</li>
+      <li>Players answer I'm in / Maybe / Can't on its Overview</li>
+      <li>Coaches pick the squad on the Squad tab and set each game's line-up on Games</li>
+      <li>Stat takers find the tournament's Game Day numbers on its Stats tab</li>
     </ol>
     <a href="{{ url_for('tournament.index') }}" class="btn btn-sm btn-outline-primary mt-auto" style="border-radius:7px;font-size:.79rem;width:fit-content">View Tournaments</a>
   </div>
+
+  {% if current_user.is_authenticated and current_user.is_coach %}
+  <div class="htu-feat">
+    <div class="htu-feat-icon ic-blue"><i class="bi bi-diagram-3"></i></div>
+    <div class="htu-feat-name">Roles</div>
+    <div class="htu-feat-desc">Your team's roles, like O-line initiation cutter, and who plays each one this season.</div>
+    <ol class="htu-feat-steps">
+      <li>Start from the suggested roles under Club → Roles, then rename and add your own</li>
+      <li>Add players to each role, first choice first; the star marks each player's main role</li>
+      <li>Watch for roles with nobody, only one player, or only one gender</li>
+      <li>Players say which roles they'd like on their profile; the playbook says what each role does in each play</li>
+    </ol>
+    <a href="{{ url_for('roles.index') }}" class="btn btn-sm btn-outline-primary mt-auto" style="border-radius:7px;font-size:.79rem;width:fit-content">Roles</a>
+  </div>
+  {% endif %}
+
+  {% if current_user.is_authenticated and current_user.is_coach %}
+  <div class="htu-feat">
+    <div class="htu-feat-icon ic-purple"><i class="bi bi-layers"></i></div>
+    <div class="htu-feat-name">Seasons &amp; Squads</div>
+    <div class="htu-feat-desc">Start a new season without losing anything; every page shows the season you pick.</div>
+    <ol class="htu-feat-steps">
+      <li>Pick a season (or All time) from the season menu at the top</li>
+      <li>Start a new season from Seasons &amp; squads: last season's roster carries over</li>
+      <li>Add squads (1s, 2s) so sessions, tournaments and stats can be split by squad</li>
+    </ol>
+    <a href="{{ url_for('seasons.index') }}" class="btn btn-sm btn-outline-primary mt-auto" style="border-radius:7px;font-size:.79rem;width:fit-content">Seasons &amp; Squads</a>
+  </div>
+  {% endif %}
 
   <div class="htu-feat">
     <div class="htu-feat-icon ic-teal"><i class="bi bi-calendar3"></i></div>
@@ -359,6 +389,7 @@
     <ol class="htu-feat-steps">
       <li>Browse upcoming events by month</li>
       <li>Click any event for details and RSVP options</li>
+      <li>Subscribe from Google, Apple or Outlook calendar so your sessions and tournaments show on your phone</li>
     </ol>
     <a href="{{ url_for('calendar.index') }}" class="btn btn-sm btn-outline-primary mt-auto" style="border-radius:7px;font-size:.79rem;width:fit-content">Open Calendar</a>
   </div>
@@ -380,12 +411,12 @@
   <div class="htu-feat">
     <div class="htu-feat-icon ic-green"><i class="bi bi-calendar-check-fill"></i></div>
     <div class="htu-feat-name">Session Plans</div>
-    <div class="htu-feat-desc">Build practice plans, attach drills, and track attendance.</div>
+    <div class="htu-feat-desc">Regular training dates, who's coming, plans and attendance.</div>
     <ol class="htu-feat-steps">
-      <li>Create a session with date, location, and focus</li>
-      <li>Add drills from the library to the session plan</li>
-      <li>Mark attendance during or after practice</li>
-      <li>Players can RSVP in advance from their profile</li>
+      <li>Coaches set up a Training Schedule (e.g. Saturdays for everyone, Wednesdays for the 1s) and the dates appear</li>
+      <li>Players answer under My Availability, for one date or as their usual</li>
+      <li>Who's Coming shows everyone's answers at once; Maybes get one reminder</li>
+      <li>Build the plan from the library's drills, then take the register from the answers</li>
     </ol>
     <a href="{{ url_for('session.index') }}" class="btn btn-sm btn-outline-primary mt-auto" style="border-radius:7px;font-size:.79rem;width:fit-content">Session Plans</a>
   </div>
@@ -422,6 +453,47 @@
   </div>
   {% endif %}
 
+  {% if programmes_nav() %}
+  <div class="htu-feat">
+    <div class="htu-feat-icon ic-green"><i class="bi bi-journal-check"></i></div>
+    <div class="htu-feat-name">Programmes</div>
+    <div class="htu-feat-desc">Off-season and gym programmes, week by week, with each player's log.</div>
+    <ol class="htu-feat-steps">
+      <li>Open a programme to see this week and what's next</li>
+      <li>Log each session as you do it, from your phone</li>
+      <li>Coaches build programmes, publish new versions, and see who's keeping up on the dashboard</li>
+    </ol>
+    <a href="{{ url_for('programmes.index') }}" class="btn btn-sm btn-outline-primary mt-auto" style="border-radius:7px;font-size:.79rem;width:fit-content">Programmes</a>
+  </div>
+  {% endif %}
+
+  {% if current_user.is_authenticated and (current_user.is_coach or current_user.player) %}
+  <div class="htu-feat">
+    <div class="htu-feat-icon ic-blue"><i class="bi bi-chat-square-heart-fill"></i></div>
+    <div class="htu-feat-name">Player Feedback</div>
+    <div class="htu-feat-desc">Coaches' notes on each player. They stay with the coaches until a coach shares them.</div>
+    <ol class="htu-feat-steps">
+      <li>Coaches write notes from a session (Quick Feedback), a game, a clip's Feedback tab or the player's page</li>
+      <li>Tick <em>Share with the player</em> for the ones they should read</li>
+      <li>Players read shared notes under Training → My Feedback; new ones show on the home page</li>
+    </ol>
+    <a href="{{ url_for('feedback.hub') if current_user.is_coach else url_for('feedback.mine') }}" class="btn btn-sm btn-outline-primary mt-auto" style="border-radius:7px;font-size:.79rem;width:fit-content">{{ 'Player Feedback' if current_user.is_coach else 'My Feedback' }}</a>
+  </div>
+  {% endif %}
+
+  {% if handbook_nav() %}
+  <div class="htu-feat">
+    <div class="htu-feat-icon ic-amber"><i class="bi bi-book"></i></div>
+    <div class="htu-feat-name">Leadership Handbook</div>
+    <div class="htu-feat-desc">How we lead, coach and build the team, for captains and coaches.</div>
+    <ol class="htu-feat-steps">
+      <li>Read it section by section, or search it</li>
+      <li>Edit a page when the way you do things changes</li>
+    </ol>
+    <a href="{{ url_for('handbook.index') }}" class="btn btn-sm btn-outline-primary mt-auto" style="border-radius:7px;font-size:.79rem;width:fit-content">Handbook</a>
+  </div>
+  {% endif %}
+
   {% if not s or s.fitness_enabled %}
   <div class="htu-feat">
     <div class="htu-feat-icon ic-red"><i class="bi bi-heart-pulse"></i></div>
@@ -454,12 +526,13 @@
   <div class="htu-feat">
     <div class="htu-feat-icon ic-purple"><i class="bi bi-book-fill"></i></div>
     <div class="htu-feat-name">Playbook</div>
-    <div class="htu-feat-desc">Create and share offensive and defensive plays using an interactive field editor.</div>
+    <div class="htu-feat-desc">Your offence and defence plays, drawn on the field in stages so players can watch them move.</div>
     <ol class="htu-feat-steps">
-      <li>Create a play — give it a name and category (O/D)</li>
-      <li>Use the drag-and-drop field editor to draw routes and assignments</li>
-      <li>Publish the play so players can view it</li>
-      <li>Link plays to formations or game scouting reports</li>
+      <li><em>New play</em> → <em>Draw a Play</em> opens the drill editor: place players, draw cuts and throws, add a stage for each step; right-click or long-press a player to give them a team role</li>
+      <li><em>Edit details</em> adds the call, the hand signal, what each role does, and links to theory, drills and clips</li>
+      <li>Players see their own role first, pick a role to see just that path, mark plays as learned and flick through the Game-day cards</li>
+      <li>Coaches ask the team to learn a play by a date, see who has, and retire plays they stop using</li>
+      <li>Before a game, pick its plays on the game's <em>Call sheet</em>; in Game Day, choose the <em>Play called</em> each point, and <em>How our plays went</em> shows what's working</li>
     </ol>
     <a href="{{ url_for('playbook.index') }}" class="btn btn-sm btn-outline-primary mt-auto" style="border-radius:7px;font-size:.79rem;width:fit-content">Playbook</a>
   </div>
@@ -472,8 +545,9 @@
     <div class="htu-feat-desc">Build dossiers on upcoming opponents to help prepare your team.</div>
     <ol class="htu-feat-steps">
       <li>Create a scouting report linked to an upcoming game</li>
-      <li>Log opponent tendencies, key players, and defensive schemes</li>
-      <li>Attach relevant plays from your playbook as counter-strategies</li>
+      <li>Log their looks, key players and who marks them on the matchup board</li>
+      <li>Write the game plan and pick the plays to run against them; they become the Game-day cards for that game</li>
+      <li>Open the report's phone card on the sideline</li>
     </ol>
     <a href="{{ url_for('scouting.index') }}" class="btn btn-sm btn-outline-primary mt-auto" style="border-radius:7px;font-size:.79rem;width:fit-content">Scouting Reports</a>
   </div>
@@ -500,9 +574,9 @@
     <div class="htu-feat-desc">Deep-dive into player and team performance metrics, PER ratings, and heatmaps.</div>
     <ol class="htu-feat-steps">
       <li>Stats are built automatically as you record game points</li>
-      <li>Visit the Stats dashboard for team-wide metrics</li>
-      <li>Click any player to see their individual profile</li>
-      <li>Filter by game, line type, or date range</li>
+      <li>Visit the Stats dashboard for team-wide metrics, for the season you've picked</li>
+      <li>Click any player to see their profile, where they turn it over and what to work on</li>
+      <li>Stat takers find the quick Game Day tallies under Stats → Game Day summary</li>
     </ol>
     <a href="{{ url_for('stats_dashboard.index') }}" class="btn btn-sm btn-outline-primary mt-auto" style="border-radius:7px;font-size:.79rem;width:fit-content">Stats Dashboard</a>
   </div>
@@ -514,9 +588,10 @@
     <div class="htu-feat-name">Clip Library</div>
     <div class="htu-feat-desc">Upload and annotate video clips for review and coaching feedback.</div>
     <ol class="htu-feat-steps">
-      <li>Upload a video clip from a game or practice</li>
+      <li>Add a clip from a YouTube or video link, with start and end times</li>
       <li>Add time-stamped annotations and comments</li>
-      <li>Share clips with the team or specific players</li>
+      <li>Line clips up in a playlist and watch them back to back</li>
+      <li>Coaches leave a player a note about a clip from its Feedback tab</li>
     </ol>
     <a href="{{ url_for('clip.index') }}" class="btn btn-sm btn-outline-primary mt-auto" style="border-radius:7px;font-size:.79rem;width:fit-content">Clip Library</a>
   </div>
@@ -540,11 +615,11 @@
   <div class="htu-feat">
     <div class="htu-feat-icon ic-amber"><i class="bi bi-mortarboard-fill"></i></div>
     <div class="htu-feat-name">Theory</div>
-    <div class="htu-feat-desc">Educational content on ultimate concepts, strategy, and skill development.</div>
+    <div class="htu-feat-desc">The ideas behind how you play, written down so everyone learns the same game.</div>
     <ol class="htu-feat-steps">
-      <li>Browse theory articles by category</li>
-      <li>Coaches can add custom theory content for the team</li>
-      <li>Link theory articles to session plans and playbook entries</li>
+      <li>Read it section by section with Previous / Next, or search it</li>
+      <li>Each topic links the drills that practise it and clips that show it</li>
+      <li>Coaches add sections and topics, written in Markdown</li>
     </ol>
     <a href="{{ url_for('theory.index') }}" class="btn btn-sm btn-outline-primary mt-auto" style="border-radius:7px;font-size:.79rem;width:fit-content">Theory</a>
   </div>
