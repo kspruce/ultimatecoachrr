@@ -2,55 +2,6 @@
 
 {% block title %}{{ title }}{% endblock %}
 
-{% block styles %}
-{{ super() }}
-<style>
-    .embed-preview {
-        position: relative;
-        padding-bottom: 56.25%; /* 16:9 aspect ratio */
-        height: 0;
-        overflow: hidden;
-        border: 1px solid var(--rule);
-        border-radius: 4px;
-        margin-top: 10px;
-        background: var(--sunken);
-    }
-
-    .embed-preview iframe {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        border: 0;
-    }
-
-    .preview-placeholder {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: var(--ink-2);
-    }
-
-    .embed-help {
-        background: var(--sunken);
-        padding: 15px;
-        border-radius: 4px;
-        margin-top: 10px;
-    }
-
-    .embed-help ol {
-        margin-bottom: 0;
-        padding-left: 20px;
-    }
-</style>
-{% endblock %}
-
 {% block content %}
 <div class="container">
     <div class="row mb-4">
@@ -147,44 +98,17 @@
                             {% endfor %}
                         </div>
 
-                        <!-- Ultiplay Embed Section -->
+                        {% if drill and drill.ultiplay_embed %}
+                        {# New Ultiplays links can't be added; an old one stays to redraw from #}
                         <div class="mb-4">
-                            <label class="form-label">Ultiplay Video</label>
-                            
-                            <div class="mb-3">
-                                {{ form.ultiplay_embed.label(class="form-label") }}
-                                {{ form.ultiplay_embed(class="form-control", rows=3, 
-                                    placeholder="Paste the embed code from Ultiplay here...",
-                                    oninput="previewEmbed(this.value)") }}
-                                {% for error in form.ultiplay_embed.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                                {% endfor %}
-                            </div>
-
-                            <!-- Embed Preview -->
-                            <div class="embed-preview">
-                                <div id="embed-preview-content">
-                                    <div class="preview-placeholder">
-                                        <div class="text-center">
-                                            <i class="bi bi-camera-video fa-3x mb-2"></i>
-                                            <br>
-                                            Video preview will appear here
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Help Text -->
-                            <div class="embed-help">
-                                <h6><i class="bi bi-info-circle"></i> How to get the embed code:</h6>
-                                <ol>
-                                    <li>Go to your video on Ultiplay</li>
-                                    <li>Click the "Share" button</li>
-                                    <li>Select "Embed"</li>
-                                    <li>Copy the entire embed code and paste it above</li>
-                                </ol>
+                            <label class="form-label d-block">Original (Ultiplays)</label>
+                            <p class="small text-muted mb-2">{% if drill.editor_diagram %}It's drawn now, so the Ultiplays link can go.{% else %}Kept to redraw it from. Draw it in the drill editor, then remove the link.{% endif %}</p>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="remove_embed" value="1" id="remove_embed">
+                                <label class="form-check-label" for="remove_embed">Remove the Ultiplays link</label>
                             </div>
                         </div>
+                        {% endif %}
 
                         <!-- Public/Private -->
                         <div class="mb-3">
@@ -208,44 +132,3 @@
 </div>
 {% endblock %}
 
-{% block scripts %}
-{{ super() }}
-<script>
-function previewEmbed(embedCode) {
-    const previewContainer = document.getElementById('embed-preview-content');
-    
-    if (embedCode.trim()) {
-        // Basic XSS protection by only allowing iframe tags with specific attributes
-        const sanitized = embedCode.replace(/[<>]/g, match => {
-            return {
-                '<': '<',
-                '>': '>'
-            }[match];
-        });
-        
-        // Only process if it looks like an iframe embed code
-        if (sanitized.toLowerCase().includes('iframe')) {
-            previewContainer.innerHTML = embedCode;
-        }
-    } else {
-        previewContainer.innerHTML = `
-            <div class="preview-placeholder">
-                <div class="text-center">
-                    <i class="bi bi-camera-video fa-3x mb-2"></i>
-                    <br>
-                    Video preview will appear here
-                </div>
-            </div>
-        `;
-    }
-}
-
-// Initialize preview if there's existing embed code
-document.addEventListener('DOMContentLoaded', function() {
-    const embedInput = document.querySelector('#ultiplay_embed');
-    if (embedInput && embedInput.value) {
-        previewEmbed(embedInput.value);
-    }
-});
-</script>
-{% endblock %}

@@ -24,7 +24,7 @@ import os
 import re
 from datetime import datetime
 
-from flask import current_app, render_template
+from flask import current_app, render_template, url_for
 
 from app.utils.editor_diagrams import data_uri
 
@@ -74,13 +74,24 @@ def _image_src(url, team_id):
     return f'data:{image.mime_type};base64,{image.data}'
 
 
+def play_url(play):
+    """Where a play's QR code goes: its share link if it has one (opens
+    without signing in), else its page (for the team, signed in)."""
+    if play.share_token:
+        return url_for('playbook.shared_play', token=play.share_token, _external=True)
+    return url_for('playbook.view_play', play_id=play.id, _external=True)
+
+
 def _item(kind, obj):
     """Dict the template consumes for one play."""
-    animation_url = extract_embed_url(obj.ultiplay_embed)
     # Drawn in the drill editor: every stage, inline
     stages = [{'label': d.step_label, 'caption': d.caption, 'src': data_uri(d)}
               for d in getattr(obj, 'editor_diagrams', [])]
     stages = [st for st in stages if st['src']]
+    # The QR code goes to the play on this site; an old Ultiplays link only
+    # while the play isn't drawn
+    animation_url = extract_embed_url(obj.ultiplay_embed) if not stages else None
+    animation_url = animation_url or play_url(obj)
     return {
         'kind': kind,
         'key': f'{kind}-{obj.id}',
@@ -236,7 +247,8 @@ def cache_key(team_id, plays, type_filter, tag_id):
     parts = [f'team={team_id}', f'type={type_filter}', f'tag={tag_id}']
     for obj in plays:
         stamp = obj.updated_at.isoformat() if obj.updated_at else '0'
-        parts.append(f'{obj.__class__.__name__}:{obj.id}:{stamp}')
+        # The share link is in the QR code
+        parts.append(f'{obj.__class__.__name__}:{obj.id}:{stamp}:{obj.share_token or ""}')
     return hashlib.sha1('|'.join(parts).encode()).hexdigest()[:16]
 
 

@@ -116,6 +116,9 @@
           <button type="submit" name="action" value="draw" class="btn btn-outline-primary th-btn"><i class="bi bi-easel2"></i>Save and edit the drawing</button>
         </div>
       </div>
+      <label class="form-label d-block mt-3">Defence in the drawing</label>
+      {{ seg(form.defence_view, 'defence_view') }}
+      <p class="small text-muted mt-2 mb-0">{{ form.defence_view.description }}</p>
       {% else %}
       <button type="submit" name="action" value="draw" class="btn btn-outline-primary th-btn mb-2"><i class="bi bi-easel2"></i>Save and draw it on the field</button>
       <div class="th-cover mt-2" id="th-cover">
@@ -175,7 +178,7 @@
       {{ form.notes(class="form-control", rows="3", placeholder="Cues, reads, what goes wrong") }}
     </div>
 
-    <details class="th-more" {% if form.tags.data or form.topics.data or form.drills.data or form.clips.data or form.ultiplay_embed.data %}open{% endif %}>
+    <details class="th-more" {% if form.tags.data or form.topics.data or form.drills.data or form.clips.data %}open{% endif %}>
       <summary>Tags and links <i class="bi bi-chevron-down" aria-hidden="true"></i></summary>
       <div class="th-more-body">
         <div class="th-field">
@@ -202,10 +205,17 @@
           {% endif %}
         </div>
         {% endfor %}
+        {% if play and play.ultiplay_embed %}
+        {# New Ultiplays links can't be added; an old one stays to redraw from #}
         <div class="th-field">
-          <label class="form-label" for="ultiplay_embed">Ultiplay embed code <span class="fw-normal text-muted">(optional)</span></label>
-          {{ form.ultiplay_embed(class="form-control font-monospace", rows="2", placeholder="<iframe src=\"https://…\"></iframe>") }}
+          <label class="form-label d-block">Original (Ultiplays)</label>
+          <p class="small text-muted mb-2">{% if play.editor_diagram %}It's drawn now, so the Ultiplays link can go.{% else %}Kept to redraw it from. Draw it on the field, then remove the link.{% endif %}</p>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="remove_embed" value="1" id="remove_embed">
+            <label class="form-check-label" for="remove_embed">Remove the Ultiplays link</label>
+          </div>
         </div>
+        {% endif %}
       </div>
     </details>
 

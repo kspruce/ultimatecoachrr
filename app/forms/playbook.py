@@ -3,7 +3,7 @@ from wtforms import BooleanField, DateField, RadioField, SelectField, SelectMult
 from wtforms.validators import DataRequired, Length, Optional, ValidationError
 
 from app.forms.theory import IMAGE_URL
-from app.models.playbook import PLAY_STATUSES, PLAY_TYPES, SITUATIONS
+from app.models.playbook import DEFENCE_VIEWS, PLAY_STATUSES, PLAY_TYPES, SITUATIONS
 
 
 def image_url(form, field):
@@ -22,7 +22,8 @@ class PlayForm(FlaskForm):
     description = TextAreaField('How it works', validators=[Optional()])
     notes = TextAreaField('Coaching notes', validators=[Optional()])
     image_url = StringField('Photo', validators=[Optional(), Length(max=500), image_url])
-    ultiplay_embed = TextAreaField('Ultiplay embed code', validators=[Optional()])
+    defence_view = RadioField('Defence in the drawing', choices=DEFENCE_VIEWS, default='show', validators=[Optional()],
+                              description='How the defenders show when the drawing plays. Anyone watching can change it.')
     tags = StringField('Tags', validators=[Optional(), Length(max=300)])
     is_core = BooleanField('Core play: everyone must know it')
     situations = SelectMultipleField('When it\'s for', choices=SITUATIONS, validators=[Optional()])

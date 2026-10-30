@@ -34,7 +34,9 @@
 
     <div class="row">
         <div class="col-md-8">
-            {% if drill.ultiplay_embed %}
+            {# An old Ultiplays link: shown until the drill is drawn, then
+               only to coaches, to check the drawing against #}
+            {% if drill.ultiplay_embed and not drill.diagrams %}
             <div class="card mb-4">
                 <div class="card-header">
                     <h4>Drill Video</h4>
@@ -45,6 +47,16 @@
                     </div>
                 </div>
             </div>
+            {% elif drill.ultiplay_embed and current_user.is_authenticated and current_user.is_coach %}
+            <details class="card mb-4">
+                <summary class="card-header">Original (Ultiplays)</summary>
+                <div class="card-body">
+                    <p class="small text-muted">Only coaches see this. Remove the link from the drill's details once the drawing is right.</p>
+                    <div class="embed-responsive embed-responsive-16by9">
+                        {{ drill.ultiplay_embed|embed_html }}
+                    </div>
+                </div>
+            </details>
             {% endif %}
 
             {% if animation %}

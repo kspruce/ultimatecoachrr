@@ -7,6 +7,23 @@
 {% else %}<span class="pb-thumb empty" aria-hidden="true"><i class="bi bi-easel2"></i></span>{% endif %}
 {% endmacro %}
 
+{# A drawn play's first stage that plays the animation in a pop-up when
+   tapped (play_preview.js, loaded with preview_script()) #}
+{% macro preview_thumb(play) %}
+<button type="button" class="pb-thumb-btn" data-play-preview="{{ url_for('playbook.play_drawing', play_id=play.id) }}"
+        data-title="{{ play.name }}" data-href="{{ url_for('playbook.view_play', play_id=play.id) }}"
+        aria-label="Play {{ play.name }}">
+  <img src="{{ play.thumbnail }}" alt="" class="pb-thumb" loading="lazy">
+  <span class="pb-thumb-play" aria-hidden="true"><i class="bi bi-play-circle-fill"></i></span>
+</button>
+{% endmacro %}
+
+{% macro preview_script() %}
+<script src="{{ url_for('static', filename='js/play_preview.js') }}"
+        data-fabric="https://cdn.jsdelivr.net/npm/fabric@5.3.0/dist/fabric.min.js"
+        data-diagram="{{ url_for('static', filename='js/drill_diagram.js') }}"></script>
+{% endmacro %}
+
 {# Arrows beside a row from 576px; on phones they're in the row's menu #}
 {% macro move_buttons(play, first, last, next=None) %}
 <form method="POST" action="{{ url_for('playbook.move_play', play_id=play.id) }}" class="d-none d-sm-inline">

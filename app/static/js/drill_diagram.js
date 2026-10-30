@@ -462,6 +462,40 @@
         return {legs, owners};
     }
 
+    // How a viewer sees a stage: picking a role fades everything but that
+    // role's player and the arrows they run; the defence (defenders and
+    // their arrows) can be shown, faded or hidden. Returns new objects.
+    function viewObjects(objects, options) {
+        const role = options && options.role ? String(options.role) : '';
+        const defence = (options && options.defence) || 'show';
+        if (!role && defence === 'show') return objects;
+        const owners = arrowOwners(objects);
+        const byId = {};
+        objects.forEach(o => { if (o.herdId) byId[o.herdId] = o; });
+        const ownerOf = (o, i) => byId[o.herdFrom || owners[i]];
+        const isDefence = (o, i) => o.herdType === 'player-d'
+            || (isArrow(o) && (ownerOf(o, i) || {}).herdType === 'player-d');
+        const roleIds = role ? new Set(objects.filter(o => String(o.herdRole || '') === role).map(o => o.herdId))
+                             : null;
+        const shown = [];
+        objects.forEach((o, i) => {
+            const d = defence !== 'show' && isDefence(o, i);
+            if (d && defence === 'hidden') return;
+            let opacity = o.opacity === undefined ? 1 : o.opacity;
+            if (roleIds) {
+                const mine = roleIds.has(o.herdId) || roleIds.has(owners[i]) || (o.herdFrom && roleIds.has(o.herdFrom));
+                opacity = mine ? 1 : (o.herdType === 'disc' ? 0.6 : 0.18);
+            }
+            if (d) opacity = Math.min(opacity, 0.25);
+            shown.push(Object.assign({}, o, {opacity}));
+        });
+        return shown;
+    }
+
+    function hasDefence(stages) {
+        return stages.some(s => (s.objects || []).some(o => o.herdType === 'player-d'));
+    }
+
     // The next stage: the same things, with players and the disc at the ends
     // of their arrows, and no arrows
     function nextStageObjects(objects) {
@@ -754,7 +788,7 @@
         mid, lineSegments, segmentMiddle, samplePoints,
         withDefaults, logicalSize, viewRect, fieldParts, textOn, recolourPlayers,
         toDisplay, toSaved, pointToDisplay, pointToSaved,
-        centred, isArrow, movements, arrowOwners, nextStageObjects,
+        centred, isArrow, movements, arrowOwners, viewObjects, hasDefence, nextStageObjects,
         transitionPlan, applyFrame, enliven, showStage, createPlayer,
         exportStage, videoType, recordVideo, normaliseState,
     };

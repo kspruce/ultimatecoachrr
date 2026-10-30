@@ -1,7 +1,10 @@
 {# Plays a drawing's stages (drill_viewer.js). Needs `animation`, the
    editor's saved state, and the page to load fabric, drill_diagram.js and
    drill_viewer.js. A play passes `animation_roles` (the roles its players
-   are) for a picker that picks out one role's path; `?role=` preselects it. #}
+   are) for a picker that picks out one role's path; `?role=` preselects it.
+   The defence picker shows when there are defenders; `animation_defence`
+   is where it starts (show, faded or hidden). `animation_name` names the
+   saved video. #}
 {% set one_stage = (animation.stages or [])|length < 2 %}
 {% set picked_role = request.args.get('role', '') %}
 <div class="card mb-4" id="drill-animation">
@@ -34,8 +37,19 @@
                 <option value="1" selected>1×</option>
                 <option value="2">2×</option>
             </select>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-animation="video" data-name="{{ animation_name or 'animation' }}" hidden
+                    title="Save the animation as a video, to send in a chat"><i class="bi bi-film"></i> Video</button>
         </div>
         <div class="animation-caption small mt-2"{% if one_stage %} hidden{% endif %}><strong></strong><span class="text-muted"></span></div>
+        <label class="d-inline-flex align-items-center gap-2 mt-2 mb-0 small" hidden>
+            <span class="text-muted">Defence</span>
+            {% set defence = animation_defence or 'show' %}
+            <select class="form-select form-select-sm w-auto" data-animation="defence" aria-label="How the defence is shown">
+                {% for value, label in [('show', 'Shown'), ('faded', 'Faded'), ('hidden', 'Hidden')] %}
+                <option value="{{ value }}" {% if defence == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </label>
     </div>
 </div>
 <script id="drill-animation-data" type="application/json">{{ animation|tojson }}</script>

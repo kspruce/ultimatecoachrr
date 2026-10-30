@@ -143,7 +143,7 @@
         <div class="anim-row">
             {% if item.qr %}<img src="{{ item.qr }}">{% endif %}
             <div>
-                <div class="lbl">Scan for the animated version</div>
+                <div class="lbl">{% if item.stages %}Scan to watch it move{% else %}Scan for the play online{% endif %}</div>
                 <div class="url">{{ item.animation_url }}</div>
             </div>
         </div>

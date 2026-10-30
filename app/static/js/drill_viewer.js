@@ -1,6 +1,7 @@
 // Plays a drill's or play's stages (templates/partials/diagram_animation.html),
 // using drill_diagram.js. Not editable. On a play, picking a role fades
-// everything but that role's player and the arrows they run.
+// everything but that role's player and the arrows they run. The defence
+// can be faded or hidden, and the animation saved as a video to send on.
 document.addEventListener('DOMContentLoaded', function () {
     const DD = window.DrillDiagram;
     const root = document.getElementById('drill-animation');
@@ -11,7 +12,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const field = saved.field;
     const stages = saved.stages;
     const rolePick = root.querySelector('[data-animation="role"]');
-    if (stages.length < 2 && !rolePick) return;
+    const defencePick = root.querySelector('[data-animation="defence"]');
+    const showDefence = defencePick && DD.hasDefence(stages);
+    if (stages.length < 2 && !rolePick && !showDefence) return;
+    if (showDefence) defencePick.closest('label').hidden = false;
 
     const holder = root.querySelector('.animation-canvas');
     const el = document.createElement('canvas');
@@ -30,19 +34,13 @@ document.addEventListener('DOMContentLoaded', function () {
         caption.querySelector('span').textContent = stage.notes ? ' – ' + stage.notes : '';
     }
 
-    function highlight(objects) {
-        const role = rolePick ? rolePick.value : '';
-        if (!role) return objects;
-        const ids = new Set(objects.filter(o => String(o.herdRole || '') === role).map(o => o.herdId));
-        const owners = DD.arrowOwners(objects);
-        return objects.map((o, i) => {
-            const mine = ids.has(o.herdId) || ids.has(owners[i]) || (o.herdFrom && ids.has(o.herdFrom));
-            return Object.assign({}, o, {opacity: mine ? 1 : (o.herdType === 'disc' ? 0.6 : 0.18)});
-        });
+    function view(objects) {
+        return DD.viewObjects(objects, {role: rolePick ? rolePick.value : '',
+                                        defence: showDefence ? defencePick.value : 'show'});
     }
 
     const player = DD.createPlayer(canvas, () => stages, {
-        mapObjects: highlight,
+        mapObjects: view,
         onUpdate: function (position, playing) {
             scrubber.value = String(Math.round(position * 1000));
             showCaption(Math.min(Math.floor(position + 0.001), stages.length - 1));
@@ -57,6 +55,11 @@ document.addEventListener('DOMContentLoaded', function () {
         canvas.setDimensions({width, height: Math.round(view.h * zoom)});
         canvas.setViewportTransform([zoom, 0, 0, zoom, -view.x * zoom, -view.y * zoom]);
         canvas.requestRenderAll();
+    }
+
+    function redraw() {
+        player.reset();
+        player.seek(player.position);
     }
 
     playBtn.addEventListener('click', () => (player.playing ? player.pause() : player.play()));
@@ -78,12 +81,55 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     if (rolePick) {
         rolePick.addEventListener('change', () => {
-            player.reset();
-            player.seek(player.position);
+            redraw();
             const url = new URL(window.location.href);
             if (rolePick.value) url.searchParams.set('role', rolePick.value);
             else url.searchParams.delete('role');
             window.history.replaceState({}, '', url);
+        });
+    }
+    if (showDefence) defencePick.addEventListener('change', redraw);
+
+    // Save as video: what's on screen (role picked, defence faded...), at the
+    // chosen speed. Phones get the share sheet, others a download.
+    const videoBtn = root.querySelector('[data-animation="video"]');
+    if (videoBtn && stages.length > 1 && DD.videoType() && HTMLCanvasElement.prototype.captureStream) {
+        videoBtn.hidden = false;
+        const label = videoBtn.innerHTML;
+        videoBtn.addEventListener('click', async () => {
+            player.pause();
+            videoBtn.disabled = true;
+            const shown = stages.map(s => Object.assign({}, s, {objects: view(s.objects)}));
+            try {
+                const {blob, extension} = await DD.recordVideo(field, shown, {
+                    speed: player.speed,
+                    onUpdate: position => {
+                        videoBtn.textContent = `Recording… ${Math.round(100 * position / (stages.length - 1))}%`;
+                    },
+                });
+                const name = `${(videoBtn.dataset.name || 'animation').replace(/[^\w-]+/g, '_')}.${extension}`;
+                const file = new File([blob], name, {type: blob.type});
+                if (navigator.canShare && navigator.canShare({files: [file]})) {
+                    try {
+                        await navigator.share({files: [file], title: videoBtn.dataset.name || ''});
+                    } catch (e) {
+                        if (e.name !== 'AbortError') throw e;
+                    }
+                } else {
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = name;
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                    setTimeout(() => URL.revokeObjectURL(link.href), 10000);
+                }
+            } catch (e) {
+                window.alert(e.message || 'The video could not be made.');
+            } finally {
+                videoBtn.disabled = false;
+                videoBtn.innerHTML = label;
+            }
         });
     }
 

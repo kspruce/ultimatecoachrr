@@ -48,7 +48,6 @@
         </div>
         <div class="col-md-4 text-end">
             <div class="btn-group">
-                <a href="https://www.ultiplays.com/" class="btn btn-success" target="_blank">Ultiplays</a>  
                 {% if current_user.is_admin %}
                     <a href="{{ url_for('session.add_drill') }}" class="btn btn-primary">
                         <i class="bi bi-plus-lg"></i> Add New Drill
@@ -100,13 +99,13 @@
         {% for drill in drills %}
         <div class="col">
             <div class="card h-100">
-                {% if drill.ultiplay_embed %}
-                    <div class="drill-video-container">
-                        {{ drill.ultiplay_embed|embed_html }}
-                    </div>
-                {% elif drill.first_diagram %}
+                {% if drill.first_diagram %}
                     <div class="drill-placeholder">
                         <img src="{{ drill.first_diagram.image_url }}" alt="{{ drill.first_diagram.caption or drill.title }}" loading="lazy" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                    </div>
+                {% elif drill.ultiplay_embed %}
+                    <div class="drill-video-container">
+                        {{ drill.ultiplay_embed|embed_html }}
                     </div>
                 {% else %}
                     <div class="drill-placeholder">

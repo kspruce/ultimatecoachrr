@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "playbook/_macros.html" import preview_script %}
 {% from 'session/partials/_badges.html' import session_type_colour, component_colour, component_icon %}
 {% from 'training/_macros.html' import answer_buttons, squad_pills %}
 
@@ -283,6 +284,30 @@
                                     </div>
                                     {% endif %}
 
+                                    {% set plays = component_plays.get(component.id) %}
+                                    {% if plays %}
+                                    <div class="border rounded p-2 mt-2">
+                                        <strong class="small"><i class="bi bi-journal-richtext"></i> Plays</strong>
+                                        {% for play in plays %}
+                                        <div class="d-flex align-items-center gap-2 mt-2">
+                                            {% if play.stage_count > 1 %}
+                                            <button type="button" class="pb-thumb-btn" data-play-preview="{{ url_for('playbook.play_drawing', play_id=play.id) }}"
+                                                    data-title="{{ play.name }}" data-href="{{ url_for('playbook.view_play', play_id=play.id) }}" aria-label="Play {{ play.name }}">
+                                                <img src="{{ play.thumbnail }}" alt="" class="session-play-thumb" loading="lazy">
+                                                <span class="pb-thumb-play" aria-hidden="true"><i class="bi bi-play-circle-fill"></i></span>
+                                            </button>
+                                            {% elif play.thumbnail %}
+                                            <img src="{{ play.thumbnail }}" alt="" class="session-play-thumb" loading="lazy">
+                                            {% endif %}
+                                            <div class="small flex-grow-1">
+                                                <a href="{{ url_for('playbook.view_play', play_id=play.id) }}">{{ play.name }}</a>
+                                                <span class="text-muted">· {{ play.type_label }}{% if play.call %} · Call: {{ play.call }}{% endif %}{% if play.is_draft %} · Draft{% endif %}</span>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+
                                     {% if current_user.is_admin %}
                                     <div class="mt-2 pt-2 border-top text-end">
                                         <a href="{{ url_for('session.edit_component', component_id=component.id) }}" class="btn btn-sm btn-outline-secondary">
@@ -422,6 +447,10 @@
         margin-left: 60px;
     }
 
+    /* A playbook play on a component */
+    .session-play-thumb { width: 96px; height: 64px; object-fit: cover; border-radius: 6px;
+                          border: 1px solid var(--rule, #dee2e6); background: #fff; }
+
     /* Drill diagram thumbnail on a component */
     .drill-thumb img {
         max-width: 240px;
@@ -506,6 +535,7 @@
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/availability.js') }}"></script>
 {{ super() }}
+{% if component_plays %}{{ preview_script() }}{% endif %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Find all images in markdown content

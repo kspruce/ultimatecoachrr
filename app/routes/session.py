@@ -16,6 +16,7 @@ from flask_wtf.csrf import CSRFProtect
 from app.utils.utils import admin_required, coach_required
 from app.utils.season import scope_sessions
 from app.utils.editor_diagrams import save_editor_diagrams
+from app.utils.team_filter import can_access_team
 from app.forms.session import (
     SessionRSVPForm, SessionPlanForm, DrillForm, 
     SessionComponentForm, SessionFilterForm, AdminBulkRSVPForm,
@@ -228,7 +229,6 @@ def add_drill(drill_type='basic'):
             skill_level=form.skill_level.data,
             focus_area=form.focus_area.data,
             equipment_needed=form.equipment_needed.data,
-            ultiplay_embed=form.ultiplay_embed.data,
             created_by=current_user.id,
             team_organization_id=get_current_team_id()  # Add team organization ID
         )
@@ -284,25 +284,34 @@ def drill_detail(drill_id):
             animation = state
 
     return render_template('session/drills/detail.html', drill=drill, session_id=session_id,
-                           animation=animation)
+                           animation=animation, animation_name=drill.title)
 
 
 # Drill diagram images are stored in the database (see DrillDiagram). These
 # routes are public so guest share links can show them; the filename must
 # match the start of the image's hash, so ids alone can't be enumerated.
+# A playbook play's stages are the exception: only the play's team sees
+# them (share links and the PDF put the images in the page instead).
 def _get_diagram_or_404(diagram_id, filename, digest_attr):
     diagram = DrillDiagram.query.get_or_404(diagram_id)
     digest = getattr(diagram, digest_attr)
     if not digest or filename.rsplit('.', 1)[0] != digest[:16]:
         abort(404)
+    if diagram.play_id is not None:
+        play = diagram.play
+        if not can_access_team(current_user, play.team_organization_id) \
+                or (play.is_draft and not current_user.is_coach):
+            abort(404)
     return diagram
 
 
-def _immutable_response(body, mimetype):
+def _immutable_response(body, mimetype, private=False):
     response = make_response(body)
     response.mimetype = mimetype
-    response.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
+    response.headers['Cache-Control'] = f'{"private" if private else "public"}, max-age=31536000, immutable'
     response.headers['X-Content-Type-Options'] = 'nosniff'
+    if private:
+        response.headers['Vary'] = 'Cookie'
     return response
 
 
@@ -311,7 +320,8 @@ def drill_diagram_image(diagram_id, filename):
     diagram = _get_diagram_or_404(diagram_id, filename, 'image_hash')
     if not diagram.image_data:
         abort(404)
-    return _immutable_response(base64.b64decode(diagram.image_data), diagram.image_mime)
+    return _immutable_response(base64.b64decode(diagram.image_data), diagram.image_mime,
+                               private=diagram.play_id is not None)
 
 
 @bp.route('/drills/diagrams/<int:diagram_id>/svg/<string:filename>')
@@ -319,7 +329,7 @@ def drill_diagram_svg(diagram_id, filename):
     diagram = _get_diagram_or_404(diagram_id, filename, 'svg_hash')
     if not diagram.svg_data:
         abort(404)
-    response = _immutable_response(diagram.svg_data, 'image/svg+xml')
+    response = _immutable_response(diagram.svg_data, 'image/svg+xml', private=diagram.play_id is not None)
     # SVG can carry script; stop it running if the file is opened directly.
     response.headers['Content-Security-Policy'] = "default-src 'none'; style-src 'unsafe-inline'; sandbox"
     return response
@@ -1083,10 +1093,22 @@ def detail(session_id):
     if not show_plan:
         components = []
 
+    # The playbook plays each part works on, ready to play (drafts for coaches)
+    from app.models.playbook import Play
+    from app.routes.playbook import feature_on
+    component_plays = {}
+    if components and feature_on('playbook_enabled', session_plan.team_organization_id):
+        for component in components:
+            component_plays[component.id] = [
+                p for p in component.plays.order_by(Play.type.desc(), Play.name)
+                if p.team_organization_id == session_plan.team_organization_id
+                and (current_user.is_coach or not p.is_draft)]
+
     return render_template(
         'session/detail.html',
         session=session_plan,
         components=components,
+        component_plays=component_plays,
         attendance_by_status=attendance_by_status,
         my_answer=my_answer,
         answer_counts=answer_counts,
@@ -1208,7 +1230,8 @@ def edit_drill(drill_id):
         drill.skill_level = form.skill_level.data
         drill.focus_area = form.focus_area.data
         drill.equipment_needed = form.equipment_needed.data
-        drill.ultiplay_embed = form.ultiplay_embed.data
+        if request.form.get('remove_embed'):  # new Ultiplays links can't be added
+            drill.ultiplay_embed = None
         drill.is_public = form.is_public.data if hasattr(form, 'is_public') else False
         
         db.session.commit()

@@ -16,6 +16,7 @@
       <h1>Plays to draw</h1>
       <p>These plays aren't drawn on the field yet, so they've no animation and no role paths. Draw them, or retire the ones you don't use.</p>
     </div>
+    <a href="{{ url_for('playbook.import_ultiplays') }}" class="btn btn-outline-secondary th-btn flex-shrink-0"><i class="bi bi-box-arrow-in-down"></i><span>Add from Ultiplays</span></a>
   </div>
   {% if plays %}
   <div class="th-list">

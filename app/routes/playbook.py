@@ -9,6 +9,7 @@ off the cards, the PDF and game plans). Team concepts moved to Theory; their
 old links redirect there.
 """
 import json
+import re
 from datetime import datetime
 
 from flask import (
@@ -16,13 +17,15 @@ from flask import (
     request, jsonify, current_app, abort
 )
 from flask_login import current_user
+from markupsafe import escape
 
 from app import db, login
 from app.forms.playbook import LearnForm, PlayForm
 from app.models.clip import Clip
 from app.models.drill import SavedDrill
 from app.models.playbook import (Formation, Play, PlayAssignment, PlayerPosition, PlayLearned,
-                                 PlaySetup, PlayToLearn, GameCallPlay, PLAY_STATUSES, PLAY_TYPES, SITUATIONS)
+                                 PlaySetup, PlayToLearn, GameCallPlay, DEFENCE_VIEWS, PLAY_STATUSES, PLAY_TYPES,
+                                 SITUATIONS)
 from app.models.team_settings import TeamSettings
 from app.models.theory import TheoryImage, TheorySection, TheoryTopic
 from app.utils import playbook as pb
@@ -153,13 +156,14 @@ def _export_filename(team_name, type_filter):
             f"_{datetime.now():%Y-%m-%d}.pdf")
 
 
-def _run_export_job(app, job_id, team_id, team_name, type_filter, tag_id):
+def _run_export_job(app, job_id, team_id, team_name, type_filter, tag_id, base_url=None):
     from app.utils.playbook_export import (
         generate_playbook_pdf, cache_key, store_cached_pdf
     )
     # test_request_context: templates render in background threads with an
-    # anonymous user instead of crashing in context processors.
-    with app.test_request_context():
+    # anonymous user instead of crashing in context processors. base_url:
+    # the site's address, for the links in the QR codes.
+    with app.test_request_context(base_url=base_url):
         job = _export_jobs.get(job_id)
         if job is None:
             return
@@ -222,7 +226,7 @@ def export_start():
     app = current_app._get_current_object()
     _threading.Thread(
         target=_run_export_job,
-        args=(app, job_id, team_id, team_name, type_filter, tag_id),
+        args=(app, job_id, team_id, team_name, type_filter, tag_id, request.host_url),
         daemon=True
     ).start()
     return jsonify({'job_id': job_id, 'state': 'running'})
@@ -392,7 +396,8 @@ def view_play(play_id):
     # roles: pick a role to see just their path (one stage too).
     state = drawing_state(play)
     drawn_roles = drawing_role_ids(state)
-    animation = state if state and (len(state.get('stages') or []) > 1 or drawn_roles) else None
+    animation = state if state and (len(state.get('stages') or []) > 1 or drawn_roles
+                                    or play.defence_view in ('faded', 'hidden')) else None
     roles = team_roles(team_id)
     said = {a.position_id: a for a in play.assignments}
     who = [{'role': r, 'assignment': said.get(r.id), 'drawn': r.id in drawn_roles}
@@ -421,11 +426,26 @@ def view_play(play_id):
                            next_play=siblings[i + 1] if i + 1 < len(siblings) else None,
                            position=(i + 1, len(siblings)),
                            who=who, animation_roles=[r for r in roles if r.id in drawn_roles],
+                           animation_defence=play.defence_view, animation_name=play.name,
                            coming=coming_sessions(team_id) if can_edit() else [],
                            in_games=_in_games(play),
                            mine=mine, is_learned=play.id in pb.learned_ids(current_user.id, team_id),
                            learners=learners, topics=visible_topics(play),
                            clips=visible_clips(play.clips, team_id), reports=reports, sessions=sessions[:5])
+
+
+@bp.route('/plays/<int:play_id>/drawing.json')
+def play_drawing(play_id):
+    """The play's drawing, for playing it in place (cards, the playbook
+    list, sessions: play_preview.js)."""
+    play = play_or_404(play_id)
+    state = drawing_state(play)
+    if not state:
+        abort(404)
+    response = jsonify({'drawing': state, 'defence': play.defence_view or 'show', 'name': play.name,
+                        'url': url_for('playbook.view_play', play_id=play.id)})
+    response.headers['Cache-Control'] = 'private, no-cache'
+    return response
 
 
 @bp.route('/plays/<int:play_id>/learned', methods=['POST'])
@@ -726,11 +746,14 @@ def save_play(form, play):
         play.description = form.description.data or None
         play.notes = form.notes.data or None
         play.image_url = (form.image_url.data or '').strip() or None
-        play.ultiplay_embed = (form.ultiplay_embed.data or '').strip() or None
+        if request.form.get('remove_embed'):  # new Ultiplays links can't be added
+            play.ultiplay_embed = None
         play.team_organization_id = team_id
         play.updated_by = current_user.id
         play.tags = pb.tags_for(form.tags.data, team_id)
         play.is_core = bool(form.is_core.data)
+        if form.defence_view.data in dict(DEFENCE_VIEWS):
+            play.defence_view = None if form.defence_view.data == 'show' else form.defence_view.data
         play.situations = ','.join(k for k, _ in SITUATIONS if k in (form.situations.data or [])) or None
 
         topics, drills, clips = link_choices(team_id)
@@ -787,6 +810,7 @@ def edit_play(play_id):
     play = play_or_404(play_id)
     form = PlayForm(obj=play)
     if request.method == 'GET':
+        form.defence_view.data = play.defence_view or 'show'
         form.tags.data = ', '.join(t.name for t in play.tags)
         form.situations.data = play.situation_keys
         form.topics.data = [t.id for t in play.theory_topics]
@@ -865,6 +889,78 @@ def redraw():
     plays = [p for p in team_plays(get_current_team_id()).order_by(Play.type.desc(), *_play_order())
              if not p.is_retired and not p.editor_diagram]
     return render_template('playbook/redraw.html', title='Plays to draw', plays=plays)
+
+
+# ── Bulk add from Ultiplays (temporary) ──────────────────────────
+# While the team's Ultiplays library is redrawn in the editor: paste the
+# links and each becomes a draft play, keeping its link to redraw from.
+# Goes when the ultiplay_embed columns are dropped.
+MAX_IMPORT_LINES = 300
+IFRAME_TITLE = re.compile(r'title=["\']([^"\']+)["\']', re.I)
+
+
+def _import_line(line):
+    """(name or None, embed code) from 'Name | link or embed code', or
+    (None, None) when the line has no link."""
+    name, _, code = line.rpartition('|') if '|' in line else ('', '', line)
+    name, code = name.strip(), code.strip()
+    if '<iframe' in code.lower():
+        if not name:
+            m = IFRAME_TITLE.search(code)
+            name = m.group(1).strip() if m else ''
+        return name or None, code
+    if code.startswith('https://'):
+        src = str(escape(code))
+        return name or None, f'<iframe src="{src}" width="100%" height="450" frameborder="0" allowfullscreen></iframe>'
+    return None, None
+
+
+@bp.route('/import-ultiplays', methods=['GET', 'POST'])
+def import_ultiplays():
+    from app.utils.playbook_export import extract_embed_url
+    coach_only()
+    team_id = get_current_team_id()
+    if request.method == 'GET':
+        return render_template('playbook/import_ultiplays.html', title='Add plays from Ultiplays')
+    play_type = request.form.get('type') if request.form.get('type') in TYPES else 'offense'
+    lines = [ln.strip() for ln in (request.form.get('lines') or '').splitlines() if ln.strip()]
+    if len(lines) > MAX_IMPORT_LINES:
+        flash(f'Up to {MAX_IMPORT_LINES} at a time, please.', 'danger')
+        return render_template('playbook/import_ultiplays.html', title='Add plays from Ultiplays',
+                               lines=request.form.get('lines'), play_type=play_type)
+    existing = Play.query.filter_by(team_organization_id=team_id).all()
+    names = {p.name.lower() for p in existing}
+    urls = {extract_embed_url(p.ultiplay_embed) for p in existing if p.ultiplay_embed}
+    added, skipped = [], []
+    order = next_order(team_id, play_type)
+    for line in lines:
+        name, code = _import_line(line)
+        if code is None:
+            skipped.append((line, 'no https:// link or embed code'))
+            continue
+        url = extract_embed_url(code)
+        if not name:  # numbered after any already added this way
+            n = 1
+            while f'ultiplays play {n}' in names:
+                n += 1
+            name = f'Ultiplays play {n}'
+        name = name[:100]
+        if url in urls:
+            skipped.append((line, 'that link is already in the playbook'))
+            continue
+        if name.lower() in names:
+            skipped.append((line, f'there is already a play called "{name}"'))
+            continue
+        play = Play(name=name, type=play_type, status='draft', ultiplay_embed=code, sort_order=order,
+                    created_by=current_user.id, updated_by=current_user.id, team_organization_id=team_id)
+        db.session.add(play)
+        added.append(play)
+        names.add(name.lower())
+        urls.add(url)
+        order += 1
+    db.session.commit()
+    return render_template('playbook/import_ultiplays.html', title='Add plays from Ultiplays',
+                           added=added, skipped=skipped, play_type=play_type)
 
 
 # ── Share links: one play, readable without signing in ───────────

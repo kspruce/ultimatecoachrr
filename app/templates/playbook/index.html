@@ -1,6 +1,6 @@
 {# templates/playbook/index.html #}
 {% extends "base.html" %}
-{% from "playbook/_macros.html" import play_menu, move_buttons, side_badge, thumb %}
+{% from "playbook/_macros.html" import play_menu, move_buttons, side_badge, thumb, preview_thumb, preview_script %}
 
 {% block styles %}
 {{ super() }}
@@ -11,8 +11,9 @@
 {% macro play_row(play, first=False, last=False) %}
 {% set done = play.id in learned %}
 <div class="th-row">
+  {% if play.stage_count > 1 %}{{ preview_thumb(play) }}{% endif %}
   <a class="th-row-main" href="{{ url_for('playbook.view_play', play_id=play.id) }}">
-    {{ thumb(play) }}
+    {% if play.stage_count <= 1 %}{{ thumb(play) }}{% endif %}
     <div class="th-row-text">
       <div class="th-row-title">{% if play.is_core %}<span title="Core play" aria-label="Core play" style="color:var(--warn)">★</span> {% endif %}{{ play.name }}</div>
       {% if play.call or play.signal %}<div class="th-row-sub">{% if play.call %}Call: {{ play.call }}{% endif %}{% if play.call and play.signal %} · {% endif %}{% if play.signal %}{{ play.signal }}{% endif %}</div>{% endif %}
@@ -54,6 +55,7 @@
           <li><a class="dropdown-item" href="{{ url_for('playbook.draw_play', type=type_filter) }}"><i class="bi bi-easel2 me-2"></i>Draw a Play</a></li>
           <li><a class="dropdown-item" href="{{ url_for('playbook.add_play', type=type_filter) }}"><i class="bi bi-pencil me-2"></i>Write it up first, draw later</a></li>
           <li><a class="dropdown-item" href="{{ url_for('playbook.setups') }}"><i class="bi bi-people me-2"></i>From a set-up</a></li>
+          <li><a class="dropdown-item" href="{{ url_for('playbook.import_ultiplays') }}"><i class="bi bi-box-arrow-in-down me-2"></i>Add from Ultiplays</a></li>
         </ul>
       </div>
       {% endif %}
@@ -188,4 +190,5 @@
 {{ super() }}
 <script src="{{ url_for('static', filename='js/theory.js') }}"></script>
 <script src="{{ url_for('static', filename='js/playbook_export.js') }}"></script>
+{{ preview_script() }}
 {% endblock %}

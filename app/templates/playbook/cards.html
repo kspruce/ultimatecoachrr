@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "playbook/_macros.html" import preview_script %}
 
 {% block title %}{% if report %}Plays vs {{ report.team_name }}{% else %}Game-day cards{% endif %}{% endblock %}
 
@@ -59,7 +60,7 @@
     </nav>
 
     {% for play in plays %}
-    <article class="gd-card" id="play-{{ play.id }}">
+    <article class="gd-card" id="play-{{ play.id }}" data-preview-card>
         <div class="gd-head">
             <h2>{{ play.name }}{% if play.id in learned %} <i class="bi bi-check-circle-fill" style="color:var(--ok);font-size:.9rem" aria-label="Learned"></i>{% endif %}</h2>
             <span class="badge {{ 'bg-primary' if play.type == 'offense' else 'bg-danger' }}">{{ play.type_label }}</span>
@@ -102,15 +103,16 @@
             {% endif %}
         </div>
         <div class="gd-foot">
-            <span class="small text-muted">{% if play.stage_count > 1 %}Swipe for each stage{% endif %}</span>
+            {% if play.stage_count > 1 %}
+            <button type="button" class="btn btn-sm btn-success" data-inline=".gd-stages"
+                    data-play-preview="{{ url_for('playbook.play_drawing', play_id=play.id) }}"><i class="bi bi-play-fill"></i> Play it</button>
+            {% else %}<span></span>{% endif %}
             {% if my_path.get(play.id) %}
             <a href="{{ url_for('playbook.view_play', play_id=play.id, role=my_path[play.id]) }}" class="btn btn-sm btn-outline-primary">
                 <i class="bi bi-person-fill"></i> Your path
             </a>
             {% else %}
-            <a href="{{ url_for('playbook.view_play', play_id=play.id) }}" class="btn btn-sm btn-outline-primary">
-                {% if play.stage_count > 1 %}<i class="bi bi-play-fill"></i> Watch it{% else %}Full play{% endif %}
-            </a>
+            <a href="{{ url_for('playbook.view_play', play_id=play.id) }}" class="btn btn-sm btn-outline-primary">Full play</a>
             {% endif %}
         </div>
     </article>
@@ -121,4 +123,9 @@
     </div>
     {% endfor %}
 </div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{{ preview_script() }}
 {% endblock %}

@@ -33,6 +33,8 @@ play_clip_association = db.Table('play_clip_association',
 PLAY_TYPES = (('offense', 'Offence'), ('defense', 'Defence'))
 PLAY_STATUSES = (('draft', 'Draft'), ('active', 'In use'), ('retired', 'Retired'))
 # When a play is for: filters on the playbook, the cards and the call sheet
+# How the drawing shows the defenders (and their arrows) to start with
+DEFENCE_VIEWS = (('show', 'Shown'), ('faded', 'Faded'), ('hidden', 'Hidden'))
 SITUATIONS = (('pull', 'Pull play'), ('hold', 'Hold point'), ('break', 'Break point'),
               ('endzone', 'Endzone'), ('timeout', 'After a timeout'), ('vs_zone', 'Against zone'),
               ('vs_person', 'Against person'), ('upwind', 'Upwind'), ('downwind', 'Downwind'))
@@ -77,6 +79,7 @@ class Play(db.Model):
     is_core = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())  # everyone must know it
     situations = db.Column(db.String(200))  # comma-separated SITUATIONS keys
     share_token = db.Column(db.String(43), unique=True, nullable=True)  # a link that shows it without signing in
+    defence_view = db.Column(db.String(10))  # DEFENCE_VIEWS key; empty means shown
     description = db.Column(db.Text)
     formation_id = db.Column(db.Integer, db.ForeignKey('formation.id'))  # concepts: see Formation
     notes = db.Column(db.Text)

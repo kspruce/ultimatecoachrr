@@ -59,7 +59,6 @@ class DrillForm(FlaskForm):
     )
     focus_area = StringField('Focus Area')
     equipment_needed = StringField('Equipment Needed')
-    ultiplay_embed = TextAreaField('Ultiplay Embed Code')
     is_public = BooleanField('Make this drill public')
 
     def __init__(self, *args, **kwargs):
@@ -85,8 +84,12 @@ class SessionComponentForm(FlaskForm):
         super(SessionComponentForm, self).__init__(*args, **kwargs)
         from app.models.playbook import Play
         from app.utils.team_filter import get_current_team_id
-        self.plays.choices = [(p.id, p.name) for p in Play.query.filter_by(
-            team_organization_id=get_current_team_id()).order_by(Play.name).all()]
+        plays = Play.query.filter_by(team_organization_id=get_current_team_id()) \
+            .order_by(Play.type.desc(), Play.name).all()
+        self.plays.choices = [(p.id, p.name) for p in plays]
+        # For the picker: side, and drafts / retired marked
+        self.play_notes = {p.id: ' · '.join([p.type_label] + ([p.status_label] if p.status != 'active' else []))
+                           for p in plays}
     submit = SubmitField('Save Component')
 
 class AttendanceForm(FlaskForm):

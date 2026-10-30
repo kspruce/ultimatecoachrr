@@ -68,7 +68,7 @@ def client(app, club, who, team='team'):
 
 def form(club, **kw):
     data = {'name': 'Iso', 'type': 'offense', 'status': 'active', 'call': 'Iso', 'signal': 'Fist',
-            'description': 'Clear the break side.', 'notes': '', 'image_url': '', 'ultiplay_embed': '',
+            'description': 'Clear the break side.', 'notes': '', 'image_url': '',
             'tags': '', 'role_id': [club['handler'], club['cutter']],
             'role_text': ['Swing it to the break side.', 'Cut under from the back.'], 'action': 'save'}
     data.update(kw)
@@ -351,7 +351,7 @@ def test_session_plans_keep_their_plays(app, club):
     assert [p.id for p in component.plays] == [club['Hammer']]
     assert 'Practised: Tuesday' in text(client(app, club, 'player').get(f'/playbook/plays/{club["Hammer"]}'))
     form_page = text(c.get(f'/sessions/edit_component/{component.id}'))
-    assert f'<option selected value="{club["Hammer"]}">' in form_page
+    assert f'name="plays" value="{club["Hammer"]}" id="play-{club["Hammer"]}" checked' in form_page
     c.post(f'/sessions/edit_component/{component.id}', data={'title': 'Hammer reps', 'order': 1,
                                                             'component_type': 'drill', 'drill_id': 0, 'plays': []})
     db.session.expire_all()

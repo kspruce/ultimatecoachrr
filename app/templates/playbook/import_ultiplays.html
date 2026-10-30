@@ -1,0 +1,76 @@
+{# templates/playbook/import_ultiplays.html: paste Ultiplays links, get draft plays (temporary, while the library is redrawn) #}
+{% extends "base.html" %}
+
+{% block styles %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/theory.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/playbook.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container th-page" style="max-width:860px">
+  <nav class="th-crumbs" aria-label="Breadcrumb"><a href="{{ url_for('playbook.index') }}">Playbook</a><span aria-hidden="true">›</span><a href="{{ url_for('playbook.redraw') }}">Plays to draw</a></nav>
+  <div class="th-head">
+    <div>
+      <h1>Add plays from Ultiplays</h1>
+      <p>Paste your Ultiplays plays to get them into the playbook as drafts, each keeping its link so you can redraw it on the field. Only coaches see drafts.</p>
+    </div>
+  </div>
+
+  {% if added is defined %}
+  <div class="th-list mb-3">
+    {% for play in added %}
+    <div class="th-row">
+      <a class="th-row-main" href="{{ url_for('playbook.view_play', play_id=play.id) }}">
+        <div class="th-row-text"><div class="th-row-title">{{ play.name }}</div><div class="th-row-meta"><span class="th-badge draft">Draft</span></div></div>
+      </a>
+      <div class="th-row-end"><a href="{{ url_for('playbook.draw_play', play_id=play.id) }}" class="btn btn-sm btn-primary">Draw it</a></div>
+    </div>
+    {% else %}
+    <div class="th-row"><div class="th-row-text">No plays added.</div></div>
+    {% endfor %}
+  </div>
+  {% if skipped %}
+  <h2 class="th-label">Skipped</h2>
+  <div class="th-list mb-3">
+    {% for line, why in skipped %}
+    <div class="th-row"><div class="th-row-text"><div class="th-row-title text-break" style="font-weight:600">{{ line|truncate(90) }}</div><div class="th-row-sub">Skipped: {{ why }}</div></div></div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  <p><a href="{{ url_for('playbook.redraw') }}" class="btn btn-primary th-btn">Plays to draw</a>
+     <a href="{{ url_for('playbook.import_ultiplays') }}" class="btn btn-link">Add more</a></p>
+  {% else %}
+  <form method="POST" class="th-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="th-form-card">
+      <label class="form-label" for="lines">One play per line</label>
+      <textarea id="lines" name="lines" class="form-control font-monospace" rows="10" required
+                placeholder="Hammer | https://www.ultiplays.com/embed/…&#10;Side stack | <iframe src=&quot;https://…&quot;></iframe>">{{ lines or '' }}</textarea>
+      <p class="small text-muted mt-2 mb-0">Write the name, a <code>|</code>, then the link or the embed code from Ultiplays' share menu. Without a name, the play gets the embed's title or a number. Links or names already in the playbook are skipped.</p>
+    </div>
+    <div class="th-form-card">
+      <label class="form-label d-block">Side</label>
+      <div class="pb-seg">
+        {% set current = play_type or 'offense' %}
+        {% for value, label in TYPES.items() %}
+        <input type="radio" name="type" value="{{ value }}" id="type-{{ value }}" {% if value == current %}checked{% endif %}>
+        <label for="type-{{ value }}">{{ label }}</label>
+        {% endfor %}
+      </div>
+      <p class="small text-muted mt-2 mb-0">For all the plays in this batch. Do offence and defence as two batches.</p>
+    </div>
+    <div class="th-actionbar">
+      <a href="{{ url_for('playbook.redraw') }}" class="btn btn-link px-2">Cancel</a>
+      <span class="grow"></span>
+      <button type="submit" class="btn btn-primary th-btn px-4"><i class="bi bi-plus-lg"></i>Add as drafts</button>
+    </div>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/theory.js') }}"></script>
+{% endblock %}

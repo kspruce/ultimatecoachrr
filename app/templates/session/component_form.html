@@ -127,12 +127,23 @@
                         </div>
 
                         <!-- Plays -->
-                        <div class="form-group mb-3">
-                            {{ form.plays.label(class="form-label") }}
-                            {{ form.plays(class="form-select", multiple="multiple", size="5") }}
-                            <small class="form-text text-muted">
-                                Hold Ctrl/Cmd to select multiple plays
-                            </small>
+                        <div class="form-group mb-3" id="play-picker">
+                            <label class="form-label" for="play-search">{{ form.plays.label.text }}</label>
+                            {% if form.plays.choices %}
+                            {% set picked = form.plays.data or [] %}
+                            <input type="search" id="play-search" class="form-control form-control-sm mb-2" placeholder="Search plays" autocomplete="off">
+                            <div class="border rounded px-2 py-1" style="max-height: 240px; overflow-y: auto;">
+                                {% for play_id, name in form.plays.choices %}
+                                <div class="form-check py-1" data-play-name="{{ name|lower }}">
+                                    <input class="form-check-input" type="checkbox" name="plays" value="{{ play_id }}" id="play-{{ play_id }}" {% if play_id in picked %}checked{% endif %}>
+                                    <label class="form-check-label" for="play-{{ play_id }}">{{ name }} <small class="text-muted">{{ form.play_notes[play_id] }}</small></label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <small class="form-text text-muted">The plays this part works on. They show on the session, ready to play.</small>
+                            {% else %}
+                            <p class="small text-muted mb-0">No plays in the playbook yet.</p>
+                            {% endif %}
                         </div>
 
                         <!-- Submit buttons -->
@@ -293,6 +304,17 @@
                 .then(response => response.json())
                 .then(drill => showDrillPreview(drill))
                 .catch(error => console.error('Error:', error));
+        }
+
+        // Play picker: filter the list as you type
+        const playSearch = document.getElementById('play-search');
+        if (playSearch) {
+            playSearch.addEventListener('input', () => {
+                const q = playSearch.value.trim().toLowerCase();
+                document.querySelectorAll('#play-picker [data-play-name]').forEach(row => {
+                    row.hidden = q && !row.dataset.playName.includes(q);
+                });
+            });
         }
     });
 </script>
