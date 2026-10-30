@@ -239,8 +239,16 @@ def test_canvas_views(app, team, live_server, browser):
 
     def to_screen(x, y):
         # As the editor fits the view: the attacking end at the right
-        # (anchor 'end'), otherwise centred
-        return page.evaluate("""([x, y]) => {
+        # (anchor 'end'), otherwise centred. First wait for fonts and the
+        # layout to settle, since the editor refits when its space changes.
+        return page.evaluate("""async ([x, y]) => {
+            await document.fonts.ready;
+            const frame = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+            const box = () => JSON.stringify(document.querySelector('.upper-canvas').getBoundingClientRect());
+            for (let last = null, i = 0; i < 50 && box() !== last; i++) {
+                last = box();
+                await frame();
+            }
             const el = document.querySelector('.upper-canvas').getBoundingClientRect();
             const v = DrillDiagram.viewRect(DrillDiagram.withDefaults({view: document.getElementById('field-view').value}));
             const z = Math.min(el.width / v.w, el.height / v.h);
@@ -263,9 +271,9 @@ def test_canvas_views(app, team, live_server, browser):
     state = json.loads(drill.editor_diagram.editor_json)
     assert state['field']['view'] == 'blank'
     placed = [(o['left'], o['top']) for o in state['stages'][0]['objects'] if o.get('herdType') == 'player-o']
-    assert all(abs(px - x) < 3 and abs(py - y) < 3
-               for (px, py), (x, y) in zip(placed, [(1000, 200), (550, 330), (550, 200)]))
+    wanted = [(1000, 200), (550, 330), (550, 200)]
     assert len(placed) == 3
+    assert all(abs(px - x) < 3 and abs(py - y) < 3 for (px, py), (x, y) in zip(placed, wanted)), placed
 
     # The saved picture is just the patch of grass shown (30 by 20 yards)
     diagram = drill.editor_diagram
