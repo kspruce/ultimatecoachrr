@@ -4,52 +4,56 @@
 <style>
   .fs-card { background: var(--card); border: 1px solid var(--rule); border-radius: var(--radius); padding: 1.3rem 1.5rem; margin-bottom: 1.25rem; }
   .fs-card h3 { font-size: 1.2rem; margin: 0 0 .5rem; }
-  .fs-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .75rem 0; border-top: 1px solid var(--rule); }
+  .fs-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .75rem .5rem; margin: 0 -.5rem; border-top: 1px solid var(--rule); border-radius: 8px; scroll-margin-top: 90px; }
   .fs-row:first-of-type { border-top: 0; }
+  .fs-row:target { background: var(--club-soft); }
   .fs-row b { display: block; font-weight: 700; }
   .fs-row span { color: var(--ink-3); font-size: .85rem; }
+  .fs-row .fs-meta { display: block; margin-top: .15rem; font-size: .78rem; }
+  .fs-row .fs-meta a { font-weight: 700; }
   .fs-row .form-check-input { width: 2.6em; height: 1.4em; margin: 0; cursor: pointer; }
+  .fs-presets { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .5rem; }
+  .fs-preset { border: 1px solid var(--rule); background: var(--card); border-radius: 10px; padding: .5rem .8rem; text-align: left; color: var(--ink); }
+  .fs-preset:hover { border-color: var(--club-ink); }
+  .fs-preset b { display: block; font-size: .86rem; }
+  .fs-preset small { color: var(--ink-3); font-size: .76rem; }
 </style>
 {% endblock %}
 
 {% block content %}
-{% set groups = [
-  ('Core', [
-    ('stats_enabled', 'Stats', 'Season, game and player statistics'),
-    ('gameday_enabled', 'Game day', 'Live stat recording on the sideline'),
-  ]),
-  ('Coaching', [
-    ('playbook_enabled', 'Playbook', 'Plays and formations'),
-    ('theory_enabled', 'Theory', 'Learning content for players'),
-    ('drills_enabled', 'Drills', 'The drill library'),
-    ('sessions_enabled', 'Sessions', 'Practice plans and attendance'),
-    ('season_plan_enabled', 'Season plan', 'Phases, week-by-week themes and session notes'),
-    ('leadership_handbook_enabled', 'Leadership handbook', 'Coaching and captaining guide for captains and coaches only'),
-  ]),
-  ('Analysis', [
-    ('clip_enabled', 'Clips', 'Video clips and annotations'),
-    ('scouting_enabled', 'Scouting', 'Opponent reports'),
-    ('fitness_enabled', 'Fitness', 'Fitness tests, PBs and leaderboard'),
-  ]),
-] %}
 <div class="uc-settings">
   {% include "team/_settings_nav.html" %}
   <div>
     <div class="uc-page-header">
       <div>
         <h1>Features</h1>
-        <p>Choose which parts of Ultimate Coach {{ team.name }} uses. Hidden features disappear from the menus.</p>
+        <p>Choose which parts of Ultimate Coach {{ team.name }} uses. Hidden features disappear from the menus.
+           The <a href="{{ url_for('main.how_to_use') }}">How to Use guide</a> explains each one.</p>
       </div>
     </div>
 
-    <form method="POST" style="max-width:720px">
+    <form method="POST" style="max-width:720px" id="fs-form">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      {% for group, items in groups %}
+      <div class="fs-card">
+        <h3>Start from a preset</h3>
+        <span style="color:var(--ink-3);font-size:.85rem">Sets the switches below. Nothing changes until you save, and you can still change any switch.</span>
+        <div class="fs-presets">
+          {% for preset in presets %}
+          <button type="button" class="fs-preset js-preset" data-flags="{{ preset.flags|join(' ') }}">
+            <b>{{ preset.name }}</b><small>{{ preset.hint }}</small>
+          </button>
+          {% endfor %}
+        </div>
+      </div>
+      {% for group, flags in groups %}
       <div class="fs-card">
         <h3>{{ group }}</h3>
-        {% for field, label, hint in items %}
-        <label class="fs-row" for="{{ field }}">
-          <div><b>{{ label }}</b><span>{{ hint }}</span></div>
+        {% for field in flags %}
+        {% set feature = features[field] %}
+        <label class="fs-row" for="{{ field }}" id="row-{{ field }}">
+          <div><b>{{ labels[field] }}</b><span>{{ feature.summary }}</span>
+            <span class="fs-meta">{{ 'Coaches only' if feature.coach_only else 'Players and coaches' }} ·
+              <a href="{{ url_for('main.how_to_use', _anchor=feature.key) }}">How it works</a></span></div>
           <div class="form-check form-switch m-0">
             <input class="form-check-input" type="checkbox" role="switch" id="{{ field }}" name="{{ field }}" {% if team.settings[field] %}checked{% endif %}>
           </div>
@@ -63,4 +67,17 @@
     </form>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.querySelectorAll('.js-preset').forEach(function (button) {
+  button.addEventListener('click', function () {
+    var on = button.dataset.flags.split(' ');
+    document.querySelectorAll('#fs-form input[role="switch"]').forEach(function (box) {
+      box.checked = on.indexOf(box.name) !== -1;
+    });
+  });
+});
+</script>
 {% endblock %}

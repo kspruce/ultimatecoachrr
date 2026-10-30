@@ -108,6 +108,9 @@ def create_app(config_class=Config):
 
     # Lets templates link to optional blueprints (e.g. Discord) only when registered
     app.jinja_env.globals['has_endpoint'] = lambda endpoint: endpoint in app.view_functions
+    # The How to Use card that explains a page (navbar help link, checklist)
+    from app.help_guide import feature_for_endpoint
+    app.jinja_env.globals['help_for_endpoint'] = feature_for_endpoint
 
     # Register custom CLI commands
     from commands import register_commands

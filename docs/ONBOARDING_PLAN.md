@@ -14,7 +14,12 @@
 > - Manual "go and look" steps tick off when opened from the checklist (`/welcome/go/<key>`).
 > - Coaches can't add plays or fitness metrics (admin-only routes), so those steps sit on the
 >   admin/captain lists; coaches get the game-day and squad steps instead.
-> - Email/Discord nudges (4.3) are not built yet.
+> - Nudges (4.3): new users (3-30 days old) whose checklist isn't done get one email
+>   listing what's left (`onboarding.send_nudges`, run nightly by `app/scheduler.py`,
+>   stored in `user_onboarding.nudged_at`). It respects the account's email setting and
+>   skips anyone who hid the checklist. Discord nudges are not built.
+> - The How to Use guide was rewritten (4.3) from `app/help_guide.py`, which also feeds the
+>   About page, the Features settings page and each checklist step's "How it works" link.
 
 A plan for first-run onboarding for each team role: **admin, coach, captain, player**
 (plus how stat takers, guests and superadmins are handled). It's written against the

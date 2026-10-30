@@ -180,6 +180,7 @@
       <p style="max-width:32rem;margin:0 auto 1rem">
         A report holds an opponent's offence and defence, their key players, video clips
         and your game plan. Open it on the sideline as a one-page game card.
+        {% with guide_key='scouting' %}{% include 'partials/guide_link.html' %}{% endwith %}
       </p>
       {% if current_user.is_coach %}
       <a href="{{ url_for('scouting.add_report') }}" class="btn btn-primary btn-sm">Write the first report</a>
