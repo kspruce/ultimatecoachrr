@@ -560,6 +560,41 @@ def manage_join_link():
     return redirect(url_for('auth.users', team_id=team.id))
 
 
+@bp.route('/remind-unjoined', methods=['POST'])
+@login_required
+def remind_unjoined():
+    """Coach chases the roster players who haven't made an account: each one
+    with an email gets their own invite link, and the team's Discord gets a
+    note naming who's left."""
+    team_id = _get_managed_team_id()
+    if not team_id or not can_manage_team_users(team_id):
+        flash("You do not have permission.", "danger")
+        return redirect(url_for("main.index"))
+
+    team = TeamOrganization.query.get_or_404(team_id)
+    result = onboarding.remind_unjoined(team, current_user)
+    if not result['waiting']:
+        flash('Everyone on the roster has an account.', 'info')
+        return redirect(url_for('auth.users', team_id=team.id, _anchor='signup'))
+    emailed = result['emailed']
+    sentences = []
+    if emailed:
+        sentences.append(f"Emailed {emailed} player{'s' if emailed != 1 else ''} their invite link.")
+    if result['discord']:
+        sentences.append("Posted who's left to your Discord.")
+    went = bool(sentences)
+    if not went:
+        sentences.append('Nobody was sent anything.')
+    message = ' '.join(sentences)
+    if result['recent']:
+        message += f" {result['recent']} had an invite in the last few days, so weren't sent another."
+    if result['no_email']:
+        message += (f" No email for {', '.join(result['no_email'])}: add one on their roster page, "
+                    "or copy their invite link from the roster and send it yourself.")
+    flash(message, 'success' if went else 'warning')
+    return redirect(url_for('auth.users', team_id=team.id, _anchor='signup'))
+
+
 @bp.route('/join', methods=['GET', 'POST'])
 @limiter.limit(SIGNUP_LIMIT, methods=['POST'])
 def join():

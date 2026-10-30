@@ -7,7 +7,7 @@
 - every hour from 9am, players who haven't replied to a tournament whose
   reply-by date is two days away get one reminder;
 - every night, new users who haven't finished their getting-started
-  checklist get one email listing what's left.
+  checklist get one reminder (email, or Discord message) listing what's left.
 
 The scheduler starts on the first request, so `flask` commands (migrations,
 imports) never start it. Everything it does is safe to repeat, and

@@ -67,7 +67,8 @@ FEATURES = [
                      'Add players one at a time, or paste a whole spreadsheet with <strong>Bulk Import</strong>',
                      'Click a player for their profile, stats and roles'),
             coach_steps=_m('Tick <em>Auto-create login accounts</em> on Bulk Import to make logins for everyone with an email',
-                           'Or turn on the team join link under Members and share it in the team chat'),
+                           'Or turn on the team join link under Members and share it in the team chat',
+                           "<em>Remind them</em> under Members emails anyone who hasn't joined their own invite link and tells your Discord who's left"),
             pages=('team.index', 'team.add_player', 'team.bulk_import', 'team.player_detail',
                    'team.edit_player')),
     Feature('seasons', 'Seasons & Squads', 'bi-calendar3', 'Start a new season without losing '

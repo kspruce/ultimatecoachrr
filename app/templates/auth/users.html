@@ -130,6 +130,11 @@
                 <a href="{{ url_for('team.player_detail', player_id=p.id) }}" class="badge bg-light text-dark border text-decoration-none">{{ p.name }}</a>
                 {% endfor %}
             </div>
+            <form method="POST" action="{{ url_for('auth.remind_unjoined', team_id=current_team.id) }}" class="d-flex flex-wrap align-items-center gap-2 mt-3">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-sm btn-primary"><i class="bi bi-send me-1"></i>Remind them</button>
+                <span class="small text-muted">Emails each of them their own invite link{% if current_team.settings and current_team.settings.discord_enabled %} and posts who's left to your Discord{% endif %}. Nobody is sent more than one every few days.</span>
+            </form>
             {% endif %}
         </div>
     </div>

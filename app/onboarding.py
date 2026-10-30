@@ -400,16 +400,22 @@ def roster_signup(team_id):
     return {'active': len(players), 'joined': len(players) - len(waiting), 'waiting': waiting}
 
 
-# ── Reminder email ───────────────────────────────────────────
+# ── Getting-started reminder ─────────────────────────────────
 
-# New users who haven't finished their checklist get one email, this many
-# days after their account was made; older accounts never get one.
+# New users who haven't finished their checklist get one reminder, this many
+# days after their account was made; older accounts never get one. It goes by
+# email, or by Discord message to people who linked Discord but have no
+# email (or turned emails off).
 NUDGE_AFTER_DAYS = 3
 NUDGE_WITHIN_DAYS = 30
 
 
+def _steps_left(checklist):
+    return [i['step'] for i in checklist['items'] if not i['done'] and not i['step'].optional]
+
+
 def _nudge_body(user, team, checklist, base):
-    left = [i['step'] for i in checklist['items'] if not i['done'] and not i['step'].optional]
+    left = _steps_left(checklist)
     lines = [f'Hi {user.username},', '',
              f"You're set up on {team.name}'s Ultimate Coach. "
              f"{len(left)} thing{'s' if len(left) != 1 else ''} on your getting-started list "
@@ -422,27 +428,38 @@ def _nudge_body(user, team, checklist, base):
     return '\n'.join(lines)
 
 
+def _nudge_dm(team, checklist, base):
+    left = _steps_left(checklist)
+    return (f"You're set up on {team.name}'s Ultimate Coach. Still to do: "
+            f"{', '.join(step.title for step in left)}.\n"
+            f"Your checklist: {base}/welcome\nHow everything works: {base}/how-to-use\n"
+            "This is the only reminder you'll get.")
+
+
 def send_nudges(now=None):
-    """Email each new user whose checklist isn't done, once. The daily
+    """Remind each new user whose checklist isn't done, once. The daily
     background job (app/scheduler.py) runs this. Returns how many were sent."""
+    from sqlalchemy import or_
+
+    from app.discord import api, messages, notify
     from app.models.team_organization import TeamOrganization
     from app.models.user import User
     from app.utils.email import email_configured, send_email
 
-    if not email_configured():
-        return 0
+    can_email, can_dm = email_configured(), api.bot_ready()
     base = (current_app.config.get('BASE_URL') or '').rstrip('/')
-    if not base:
+    if not base or not (can_email or can_dm):
         return 0
     now = now or datetime.utcnow()
     users = User.query.filter(User.created_at <= now - timedelta(days=NUDGE_AFTER_DAYS),
                               User.created_at >= now - timedelta(days=NUDGE_WITHIN_DAYS),
-                              User.email.isnot(None), User.email_event_updates.is_(True)).all()
+                              or_(User.email.isnot(None), User.discord_id.isnot(None))).all()
     sent = 0
     # The checklist builds its links with url_for, which needs a request
     with current_app.test_request_context(base_url=base):
         for user in users:
-            if not is_real_email(user.email) or user.role not in ROLES:
+            emailable = can_email and is_real_email(user.email) and user.email_event_updates
+            if not (emailable or (can_dm and user.discord_id)) or user.role not in ROLES:
                 continue
             record = get_record(user)
             if record and (record.nudged_at or record.dismissed_at):
@@ -453,9 +470,88 @@ def send_nudges(now=None):
             checklist = progress(user, team, record)
             if not checklist or checklist['complete']:
                 continue
-            subject = f'Getting started with {team.name} on Ultimate Coach'
-            if send_email(user.email, subject, _nudge_body(user, team, checklist, base)):
+            if emailable:
+                went = send_email(user.email, f'Getting started with {team.name} on Ultimate Coach',
+                                  _nudge_body(user, team, checklist, base))
+            else:
+                went = notify.dm(user.discord_id, messages.plain(_nudge_dm(team, checklist, base)))
+            if went:
                 get_record(user, create=True).nudged_at = now
                 sent += 1
         db.session.commit()
     return sent
+
+
+# ── Players who haven't signed up ────────────────────────────
+
+# A player sent an invite this recently isn't sent another
+INVITE_AGAIN_AFTER_DAYS = 3
+
+
+def _join_line(team):
+    from app.discord import messages
+    if team.join_enabled and team.join_code:
+        return f"Join here: {messages.link('auth.join_team', code=team.join_code)}"
+    return 'Check your email for your invite link, or ask a coach for it.'
+
+
+def signup_note(team, waiting):
+    """The Discord message listing who still needs to sign up."""
+    names = ', '.join(p.name for p in waiting)
+    count = f"{len(waiting)} player{'s' if len(waiting) != 1 else ''}"
+    return (f"{count} still need{'s' if len(waiting) == 1 else ''} to sign up for {team.name} "
+            f"on Ultimate Coach, where we do RSVPs, the playbook and stats: {names}. {_join_line(team)}")
+
+
+def post_signup_note(team, settings=None):
+    """Post who still needs to sign up to the team's Discord. True if it went."""
+    from app.discord import messages, notify
+    waiting = roster_signup(team.id)['waiting']
+    if not waiting:
+        return False
+    return notify.post(team.id, messages.plain(signup_note(team, waiting)), settings)
+
+
+def _invite_body(player, team, coach, link):
+    lines = [f'Hi {player.name.split()[0]},', '',
+             f"{coach.username} has added you to {team.name} on Ultimate Coach, where the team "
+             "does RSVPs, the playbook, stats and feedback.", '',
+             f'Set up your account here (the link works for 7 days): {link}', '',
+             "Already on Ultimate Coach with another team? Log in first, then open the link, "
+             "and the team is added to your account."]
+    return '\n'.join(lines)
+
+
+def remind_unjoined(team, coach, now=None):
+    """Email each active roster player without an account their own invite
+    link (not anyone sent one in the last few days), and post one note to
+    the team's Discord. Needs a request (for the links). Returns counts:
+    emailed, recent (skipped), no_email, and whether Discord went."""
+    from app.models.invite_token import InviteToken
+    from app.utils.email import send_email
+
+    now = now or datetime.utcnow()
+    waiting = roster_signup(team.id)['waiting']
+    out = {'waiting': len(waiting), 'emailed': 0, 'recent': 0, 'no_email': [], 'discord': False}
+    for player in waiting:
+        if not is_real_email(player.email):
+            out['no_email'].append(player.name)
+            continue
+        unused = InviteToken.query.filter_by(player_id=player.id, used_at=None).all()
+        if any(t.created_at and t.created_at > now - timedelta(days=INVITE_AGAIN_AFTER_DAYS)
+               and not t.is_expired for t in unused):
+            out['recent'] += 1
+            continue
+        for token in unused:
+            db.session.delete(token)
+        invite = InviteToken.create(player_id=player.id, team_id=team.id, created_by_id=coach.id)
+        db.session.add(invite)
+        db.session.flush()
+        link = url_for('auth.accept_invite', token=invite.token, _external=True)
+        if send_email(player.email, f'Join {team.name} on Ultimate Coach',
+                      _invite_body(player, team, coach, link)):
+            out['emailed'] += 1
+    db.session.commit()
+    if waiting:
+        out['discord'] = post_signup_note(team)
+    return out
