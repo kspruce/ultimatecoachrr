@@ -101,4 +101,8 @@ def due_week_posts(now=None):
         db.session.commit()
         if post_week(team, today, settings):
             posted.append(team)
+            # While the join link is on, the weekly post also says who still needs to sign up
+            if team.join_enabled:
+                from app.onboarding import post_signup_note
+                post_signup_note(team, settings)
     return posted

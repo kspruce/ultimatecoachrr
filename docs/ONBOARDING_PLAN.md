@@ -17,7 +17,13 @@
 > - Nudges (4.3): new users (3-30 days old) whose checklist isn't done get one email
 >   listing what's left (`onboarding.send_nudges`, run nightly by `app/scheduler.py`,
 >   stored in `user_onboarding.nudged_at`). It respects the account's email setting and
->   skips anyone who hid the checklist. Discord nudges are not built.
+>   skips anyone who hid the checklist. People with no email (or emails off) who linked
+  Discord get it as a Discord message instead.
+> - Chasing players without accounts: **Remind them** on the users page
+>   (`auth.remind_unjoined` → `onboarding.remind_unjoined`) emails each waiting roster
+>   player with an email their own invite link (at most one every 3 days) and posts who's
+>   left to the team's Discord. While the join link is on, the weekly Discord post adds
+>   the same note.
 > - The How to Use guide was rewritten (4.3) from `app/help_guide.py`, which also feeds the
 >   About page, the Features settings page and each checklist step's "How it works" link.
 
