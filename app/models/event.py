@@ -2,11 +2,6 @@ from app import db
 from datetime import datetime
 from sqlalchemy.orm import validates
 
-VALID_EVENT_TYPES = [
-    'catch', 'goal', 'throwaway', 'drop', 'stall',  # offensive events
-    'shutdown', 'forced_turnover', 'unforced_turnover', 'block', 'callahan', 'scored_on'  # defensive events
-]
-
 class Event(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     point_id = db.Column(db.Integer, db.ForeignKey('point.id'), nullable=False)
@@ -59,6 +54,14 @@ class Event(db.Model):
             raise ValueError(f"Invalid event type: {event_type}")
         return event_type
 
+    @validates('field_position_x', 'field_position_y')
+    def validate_field_position(self, key, value):
+        """Keep positions on the pitch: x 0-100 m upfield, y 0-37 m across."""
+        if value is None:
+            return None
+        limit = 100 if key == 'field_position_x' else 37
+        return min(max(float(value), 0.0), float(limit))
+
     def __repr__(self):
         return f'<Event {self.event_type} by {self.player_id} in Point {self.point_id}>'
 
@@ -92,12 +95,3 @@ class Pull(db.Model):
     def __repr__(self):
         return f'<Pull by Player {self.player_id} in Point {self.point_id}>'
 
-
-@validates('field_position_x', 'field_position_y')
-def validate_field_position(self, key, value):
-    if value is not None:
-        if key == 'field_position_x':
-            return min(max(float(value), 0), 100)
-        elif key == 'field_position_y':
-            return min(max(float(value), 0), 37)
-    return value

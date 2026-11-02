@@ -55,6 +55,15 @@ def _player_label(event):
     return 'Unknown'
 
 
+def _geometry(x1, y1, x2, y2, force):
+    """Gain, length, kind and open/break side of a throw; None for each
+    when a position is missing."""
+    if None in (x1, y1, x2, y2):
+        return {'gain': None, 'distance': None, 'kind': None, 'break': None}
+    return {'gain': round(x2 - x1, 1), 'distance': round(math.hypot(x2 - x1, y2 - y1), 1),
+            'kind': throw_kind(x1, y1, x2, y2), 'break': is_break_throw(x1, y1, x2, y2, force)}
+
+
 def location_label(x, y):
     """'Attacking third · Middle', in plain words, or '' without a position."""
     if x is None or y is None:
@@ -71,13 +80,16 @@ def outcome_label(point):
     return 'Break' if point.point_outcome == 'scored' else 'Their hold'
 
 
-def build_point_replay(point, events):
+def build_point_replay(point, events, with_positions_only=True):
     """Everything the point page shows about the play, from the point's
     events (any order; they're sorted by id, the order they were recorded).
 
     Returns a dict of plain data: 'steps' (one per event on the field, for
     the replay), 'throws', 'possessions', 'stats', 'players' (per player on
     the line) and 'story' (the scorer and assists).
+
+    with_positions_only leaves out events without a field position, which
+    can't be drawn; the stored throws (app/stats/throw_rebuild.py) keep them.
     """
     ours = point.starting_position == 'offense'
     force = point.force_direction
@@ -107,7 +119,7 @@ def build_point_replay(point, events):
 
     for event in sorted(events, key=lambda e: e.id):
         kind = event.event_type
-        if kind in IGNORED or not _has_position(event):
+        if kind in IGNORED or (with_positions_only and not _has_position(event)):
             continue
         if possession is None:
             possession = new_possession()
@@ -128,45 +140,54 @@ def build_point_replay(point, events):
         possession['steps'].append(index)
         # How far we got: only where we held the disc, not where a
         # throwaway landed or a pass was dropped
-        if not ours or kind in TOUCHES or kind == 'goal':
+        if x is not None and (not ours or kind in TOUCHES or kind == 'goal'):
             if possession['start_x'] is None:
                 possession['start_x'] = x
             possession['end_x'] = x
         row = player_row(event)
 
-        # The throw that got the disc here, on our possessions
-        if ours and holder is not None and kind in TOUCHES | {'goal', 'throwaway', 'drop'}:
-            source = steps[holder]
+        # The throw that got the disc here, on our possessions. The first
+        # touch of a possession is the pickup: nobody threw it.
+        source = steps[holder] if holder is not None else None
+        if ours and kind == 'throwaway' and source is None and index > 0:
+            # Picked up and thrown away with no catch recorded: thrown from
+            # where the disc was won back.
+            source = steps[index - 1]
+        if ours and source is not None and kind in TOUCHES | {'goal', 'throwaway', 'drop'}:
             complete = kind not in ('throwaway', 'drop')
-            # On a throwaway the event is the thrower's; otherwise the
-            # receiver's, and the thrower is whoever had the disc.
-            thrower_id = event.player_id if kind == 'throwaway' else source['player_id']
-            thrower = step['player'] if kind == 'throwaway' else source['player']
-            receiver = None if kind == 'throwaway' else step['player']
-            gain = x - source['x']
-            role = {'assist': 'assist', 'hockey_assist': 'hockey_assist'}.get(source['event_type'], 'regular')
+            # A throwaway is the thrower's event; otherwise the event is the
+            # receiver's and the thrower is whoever had the disc.
+            if kind == 'throwaway':
+                thrower_id, thrower, receiver_id, receiver = step['player_id'], step['player'], None, None
+            else:
+                thrower_id, thrower = source['player_id'], source['player']
+                receiver_id, receiver = step['player_id'], step['player']
+            geo = _geometry(source['x'], source['y'], x, y, force)
             throw = {
-                'index': len(throws), 'from_step': holder, 'to_step': index,
+                'index': len(throws), 'from_step': source['index'], 'to_step': index,
+                'throwing_event_id': event.id if kind == 'throwaway' else source['event_id'],
+                'receiving_event_id': None if kind == 'throwaway' else event.id,
                 'x1': source['x'], 'y1': source['y'], 'x2': x, 'y2': y,
-                'thrower': thrower, 'receiver': receiver, 'complete': complete,
+                'thrower_id': thrower_id, 'thrower': thrower,
+                'receiver_id': receiver_id, 'receiver': receiver, 'complete': complete,
                 'result': kind if not complete else ('goal' if kind == 'goal' else 'complete'),
-                'role': role, 'gain': round(gain, 1),
-                'distance': round(math.hypot(gain, y - source['y']), 1),
-                'kind': throw_kind(source['x'], source['y'], x, y),
-                'break': bool(is_break_throw(source['x'], source['y'], x, y, force)),
-                'possession': possession['number'],
+                'role': {'assist': 'assist', 'hockey_assist': 'hockey_assist'}.get(source['event_type'], 'regular'),
+                # A drop is the receiver's turnover, not an incomplete
+                # throw for the thrower: it's drawn but not counted.
+                'counted': kind != 'drop',
+                'possession': possession['number'], **geo,
             }
             throws.append(throw)
             step['throw'] = throw['index']
-            possession['throws'] += 1
-            if complete:
-                possession['completions'] += 1
-            thrower_row = players.get(thrower_id) if thrower_id else None
-            if thrower_row is not None:
-                thrower_row['throws'] += 1
-                if complete:
-                    thrower_row['completions'] += 1
-                    thrower_row['gain'] += gain
+            if throw['counted']:
+                possession['throws'] += 1
+                possession['completions'] += complete
+                thrower_row = players.get(thrower_id) if thrower_id else None
+                if thrower_row is not None:
+                    thrower_row['throws'] += 1
+                    if complete:
+                        thrower_row['completions'] += 1
+                        thrower_row['gain'] += geo['gain'] or 0
 
         # Who has the disc now, and the player's numbers
         if row is not None:
@@ -201,7 +222,8 @@ def build_point_replay(point, events):
         p['first_step'] = p['steps'][0] if p['steps'] else None
         p['last_step'] = p['steps'][-1] if p['steps'] else None
 
-    completions = [t for t in throws if t['complete']]
+    counted = [t for t in throws if t['counted']]
+    completions = [t for t in counted if t['complete']]
     kinds = {}
     for t in completions:
         if t['kind']:
@@ -209,13 +231,13 @@ def build_point_replay(point, events):
     stats = {
         'possessions': len(possessions),
         'our_possessions': sum(1 for p in possessions if p['ours']),
-        'throws': len(throws),
+        'throws': len(counted),
         'completions': len(completions),
-        'completion_pct': round(100 * len(completions) / len(throws)) if throws else None,
+        'completion_pct': round(100 * len(completions) / len(counted)) if counted else None,
         'turns': sum(1 for s in steps if s['ours'] and s['event_type'] in LOSSES | {'turnover'}),
         'blocks': sum(1 for s in steps if not s['ours'] and s['event_type'] in GAINS),
-        'gain': round(sum(t['gain'] for t in completions), 1),
-        'longest': max((t['distance'] for t in completions), default=None),
+        'gain': round(sum(t['gain'] or 0 for t in completions), 1),
+        'longest': max((t['distance'] for t in completions if t['distance'] is not None), default=None),
         'breaks': sum(1 for t in completions if t['break']),
         'hucks': kinds.get('huck', 0),
         'dumps': kinds.get('dump_swing', 0),

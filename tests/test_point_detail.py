@@ -175,3 +175,15 @@ def test_other_teams_point_is_hidden(setup, app):
     admin = stats_data.build_admin(other, username='other')
     client = stats_data.Client(app, admin.id, other.id)
     assert client.get(f'/points/{point_id}').status_code == 404
+
+
+def test_a_drop_is_drawn_but_not_the_throwers(setup):
+    point_id = _point(setup)
+    _record(setup, point_id, 'catch', 0, 20, 18, True)
+    _record(setup, point_id, 'drop', 1, 40, 10, True)
+    replay = _replay(point_id, setup['team_id'])
+    assert len(replay['throws']) == 1 and replay['throws'][0]['result'] == 'drop'
+    assert replay['stats']['throws'] == 0 and replay['stats']['turns'] == 1
+    assert replay['players'][setup['line'][0]]['throws'] == 0
+    assert replay['players'][setup['line'][1]]['turns'] == 1
+    assert replay['possessions'][0]['throws'] == 0

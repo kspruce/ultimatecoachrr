@@ -7,8 +7,8 @@ from app.models.player import Player
 from app.models.event import Pull, Event
 from app.forms.point import PointForm
 from app.models.throws import Throw
-from app.stats.throwing import is_break_throw
 from app.stats.point_replay import build_point_replay, outcome_label
+from app.stats.throw_rebuild import rebuild_point_throws
 from app.models.clip import Clip
 from app.routes.clip.helpers import sees_hidden_clips
 from app.utils.clip_video import youtube_embed_url
@@ -417,12 +417,7 @@ def edit_point(point_id):
             point.point_outcome = form.point_outcome.data or None
             point.duration = form.duration.data
             point.timestamp_in_video = form.timestamp_in_video.data
-            if point.force_direction != form.force_direction.data:
-                point.force_direction = form.force_direction.data
-                # Open/break depends on the force, so re-mark this point's throws.
-                for throw in point.throws:
-                    throw.break_throw = is_break_throw(throw.x_start, throw.y_start, throw.x_end,
-                                                       throw.y_end, point.force_direction)
+            point.force_direction = form.force_direction.data
             point.gender_ratio = gender_ratio
             point.majority_gender = majority
 
@@ -443,6 +438,8 @@ def edit_point(point_id):
                 ))
 
             sync_game_score(game)
+            # Open/break follows the force, possession who started on O
+            rebuild_point_throws(point)
             db.session.commit()
 
             flash(f'Point {point.point_number} has been updated!', 'success')

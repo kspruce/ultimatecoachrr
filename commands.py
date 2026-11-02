@@ -384,6 +384,33 @@ def training_jobs_command():
     click.echo(', '.join(f'{k}: {v}' for k, v in result.items()))
 
 
+@click.command('rebuild-throws')
+@click.option('--team', 'team_slug', default=None, help='Only this team (its slug); every team by default.')
+@click.option('--dry-run', is_flag=True, help='Report what would change without saving.')
+@with_appcontext
+def rebuild_throws_command(team_slug, dry_run):
+    """Rebuild stored throws from the recorded events (safe to run again).
+    Fixes throws saved by older versions: a pickup after a block or their
+    turnover counted as a pass, passes from a substitution, missing
+    distances."""
+    from app.models.point import Point
+    from app.models.team_organization import TeamOrganization
+    from app.stats.throw_rebuild import rebuild_throws
+
+    teams = TeamOrganization.query.order_by(TeamOrganization.id)
+    if team_slug:
+        teams = teams.filter_by(slug=team_slug)
+    for team in teams:
+        points = Point.query.filter_by(team_organization_id=team.id).order_by(Point.id).all()
+        count, removed, added = rebuild_throws(points)
+        click.echo(f'{team.name}: {count} points, {removed} throws replaced by {added}.')
+    if dry_run:
+        db.session.rollback()
+        click.echo('Dry run: nothing saved.')
+    else:
+        db.session.commit()
+
+
 def register_commands(app):
     """Register custom commands with the Flask app."""
     app.cli.add_command(training_jobs_command)
@@ -397,6 +424,7 @@ def register_commands(app):
     app.cli.add_command(show_models)
     app.cli.add_command(reset_two_factor)
     app.cli.add_command(backfill_seasons)
+    app.cli.add_command(rebuild_throws_command)
     app.cli.add_command(send_rsvp_reminders)
     app.cli.add_command(seed_demo)
     register_tag_commands(app)
