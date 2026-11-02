@@ -117,12 +117,15 @@ FEATURES = [
                      'Log each session as you do it, from your phone'),
             coach_steps=_m("Build programmes, publish new versions, and see who's keeping up on the dashboard",),
             pages=('programmes.',)),
-    Feature('handbook', 'Leadership Handbook', 'bi-book', 'How you lead, coach and build the team, '
-            'for captains and coaches only.', 'handbook.index', 'Handbook', 'plan',
-            flag='leadership_handbook_enabled', coach_only=True, nav_check='handbook_nav',
-            steps=_m('Read it section by section, or search it',
-                     'Edit a page when the way you do things changes'),
-            pages=('handbook.',)),
+    Feature('handbook', 'Leadership Hub', 'bi-people-fill', 'Share ideas, articles and footage and '
+            'talk them over, plus the leadership handbook, for captains and coaches only.',
+            'leadership.index', 'Leadership Hub', 'plan',
+            flag='leadership_handbook_enabled', coach_only=True, nav_check='leadership_nav',
+            steps=_m('Share an idea, an article or a video link (a timestamp like 3:42 in a reply jumps the video there)',
+                     "Tick 'Discuss at the next meeting' to build the leadership meeting's agenda",
+                     'Read the handbook section by section, or search it, and edit a page when the way you do things changes',
+                     'Optionally, send new posts to a private leaders-only Discord channel (Discord settings)'),
+            pages=('leadership.', 'handbook.')),
 
     # ── Run training ─────────────────────────────────────────
     Feature('sessions', 'Session Plans', 'bi-calendar-check', "Regular training dates, who's "
@@ -238,7 +241,7 @@ FLAGS = [flag for _, flags in FEATURE_GROUPS for flag in flags]
 FLAG_LABELS = {
     'stats_enabled': 'Stats', 'gameday_enabled': 'Game day', 'playbook_enabled': 'Playbook',
     'theory_enabled': 'Theory', 'drills_enabled': 'Drills', 'sessions_enabled': 'Sessions',
-    'season_plan_enabled': 'Season plan', 'leadership_handbook_enabled': 'Leadership handbook',
+    'season_plan_enabled': 'Season plan', 'leadership_handbook_enabled': 'Leadership hub',
     'clip_enabled': 'Clips', 'scouting_enabled': 'Scouting', 'fitness_enabled': 'Fitness',
 }
 

@@ -3,9 +3,11 @@
 
 {% block styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/handbook.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/leadership.css') }}">
 {% endblock %}
 
 {% block content %}
+{% include "leadership/_hub_nav.html" %}
 <div class="hb-top">
   <a class="hb-home" href="{{ url_for('handbook.index') }}"><i class="bi bi-book"></i> Leadership handbook</a>
   <form class="hb-search" role="search" action="{{ url_for('handbook.index') }}" method="get">

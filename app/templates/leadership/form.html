@@ -1,0 +1,64 @@
+{% extends "leadership/_layout.html" %}
+
+{% block lh_content %}
+<div class="uc-page-header">
+  <div>
+    <h1>{{ 'Edit post' if post else 'Share with leaders' }}</h1>
+    <p>Only coaches and captains will see this.</p>
+  </div>
+</div>
+
+<form method="post" class="hb-card lh-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <fieldset class="mb-3">
+    <legend class="form-label fs-6">What is it?</legend>
+    <div class="lh-chips">
+      {% for key, label, icon in kinds %}
+      <input type="radio" class="btn-check" name="kind" id="kind-{{ key }}" value="{{ key }}" {{ 'checked' if values.kind == key }}>
+      <label class="lh-chip" for="kind-{{ key }}"><i class="bi {{ icon }}"></i> {{ label }}</label>
+      {% endfor %}
+    </div>
+  </fieldset>
+
+  {% if clip %}
+  <input type="hidden" name="clip_id" value="{{ clip.id }}">
+  <div class="lh-attached mb-3"><i class="bi bi-film"></i> Team clip: <a href="{{ url_for('clip.view_clip', clip_id=clip.id) }}">{{ clip.title }}</a></div>
+  {% endif %}
+
+  <div class="mb-3">
+    <label class="form-label" for="title">Title</label>
+    <input class="form-control" id="title" name="title" maxlength="200" required value="{{ values.title }}"
+           placeholder="e.g. How Revolver set up their zone">
+  </div>
+  {% if not clip %}
+  <div class="row g-3 mb-3">
+    <div class="col-md-9">
+      <label class="form-label" for="url">Link <span class="hb-muted">(optional: an article, YouTube or Veo)</span></label>
+      <input class="form-control" id="url" name="url" type="url" inputmode="url" value="{{ values.url }}" placeholder="https://">
+    </div>
+    <div class="col-md-3">
+      <label class="form-label" for="start">Start at <span class="hb-muted">(video)</span></label>
+      <input class="form-control" id="start" name="start" value="{{ values.start }}" placeholder="3:42">
+    </div>
+  </div>
+  {% else %}
+  <div class="mb-3" style="max-width:12rem">
+    <label class="form-label" for="start">Start at <span class="hb-muted">(optional)</span></label>
+    <input class="form-control" id="start" name="start" value="{{ values.start }}" placeholder="0:30">
+  </div>
+  {% endif %}
+  <div class="mb-3">
+    <label class="form-label" for="body">Why it's worth a look</label>
+    <textarea class="form-control" id="body" name="body" rows="7" placeholder="What should the others watch for? What do you think we should try?">{{ values.body }}</textarea>
+    <div class="form-text">Times like 3:42 become links that jump the video there.</div>
+  </div>
+  <div class="form-check mb-3">
+    <input class="form-check-input" type="checkbox" id="on_agenda" name="on_agenda" {{ 'checked' if values.on_agenda }}>
+    <label class="form-check-label" for="on_agenda">Discuss at the next leadership meeting</label>
+  </div>
+  <div class="d-flex gap-2">
+    <button class="btn btn-primary">{{ 'Save' if post else 'Share' }}</button>
+    <a class="btn btn-outline-secondary" href="{{ url_for('leadership.view', post_id=post.id) if post else url_for('leadership.index') }}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

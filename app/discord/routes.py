@@ -115,6 +115,46 @@ def settings():
                       ", but posting to it failed. Check the URL."), 'success' if ok else 'warning')
             else:
                 flash('Webhook removed.', 'success')
+        elif action == 'leaders':
+            # The Leadership hub's private channel: a channel of the bot's
+            # server, or a webhook. Empty turns hub posts off.
+            channel_id = request.form.get('leaders_channel_id', '')
+            url = request.form.get('leaders_webhook_url', '').strip()
+            if url and not api.is_webhook_url(url):
+                flash('That isn\'t a Discord webhook URL. It starts with https://discord.com/api/webhooks/', 'danger')
+                return redirect(url_for('discord.settings'))
+            if channel_id:
+                if not settings.discord_guild_id:
+                    flash('Add the bot to your server first.', 'danger')
+                    return redirect(url_for('discord.settings'))
+                try:
+                    allowed = {cid for cid, _ in api.text_channels(settings.discord_guild_id)}
+                except api.DiscordError as e:
+                    flash(f"Couldn't read your server's channels. {e}", 'danger')
+                    return redirect(url_for('discord.settings'))
+                if channel_id not in allowed:
+                    flash('Pick one of your server\'s text channels.', 'danger')
+                    return redirect(url_for('discord.settings'))
+                if channel_id == settings.discord_notification_channel_id:
+                    flash('Pick a different channel from the team one: players can read that.', 'danger')
+                    return redirect(url_for('discord.settings'))
+            if url and url == settings.discord_webhook_url:
+                flash('Use a webhook for a different channel from the team one: players can read that.', 'danger')
+                return redirect(url_for('discord.settings'))
+            settings.discord_leaders_channel_id = channel_id or None
+            settings.discord_leaders_webhook_url = url or None
+            if channel_id or url:
+                settings.discord_enabled = True
+            db.session.commit()
+            if channel_id or url:
+                ok = notify.post_leaders(team.id, messages.plain(
+                    f"👋 Ultimate Coach will post new ideas, articles and footage from {team.name}'s "
+                    "Leadership hub here. Keep this channel to coaches and captains."), settings)
+                flash('Leadership channel saved' + (' and a hello message posted.' if ok else
+                      ", but posting there failed. Check the bot can send messages in it, or the webhook URL."),
+                      'success' if ok else 'warning')
+            else:
+                flash('Leadership hub posts to Discord are off.', 'success')
         elif action == 'posts':
             settings.discord_enabled = bool(request.form.get('discord_enabled'))
             settings.discord_notify_upcoming_events = bool(request.form.get('week_post'))
@@ -137,7 +177,8 @@ def settings():
                     logger.info('Leaving guild %s: %s', settings.discord_guild_id, e)
             settings.discord_guild_id = settings.discord_guild_name = None
             settings.discord_notification_channel_id = None
-            settings.discord_enabled = bool(settings.discord_webhook_url)
+            settings.discord_leaders_channel_id = None
+            settings.discord_enabled = bool(settings.discord_webhook_url or settings.discord_leaders_webhook_url)
             db.session.commit()
             flash('Discord server disconnected.', 'success')
         return redirect(url_for('discord.settings'))
@@ -153,7 +194,8 @@ def settings():
                                User.memberships.any(team_organization_id=team.id)).count()
     return render_template('discord/settings.html', team=team, settings=settings, bot_ready=bot_ready,
                            channels=channels, channel_error=channel_error, weekdays=WEEKDAYS,
-                           linked=linked, target=notify.channel_target(settings))
+                           linked=linked, target=notify.channel_target(settings),
+                           hub_on=bool(settings.leadership_handbook_enabled))
 
 
 @discord_bp.route('/add')

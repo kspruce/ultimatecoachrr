@@ -103,6 +103,23 @@
       </div>
     </form>
 
+    <form method="post" class="tr-card" id="leaders">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <h3><i class="bi bi-people"></i> Leadership hub channel <span class="tr-muted fw-normal small">(optional)</span></h3>
+      <p class="tr-muted">New posts and replies in the <a href="{{ url_for('leadership.index') }}">Leadership hub</a> go to a private channel that only your coaches and captains can see. They never go to the team channel.
+        {% if not hub_on %}The hub is off: switch on <b>Leadership hub</b> in <a href="{{ url_for('team.feature_settings') }}">features</a>.{% endif %}</p>
+      {% if bot_ready and settings.discord_guild_id and not channel_error %}
+      <label class="form-label" for="leaders_channel_id">Channel</label>
+      <select name="leaders_channel_id" id="leaders_channel_id" class="form-select mb-2" style="max-width:20rem">
+        <option value="">No channel</option>
+        {% for id, name in channels %}{% if id != settings.discord_notification_channel_id %}<option value="{{ id }}" {% if id == settings.discord_leaders_channel_id %}selected{% endif %}>#{{ name }}</option>{% endif %}{% endfor %}
+      </select>
+      {% endif %}
+      <label class="form-label" for="leaders_webhook_url">{% if bot_ready and settings.discord_guild_id %}Or a webhook for it{% else %}Webhook URL for the private channel{% endif %}</label>
+      <input name="leaders_webhook_url" id="leaders_webhook_url" class="form-control mb-2" style="max-width:32rem" value="{{ settings.discord_leaders_webhook_url or '' }}" placeholder="https://discord.com/api/webhooks/…">
+      <button name="action" value="leaders" class="btn btn-outline-primary">Save and test</button>
+    </form>
+
     {% if bot_ready %}
     <div class="tr-card">
       <h3>Players</h3>

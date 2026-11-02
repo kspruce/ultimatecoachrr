@@ -27,6 +27,7 @@ from app.models.season_plan import (
     ClassroomSession, ClassroomResource,
 )
 from app.models.handbook import HandbookPage
+from app.models.leadership import LeadershipPost, LeadershipComment, LeadershipRead
 
 # Game and Tournament models
 from app.models.tournament import Tournament
@@ -83,6 +84,7 @@ __all__ = [
     'SeasonPlan', 'SeasonPhase', 'SeasonWeek', 'SeasonPage', 'SeasonMilestone',
     'ClassroomSession', 'ClassroomResource',
     'HandbookPage',
+    'LeadershipPost', 'LeadershipComment', 'LeadershipRead',
     # Playbook
     'Play', 'Formation', 'PlayTag', 'PlayerPosition', 'PlayAssignment', 'PlayerRole', 'PlayLearned', 'PlayToLearn', 'PlaySetup', 'GameCallPlay',
     # Theory

@@ -24,6 +24,10 @@ class TeamSettings(db.Model):
     discord_notify_new_items = db.Column(db.Boolean, default=False)
     discord_week_post_day = db.Column(db.Integer, default=0, server_default='0')  # 0 = Monday
     discord_week_posted_on = db.Column(db.Date)  # the last weekly post, so it goes once
+    # The Leadership hub's own, private channel (bot) or webhook. Hub posts go
+    # only here, never to the team channel; empty means hub posts aren't sent.
+    discord_leaders_channel_id = db.Column(db.String(255))
+    discord_leaders_webhook_url = db.Column(db.String(255))
 
     # Sessions: what players see and when they're reminded
     ATTENDEE_VISIBILITY = [('names', 'Names of who is coming'), ('counts', 'Just the numbers'),
@@ -50,7 +54,8 @@ class TeamSettings(db.Model):
 
     # Off by default: only teams that import a season plan switch it on
     season_plan_enabled = db.Column(db.Boolean, default=False, server_default=sa.false(), nullable=False)
-    # Off by default: leaders-only pages, switched on per team
+    # Off by default: the Leadership hub (discussion and the handbook), for
+    # leaders only, switched on per team
     leadership_handbook_enabled = db.Column(db.Boolean, default=False, server_default=sa.false(), nullable=False)
 
     # Team colours (#RRGGBB); empty means the default Ultimate Coach colours

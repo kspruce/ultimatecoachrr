@@ -1,0 +1,41 @@
+{% extends "leadership/_layout.html" %}
+
+{% block lh_content %}
+<div class="uc-page-header">
+  <div>
+    <h1>Meeting agenda</h1>
+    <p>What to talk about at the next leadership meeting. Add a post with <b>Add to agenda</b> on it.</p>
+  </div>
+  {% if posts %}
+  <form method="post" onsubmit="return confirm('Take everything off the agenda?')">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button name="action" value="clear" class="btn btn-outline-secondary"><i class="bi bi-check2-all"></i> Meeting done: clear it</button>
+  </form>
+  {% endif %}
+</div>
+
+{% if posts %}
+<ol class="lh-agenda">
+  {% for p in posts %}
+  <li class="hb-card">
+    <div class="lh-agenda-main">
+      <a class="lh-item-title" href="{{ url_for('leadership.view', post_id=p.id) }}">{{ p.title }}</a>
+      <div class="lh-meta"><i class="bi {{ p.kind_icon }}"></i> {{ p.kind_label }} · {{ p.author_name }}
+        {% if p.url %} · {{ domain(p.url) }}{% endif %}
+        {% if p.comments %} · <i class="bi bi-chat"></i> {{ p.comments|length }}{% endif %}</div>
+      {% if p.body %}<p class="lh-snippet">{{ p.body|truncate(220) }}</p>{% endif %}
+    </div>
+    <form method="post" action="{{ url_for('leadership.set_flag', post_id=p.id) }}" class="d-flex gap-2 flex-wrap">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="back" value="agenda">
+      <input type="hidden" name="status" value="actioned">
+      {% if p.status != 'actioned' %}<button name="what" value="status" class="btn btn-sm btn-outline-success"><i class="bi bi-check2"></i> Actioned</button>{% endif %}
+      <button name="what" value="on_agenda" class="btn btn-sm btn-outline-secondary">Take off</button>
+    </form>
+  </li>
+  {% endfor %}
+</ol>
+{% else %}
+<div class="hb-card"><p class="m-0 hb-muted">Nothing on the agenda. Open a post in <a href="{{ url_for('leadership.index') }}">Discussion</a> and tap <b>Add to agenda</b>.</p></div>
+{% endif %}
+{% endblock %}

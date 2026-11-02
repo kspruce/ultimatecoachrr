@@ -1,0 +1,70 @@
+{% extends "leadership/_layout.html" %}
+
+{% block lh_content %}
+<div class="uc-page-header">
+  <div>
+    <h1>Discussion</h1>
+    <p>Ideas, articles and footage worth talking over. Only coaches and captains can see this.</p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a class="btn btn-primary" href="{{ url_for('leadership.new') }}"><i class="bi bi-plus-lg"></i> Share something</a>
+  </div>
+</div>
+
+<form class="lh-filters" method="get" action="{{ url_for('leadership.index') }}" role="search">
+  <div class="lh-chips" role="group" aria-label="Kind">
+    <a href="{{ url_for('leadership.index', status=status or None, q=q or None) }}" class="lh-chip {{ 'active' if not kind }}">All</a>
+    {% for key, label, icon in kinds %}
+    <a href="{{ url_for('leadership.index', kind=key, status=status or None, q=q or None) }}" class="lh-chip {{ 'active' if kind == key }}"><i class="bi {{ icon }}"></i> {{ label }}</a>
+    {% endfor %}
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    {% if kind %}<input type="hidden" name="kind" value="{{ kind }}">{% endif %}
+    <select name="status" class="form-select form-select-sm" style="width:auto" aria-label="Status" onchange="this.form.submit()">
+      <option value="" {{ 'selected' if not status }}>Open and actioned</option>
+      {% for key, label in statuses %}<option value="{{ key }}" {{ 'selected' if status == key }}>{{ label }} only</option>{% endfor %}
+    </select>
+    <div class="hb-search m-0">
+      <i class="bi bi-search" aria-hidden="true"></i>
+      <input type="search" name="q" value="{{ q }}" placeholder="Search posts and replies" aria-label="Search posts and replies">
+    </div>
+  </div>
+</form>
+
+{% if agenda_count %}
+<a class="lh-agenda-note" href="{{ url_for('leadership.agenda') }}"><i class="bi bi-list-check"></i>
+  {{ agenda_count }} thing{{ 's' if agenda_count != 1 }} to discuss at the next meeting <i class="bi bi-arrow-right"></i></a>
+{% endif %}
+
+<div class="lh-feed">
+  {% for p in posts %}
+  <a class="lh-item {{ 'unread' if p.id in unread }}" href="{{ url_for('leadership.view', post_id=p.id) }}">
+    <span class="lh-kind lh-kind-{{ p.kind }}" title="{{ p.kind_label }}"><i class="bi {{ p.kind_icon }}"></i></span>
+    <span class="lh-item-main">
+      <span class="lh-item-title">
+        {% if p.pinned %}<i class="bi bi-pin-angle-fill lh-pin" title="Pinned"></i>{% endif %}
+        {{ p.title }}
+        {% if p.id in unread %}<span class="badge rounded-pill bg-success">New</span>{% endif %}
+      </span>
+      <span class="lh-meta">
+        {{ p.kind_label }} · {{ p.author_name }} · {{ p.last_activity_at|lh_ago }}
+        {% if p.url %} · {{ domain(p.url) }}{% elif p.clip %} · Team clip{% endif %}
+        {% if p.comments %} · <i class="bi bi-chat"></i> {{ p.comments|length }}{% endif %}
+        {% if p.on_agenda %} · <span class="lh-flag">On the agenda</span>{% endif %}
+        {% if p.status != 'open' %} · <span class="lh-status lh-status-{{ p.status }}">{{ p.status|title }}</span>{% endif %}
+      </span>
+    </span>
+  </a>
+  {% else %}
+  <div class="hb-card lh-empty">
+    {% if q or kind or status %}
+    <p class="m-0 hb-muted">Nothing matches. <a href="{{ url_for('leadership.index') }}">Show everything</a></p>
+    {% else %}
+    <p class="mb-2"><b>Nothing shared yet.</b></p>
+    <p class="hb-muted mb-3">Post a drill idea, an article on leading a team, or a link to footage you want the others to watch. Replies can point at a moment in the video, like “watch the force at 3:42”.</p>
+    <a class="btn btn-primary" href="{{ url_for('leadership.new') }}">Share the first one</a>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

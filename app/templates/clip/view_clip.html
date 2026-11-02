@@ -617,6 +617,10 @@
                 <li class="d-md-none"><a class="dropdown-item" href="{{ url_for('clip.edit_clip', clip_id=clip.id) }}">
                   <i class="bi bi-pencil me-2"></i>Edit clip</a></li>
                 {% endif %}
+                {% if leadership_nav() %}
+                <li><a class="dropdown-item" href="{{ url_for('leadership.new', clip=clip.id) }}">
+                  <i class="bi bi-people me-2"></i>Discuss with leaders</a></li>
+                {% endif %}
                 {% if current_user.is_admin %}
                 <li>
                   <form method="post" action="{{ url_for('clip.toggle_hidden', clip_id=clip.id) }}">

@@ -46,6 +46,36 @@ def post(team_id, payload, settings=None):
         return False
 
 
+def leaders_target(settings):
+    """Where Leadership hub posts go: ('bot', channel id), ('webhook', url) or
+    None. Only the hub's own channel: never the team channel, which players
+    read."""
+    if settings is None or not settings.discord_enabled:
+        return None
+    if settings.discord_guild_id and settings.discord_leaders_channel_id and api.bot_ready():
+        return 'bot', settings.discord_leaders_channel_id
+    if api.is_webhook_url(settings.discord_leaders_webhook_url):
+        return 'webhook', settings.discord_leaders_webhook_url
+    return None
+
+
+def post_leaders(team_id, payload, settings=None):
+    """Post to the team's private leadership channel. True if it went."""
+    target = leaders_target(settings or team_settings(team_id))
+    if target is None:
+        return False
+    kind, where = target
+    try:
+        if kind == 'bot':
+            api.send_channel(where, payload)
+        else:
+            api.send_webhook(where, payload)
+        return True
+    except api.DiscordError as e:
+        logger.warning('Discord leadership post for team %s failed: %s', team_id, e)
+        return False
+
+
 def dm(discord_user_id, payload):
     """Direct-message someone through the site's bot. True if it went."""
     if not discord_user_id or not api.bot_ready():
