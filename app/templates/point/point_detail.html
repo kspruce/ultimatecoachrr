@@ -1,853 +1,798 @@
 {% extends "base.html" %}
 
-{% block head %}
-{{ super() }}
+{% block styles %}
 <style>
-    /* Field container with explicit styling */
-    .field-container {
-        position: relative;
-        width: 100%;
-        height: 300px !important;
-        background-color: #8BC34A !important; /* Bright green field */
-        border: 3px solid #3E7D29 !important; /* Darker green border */
-        margin: 20px 0;
-        overflow: hidden !important; /* Force hidden overflow */
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2); /* Add shadow for depth */
-        z-index: 1; /* Lower z-index for the container */
+    /* ── Score strip: every point of the game ─────────────────────────── */
+    .pd-strip { display: flex; gap: .35rem; overflow-x: auto; padding-bottom: .25rem; scrollbar-width: thin; }
+    .pd-chip {
+        flex: none; display: flex; flex-direction: column; align-items: center;
+        min-width: 3.1rem; padding: .25rem .4rem; border-radius: var(--radius-sm, 6px);
+        border: 1px solid var(--rule); background: var(--card); color: var(--ink);
+        text-decoration: none; font-size: .8rem; line-height: 1.15;
     }
-    
-    /* Enhanced endzone styling */
-    .field-endzone {
-        position: absolute !important;
-        height: 100% !important; /* Full height */
-        width: 18% !important; /* Standard endzone width */
-        background-color: rgba(255, 255, 255, 0.15) !important; /* Slightly transparent white */
-        border: 2px dashed white !important; /* Dashed white border */
-        pointer-events: none;
-        z-index: 2;
-        top: 0 !important; /* Ensure it starts at the top */
+    .pd-chip small { font-size: .65rem; color: var(--ink-3); }
+    .pd-chip.scored { border-color: var(--ok); background: var(--ok-soft); }
+    .pd-chip.conceded { border-color: var(--bad); background: var(--bad-soft); }
+    .pd-chip.current { outline: 2px solid var(--accent); outline-offset: 1px; font-weight: 700; }
+    .pd-chip:hover { color: var(--ink); filter: brightness(.97); }
+
+    .pd-story { color: var(--ink-3); }
+    .pd-story strong { color: var(--ink); }
+
+    /* ── The pitch: drawn like the drill and playbook diagrams ────────── */
+    .pd-pitch-wrap { display: flex; justify-content: center; }
+    .pd-pitch { display: block; width: 100%; height: auto; border-radius: 4px; user-select: none; }
+    .pd-pitch.vertical { width: min(100%, calc(68svh * 0.37), calc(68vh * 0.37)); }
+    .pd-pitch .marker { cursor: pointer; transition: opacity .25s; }
+    .pd-pitch .throw { transition: opacity .25s; }
+    .pd-pitch .marker.hover circle.body { stroke: #ffd43b; stroke-width: 4; }
+
+    .pd-controls { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-top: .75rem; }
+    .pd-controls .btn { min-width: 2.4rem; }
+    .pd-controls input[type=range] { flex: 1 1 10rem; min-width: 8rem; }
+    .pd-caption {
+        margin-top: .6rem; padding: .5rem .75rem; border-radius: var(--radius-sm, 6px);
+        background: var(--sunken); min-height: 2.6rem; font-size: .92rem;
     }
-    
-    /* Position endzones explicitly */
-    .field-endzone.left {
-        left: 0 !important; /* Left endzone at left edge */
-    }
-    
-    .field-endzone.right {
-        right: 0 !important; /* Right endzone at right edge */
-    }
-    
-    /* Endzone labels */
-    .endzone-label {
-        position: absolute;
-        color: white;
-        font-weight: bold;
-        text-transform: uppercase;
-        font-size: 14px;
-        opacity: 0.7;
-        pointer-events: none;
-        z-index: 3;
-        text-align: center;
-        width: 18%; /* Match endzone width */
-    }
-    
-    /* Position labels in middle of endzones */
-    .endzone-label.left {
-        top: 50%;
-        left: 0;
-        transform: translateY(-50%);
-    }
-    
-    .endzone-label.right {
-        top: 50%;
-        right: 0;
-        transform: translateY(-50%);
-    }
-    
-    .field-midline {
-        position: absolute;
-        height: 100%;
-        width: 2px;
-        background-color: var(--card);
-        left: 50%;
-        transform: translateX(-50%);
-        pointer-events: none;
-    }
-    
-    /* Field yard lines */
-    .yard-line {
-        position: absolute;
-        height: 100%;
-        width: 1px;
-        background-color: rgba(255, 255, 255, 0.5);
-        pointer-events: none;
-    }
-    
-    /* Event markers */
-    .field-marker {
-        position: absolute;
-        width: 14px;
-        height: 14px;
-        border-radius: 50%;
-        background-color: red;
-        border: 2px solid white;
-        transform: translate(-50%, -50%);
-        z-index: 10;
-        box-shadow: 0 0 5px rgba(0,0,0,0.5);
-    }
-    
-    /* Connection lines */
-    .field-line {
-        position: absolute;
-        height: 3px;
-        background-color: rgba(255, 255, 255, 0.7);
-        transform-origin: left center;
-        z-index: 5;
-        pointer-events: none;
-        transition: opacity 0.5s ease;
-    }
-    
-    /* Disc for animation */
-    .disc {
-        position: absolute;
-        width: 24px !important;
-        height: 24px !important;
-        border-radius: 50%;
-        background-color: var(--card) !important;
-        border: 3px solid black !important;
-        transform: translate(-50%, -50%);
-        z-index: 1000 !important;
-        pointer-events: none;
-        transition: all 0.8s ease-in-out;
-    }
-    
-    /* Active marker highlighting */
-    .field-marker.active {
-        transform: translate(-50%, -50%) scale(1.5) !important;
-        box-shadow: 0 0 10px 5px rgba(255, 255, 0, 0.8) !important;
-        z-index: 20 !important;
-    }
-    
-    /* Table styling */
-    .event-badge {
-        font-size: 0.8rem;
-        padding: 0.2rem 0.5rem;
-    }
-    .active-event {
-        background-color: rgba(255, 255, 0, 0.3);
-    }
+    .pd-caption .poss { font-size: .75rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+    .pd-legend { display: flex; flex-wrap: wrap; gap: .25rem 1rem; font-size: .8rem; color: var(--ink-3); margin-top: .5rem; }
+    .pd-legend .dot { display: inline-block; width: .8rem; height: .8rem; border-radius: 50%; border: 2px solid #fff; vertical-align: -2px; box-shadow: 0 0 0 1px var(--rule-strong, #999); }
+    .pd-legend .line { display: inline-block; width: 1.6rem; border-top: 2px dashed #212529; vertical-align: middle; }
+    .pd-legend .line.turn { border-top-color: #c92a2a; }
+
+    /* ── Stat tiles ───────────────────────────────────────────────────── */
+    .pd-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; }
+    .pd-tile { background: var(--sunken); border-radius: var(--radius-sm, 6px); padding: .5rem .6rem; }
+    .pd-tile .v { font-size: 1.25rem; font-weight: 700; line-height: 1.2; }
+    .pd-tile .k { font-size: .72rem; color: var(--ink-3); text-transform: uppercase; letter-spacing: .05em; }
+    .pd-facts dt { font-weight: 600; font-size: .85rem; color: var(--ink-3); }
+    .pd-facts dd { margin-bottom: .5rem; }
+    .pd-score { font-size: 1.6rem; font-weight: 700; }
+
+    /* ── Tables ───────────────────────────────────────────────────────── */
+    .pd-events { max-height: 26rem; overflow: auto; }
+    .pd-events thead th { position: sticky; top: 0; background: var(--card); z-index: 1; }
+    .pd-events tr[data-step] { cursor: pointer; }
+    .pd-events tr.active-event > * { background-color: var(--accent-soft) !important; }
+    .pd-num { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+    #line-table td:first-child, #events-table td:nth-child(3) { white-space: nowrap; }
+    .pd-zero { color: var(--ink-3); }
+    .pd-jersey { display: inline-block; min-width: 1.6rem; text-align: center; }
 </style>
 {% endblock %}
 
 {% block content %}
-<!-- Your HTML content remains the same -->
+{% set s = replay.stats %}
+{% set story = replay.story %}
+{% set step_for = {} %}
+{% for st in replay.steps %}{% set _ = step_for.update({st.event_id: st}) %}{% endfor %}
+
 <div class="container">
-    <!-- Header section -->
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h1>Point {{ point.point_number }} - Game vs {{ game.opponent }}</h1>
-            <p class="lead">
-                {{ point.our_line_type }} | 
-                Starting on {{ point.starting_position }} | 
-                {% if point.point_outcome == 'scored' %}Scored{% else %}Conceded{% endif %}
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-2">
+            <li class="breadcrumb-item"><a href="{{ url_for('game.detail', game_id=game.id) }}">vs {{ game.opponent }}</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('point.game_points', game_id=game.id) }}">Points</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Point {{ point.point_number }}</li>
+        </ol>
+    </nav>
+
+    <!-- Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+        <div>
+            <h1 class="mb-1">Point {{ point.point_number }} <span class="text-muted fs-4">vs {{ game.opponent }}</span></h1>
+            <p class="pd-story mb-0" id="point-story">
+                <strong>{{ outcome }}</strong>
+                {% if story.callahan %}
+                    · Callahan: <strong>{{ story.callahan }}</strong>
+                {% elif story.scorer %}
+                    · Goal: <strong>{{ story.scorer }}</strong>{% if story.assist %} from {{ story.assist }}{% endif %}{% if story.hockey_assist %} (hockey assist {{ story.hockey_assist }}){% endif %}
+                {% endif %}
+                {% if replay.steps %}
+                    · {{ s.possessions }} possession{{ '' if s.possessions == 1 else 's' }}
+                    · {{ s.throws }} throw{{ '' if s.throws == 1 else 's' }}
+                    · {{ s.turns }} turn{{ '' if s.turns == 1 else 's' }}
+                {% endif %}
             </p>
         </div>
-        <div class="col-md-4 text-end">
+        <div class="d-flex flex-wrap gap-2">
+            {% if prev_point %}
+            <a href="{{ url_for('point.point_detail', point_id=prev_point.id) }}" class="btn btn-outline-secondary" title="Point {{ prev_point.point_number }}"><i class="bi bi-chevron-left"></i> Prev</a>
+            {% endif %}
+            {% if next_point %}
+            <a href="{{ url_for('point.point_detail', point_id=next_point.id) }}" class="btn btn-outline-secondary" title="Point {{ next_point.point_number }}">Next <i class="bi bi-chevron-right"></i></a>
+            {% endif %}
             <a href="{{ url_for('stat.record_events', point_id=point.id) }}" class="btn btn-success">Record Stats</a>
             <a href="{{ url_for('point.edit_point', point_id=point.id) }}" class="btn btn-outline-primary">Edit Point</a>
-            <a href="{{ url_for('point.game_points', game_id=point.game_id) }}" class="btn btn-secondary">Back to Points</a>
         </div>
     </div>
 
-    <!-- Warning for missing lineups -->
+    <!-- Every point of the game -->
+    {% if game_points|length > 1 %}
+    <div class="pd-strip mb-4" aria-label="Points in this game">
+        {% for gp in game_points %}
+        <a href="{{ url_for('point.point_detail', point_id=gp.id) }}"
+           class="pd-chip {{ gp.point_outcome or '' }} {% if gp.id == point.id %}current{% endif %}"
+           {% if gp.id == point.id %}aria-current="page"{% endif %}
+           title="Point {{ gp.point_number }}: {{ gp.our_line_type }}{% if gp.point_outcome == 'scored' %}, we scored{% elif gp.point_outcome == 'conceded' %}, they scored{% endif %}">
+            <small>P{{ gp.point_number }}</small>
+            {% if gp.point_outcome %}{{ gp.our_score_after }}–{{ gp.their_score_after }}{% else %}…{% endif %}
+        </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+
     {% if lineups|length == 0 %}
     <div class="alert alert-warning mb-4">
-        <strong>No players found for this line!</strong> 
+        <strong>No players found for this line!</strong>
         <a href="{{ url_for('point.edit_point', point_id=point.id) }}" class="btn btn-sm btn-warning">Edit Point to Add Players</a>
     </div>
     {% endif %}
 
-    <!-- Point summary and players -->
-    <div class="row mb-4">
-        <!-- Point summary card -->
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5>Point Summary</h5>
+    <div class="row g-4 mb-4">
+        <!-- Replay -->
+        <div class="col-lg-8">
+            <div class="card" id="replay-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Replay</h5>
+                    {% if replay.steps %}<span class="text-muted small d-none d-md-inline">← → step · space play/pause</span>{% endif %}
                 </div>
                 <div class="card-body">
-                    <!-- Point details -->
-                    <p><strong>Started on:</strong> 
-                        <span class="badge {% if point.starting_position == 'offense' %}bg-primary{% else %}bg-secondary{% endif %}">
-                            {{ point.starting_position|capitalize }}
-                        </span>
-                    </p>
-                    <p><strong>Score Before:</strong> {{ point.our_score_before }}-{{ point.their_score_before }}</p>
-                    <p><strong>Score After:</strong> {{ point.our_score_after }}-{{ point.their_score_after }}</p>
-                    <p><strong>Outcome:</strong> 
-                        <span class="badge {% if point.point_outcome == 'scored' %}bg-success{% else %}bg-danger{% endif %}">
-                            {% if point.point_outcome == 'scored' %}We Scored{% else %}They Scored{% endif %}
-                        </span>
-                    </p>
-                    <p><strong>Point Type:</strong> 
-                        {% if point.starting_position == 'defense' and point.point_outcome == 'scored' %}
-                        <span class="badge bg-warning">Break</span>
-                        {% elif point.starting_position == 'offense' and point.point_outcome == 'scored' %}
-                        <span class="badge bg-info">Hold</span>
-                        {% elif point.starting_position == 'defense' and point.point_outcome == 'conceded' %}
-                        <span class="badge bg-info">Hold (D)</span>
-                        {% else %}
-                        <span class="badge bg-warning">Break (Against)</span>
-                        {% endif %}
-                    </p>
-                    {% if point.duration %}
-                    <p><strong>Duration:</strong> {{ point.duration // 60 }}:{{ '%02d' % (point.duration % 60) }}</p>
-                    {% endif %}
-                    {% if point.timestamp_in_video %}
-                    <p><strong>Video Timestamp:</strong> {{ point.timestamp_in_video // 60 }}:{{ '%02d' % (point.timestamp_in_video % 60) }}</p>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-        
-        <!-- Players on line card -->
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header">
-                    <h5>Players on Line</h5>
-                </div>
-                <div class="card-body">
-                    {% if lineups|length > 0 %}
-                    <div class="row">
-                        {% for lineup in lineups %}
-                        <div class="col-md-6 mb-2">
-                            <div class="d-flex align-items-center">
-                                <span class="badge bg-primary me-2">{{ lineup.player.jersey_number }}</span>
-                                <a href="{{ url_for('team.player_detail', player_id=lineup.player.id) }}">
-                                    {{ lineup.player.name }}
-                                </a>
-                                <span class="ms-auto text-muted">{{ lineup.player.position|capitalize }}</span>
-                            </div>
-                        </div>
-                        {% endfor %}
+                    <div class="pd-pitch-wrap">
+                        <svg id="pitch" class="pd-pitch" role="img" aria-label="The point drawn on the pitch"></svg>
+                    </div>
+                    {% if replay.steps %}
+                    <div class="pd-controls" role="group" aria-label="Replay controls">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-start" title="Back to the start"><i class="bi bi-skip-start-fill"></i></button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-prev" title="Step back (←)"><i class="bi bi-chevron-left"></i></button>
+                        <button type="button" class="btn btn-primary btn-sm" id="btn-play" title="Play / pause (space)"><i class="bi bi-play-fill"></i> <span>Play</span></button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-next" title="Step forward (→)"><i class="bi bi-chevron-right"></i></button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-end" title="Show the whole point"><i class="bi bi-skip-end-fill"></i></button>
+                        <input type="range" class="form-range" id="scrubber" min="0" max="{{ replay.steps|length - 1 }}" value="{{ replay.steps|length - 1 }}" aria-label="Event">
+                        <select class="form-select form-select-sm w-auto" id="speed" aria-label="Speed">
+                            <option value="0.5">0.5×</option>
+                            <option value="1" selected>1×</option>
+                            <option value="2">2×</option>
+                        </select>
+                    </div>
+                    <div class="pd-caption" id="caption" aria-live="polite"></div>
+                    <div class="pd-legend">
+                        <span><span class="dot" style="background:#e03131"></span> Us on offence</span>
+                        <span><span class="dot" style="background:#1c7ed6"></span> Us on defence</span>
+                        <span><span class="dot" style="background:#868e96"></span> Opponent / unknown</span>
+                        <span><span class="line"></span> Throw</span>
+                        <span><span class="line turn"></span> Turnover</span>
+                        <span>★ Goal · ✕ Turn · D Block</span>
                     </div>
                     {% else %}
-                    <p class="text-center text-muted">No players assigned to this line.</p>
+                    <div class="text-center text-muted mt-3">
+                        <p class="mb-2">No positions recorded for this point yet.</p>
+                        <a href="{{ url_for('stat.record_events', point_id=point.id) }}" class="btn btn-primary btn-sm">Record Events</a>
+                    </div>
                     {% endif %}
                 </div>
             </div>
         </div>
-    </div>
-    
-    <!-- Field visualization -->
-    <div class="row mb-4">
-        <div class="col-12">
+
+        <!-- Summary and numbers -->
+        <div class="col-lg-4 d-flex flex-column gap-4">
             <div class="card">
-                <div class="card-header">
-                    <h5>Point Visualization</h5>
-                </div>
+                <div class="card-header"><h5 class="mb-0">Point Summary</h5></div>
                 <div class="card-body">
-                    <!-- Field container with inline styles for extra certainty -->
-                    <div id="field" class="field-container" style="height: 300px; width: 100%; background-color: #8BC34A; border: 3px solid #3E7D29; overflow: hidden; position: relative;">
-                        <!-- Field markings will be added here -->
+                    <div class="d-flex align-items-baseline gap-2 mb-2">
+                        <span class="pd-score">{{ point.our_score_before }}–{{ point.their_score_before }}</span>
+                        {% if point.point_outcome %}
+                        <i class="bi bi-arrow-right text-muted"></i>
+                        <span class="pd-score">{{ point.our_score_after }}–{{ point.their_score_after }}</span>
+                        {% endif %}
                     </div>
-                    
-                    <!-- Animation controls - clearly separated from the field -->
-                    <div class="mt-4 d-flex justify-content-between align-items-center">
-                        <div>
-                            <button id="animate-button" class="btn btn-primary">Animate Throws</button>
-                            <button id="reset-button" class="btn btn-outline-secondary">Reset</button>
-                            <span id="animation-status" class="ms-3 text-muted"></span>
-                        </div>
-                        <div class="text-muted small">
-                            <span class="d-inline-block me-2"><i class="bi bi-circle text-success"></i> Goal</span>
-                            <span class="d-inline-block me-2"><i class="bi bi-circle text-danger"></i> Turnover</span>
-                            <span class="d-inline-block me-2"><i class="bi bi-circle text-primary"></i> Catch</span>
-                            <span class="d-inline-block"><i class="bi bi-circle text-warning"></i> Block</span>
-                        </div>
+                    <div class="d-flex flex-wrap gap-1 mb-3">
+                        <span class="badge {% if outcome in ('Hold', 'Break') %}bg-success{% elif outcome == 'In progress' %}bg-secondary{% else %}bg-danger{% endif %}">{{ outcome }}</span>
+                        <span class="badge {% if point.starting_position == 'offense' %}bg-primary{% else %}bg-secondary{% endif %}">{{ point.our_line_type }}</span>
+                        <span class="badge bg-light text-dark border">Started on {{ point.starting_position }}</span>
+                    </div>
+                    <dl class="pd-facts mb-0">
+                        {% if point.gender_ratio %}
+                        <dt>Ratio</dt><dd>{{ point.gender_ratio }}{% if point.majority_gender %} ({{ point.majority_gender }} majority){% endif %}</dd>
+                        {% endif %}
+                        {% if point.force_direction and point.force_direction != 'unknown' %}
+                        <dt>Our force</dt><dd>{{ point.force_direction|capitalize }}</dd>
+                        {% endif %}
+                        {% if pull %}
+                        <dt>Pull</dt><dd>{{ pull.player.name if pull.player else 'Unknown' }} · {{ 'in' if pull.is_inbounds else 'out of bounds' }}</dd>
+                        {% endif %}
+                        {% if point.called_play %}
+                        <dt>Play called</dt><dd><a href="{{ url_for('playbook.view_play', play_id=point.called_play.id) }}">{{ point.called_play.name }}</a></dd>
+                        {% endif %}
+                        {% if point.duration %}
+                        <dt>Duration</dt><dd>{{ point.duration // 60 }}:{{ '%02d' % (point.duration % 60) }}</dd>
+                        {% endif %}
+                        {% if point.timestamp_in_video %}
+                        <dt>In the video at</dt><dd>{{ point.timestamp_in_video // 60 }}:{{ '%02d' % (point.timestamp_in_video % 60) }}</dd>
+                        {% endif %}
+                    </dl>
+                </div>
+            </div>
+
+            {% if replay.steps %}
+            <div class="card">
+                <div class="card-header"><h5 class="mb-0">This Point in Numbers</h5></div>
+                <div class="card-body">
+                    <div class="pd-tiles" id="point-numbers">
+                        <div class="pd-tile"><div class="v">{{ s.our_possessions }}</div><div class="k">Our possessions</div></div>
+                        <div class="pd-tile"><div class="v">{{ s.completions }}/{{ s.throws }}</div><div class="k">Completed{% if s.completion_pct is not none %} · {{ s.completion_pct }}%{% endif %}</div></div>
+                        <div class="pd-tile"><div class="v">{{ s.turns }}</div><div class="k">Turns</div></div>
+                        <div class="pd-tile"><div class="v">{{ s.blocks }}</div><div class="k">Ds won</div></div>
+                        <div class="pd-tile"><div class="v">{{ s.gain|round|int }} m</div><div class="k">Upfield gain</div></div>
+                        <div class="pd-tile"><div class="v">{% if s.longest is not none %}{{ s.longest|round|int }} m{% else %}–{% endif %}</div><div class="k">Longest throw</div></div>
+                        <div class="pd-tile"><div class="v">{{ s.breaks }}</div><div class="k">Break throws</div></div>
+                        <div class="pd-tile"><div class="v">{{ s.hucks }} / {{ s.dumps }}</div><div class="k">Hucks / dumps</div></div>
                     </div>
                 </div>
             </div>
+            {% endif %}
         </div>
     </div>
 
-    <!-- Rest of your HTML content remains the same -->
-    <!-- Clips section -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5>Clips</h5>
-                    <a href="{{ url_for('clip.point_clips', point_id=point.id) }}" class="btn btn-sm btn-primary">View All Clips</a>
-                </div>
-                <div class="card-body">
-                    <p class="text-center">
-                        <a href="{{ url_for('clip.add_clip', game_id=point.game_id, point_id=point.id) }}" class="btn btn-outline-primary">Add Clip for This Point</a>
-                    </p>
-                </div>
+    <!-- Possessions -->
+    {% if replay.possessions %}
+    <div class="card mb-4">
+        <div class="card-header"><h5 class="mb-0">Possessions</h5></div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0" id="possessions-table">
+                    <thead>
+                        <tr>
+                            <th class="ps-3">#</th>
+                            <th>Disc</th>
+                            <th class="pd-num">Throws</th>
+                            <th class="pd-num">Gain</th>
+                            <th>Ended by</th>
+                            <th>Where</th>
+                            <th class="text-end pe-3"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in replay.possessions %}
+                        {% set last = replay.steps[p.last_step] %}
+                        <tr>
+                            <td class="ps-3">{{ p.number }}</td>
+                            <td>{% if p.ours %}<span class="badge" style="background:#e03131">Ours</span>{% else %}<span class="badge" style="background:#1c7ed6">Theirs</span>{% endif %}</td>
+                            <td class="pd-num">{% if p.ours %}{{ p.completions }}/{{ p.throws }}{% else %}–{% endif %}</td>
+                            <td class="pd-num">{% if p.gain is not none %}{{ '%+d'|format(p.gain|round|int) }} m{% else %}–{% endif %}</td>
+                            <td>
+                                {% if p.ended_by %}
+                                <span class="badge {% if p.ended_by in ('Goal', 'Callahan') %}bg-success{% elif p.ended_by == 'They scored' %}bg-danger{% elif p.ours %}bg-danger{% else %}bg-warning text-dark{% endif %}">{{ p.ended_by }}</span>
+                                {% else %}<span class="text-muted">–</span>{% endif %}
+                            </td>
+                            <td class="small text-muted">{{ last.where }}</td>
+                            <td class="text-end pe-3">
+                                <button type="button" class="btn btn-sm btn-outline-primary" data-watch="{{ p.first_step }}" data-until="{{ p.last_step }}">
+                                    <i class="bi bi-play-fill"></i> Watch
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
-    
-    <!-- Events table -->
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5>Events</h5>
-                </div>
-                <div class="card-body">
-                    {% if events %}
-                    <div class="table-responsive">
-                        <table class="table table-striped" id="events-table">
-                            <thead>
-                                <tr>
-                                    <th>Sequence</th>
-                                    <th>Event</th>
-                                    <th>Player</th>
-                                    <th>Details</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for event in events %}
-                                <tr data-event-id="{{ event.id }}" class="event-row">
-                                    <td>{{ loop.index }}</td>
-                                    <td>
-                                        <span class="badge event-badge 
-                                            {% if event.event_type == 'goal' %}bg-success
-                                            {% elif event.event_type == 'assist' %}bg-info
-                                            {% elif event.event_type == 'block' %}bg-warning
-                                            {% elif event.event_type == 'throwaway' or event.event_type == 'drop' %}bg-danger
-                                            {% elif event.event_type == 'catch' %}bg-primary
-                                            {% else %}bg-secondary{% endif %}">
-                                            {{ event.event_type|capitalize }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        {% if event.player %}
-                                            <a href="{{ url_for('team.player_detail', player_id=event.player.id) }}">
-                                                {{ event.player.name }}
-                                            </a>
-                                        {% else %}
-                                            -
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if event.event_type in ['throw', 'assist'] %}
-                                            {% if event.receiver %}
-                                                to {{ event.receiver.name }}
-                                            {% endif %}
-                                            {% if event.field_position_x is not none and event.field_position_y is not none %}
-                                                at position ({{ event.field_position_x|round(1) }}, {{ event.field_position_y|round(1) }})
-                                            {% endif %}
-                                        {% elif event.event_type == 'goal' %}
-                                            Goal scored
-                                            {% if event.field_position_x is not none and event.field_position_y is not none %}
-                                                at position ({{ event.field_position_x|round(1) }}, {{ event.field_position_y|round(1) }})
-                                            {% endif %}
-                                        {% elif event.event_type == 'block' %}
-                                            Defensive play
-                                            {% if event.field_position_x is not none and event.field_position_y is not none %}
-                                                at position ({{ event.field_position_x|round(1) }}, {{ event.field_position_y|round(1) }})
-                                            {% endif %}
-                                        {% elif event.event_type == 'throwaway' %}
-                                            Turnover
-                                            {% if event.field_position_x is not none and event.field_position_y is not none %}
-                                                at position ({{ event.field_position_x|round(1) }}, {{ event.field_position_y|round(1) }})
-                                            {% endif %}
-                                        {% elif event.event_type == 'drop' %}
-                                            Dropped pass
-                                            {% if event.field_position_x is not none and event.field_position_y is not none %}
-                                                at position ({{ event.field_position_x|round(1) }}, {{ event.field_position_y|round(1) }})
-                                            {% endif %}
-                                        {% elif event.event_type == 'catch' %}
-                                            {% if event.field_position_x is not none and event.field_position_y is not none %}
-                                                At position ({{ event.field_position_x|round(1) }}, {{ event.field_position_y|round(1) }})
-                                            {% endif %}
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    {% else %}
-                    <p class="text-center">No events recorded for this point yet.</p>
-                    <div class="text-center">
-                        <a href="{{ url_for('stat.record_events', point_id=point.id) }}" class="btn btn-primary">Record Events</a>
-                    </div>
-                    {% endif %}
-                </div>
+    {% endif %}
+
+    <!-- Players on line -->
+    <div class="card mb-4">
+        <div class="card-header"><h5 class="mb-0">Players on Line</h5></div>
+        <div class="card-body {% if lineups %}p-0{% endif %}">
+            {% if lineups %}
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0" id="line-table">
+                    <thead>
+                        <tr>
+                            <th class="ps-3">Player</th>
+                            <th class="pd-num" title="Catches, pickups and goals">Touches</th>
+                            <th class="pd-num" title="Completed / thrown">Throws</th>
+                            <th class="pd-num" title="Metres gained upfield by completed throws">Gain</th>
+                            <th class="pd-num" title="Throwaways, drops and stalls">Turns</th>
+                            <th class="pd-num" title="Blocks, forced turnovers and Callahans">D</th>
+                            <th class="pd-num" title="Goals">G</th>
+                            <th class="pd-num pe-3" title="Assists (hockey assists)">A</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for lineup in lineups %}
+                        {% set r = replay.players.get(lineup.player.id) %}
+                        <tr>
+                            <td class="ps-3">
+                                <span class="badge bg-primary pd-jersey me-1">{{ lineup.player.jersey_number if lineup.player.jersey_number is not none else '–' }}</span>
+                                <a href="{{ url_for('team.player_detail', player_id=lineup.player.id) }}">{{ lineup.player.name }}</a>
+                                <span class="text-muted small ms-1 d-none d-sm-inline">{{ lineup.player.position|capitalize if lineup.player.position }}</span>
+                            </td>
+                            {% if r %}
+                            <td class="pd-num {{ 'pd-zero' if not r.touches }}">{{ r.touches }}</td>
+                            <td class="pd-num {{ 'pd-zero' if not r.throws }}">{{ r.completions }}/{{ r.throws }}</td>
+                            <td class="pd-num {{ 'pd-zero' if not r.throws }}">{{ r.gain|round|int }}</td>
+                            <td class="pd-num {{ 'pd-zero' if not r.turns }}">{{ r.turns }}</td>
+                            <td class="pd-num {{ 'pd-zero' if not r.blocks }}">{{ r.blocks }}</td>
+                            <td class="pd-num {{ 'pd-zero' if not r.goals }}">{{ r.goals }}</td>
+                            <td class="pd-num pe-3 {{ 'pd-zero' if not (r.assists or r.hockey_assists) }}">{{ r.assists }}{% if r.hockey_assists %} ({{ r.hockey_assists }}){% endif %}</td>
+                            {% else %}
+                            <td class="pd-num pd-zero">0</td><td class="pd-num pd-zero">0/0</td><td class="pd-num pd-zero">0</td>
+                            <td class="pd-num pd-zero">0</td><td class="pd-num pd-zero">0</td><td class="pd-num pd-zero">0</td>
+                            <td class="pd-num pe-3 pd-zero">0</td>
+                            {% endif %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
+            {% else %}
+            <p class="text-center text-muted mb-0">No players assigned to this line.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Events -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Events</h5>
+            {% if replay.steps %}<span class="text-muted small">Click a row to see it on the pitch</span>{% endif %}
+        </div>
+        <div class="card-body {% if events %}p-0{% endif %}">
+            {% if events %}
+            <div class="pd-events" id="events-scroll">
+                <table class="table table-sm align-middle mb-0" id="events-table">
+                    <thead>
+                        <tr>
+                            <th class="ps-3">#</th>
+                            <th>Event</th>
+                            <th>Player</th>
+                            <th>Throw</th>
+                            <th class="pe-3">Where</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for event in events %}
+                        {% set st = step_for.get(event.id) %}
+                        {% set th = replay.throws[st.throw] if st and st.throw is not none else none %}
+                        <tr class="event-row" data-event-id="{{ event.id }}" {% if st %}data-step="{{ st.index }}" tabindex="0"{% endif %}>
+                            <td class="ps-3 text-muted">{{ loop.index }}</td>
+                            <td>
+                                <span class="badge
+                                    {% if event.event_type in ('goal', 'callahan') %}bg-success
+                                    {% elif event.event_type in ('assist', 'hockey_assist') %}bg-info text-dark
+                                    {% elif event.event_type in ('block', 'forced_turnover', 'unforced_turnover') %}bg-warning text-dark
+                                    {% elif event.event_type in ('throwaway', 'drop', 'stall', 'scored_on') %}bg-danger
+                                    {% elif event.event_type == 'catch' %}bg-primary
+                                    {% else %}bg-secondary{% endif %}">{{ st.label if st else event.event_type.replace('_', ' ')|capitalize }}</span>
+                            </td>
+                            <td>
+                                {% if event.player and not event.is_opponent %}
+                                <a href="{{ url_for('team.player_detail', player_id=event.player.id) }}">{{ event.player.name }}</a>
+                                {% elif event.is_opponent %}<span class="text-muted">Opponent</span>
+                                {% else %}<span class="text-muted">Unknown</span>{% endif %}
+                            </td>
+                            <td class="small">
+                                {% if th %}
+                                    {% if th.receiver %}{{ th.thrower }} → {{ th.receiver }}{% else %}{{ th.thrower }}, not caught{% endif %}
+                                    <span class="text-muted">· {{ th.distance|round|int }} m, {{ '%+d'|format(th.gain|round|int) }} upfield{% if th['break'] %} · break{% endif %}</span>
+                                {% elif st and st.event_type in ('catch', 'pickup') and st.ours %}
+                                    <span class="text-muted">Picked up</span>
+                                {% endif %}
+                            </td>
+                            <td class="small text-muted pe-3">{{ st.where if st else '' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-center text-muted">No events recorded for this point yet.</p>
+            <div class="text-center">
+                <a href="{{ url_for('stat.record_events', point_id=point.id) }}" class="btn btn-primary">Record Events</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Video -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Video</h5>
+            <div class="d-flex gap-2">
+                {% if clips %}<a href="{{ url_for('clip.point_clips', point_id=point.id) }}" class="btn btn-sm btn-outline-secondary">All clips ({{ clips|length }})</a>{% endif %}
+                <a href="{{ url_for('clip.add_clip', game_id=point.game_id, point_id=point.id) }}" class="btn btn-sm btn-outline-primary">Add Clip</a>
+            </div>
+        </div>
+        <div class="card-body">
+            {% set embedded = clips|selectattr('embed_url')|list %}
+            {% if embedded %}
+                {% set main = embedded[0] %}
+                <div class="ratio ratio-16x9 mb-2">
+                    <iframe src="{{ main.embed_url }}" title="{{ main.title or 'Clip' }}" loading="lazy"
+                            allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                </div>
+                <a href="{{ url_for('clip.view_clip', clip_id=main.id) }}" class="fw-semibold">{{ main.title or 'Clip' }}</a>
+            {% elif video_url %}
+                <div class="ratio ratio-16x9 mb-2">
+                    <iframe src="{{ video_url }}" title="Game video from this point" loading="lazy"
+                            allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                </div>
+                <p class="text-muted small mb-0">The game video, from where this point starts.</p>
+            {% elif not clips %}
+                <p class="text-muted mb-0">No clips for this point yet.</p>
+            {% endif %}
+            {% set others = clips if not embedded else clips|reject('equalto', embedded[0])|list %}
+            {% if others %}
+            <ul class="list-unstyled mb-0 mt-2">
+                {% for clip in others %}
+                <li><i class="bi bi-film text-muted me-1"></i><a href="{{ url_for('clip.view_clip', clip_id=clip.id) }}">{{ clip.title or 'Clip' }}</a></li>
+                {% endfor %}
+            </ul>
+            {% endif %}
         </div>
     </div>
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Document loaded, initializing field visualization');
-    
-    // Field visualization data
-    const events = {{ events_data|tojson }};
-    
-    // Get the field container
-    const field = document.getElementById('field');
-    const animationStatus = document.getElementById('animation-status');
-    
-    if (!field) {
-        console.error('Field element not found');
-        return;
+(function () {
+    // The pitch is drawn like the drill and playbook diagrams
+    // (static/js/drill_diagram.js): plain grass, white lines, brick marks,
+    // offence red, defence blue, throws dashed, the disc white.
+    // Positions are saved as if we attack the right-hand endzone:
+    // x 0-100 m upfield (endzones 0-18 and 82-100), y 0-37 m across.
+    const LENGTH = 100, WIDTH = 37, EZ = 18, BRICK = 18, S = 10;
+    const C = {field: '#5a9e4b', line: '#ffffff', ink: '#212529', offence: '#e03131',
+               defence: '#1c7ed6', other: '#868e96', turn: '#c92a2a', goal: '#ffd43b'};
+    const FORCES = {forehand: 'Force forehand', backhand: 'Force backhand', middle: 'Force middle', zone: 'Zone'};
+    const FORCE = {{ point.force_direction|tojson }};
+    const steps = {{ replay.steps|tojson }};
+    const throws = {{ replay.throws|tojson }};
+    const LOSSES = ['throwaway', 'drop', 'stall'];
+    const DS = ['block', 'forced_turnover', 'unforced_turnover', 'callahan'];
+
+    const svg = document.getElementById('pitch');
+    if (!svg) return;
+    const NS = 'http://www.w3.org/2000/svg';
+    const portrait = window.matchMedia('(max-width: 575.98px) and (orientation: portrait)');
+    let vertical = portrait.matches;
+
+    // Field metres to the SVG: across the screen attacking right, or on an
+    // upright phone standing up and attacking up the screen.
+    function P(x, y) {
+        return vertical ? [y * S, (LENGTH - x) * S] : [x * S, y * S];
     }
-    
-    console.log('Field element found:', field);
-    
-    // Add field markings with improved endzone implementation
-    function addFieldMarkings() {
-        // Clear existing field markings
-        while (field.firstChild) {
-            field.removeChild(field.firstChild);
+
+    function el(name, attrs, parent) {
+        const node = document.createElementNS(NS, name);
+        for (const k in attrs) node.setAttribute(k, attrs[k]);
+        if (parent) parent.appendChild(node);
+        return node;
+    }
+
+    function text(str, x, y, attrs, parent) {
+        const t = el('text', Object.assign({x, y, 'text-anchor': 'middle', 'dominant-baseline': 'central',
+                                            'font-family': 'Arial, sans-serif'}, attrs), parent);
+        t.textContent = str;
+        return t;
+    }
+
+    function drawField() {
+        svg.innerHTML = '';
+        const w = (vertical ? WIDTH : LENGTH) * S, h = (vertical ? LENGTH : WIDTH) * S;
+        svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+        svg.classList.toggle('vertical', vertical);
+
+        const defs = el('defs', {}, svg);
+        [['arrow', C.ink], ['arrow-turn', C.turn]].forEach(([id, colour]) => {
+            const m = el('marker', {id, viewBox: '0 0 10 10', refX: 8, refY: 5, markerWidth: 5, markerHeight: 5,
+                                    orient: 'auto-start-reverse'}, defs);
+            el('path', {d: 'M0,0 L10,5 L0,10 z', fill: colour}, m);
+        });
+
+        el('rect', {x: 0, y: 0, width: w, height: h, fill: C.field}, svg);
+        const white = {stroke: C.line, 'stroke-width': 3, fill: 'none'};
+        el('rect', Object.assign({x: 1.5, y: 1.5, width: w - 3, height: h - 3}, white), svg);
+        [EZ, LENGTH - EZ].forEach(gx => {
+            const [x1, y1] = P(gx, 0), [x2, y2] = P(gx, WIDTH);
+            el('line', Object.assign({x1, y1, x2, y2}, white), svg);
+        });
+        // Brick marks, out from each goal line
+        [EZ + BRICK, LENGTH - EZ - BRICK].forEach(bx => {
+            const [x, y] = P(bx, WIDTH / 2);
+            text('×', x, y, {fill: C.line, 'font-size': 26}, svg);
+        });
+        // Distance from our goal line, along the near sideline
+        for (let d = 10; d < LENGTH - 2 * EZ; d += 10) {
+            const [x, y] = P(EZ + d, vertical ? WIDTH - 1.4 : 1.4);
+            text(String(d), x, y, {fill: 'rgba(255,255,255,0.8)', 'font-size': 14}, svg);
         }
-        
-        // Create left endzone with inline styles
-        const leftEndzone = document.createElement('div');
-        leftEndzone.style.position = 'absolute';
-        leftEndzone.style.left = '0';
-        leftEndzone.style.top = '0';
-        leftEndzone.style.width = '18%';
-        leftEndzone.style.height = '100%';
-        leftEndzone.style.backgroundColor = 'rgba(255, 255, 255, 0.15)';
-        leftEndzone.style.border = '2px dashed white';
-        leftEndzone.style.zIndex = '2';
-        field.appendChild(leftEndzone);
-        
-        // Create "ENDZONE" text for left endzone
-        const leftText = document.createElement('div');
-        leftText.textContent = 'ENDZONE';
-        leftText.style.position = 'absolute';
-        leftText.style.left = '9%'; // Center in endzone
-        leftText.style.top = '50%';
-        leftText.style.transform = 'translate(-50%, -50%)';
-        leftText.style.color = 'white';
-        leftText.style.fontWeight = 'bold';
-        leftText.style.opacity = '0.7';
-        leftText.style.zIndex = '3';
-        field.appendChild(leftText);
-        
-        // Create right endzone with inline styles
-        const rightEndzone = document.createElement('div');
-        rightEndzone.style.position = 'absolute';
-        rightEndzone.style.right = '0';
-        rightEndzone.style.top = '0';
-        rightEndzone.style.width = '18%';
-        rightEndzone.style.height = '100%';
-        rightEndzone.style.backgroundColor = 'rgba(255, 255, 255, 0.15)';
-        rightEndzone.style.border = '2px dashed white';
-        rightEndzone.style.zIndex = '2';
-        field.appendChild(rightEndzone);
-        
-        // Create "ENDZONE" text for right endzone
-        const rightText = document.createElement('div');
-        rightText.textContent = 'ENDZONE';
-        rightText.style.position = 'absolute';
-        rightText.style.right = '9%'; // Center in endzone
-        rightText.style.top = '50%';
-        rightText.style.transform = 'translate(50%, -50%)';
-        rightText.style.color = 'white';
-        rightText.style.fontWeight = 'bold';
-        rightText.style.opacity = '0.7';
-        rightText.style.zIndex = '3';
-        field.appendChild(rightText);
-        
-        // Add midline
-        const midline = document.createElement('div');
-        midline.style.position = 'absolute';
-        midline.style.left = '50%';
-        midline.style.top = '0';
-        midline.style.height = '100%';
-        midline.style.width = '2px';
-        midline.style.backgroundColor = 'white';
-        midline.style.transform = 'translateX(-50%)';
-        field.appendChild(midline);
-        
-        // Add yard lines
-        for (let i = 1; i < 10; i++) {
-            if (i === 5) continue; // Skip midline
-            const yardLine = document.createElement('div');
-            yardLine.style.position = 'absolute';
-            yardLine.style.left = `${i * 10}%`;
-            yardLine.style.top = '0';
-            yardLine.style.height = '100%';
-            yardLine.style.width = '1px';
-            yardLine.style.backgroundColor = 'rgba(255, 255, 255, 0.5)';
-            field.appendChild(yardLine);
+        // Which end is which
+        [[EZ / 2, 'DEFENDING'], [LENGTH - EZ / 2, 'ATTACKING']].forEach(([ex, label]) => {
+            const [x, y] = P(ex, WIDTH / 2);
+            text(label, x, y, {fill: 'rgba(255,255,255,0.55)', 'font-size': 18, 'font-weight': 700,
+                               'letter-spacing': 3, transform: vertical ? '' : `rotate(-90 ${x} ${y})`}, svg);
+        });
+        if (FORCES[FORCE]) {
+            const [fx, fy] = vertical ? P(EZ + 1, 1) : P(EZ + 1, WIDTH - 1);
+            const g = el('g', {}, svg);
+            const label = text(FORCES[FORCE], fx + 8, fy - 12, {fill: '#fff', 'font-size': 15, 'font-weight': 700,
+                                                                 'text-anchor': 'start'}, g);
+            const width = FORCES[FORCE].length * 8.4 + 16;
+            g.insertBefore(el('rect', {x: fx, y: fy - 25, width, height: 26, rx: 3, fill: 'rgba(0,0,0,0.35)'}), label);
         }
-        
-        console.log('Field markings added with inline styles');
     }
-    
-    // Add field markings immediately
-    addFieldMarkings();
-    
-    // Get field dimensions
-    const fieldWidth = field.offsetWidth;
-    const fieldHeight = field.offsetHeight;
-    console.log('Field dimensions:', fieldWidth, 'x', fieldHeight);
-    
-    // Helper functions to scale coordinates
-    function scaleX(x) {
-        return (x / 100) * fieldWidth;
-    }
-    
-    function scaleY(y) {
-        return (y / 35) * fieldHeight; // Using 35 as the max Y value
-    }
-    
-    // Filter for events with position data
-    const eventsWithPosition = events.filter(e => 
-        e.field_position_x !== null && 
-        e.field_position_y !== null
-    );
-    
-    console.log('Original events:', events);
-    console.log('Events with position:', eventsWithPosition);
-    
-    // Check if we have events with position data
-    if (eventsWithPosition.length === 0) {
-        // No position data available
-        const noDataMsg = document.createElement('div');
-        noDataMsg.className = 'alert alert-info m-3';
-        noDataMsg.textContent = 'No position data available for this point';
-        field.appendChild(noDataMsg);
-        return;
-    }
-    
-    // Plot all disc positions
-    eventsWithPosition.forEach(function(event, index) {
-        try {
-            const marker = document.createElement('div');
-            marker.className = 'field-marker';
-            marker.dataset.eventId = event.id;
-            marker.dataset.eventIndex = index;
-            
-            // Scale field positions to fit the container
-            const x = scaleX(event.field_position_x);
-            const y = scaleY(event.field_position_y);
-            
-            console.log(`Adding marker for event ${index} (${event.event_type}) at position (${x}, ${y})`);
-            
-            marker.style.left = x + 'px';
-            marker.style.top = y + 'px';
-            
-            // Color based on event type
-            if (event.event_type === 'goal') {
-                marker.style.backgroundColor = 'green';
-            } else if (event.event_type === 'throwaway' || event.event_type === 'drop') {
-                marker.style.backgroundColor = 'red';
-            } else if (event.event_type === 'block') {
-                marker.style.backgroundColor = 'orange';
-            } else if (event.event_type === 'assist') {
-                marker.style.backgroundColor = 'cyan';
-            } else if (event.event_type === 'hockey_assist') {
-                marker.style.backgroundColor = 'purple';
-            } else if (event.event_type === 'catch') {
-                marker.style.backgroundColor = 'blue';
-            } else {
-                marker.style.backgroundColor = 'gray';
+
+    // ── Throws and markers ──────────────────────────────────────────────
+    const R = 12;  // marker radius
+    let throwEls = [], markerEls = [], halo = null, disc = null;
+
+    function drawPlay() {
+        throwEls = throws.map(t => {
+            const [x1, y1] = P(t.x1, t.y1), [x2, y2] = P(t.x2, t.y2);
+            const len = Math.hypot(x2 - x1, y2 - y1) || 1;
+            // Stop short of the markers so the arrow head shows
+            const trimStart = Math.min(R + 2, len / 3), trimEnd = Math.min(R + 4, len / 3);
+            const ux = (x2 - x1) / len, uy = (y2 - y1) / len;
+            const colour = t.complete ? C.ink : C.turn;
+            const line = el('line', {
+                class: 'throw', x1: x1 + ux * trimStart, y1: y1 + uy * trimStart,
+                x2: x2 - ux * trimEnd, y2: y2 - uy * trimEnd, stroke: colour,
+                'stroke-width': t.role === 'regular' ? 3 : 3.5, 'stroke-dasharray': '10 7',
+                'stroke-linecap': 'round', 'marker-end': `url(#${t.complete ? 'arrow' : 'arrow-turn'})`,
+            }, svg);
+            return line;
+        });
+
+        halo = el('circle', {r: R + 7, fill: 'none', stroke: '#fff', 'stroke-width': 3, opacity: 0}, svg);
+
+        markerEls = steps.map(s => {
+            const [x, y] = P(s.x, s.y);
+            const g = el('g', {class: 'marker', 'data-step': s.index, transform: `translate(${x} ${y})`}, svg);
+            const title = el('title', {}, g);
+            title.textContent = `${s.index + 1}. ${s.label}: ${s.player}`;
+            if (s.event_type === 'throwaway') {
+                // Where the disc landed; nobody stands here
+                el('circle', {r: 9, fill: C.turn, stroke: '#fff', 'stroke-width': 2}, g);
+                text('✕', 0, 0.5, {fill: '#fff', 'font-size': 12, 'font-weight': 700}, g);
+                return g;
             }
-            
-            field.appendChild(marker);
-            
-            // Add tooltip with event info
-            marker.title = `${event.event_type}`;
-            
-            // Only draw lines if we have a previous event with position
-            if (index > 0) {
-                const prevEvent = eventsWithPosition[index - 1];
-                const prevX = scaleX(prevEvent.field_position_x);
-                const prevY = scaleY(prevEvent.field_position_y);
-                
-                const line = document.createElement('div');
-                line.className = 'field-line';
-                line.dataset.lineIndex = index;
-                
-                // Calculate line length and angle
-                const dx = x - prevX;
-                const dy = y - prevY;
-                const length = Math.sqrt(dx * dx + dy * dy);
-                const angle = Math.atan2(dy, dx) * 180 / Math.PI;
-                
-                console.log(`Adding line from (${prevX}, ${prevY}) to (${x}, ${y}), length: ${length}, angle: ${angle}`);
-                
-                line.style.width = length + 'px';
-                line.style.left = prevX + 'px';
-                line.style.top = prevY + 'px';
-                line.style.transform = `rotate(${angle}deg)`;
-                
-                field.appendChild(line);
+            const fill = s.opponent || !s.player_id ? C.other : (s.ours ? C.offence : C.defence);
+            el('circle', {class: 'body', r: R, fill, stroke: s.event_type === 'goal' || s.event_type === 'callahan' ? C.goal : '#fff',
+                          'stroke-width': s.event_type === 'goal' || s.event_type === 'callahan' ? 4 : 2}, g);
+            const label = s.opponent ? 'O' : (s.jersey !== null && s.jersey !== undefined ? String(s.jersey) : (s.player_id ? s.player.charAt(0) : '?'));
+            text(label, 0, 0.5, {fill: '#fff', 'font-size': label.length > 2 ? 10 : 12, 'font-weight': 700}, g);
+            let badge = null;
+            if (s.event_type === 'goal' || s.event_type === 'callahan') badge = ['★', C.goal, C.ink];
+            else if (LOSSES.includes(s.event_type) || s.event_type === 'scored_on') badge = ['✕', C.turn, '#fff'];
+            else if (DS.includes(s.event_type)) badge = ['D', C.goal, C.ink];
+            if (badge) {
+                el('circle', {cx: R - 1, cy: -R + 1, r: 7, fill: badge[1], stroke: '#fff', 'stroke-width': 1.5}, g);
+                text(badge[0], R - 1, -R + 1.5, {fill: badge[2], 'font-size': 9, 'font-weight': 700}, g);
             }
-        } catch (err) {
-            console.error('Error plotting event:', err, event);
-        }
-    });
-    
-    // Function to update disc color based on event type
-    function updateDiscColor(discElement, eventType) {
-        // Reset to default
-        discElement.style.backgroundColor = 'white';
-        discElement.style.borderColor = 'black';
-        
-        // Color based on event type
-        switch(eventType) {
-            case 'goal':
-                discElement.style.backgroundColor = '#28a745'; // Green
-                discElement.style.borderColor = '#1e7e34';
-                break;
-            case 'throwaway':
-            case 'drop':
-                discElement.style.backgroundColor = '#dc3545'; // Red
-                discElement.style.borderColor = '#bd2130';
-                break;
-            case 'catch':
-                discElement.style.backgroundColor = '#007bff'; // Blue
-                discElement.style.borderColor = '#0056b3';
-                break;
-            case 'block':
-                discElement.style.backgroundColor = '#ffc107'; // Yellow
-                discElement.style.borderColor = '#d39e00';
-                break;
-            case 'assist':
-                discElement.style.backgroundColor = '#17a2b8'; // Cyan
-                discElement.style.borderColor = '#138496';
-                break;
-            case 'hockey_assist':
-                discElement.style.backgroundColor = '#6f42c1'; // Purple
-                discElement.style.borderColor = '#59339d';
-                break;
-            default:
-                // Keep default white with black border
-                break;
-        }
+            return g;
+        });
+
+        disc = el('circle', {r: 7, fill: '#fff', stroke: C.ink, 'stroke-width': 2.5, opacity: 0,
+                             'pointer-events': 'none'}, svg);
     }
-    
-    // Animation functionality
-    const animateButton = document.getElementById('animate-button');
-    const resetButton = document.getElementById('reset-button');
-    
-    let disc = null;
-    let animationTimeout = null;
-    
-    function resetAnimation() {
-        // Clear any ongoing animation
-        if (animationTimeout) {
-            clearTimeout(animationTimeout);
-            animationTimeout = null;
-        }
-        
-        // Remove existing disc
-        if (disc) {
-            disc.remove();
-            disc = null;
-        }
-        
-        // Reset all markers and lines
-        const markers = field.querySelectorAll('.field-marker');
-        const lines = field.querySelectorAll('.field-line');
-        
-        markers.forEach(marker => {
-            marker.style.opacity = '1';
-            marker.classList.remove('active');
+
+    // ── The replay ──────────────────────────────────────────────────────
+    const last = steps.length - 1;
+    let current = last, playing = false, stopAt = last, timer = null, anim = null;
+    const scrubber = document.getElementById('scrubber');
+    const caption = document.getElementById('caption');
+    const playBtn = document.getElementById('btn-play');
+    const speedSel = document.getElementById('speed');
+    const rows = Array.from(document.querySelectorAll('#events-table tr[data-step]'));
+    const scroller = document.getElementById('events-scroll');
+
+    const speed = () => parseFloat(speedSel ? speedSel.value : '1') || 1;
+    const esc = str => String(str).replace(/[&<>"']/g, ch => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[ch]));
+
+    function render(k, overview) {
+        // overview: the whole point at once, nothing faded
+        const pos = steps[k] ? steps[k].possession : null;
+        throwEls.forEach((line, i) => {
+            const t = throws[i];
+            let opacity;
+            if (overview || t.to_step <= k) opacity = overview || t.possession === pos ? 1 : 0.3;
+            else if (t.to_step === k + 1) opacity = 0.3;  // the next throw
+            else opacity = 0;
+            line.setAttribute('opacity', opacity);
         });
-        
-        lines.forEach(line => {
-            line.style.opacity = '1';
+        markerEls.forEach((g, i) => {
+            let opacity;
+            if (overview) opacity = 1;
+            else if (i > k) opacity = 0;
+            else opacity = steps[i].possession === pos ? 1 : 0.4;
+            g.setAttribute('opacity', opacity);
         });
-        
-        // Reset event table highlighting
-        document.querySelectorAll('.event-row').forEach(row => {
-            row.classList.remove('active-event');
-        });
-        
-        // Reset animation status
-        if (animationStatus) {
-            animationStatus.textContent = '';
+        const s = steps[k];
+        const [x, y] = P(s.x, s.y);
+        halo.setAttribute('cx', x);
+        halo.setAttribute('cy', y);
+        halo.setAttribute('opacity', overview ? 0 : 0.95);
+        if (!anim) {
+            disc.setAttribute('cx', x);
+            disc.setAttribute('cy', y);
         }
+        disc.setAttribute('opacity', overview ? 0 : 1);
+        if (scrubber) scrubber.value = k;
+        showCaption(k, overview);
+        highlightRow(overview ? -1 : k);
     }
-    
-    function animateThrows() {
-        resetAnimation();
-        
-        if (eventsWithPosition.length < 1) {
-            console.log('Not enough events with position data for animation');
+
+    function showCaption(k, overview) {
+        if (!caption) return;
+        if (overview) {
+            caption.innerHTML = `<span class="poss">Whole point</span> · ${steps.length} events, ${throws.length} throws. ` +
+                                `Press play, or click an event or marker to step through.`;
             return;
         }
-        
-        // Create a disc element with inline styles for extra certainty
-        disc = document.createElement('div');
-        disc.className = 'disc';
-        disc.style.position = 'absolute';
-        disc.style.width = '24px';
-        disc.style.height = '24px';
-        disc.style.borderRadius = '50%';
-        disc.style.backgroundColor = 'white';
-        disc.style.border = '3px solid black';
-        disc.style.transform = 'translate(-50%, -50%)';
-        disc.style.zIndex = '1000';
-        disc.style.transition = 'all 0.8s ease-in-out';
-        
-        // Add the disc to the field
-        field.appendChild(disc);
-        console.log('Disc element created and added to field');
-        
-        // For the first position:
-        const firstEvent = eventsWithPosition[0];
-        // Scale field positions to fit the container more accurately
-        const firstX = scaleX(firstEvent.field_position_x);
-        const firstY = scaleY(firstEvent.field_position_y);
-        
-        // Position disc at first position with inline styles
-        disc.style.left = firstX + 'px';
-        disc.style.top = firstY + 'px';
-        
-        // Color the disc based on the first event type
-        updateDiscColor(disc, firstEvent.event_type);
-        
-        console.log(`Positioned disc at (${firstX}, ${firstY})`);
-        
-        // Highlight the first marker
-        const firstMarker = field.querySelector(`.field-marker[data-event-index="0"]`);
-        if (firstMarker) {
-            firstMarker.classList.add('active');
-            console.log('First marker highlighted');
+        const s = steps[k];
+        const t = s.throw !== null ? throws[s.throw] : null;
+        const who = s.jersey !== null && s.jersey !== undefined ? `${esc(s.player)} (#${s.jersey})` : esc(s.player);
+        let body;
+        if (t) {
+            const gain = Math.round(t.gain);
+            body = t.receiver
+                ? `${esc(t.thrower)} → <strong>${esc(t.receiver)}</strong>`
+                : `<strong>${esc(t.thrower)}</strong>, not caught`;
+            body += ` · ${Math.round(t.distance)} m, ${gain >= 0 ? '+' : ''}${gain} upfield${t.break ? ' · break' : ''}`;
+            body += ` · <strong>${esc(s.label)}</strong>`;
+        } else {
+            body = `<strong>${esc(s.label)}</strong> · ${who}`;
         }
-        
-        // Find and highlight the corresponding table row
-        const eventRows = document.querySelectorAll('.event-row');
-        let firstRow = null;
-        eventRows.forEach(row => {
-            if (parseInt(row.dataset.eventId) === firstEvent.id) {
-                firstRow = row;
-            }
-        });
-        
-        if (firstRow) {
-            firstRow.classList.add('active-event');
-            firstRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            console.log('First table row highlighted');
-        }
-        
-        // Update animation status
-        if (animationStatus) {
-            animationStatus.textContent = `Event 1/${eventsWithPosition.length}: ${firstEvent.event_type}`;
-        }
-        
-        // Animate through each position
-        let currentIndex = 1;
-        
-        // Set all lines to full opacity initially
-        const allLines = field.querySelectorAll('.field-line');
-        allLines.forEach(line => {
-            line.style.opacity = '1';
-        });
-        
-        function moveToNextPosition() {
-            if (currentIndex >= eventsWithPosition.length) {
-                console.log('Animation complete');
-                if (animationStatus) {
-                    animationStatus.textContent = 'Animation complete';
-                }
-                return;
-            }
-            
-            const nextEvent = eventsWithPosition[currentIndex];
-            const nextX = scaleX(nextEvent.field_position_x);
-            const nextY = scaleY(nextEvent.field_position_y);
-            
-            console.log(`Moving disc to position ${currentIndex + 1}: (${nextX}, ${nextY})`);
-            
-            // Remove active class from previous marker
-            const prevMarker = field.querySelector(`.field-marker.active`);
-            if (prevMarker) {
-                prevMarker.classList.remove('active');
-            }
-            
-            // Move disc to next position with inline styles
-            disc.style.left = nextX + 'px';
-            disc.style.top = nextY + 'px';
-            
-            // Update disc color based on the current event type
-            updateDiscColor(disc, nextEvent.event_type);
-            
-            // Highlight current marker
-            const currentMarker = field.querySelector(`.field-marker[data-event-index="${currentIndex}"]`);
-            if (currentMarker) {
-                currentMarker.classList.add('active');
-                console.log(`Marker ${currentIndex} highlighted`);
-            }
-            
-            // Apply fading to all lines based on their distance from current event
-            allLines.forEach(line => {
-                const lineIndex = parseInt(line.dataset.lineIndex);
-                if (lineIndex <= currentIndex) {
-                    // Lines that have been "passed" stay at full opacity
-                    line.style.opacity = '1';
-                } else {
-                    // Calculate fading for future lines
-                    // Each step reduces opacity by 10%, with a minimum of 30%
-                    const distance = lineIndex - currentIndex;
-                    const opacity = Math.max(0.3, 1 - (distance * 0.1));
-                    line.style.opacity = opacity.toString();
-                }
-            });
-            
-            // Remove highlight from previous rows
-            document.querySelectorAll('.event-row').forEach(row => {
-                row.classList.remove('active-event');
-            });
-            
-            // Find and highlight the corresponding table row
-            let currentRow = null;
-            eventRows.forEach(row => {
-                if (parseInt(row.dataset.eventId) === nextEvent.id) {
-                    currentRow = row;
-                }
-            });
-            
-            if (currentRow) {
-                currentRow.classList.add('active-event');
-                // Scroll to the row if needed
-                currentRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-            
-            // Update animation status
-            if (animationStatus) {
-                animationStatus.textContent = `Event ${currentIndex + 1}/${eventsWithPosition.length}: ${nextEvent.event_type}`;
-            }
-            
-            currentIndex++;
-            // Use a consistent 2-second interval between events
-            animationTimeout = setTimeout(moveToNextPosition, 2000);
-        }
-        
-        // Start the animation
-        animationTimeout = setTimeout(moveToNextPosition, 2000);
+        caption.innerHTML = `<span class="poss">${k + 1}/${steps.length} · Possession ${s.possession} · ` +
+                            `${s.ours ? 'our disc' : 'their disc'}</span><br>${body}` +
+                            (s.where ? ` <span class="text-muted">· ${esc(s.where)}</span>` : '');
     }
-    
-    // Add event listeners
-    if (animateButton) {
-        animateButton.addEventListener('click', function() {
-            console.log('Animate button clicked');
-            animateThrows();
+
+    function highlightRow(k) {
+        rows.forEach(r => r.classList.toggle('active-event', +r.dataset.step === k));
+        // Keep the row in view inside the events box only: never scroll the page
+        const row = rows.find(r => +r.dataset.step === k);
+        if (row && scroller) {
+            const top = row.offsetTop - scroller.querySelector('thead').offsetHeight;
+            const bottom = row.offsetTop + row.offsetHeight;
+            if (top < scroller.scrollTop) scroller.scrollTop = top;
+            else if (bottom > scroller.scrollTop + scroller.clientHeight) scroller.scrollTop = bottom - scroller.clientHeight;
+        }
+    }
+
+    // Fly the disc from one event to the next
+    function fly(from, to, done) {
+        const [x1, y1] = P(steps[from].x, steps[from].y), [x2, y2] = P(steps[to].x, steps[to].y);
+        const ms = 900 / speed();
+        const start = performance.now();
+        cancelAnimationFrame(anim);
+        function frame(now) {
+            const t = Math.min((now - start) / ms, 1);
+            const e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+            disc.setAttribute('cx', x1 + (x2 - x1) * e);
+            disc.setAttribute('cy', y1 + (y2 - y1) * e);
+            if (t < 1) anim = requestAnimationFrame(frame);
+            else { anim = null; done(); }
+        }
+        anim = requestAnimationFrame(frame);
+    }
+
+    function stopAnimation() {
+        cancelAnimationFrame(anim);
+        anim = null;
+        clearTimeout(timer);
+    }
+
+    function goTo(k, overview) {
+        stopAnimation();
+        current = Math.max(0, Math.min(last, k));
+        render(current, !!overview);
+    }
+
+    function setPlaying(on) {
+        playing = on;
+        if (!playBtn) return;
+        playBtn.querySelector('i').className = on ? 'bi bi-pause-fill' : 'bi bi-play-fill';
+        playBtn.querySelector('span').textContent = on ? 'Pause' : 'Play';
+    }
+
+    function advance() {
+        if (!playing) return;
+        if (current >= stopAt) { setPlaying(false); return; }
+        const from = current;
+        current += 1;
+        render(current - 1, false);
+        // Show the throw we're about to watch while the disc is in the air
+        fly(from, current, () => {
+            render(current, false);
+            timer = setTimeout(advance, 550 / speed());
         });
     }
-    
-    if (resetButton) {
-        resetButton.addEventListener('click', function() {
-            console.log('Reset button clicked');
-            resetAnimation();
-        });
+
+    function play(from, until) {
+        stopAnimation();
+        stopAt = until === undefined ? last : until;
+        current = from;
+        render(current, false);
+        setPlaying(true);
+        timer = setTimeout(advance, 450 / speed());
     }
-    
-    console.log('Field visualization initialization complete');
-});
+
+    function pause() {
+        stopAnimation();
+        setPlaying(false);
+        render(current, false);
+    }
+
+    function redraw() {
+        drawField();
+        if (steps.length) {
+            drawPlay();
+            render(current, overviewShown);
+        }
+    }
+
+    let overviewShown = true;
+    drawField();
+    if (!steps.length) return;
+    drawPlay();
+    render(last, true);
+
+    // ── Controls ────────────────────────────────────────────────────────
+    function step(delta) {
+        setPlaying(false);
+        overviewShown = false;
+        goTo(current + delta);
+    }
+
+    playBtn.addEventListener('click', () => {
+        if (playing) return pause();
+        overviewShown = false;
+        play(current >= last ? 0 : current);
+    });
+    document.getElementById('btn-prev').addEventListener('click', () => step(-1));
+    document.getElementById('btn-next').addEventListener('click', () => step(1));
+    document.getElementById('btn-start').addEventListener('click', () => { setPlaying(false); overviewShown = false; goTo(0); });
+    document.getElementById('btn-end').addEventListener('click', () => { setPlaying(false); overviewShown = true; goTo(last, true); });
+    scrubber.addEventListener('input', () => { setPlaying(false); overviewShown = false; goTo(+scrubber.value); });
+
+    markerEls.forEach((g, i) => g.addEventListener('click', () => { setPlaying(false); overviewShown = false; goTo(i); }));
+    rows.forEach(r => {
+        const k = +r.dataset.step;
+        r.addEventListener('click', e => {
+            if (e.target.closest('a')) return;
+            setPlaying(false); overviewShown = false; goTo(k);
+        });
+        r.addEventListener('keydown', e => {
+            if (e.key === 'Enter') { setPlaying(false); overviewShown = false; goTo(k); }
+        });
+        r.addEventListener('mouseenter', () => markerEls[k] && markerEls[k].classList.add('hover'));
+        r.addEventListener('mouseleave', () => markerEls[k] && markerEls[k].classList.remove('hover'));
+    });
+    document.querySelectorAll('[data-watch]').forEach(btn => btn.addEventListener('click', () => {
+        overviewShown = false;
+        play(+btn.dataset.watch, +btn.dataset.until);
+        document.getElementById('replay-card').scrollIntoView({behavior: 'smooth', block: 'nearest'});
+    }));
+
+    document.addEventListener('keydown', e => {
+        if (e.altKey || e.ctrlKey || e.metaKey) return;
+        if (e.target.closest('input, textarea, select, [contenteditable]')) return;
+        if (e.key === 'ArrowLeft') { e.preventDefault(); step(-1); }
+        else if (e.key === 'ArrowRight') { e.preventDefault(); step(1); }
+        else if (e.key === ' ' && !e.target.closest('button, a')) { e.preventDefault(); playBtn.click(); }
+    });
+
+    // Turning a phone redraws the pitch the other way up
+    const onTurn = () => {
+        if (portrait.matches === vertical) return;
+        vertical = portrait.matches;
+        stopAnimation();
+        setPlaying(false);
+        redraw();
+    };
+    if (portrait.addEventListener) portrait.addEventListener('change', onTurn);
+    else if (portrait.addListener) portrait.addListener(onTurn);
+})();
 </script>
 {% endblock %}

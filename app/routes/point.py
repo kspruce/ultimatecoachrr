@@ -8,6 +8,10 @@ from app.models.event import Pull, Event
 from app.forms.point import PointForm
 from app.models.throws import Throw
 from app.stats.throwing import is_break_throw
+from app.stats.point_replay import build_point_replay, outcome_label
+from app.models.clip import Clip
+from app.routes.clip.helpers import sees_hidden_clips
+from app.utils.clip_video import youtube_embed_url
 from app.models.stats import PlayerPointStats
 from app.utils.utils import admin_required, stat_taker_required
 from app.utils.team_filter import get_current_team_id
@@ -516,75 +520,58 @@ def delete_point(point_id):
 @bp.route('/<int:point_id>')
 @login_required
 def point_detail(point_id):
+    team_id = get_current_team_id()
+    point = Point.query.filter_by(id=point_id, team_organization_id=team_id).first_or_404()
+    game = Game.query.filter_by(id=point.game_id, team_organization_id=team_id).first_or_404()
 
-    point = Point.query.filter_by(
-        id=point_id,
-        team_organization_id=get_current_team_id()
-    ).first_or_404()
+    # In the order they were recorded: the replay follows the disc
+    events = Event.query.filter_by(point_id=point_id, team_organization_id=team_id) \
+        .order_by(Event.id).all()
+    replay = build_point_replay(point, events)
 
-    game = Game.query.filter_by(
-        id=point.game_id,
-        team_organization_id=get_current_team_id()
-    ).first_or_404()
+    # Kit-number order, no number last
+    lineups = sorted(
+        (lu for lu in LineUp.query.filter_by(point_id=point_id, team_organization_id=team_id).all()
+         if lu.player),
+        key=lambda lu: (lu.player.jersey_number is None, lu.player.jersey_number or 0, lu.player.name or ''))
 
-    division = game.team_organization.division
+    # The whole game, for the score strip and previous / next
+    game_points = Point.query.filter_by(game_id=game.id, team_organization_id=team_id) \
+        .order_by(Point.point_number).all()
+    position = next(i for i, p in enumerate(game_points) if p.id == point.id)
+    prev_point = game_points[position - 1] if position > 0 else None
+    next_point = game_points[position + 1] if position + 1 < len(game_points) else None
 
-    events = Event.query.filter_by(
-        point_id=point_id,
-        team_organization_id=get_current_team_id()
-    ).order_by(Event.timestamp).all()
+    pull = Pull.query.filter_by(point_id=point_id, team_organization_id=team_id) \
+        .order_by(Pull.id).first()
 
-    reordered_events = []
-    goal_events = []
-    assist_events = []
-    hockey_assist_events = []
-    other_events = []
-
-    for event in events:
-        if event.event_type == 'goal':
-            goal_events.append(event)
-        elif event.event_type == 'assist':
-            assist_events.append(event)
-        elif event.event_type == 'hockey_assist':
-            hockey_assist_events.append(event)
-        else:
-            other_events.append(event)
-
-    reordered_events.extend(other_events)
-    reordered_events.extend(hockey_assist_events)
-    reordered_events.extend(assist_events)
-    reordered_events.extend(goal_events)
-
-    lineups = LineUp.query.filter_by(
-        point_id=point_id,
-        team_organization_id=get_current_team_id()
-    ).all()
-
-    events_data = []
-    for event in reordered_events:
-        events_data.append({
-            'id': event.id,
-            'event_type': event.event_type,
-            'timestamp': event.timestamp,
-            'field_position_x': event.field_position_x,
-            'field_position_y': event.field_position_y,
-            'player_id': event.player_id,
-            'player_name': event.player.name if event.player else None,
-            'receiver_id': event.receiver_id,
-            'receiver_name': event.receiver.name if event.receiver else None,
-            'is_offensive': event.is_offensive
-        })
+    clips_query = Clip.query.filter_by(point_id=point_id, team_organization_id=team_id)
+    if not sees_hidden_clips():
+        clips_query = clips_query.filter(Clip.is_hidden == False)  # noqa: E712
+    clips = clips_query.order_by(Clip.is_featured.desc(), Clip.created_at.desc()).all()
+    # The game video from where this point starts, when no clip has been cut
+    video_url = None
+    if not any(c.embed_url for c in clips) and game.youtube_link and point.timestamp_in_video is not None:
+        end = point.timestamp_in_video + point.duration if point.duration else None
+        video_url = youtube_embed_url(game.youtube_link, point.timestamp_in_video or None, end)
 
     return render_template(
         'point/point_detail.html',
         point=point,
         game=game,
-        division=division,
-        events=reordered_events,
-        events_data=events_data,
-        lineups=lineups
+        replay=replay,
+        events=events,
+        lineups=lineups,
+        game_points=game_points,
+        prev_point=prev_point,
+        next_point=next_point,
+        pull=pull,
+        clips=clips,
+        video_url=video_url,
+        outcome=outcome_label(point),
     )
-    
+
+
 @bp.route('/fix_lineups/<int:point_id>', methods=['GET', 'POST'])
 @login_required
 @admin_required
