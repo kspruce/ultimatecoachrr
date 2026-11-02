@@ -171,16 +171,18 @@ def test_discuss_a_team_clip(app, herd):
     db.session.add_all([clip, foreign])
     db.session.commit()
     c = client(app, herd, 'coach')
-    assert f'/leadership/new?clip={clip.id}' in c.get(f'/clips/{clip.id}').get_data(as_text=True)
-    form = c.get(f'/leadership/new?clip={clip.id}').get_data(as_text=True)
-    assert 'value="Zone O breakdown"' in form and f'name="clip_id" value="{clip.id}"' in form
+    page = c.get(f'/clips/{clip.id}').get_data(as_text=True)
+    assert f'/leadership/new?about=clip:{clip.id}' in page and 'Discuss with leaders' in page
+    form = c.get(f'/leadership/new?about=clip:{clip.id}').get_data(as_text=True)
+    assert 'value="Zone O breakdown"' in form and f'name="about" value="clip:{clip.id}"' in form
+    assert c.get(f'/leadership/new?clip={clip.id}').status_code == 200  # the old link still works
 
-    share(c, title='Zone O breakdown', clip_id=str(clip.id))
+    share(c, title='Zone O breakdown', about=f'clip:{clip.id}')
     post = only_post()
-    assert (post.kind, post.clip_id) == ('footage', clip.id)
+    assert (post.kind, post.clip_id, post.subject_type, post.subject_id) == ('footage', clip.id, 'clip', clip.id)
     assert 'embed/dQw4w9WgXcQ?start=40&amp;end=70' in c.get(f'/leadership/{post.id}').get_data(as_text=True)
 
-    share(c, title='Theirs', clip_id=str(foreign.id))  # another team's clip isn't attached
+    share(c, title='Theirs', about=f'clip:{foreign.id}')  # another team's clip isn't attached
     assert LeadershipPost.query.filter_by(title='Theirs').one().clip_id is None
 
 

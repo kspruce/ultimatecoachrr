@@ -22,7 +22,7 @@ class LeadershipPost(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'), nullable=False, index=True)
-    author_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
+    author_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True, index=True)
     kind = db.Column(db.String(20), nullable=False, default='idea')
     title = db.Column(db.String(200), nullable=False)
     url = db.Column(db.String(500))                       # an article or video link
@@ -32,6 +32,12 @@ class LeadershipPost(db.Model):
     status = db.Column(db.String(20), nullable=False, default='open', server_default='open')
     pinned = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
     on_agenda = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
+    # A question a player asked the leaders ("Ask the leaders"): the player
+    # (the author) sees it and the replies not marked leaders-only.
+    from_player = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
+    # What it's about: a key of app.utils.ask_leaders.SUBJECTS and the row's id
+    subject_type = db.Column(db.String(20))
+    subject_id = db.Column(db.Integer)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     last_activity_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
@@ -53,6 +59,21 @@ class LeadershipPost(db.Model):
     def kind_icon(self):
         return self.KIND_ICONS.get(self.kind, 'bi-chat')
 
+    def visible_comments(self):
+        """The replies the asking player sees."""
+        return [c for c in self.comments if not c.leaders_only]
+
+    def answered(self):
+        """A leader has replied where the player can see it."""
+        return any(c.author_id != self.author_id for c in self.visible_comments())
+
+    @property
+    def player_status(self):
+        """How the player sees their question."""
+        if self.status != 'open':
+            return 'closed'
+        return 'answered' if self.answered() else 'waiting'
+
     def __repr__(self):
         return f'<LeadershipPost {self.id} {self.title!r}>'
 
@@ -64,6 +85,8 @@ class LeadershipComment(db.Model):
     post_id = db.Column(db.Integer, db.ForeignKey('leadership_post.id', ondelete='CASCADE'), nullable=False, index=True)
     author_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
     body = db.Column(db.Text, nullable=False)
+    # On a player's question: a note only the leaders see (not the player)
+    leaders_only = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
     post = db.relationship('LeadershipPost', back_populates='comments')

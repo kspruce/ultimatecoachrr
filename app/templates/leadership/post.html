@@ -20,7 +20,14 @@
               title="{{ video.label or post.title }}" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe>
     </div>
     {% endif %}
-    {% if post.clip %}
+    {% if post.from_player %}
+    <div class="lh-asked"><i class="bi bi-person-raised-hand"></i>
+      <span><b>{{ post.author_name }} asked the leaders.</b> They see the post and your replies, but not replies marked <i>leaders only</i>.</span></div>
+    {% endif %}
+    {% if subject %}
+    <div class="lh-attached"><i class="bi {{ subject.icon }}"></i> {{ subject.label }}: <a href="{{ subject.url }}">{{ subject.title }}</a>
+      {% if video and not video.embed_url and video.link %} · <a href="{{ video.link }}" target="_blank" rel="noopener noreferrer">Open on Veo</a>{% endif %}</div>
+    {% elif post.clip %}
     <div class="lh-attached"><i class="bi bi-film"></i> Team clip: <a href="{{ url_for('clip.view_clip', clip_id=post.clip.id) }}">{{ post.clip.title }}</a>
       {% if video and not video.embed_url and video.link %} · <a href="{{ video.link }}" target="_blank" rel="noopener noreferrer">Open on Veo</a>{% endif %}</div>
     {% endif %}
@@ -64,8 +71,9 @@
   <section class="lh-thread" aria-label="Replies">
     <h2>{{ post.comments|length }} repl{{ 'y' if post.comments|length == 1 else 'ies' }}</h2>
     {% for c in post.comments %}
-    <div class="lh-comment {{ 'new' if last_seen and c.created_at > last_seen and c.author_id != current_user.id }}" id="c{{ c.id }}">
-      <div class="lh-meta"><b>{{ c.author_name }}</b> · {{ c.created_at|lh_ago }}
+    <div class="lh-comment {{ 'new' if last_seen and c.created_at > last_seen and c.author_id != current_user.id }} {{ 'private' if c.leaders_only }}" id="c{{ c.id }}">
+      <div class="lh-meta"><b>{{ c.author_name }}</b>{% if post.from_player and c.author_id == post.author_id %} <span class="lh-tag">Asker</span>{% endif %} · {{ c.created_at|lh_ago }}
+        {% if c.leaders_only %}<span class="lh-tag private"><i class="bi bi-lock"></i> Leaders only</span>{% endif %}
         {% if last_seen and c.created_at > last_seen and c.author_id != current_user.id %}<span class="badge rounded-pill bg-success">New</span>{% endif %}</div>
       <div class="lh-body">{{ render(c.body) }}</div>
       {% if can_change(c) %}
@@ -81,7 +89,14 @@
       <label class="form-label" for="body">Reply</label>
       <textarea class="form-control mb-2" id="body" name="body" rows="3" required
                 placeholder="{{ 'What did you notice? A time like 3:42 jumps the video there.' if video and video.embed_url else 'What do you think?' }}"></textarea>
+      {% if post.from_player %}
+      <div class="d-flex gap-2 flex-wrap">
+        <button class="btn btn-primary btn-sm" name="visibility" value="asker"><i class="bi bi-reply"></i> Reply to {{ post.author_name }}</button>
+        <button class="btn btn-outline-secondary btn-sm" name="visibility" value="leaders"><i class="bi bi-lock"></i> Leaders-only note</button>
+      </div>
+      {% else %}
       <button class="btn btn-primary btn-sm">Reply</button>
+      {% endif %}
     </form>
   </section>
 </div>

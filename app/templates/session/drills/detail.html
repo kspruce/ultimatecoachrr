@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "leadership/_ask_button.html" import ask_button with context %}
 
 {% block title %}{{ drill.title }} - Drill Detail{% endblock %}
 
@@ -21,6 +22,7 @@
             <a href="{{ url_for('session.drills') }}" class="btn btn-secondary">
                 <i class="bi bi-arrow-left"></i> Back to Drills
             </a>
+            {{ ask_button('drill', drill.id, 'btn btn-outline-secondary') }}
             <a href="{{ url_for('session.edit_drill', drill_id=drill.id) }}" class="btn btn-primary">
                 <i class="bi bi-pencil"></i> Edit Drill
             </a>

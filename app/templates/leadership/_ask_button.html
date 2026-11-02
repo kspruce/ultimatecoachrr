@@ -1,0 +1,9 @@
+{# "Ask the leaders" (players) / "Discuss with leaders" (leaders) for a
+   clip, play, theory topic, drill or session. Hidden unless the team has
+   the Leadership hub on. #}
+{% macro ask_button(kind, subject_id, cls='btn btn-outline-secondary btn-sm') -%}
+{% if ask_leaders_on() %}
+<a class="{{ cls }} lh-ask" href="{{ ask_url(kind, subject_id) }}">
+  <i class="bi bi-person-raised-hand"></i> {{ 'Discuss with leaders' if leadership_nav() else 'Ask the leaders' }}</a>
+{% endif %}
+{%- endmacro %}

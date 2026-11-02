@@ -20,9 +20,12 @@
     </div>
   </fieldset>
 
-  {% if clip %}
-  <input type="hidden" name="clip_id" value="{{ clip.id }}">
-  <div class="lh-attached mb-3"><i class="bi bi-film"></i> Team clip: <a href="{{ url_for('clip.view_clip', clip_id=clip.id) }}">{{ clip.title }}</a></div>
+  {% set clip = subject_type == 'clip' or values.clip_id %}
+  {% if subject %}
+  <input type="hidden" name="about" value="{{ values.about }}">
+  <div class="lh-attached mb-3"><i class="bi {{ subject.icon }}"></i> {{ subject.label }}: <a href="{{ subject.url }}">{{ subject.title }}</a></div>
+  {% elif values.clip_id %}
+  <input type="hidden" name="clip_id" value="{{ values.clip_id }}">
   {% endif %}
 
   <div class="mb-3">

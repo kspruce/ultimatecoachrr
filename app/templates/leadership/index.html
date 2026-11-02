@@ -13,13 +13,15 @@
 
 <form class="lh-filters" method="get" action="{{ url_for('leadership.index') }}" role="search">
   <div class="lh-chips" role="group" aria-label="Kind">
-    <a href="{{ url_for('leadership.index', status=status or None, q=q or None) }}" class="lh-chip {{ 'active' if not kind }}">All</a>
+    <a href="{{ url_for('leadership.index', status=status or None, q=q or None) }}" class="lh-chip {{ 'active' if not kind and not who }}">All</a>
+    <a href="{{ url_for('leadership.index', who='players', status=status or None, q=q or None) }}" class="lh-chip {{ 'active' if who }}"><i class="bi bi-person-raised-hand"></i> From players</a>
     {% for key, label, icon in kinds %}
-    <a href="{{ url_for('leadership.index', kind=key, status=status or None, q=q or None) }}" class="lh-chip {{ 'active' if kind == key }}"><i class="bi {{ icon }}"></i> {{ label }}</a>
+    <a href="{{ url_for('leadership.index', kind=key, status=status or None, q=q or None) }}" class="lh-chip {{ 'active' if kind == key and not who }}"><i class="bi {{ icon }}"></i> {{ label }}</a>
     {% endfor %}
   </div>
   <div class="d-flex gap-2 flex-wrap">
     {% if kind %}<input type="hidden" name="kind" value="{{ kind }}">{% endif %}
+    {% if who %}<input type="hidden" name="who" value="{{ who }}">{% endif %}
     <select name="status" class="form-select form-select-sm" style="width:auto" aria-label="Status" onchange="this.form.submit()">
       <option value="" {{ 'selected' if not status }}>Open and actioned</option>
       {% for key, label in statuses %}<option value="{{ key }}" {{ 'selected' if status == key }}>{{ label }} only</option>{% endfor %}
@@ -31,6 +33,10 @@
   </div>
 </form>
 
+{% if waiting %}
+<a class="lh-agenda-note lh-waiting" href="{{ url_for('leadership.index', who='players') }}"><i class="bi bi-person-raised-hand"></i>
+  {{ waiting }} player question{{ 's' if waiting != 1 }} waiting for a reply <i class="bi bi-arrow-right"></i></a>
+{% endif %}
 {% if agenda_count %}
 <a class="lh-agenda-note" href="{{ url_for('leadership.agenda') }}"><i class="bi bi-list-check"></i>
   {{ agenda_count }} thing{{ 's' if agenda_count != 1 }} to discuss at the next meeting <i class="bi bi-arrow-right"></i></a>
@@ -47,7 +53,8 @@
         {% if p.id in unread %}<span class="badge rounded-pill bg-success">New</span>{% endif %}
       </span>
       <span class="lh-meta">
-        {{ p.kind_label }} · {{ p.author_name }} · {{ p.last_activity_at|lh_ago }}
+        {% if p.from_player %}<span class="lh-tag">Asked by {{ p.author_name }}</span>{% if p.player_status == 'waiting' %} · <span class="lh-flag lh-wait">Needs a reply</span>{% endif %}
+        {% else %}{{ p.kind_label }} · {{ p.author_name }}{% endif %} · {{ p.last_activity_at|lh_ago }}
         {% if p.url %} · {{ domain(p.url) }}{% elif p.clip %} · Team clip{% endif %}
         {% if p.comments %} · <i class="bi bi-chat"></i> {{ p.comments|length }}{% endif %}
         {% if p.on_agenda %} · <span class="lh-flag">On the agenda</span>{% endif %}

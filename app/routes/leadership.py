@@ -18,6 +18,7 @@ from app import db, login
 from app.models.clip import Clip
 from app.models.leadership import LeadershipComment, LeadershipPost, LeadershipRead
 from app.routes.handbook import feature_enabled, is_leader
+from app.utils import ask_leaders
 from app.utils.leadership import ago, clean_url, domain, format_timestamp, is_video_link, render_text, start_from, video_for
 from app.utils.team_filter import get_current_team_id
 
@@ -117,16 +118,44 @@ def _to_discord(team_id, payload):
 def _announce_post(post):
     from app.discord import messages
     text = (post.body or '')[:300] + ('…' if len(post.body or '') > 300 else '')
+    heading = (f'❓ {post.author_name} asked the leaders: {post.title}' if post.from_player
+               else f'{post.kind_label}: {post.title}')
     _to_discord(post.team_organization_id, messages.announcement(
-        f'{post.kind_label}: {post.title}', f'{text}\n— {post.author_name}'.strip(),
-        messages.link('leadership.view', post_id=post.id), messages.GOLD))
+        heading, f'{text}\n— {post.author_name}'.strip(),
+        messages.link('leadership.view', post_id=post.id), messages.AMBER if post.from_player else messages.GOLD))
+
+
+def _tell_asker(post, reply):
+    """A leader answered a player's question: a Discord message to the player,
+    if they've connected Discord (they also see it under My Questions)."""
+    from app.discord import messages, notify
+    asker = post.author
+    if asker is None or not asker.discord_id:
+        return
+    payload = messages.announcement(
+        f'💬 {reply.author_name} answered your question: {post.title}',
+        reply.body[:300] + ('…' if len(reply.body) > 300 else ''),
+        messages.link('questions.view', post_id=post.id, _anchor=f'c{reply.id}'), messages.BLUE)
+    app = current_app._get_current_object()
+    if app.testing:
+        notify.dm(asker.discord_id, payload)
+        return
+
+    def run():
+        with app.app_context():
+            try:
+                notify.dm(asker.discord_id, payload)
+            except Exception as e:  # never let a message break anything
+                app.logger.warning('Discord message to a question asker failed: %s', e)
+    threading.Thread(target=run, daemon=True).start()
 
 
 def _announce_comment(post, comment):
     from app.discord import messages
     text = comment.body[:300] + ('…' if len(comment.body) > 300 else '')
+    note = ' (leaders only)' if comment.leaders_only else ''
     _to_discord(post.team_organization_id, messages.announcement(
-        f'💬 {comment.author_name} replied: {post.title}', text,
+        f'💬 {comment.author_name} replied{note}: {post.title}', text,
         messages.link('leadership.view', post_id=post.id, _anchor=f'c{comment.id}'), messages.BLUE))
 
 
@@ -137,13 +166,16 @@ def _form_values(post=None):
         return {'kind': f.get('kind', 'idea'), 'title': (f.get('title') or '').strip(),
                 'url': (f.get('url') or '').strip(), 'body': (f.get('body') or '').strip(),
                 'start': (f.get('start') or '').strip(), 'clip_id': f.get('clip_id') or '',
-                'on_agenda': bool(f.get('on_agenda'))}
+                'about': f.get('about') or '', 'on_agenda': bool(f.get('on_agenda'))}
     if post is not None:
         return {'kind': post.kind, 'title': post.title, 'url': post.url or '', 'body': post.body or '',
                 'start': format_timestamp(post.start_seconds) if post.start_seconds else '',
-                'clip_id': post.clip_id or '', 'on_agenda': post.on_agenda}
+                'clip_id': post.clip_id or '', 'on_agenda': post.on_agenda,
+                'about': f'{post.subject_type}:{post.subject_id}' if post.subject_type else ''}
+    clip = request.args.get('clip', '')
     return {'kind': request.args.get('kind', 'idea'), 'title': '', 'url': '', 'body': '', 'start': '',
-            'clip_id': request.args.get('clip', ''), 'on_agenda': False}
+            'clip_id': clip, 'on_agenda': False,
+            'about': request.args.get('about') or (f'clip:{clip}' if clip.isdigit() else '')}
 
 
 def _apply(post, values):
@@ -161,7 +193,9 @@ def _apply(post, values):
     if problems:
         return problems
     kind = values['kind'] if values['kind'] in LeadershipPost.KIND_KEYS else 'idea'
-    clip = _team_clip(values['clip_id'])
+    subject_type, subject_id = ask_leaders.parse(values.get('about'))
+    subject = ask_leaders.find(subject_type, subject_id)
+    clip = subject if subject_type == 'clip' and subject is not None else _team_clip(values['clip_id'])
     if kind != 'footage' and (clip or (url and is_video_link(url))):
         kind = 'footage'  # a video link is footage, whatever was picked
     post.kind = kind
@@ -171,6 +205,12 @@ def _apply(post, values):
     post.clip_id = clip.id if clip else None
     post.start_seconds = start_from(values['start'], url)
     post.on_agenda = values['on_agenda']
+    if subject is not None:
+        post.subject_type, post.subject_id = subject_type, subject.id
+    elif clip is not None:
+        post.subject_type, post.subject_id = 'clip', clip.id
+    else:
+        post.subject_type = post.subject_id = None
     return []
 
 
@@ -182,7 +222,10 @@ def index():
     kind = request.args.get('kind', '')
     status = request.args.get('status', '')
     q = (request.args.get('q') or '').strip()
+    who = 'players' if request.args.get('who') == 'players' else ''
     query = LeadershipPost.query.filter_by(team_organization_id=team_id)
+    if who:
+        query = query.filter_by(from_player=True)
     if kind in LeadershipPost.KIND_KEYS:
         query = query.filter_by(kind=kind)
     if status in LeadershipPost.STATUS_KEYS:
@@ -203,15 +246,25 @@ def index():
                         LeadershipRead.post_id.in_([p.id for p in posts] or [0])).all())
     unread = {p.id for p in posts if p.id not in seen or seen[p.id] < p.last_activity_at}
     agenda = LeadershipPost.query.filter_by(team_organization_id=team_id, on_agenda=True).count()
+    waiting = [p for p in LeadershipPost.query.filter_by(team_organization_id=team_id, from_player=True,
+                                                         status='open') if not p.answered()]
     return render_template('leadership/index.html', title='Leadership hub', posts=posts, unread=unread,
-                           kind=kind, status=status, q=q, kinds=LeadershipPost.KINDS,
-                           statuses=LeadershipPost.STATUSES, agenda_count=agenda, domain=domain)
+                           kind=kind, status=status, q=q, who=who, kinds=LeadershipPost.KINDS,
+                           statuses=LeadershipPost.STATUSES, agenda_count=agenda, domain=domain,
+                           waiting=len(waiting))
+
+
+def _subject_for(values):
+    """(describe dict, row, type) for the form's 'about', or Nones."""
+    kind, subject_id = ask_leaders.parse(values.get('about'))
+    row = ask_leaders.find(kind, subject_id)
+    return (ask_leaders.describe(kind, subject_id, row) if row is not None else None), row, kind
 
 
 @bp.route('/new', methods=['GET', 'POST'])
 def new():
     values = _form_values()
-    clip = _team_clip(values['clip_id'])
+    subject, row, subject_type = _subject_for(values)
     if request.method == 'POST':
         post = LeadershipPost(team_organization_id=get_current_team_id(), author_id=current_user.id)
         problems = _apply(post, values)
@@ -226,10 +279,10 @@ def new():
             return redirect(url_for('leadership.view', post_id=post.id))
         for problem in problems:
             flash(problem, 'danger')
-    elif clip is not None:
-        values.update(kind='footage', title=clip.title or '')
-    return render_template('leadership/form.html', title='Share with leaders', values=values, clip=clip,
-                           kinds=LeadershipPost.KINDS, post=None)
+    elif subject is not None:
+        values.update(kind='footage' if subject_type == 'clip' else values['kind'], title=subject['title'])
+    return render_template('leadership/form.html', title='Share with leaders', values=values, subject=subject,
+                           subject_type=subject_type if subject else None, kinds=LeadershipPost.KINDS, post=None)
 
 
 @bp.route('/<int:post_id>')
@@ -241,7 +294,8 @@ def view(post_id):
     db.session.commit()
     video = video_for(post)
     seekable = bool(video and video['embed_url'])
-    return render_template('leadership/post.html', title=post.title, post=post, video=video,
+    subject = ask_leaders.describe(post.subject_type, post.subject_id) if post.subject_type else None
+    return render_template('leadership/post.html', title=post.title, post=post, video=video, subject=subject,
                            render=lambda text: render_text(text, seekable), last_seen=last_seen,
                            can_change=_can_change, domain=domain, format_timestamp=format_timestamp,
                            statuses=LeadershipPost.STATUSES)
@@ -262,8 +316,9 @@ def edit(post_id):
         db.session.rollback()
         for problem in problems:
             flash(problem, 'danger')
-    return render_template('leadership/form.html', title=f'Edit {post.title}', values=values,
-                           clip=_team_clip(values['clip_id']), kinds=LeadershipPost.KINDS, post=post)
+    subject, _, subject_type = _subject_for(values)
+    return render_template('leadership/form.html', title=f'Edit {post.title}', values=values, subject=subject,
+                           subject_type=subject_type if subject else None, kinds=LeadershipPost.KINDS, post=post)
 
 
 @bp.route('/<int:post_id>/delete', methods=['POST'])
@@ -285,13 +340,16 @@ def comment(post_id):
     if not body:
         flash('Write something first.', 'warning')
         return redirect(url_for('leadership.view', post_id=post.id, _anchor='reply'))
-    reply = LeadershipComment(post_id=post.id, author_id=current_user.id, body=body)
+    leaders_only = post.from_player and request.form.get('visibility') == 'leaders'
+    reply = LeadershipComment(post_id=post.id, author_id=current_user.id, body=body, leaders_only=leaders_only)
     db.session.add(reply)
     post.last_activity_at = datetime.utcnow()
     db.session.flush()
     _mark_read(post)
     db.session.commit()
     _announce_comment(post, reply)
+    if post.from_player and not leaders_only and post.author_id != current_user.id:
+        _tell_asker(post, reply)
     return redirect(url_for('leadership.view', post_id=post.id, _anchor=f'c{reply.id}'))
 
 

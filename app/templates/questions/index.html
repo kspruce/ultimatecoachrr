@@ -1,0 +1,34 @@
+{% extends "questions/_layout.html" %}
+{% from "questions/_status.html" import status %}
+
+{% block q_content %}
+<div class="uc-page-header">
+  <div>
+    <h1>My questions</h1>
+    <p>What you've asked the coaches and captains, and their answers. Only you and the team's leaders see these.</p>
+  </div>
+  <a class="btn btn-primary" href="{{ url_for('questions.ask') }}"><i class="bi bi-person-raised-hand"></i> Ask the leaders</a>
+</div>
+
+<div class="lh-feed">
+  {% for p in posts %}
+  <a class="lh-item {{ 'unread' if p.id in news }}" href="{{ url_for('questions.view', post_id=p.id) }}">
+    <span class="lh-kind"><i class="bi {{ subjects[p.id].icon if subjects[p.id] else 'bi-question-circle' }}"></i></span>
+    <span class="lh-item-main">
+      <span class="lh-item-title">{{ p.title }}
+        {% if p.id in news %}<span class="badge rounded-pill bg-success">New answer</span>{% endif %}</span>
+      <span class="lh-meta">
+        {% if subjects[p.id] %}{{ subjects[p.id].label }} · {% endif %}{{ status(p) }} · {{ p.last_activity_at|lh_ago }}
+        {% set n = p.visible_comments()|length %}{% if n %} · <i class="bi bi-chat"></i> {{ n }}{% endif %}
+      </span>
+    </span>
+  </a>
+  {% else %}
+  <div class="hb-card lh-empty">
+    <p class="mb-2"><b>You haven't asked anything yet.</b></p>
+    <p class="hb-muted mb-3">Not sure about a play, a clip, a drill or something in theory? Tap <b>Ask the leaders</b> on it, or ask about anything here.</p>
+    <a class="btn btn-primary" href="{{ url_for('questions.ask') }}">Ask a question</a>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

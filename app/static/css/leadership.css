@@ -73,3 +73,15 @@
   background: var(--club); color: var(--on-club); font-weight: 700; font-size: .85rem; }
 .lh-agenda-main { flex: 1 1 260px; display: grid; gap: .2rem; min-width: 0; }
 .lh-snippet { margin: .2rem 0 0; color: var(--ink-2); font-size: .92rem; }
+
+/* Players' questions */
+.lh-waiting { background: var(--warn-soft); margin-right: .5rem; }
+.lh-wait { color: var(--warn); }
+.lh-tag { display: inline-flex; gap: .25rem; align-items: center; padding: .05rem .5rem; border-radius: 999px; background: var(--sunken); color: var(--ink-2); font-size: .74rem; font-weight: 700; }
+.lh-tag.private { background: var(--warn-soft); color: var(--ink); }
+.lh-comment.private { background: var(--sunken); border-style: dashed; }
+.lh-asked { display: flex; gap: .6rem; align-items: flex-start; padding: .6rem .85rem; border-radius: var(--radius-sm); background: var(--accent-soft); font-size: .92rem; }
+.lh-ask { white-space: nowrap; }
+.lh-status-answered { color: var(--ok); }
+.lh-status-waiting { color: var(--warn); }
+.lh-status-closed { color: var(--ink-3); }

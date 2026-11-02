@@ -248,6 +248,8 @@ def create_app(config_class=Config):
     app.register_blueprint(handbook_bp)
     from app.routes.leadership import bp as leadership_bp
     app.register_blueprint(leadership_bp)
+    from app.routes.questions import bp as questions_bp
+    app.register_blueprint(questions_bp)
 
     from app.routes.scouting import bp as scouting_bp
     app.register_blueprint(scouting_bp)

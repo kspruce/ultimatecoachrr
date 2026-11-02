@@ -124,7 +124,8 @@ FEATURES = [
             steps=_m('Share an idea, an article or a video link (a timestamp like 3:42 in a reply jumps the video there)',
                      "Tick 'Discuss at the next meeting' to build the leadership meeting's agenda",
                      'Read the handbook section by section, or search it, and edit a page when the way you do things changes',
-                     'Optionally, send new posts to a private leaders-only Discord channel (Discord settings)'),
+                     'Optionally, send new posts to a private leaders-only Discord channel (Discord settings)',
+                     "Players' questions (\"Ask the leaders\") show under From players: reply to them, or add a leaders-only note"),
             pages=('leadership.', 'handbook.')),
 
     # ── Run training ─────────────────────────────────────────

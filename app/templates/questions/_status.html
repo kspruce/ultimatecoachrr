@@ -1,0 +1,4 @@
+{% macro status(post) -%}
+{%- set s = post.player_status -%}
+<span class="lh-status lh-status-{{ s }}">{{ {'waiting': 'Waiting for a reply', 'answered': 'Answered', 'closed': 'Closed'}[s] }}</span>
+{%- endmacro %}
