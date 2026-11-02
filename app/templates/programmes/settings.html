@@ -1,4 +1,5 @@
 {% extends "programmes/_layout.html" %}
+{% from "programmes/_macros.html" import post_button %}
 {% block pg_content %}
 <div class="uc-page-header"><div><h1>Settings</h1><p>Name, schedule, pauses, sharing and what the dashboard tracks. These apply to every version.</p></div></div>
 <form method="post" style="max-width:860px">
@@ -49,4 +50,38 @@
   </div>
   <button class="btn btn-primary">Save settings</button>
 </form>
+
+<section class="pg-card pg-danger mt-4" id="danger-zone" style="max-width:860px">
+  <h2>Archive or delete</h2>
+  <div class="pg-danger-row">
+    <div>
+      {% if programme.archived %}
+      <div class="fw-semibold">Restore this {{ 'template' if programme.is_template else 'programme' }}</div>
+      <div class="small pg-muted">Brings it back into your list of {{ 'templates' if programme.is_template else 'programmes' }}.</div>
+      {% else %}
+      <div class="fw-semibold">Archive this {{ 'template' if programme.is_template else 'programme' }}</div>
+      <div class="small pg-muted">Hides it from your list and stops sharing it. Everything is kept, including players' logs and results, and you can restore it any time.</div>
+      {% endif %}
+    </div>
+    {{ post_button(url_for('programmes.archive', programme_id=programme.id),
+                   '<i class="bi bi-arrow-counterclockwise"></i> Restore' if programme.archived else '<i class="bi bi-archive"></i> Archive',
+                   fields={'next': 'settings'}) }}
+  </div>
+  <div class="pg-danger-row">
+    <div>
+      <div class="fw-semibold">Delete this {{ 'template' if programme.is_template else 'programme' }}</div>
+      {% if players_with_history %}
+      <div class="small pg-muted">{{ players_with_history }} player{{ 's have' if players_with_history != 1 else ' has' }} logged sessions or test results on it, so it can't be deleted. Archive it instead to keep their history.</div>
+      {% else %}
+      <div class="small pg-muted">Removes it and all its versions{% if not programme.is_template %} and enrolments{% endif %} for good. This can't be undone.</div>
+      {% endif %}
+    </div>
+    {% if players_with_history %}
+    <button class="btn btn-sm btn-outline-danger" type="button" disabled><i class="bi bi-trash"></i> Delete</button>
+    {% else %}
+    {{ post_button(url_for('programmes.delete', programme_id=programme.id), '<i class="bi bi-trash"></i> Delete',
+                   'btn btn-sm btn-outline-danger', confirm='Delete "' ~ programme.name ~ '" and all its versions? This cannot be undone.') }}
+    {% endif %}
+  </div>
+</section>
 {% endblock %}

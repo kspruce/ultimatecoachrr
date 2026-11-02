@@ -6,8 +6,10 @@
 <div class="pg-card">
   <h2>The format</h2>
   <p class="mb-2">One row per exercise (or per session, or per rest week), with the track, week and session it belongs to. Blank track, week or session cells carry on from the row above. Tests go in a second sheet or file. Full details: <code>docs/PROGRAMME_IMPORT.md</code>.</p>
-  <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('programmes.import_template', kind='programme') }}"><i class="bi bi-download"></i> Programme template (CSV)</a>
-  <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('programmes.import_template', kind='tests') }}"><i class="bi bi-download"></i> Tests template (CSV)</a>
+  <a class="btn btn-sm btn-primary" href="{{ url_for('programmes.import_template_xlsx') }}"><i class="bi bi-file-earmark-excel"></i> Excel template (.xlsx)</a>
+  <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('programmes.import_template', kind='programme') }}"><i class="bi bi-download"></i> Programme (CSV)</a>
+  <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('programmes.import_template', kind='tests') }}"><i class="bi bi-download"></i> Tests (CSV)</a>
+  <p class="small pg-muted mt-2 mb-0">The Excel template has an Instructions sheet, dropdowns for the fixed choices, a note on every column and example rows. Fill it in with Excel, Numbers or Google Sheets, save it as .xlsx and upload it here.</p>
 </div>
 
 {% if not parsed %}

@@ -5,11 +5,12 @@
 <div class="uc-page-header">
   <div>
     <div class="pg-label">{% if editing %}Editing draft v{{ version.number }}{% elif version %}Published v{{ version.number }} (read only){% endif %}</div>
-    <h1>Build: {{ programme.name }}</h1>
+    <h1>Build</h1>
     <p>Tracks run side by side, each with its own length and week numbers. Open a week to add sessions; open a session to add exercises.</p>
   </div>
   <div class="d-flex gap-2 flex-wrap">
     {% if not editing %}
+    {% if version %}<a class="btn btn-outline-secondary" href="{{ url_for('programmes.preview', programme_id=programme.id) }}"><i class="bi bi-eye"></i> Preview as a player</a>{% endif %}
     {{ post_button(url_for('programmes.start_draft', programme_id=programme.id), '<i class="bi bi-pencil"></i> Start a new draft', 'btn btn-primary') }}
     {% else %}
     <a class="btn btn-outline-secondary" href="{{ url_for('programmes.preview', programme_id=programme.id) }}"><i class="bi bi-eye"></i> Preview as a player</a>
@@ -59,7 +60,7 @@
         <a class="btn btn-sm btn-outline-primary" href="{{ url_for('programmes.edit_week', programme_id=programme.id, week_id=week.id) }}">Open</a>
         {{ post_button(url_for('programmes.week_action', programme_id=programme.id, week_id=week.id, action='up'), '<i class="bi bi-arrow-up"></i>', title='Move week earlier') }}
         {{ post_button(url_for('programmes.week_action', programme_id=programme.id, week_id=week.id, action='down'), '<i class="bi bi-arrow-down"></i>', title='Move week later') }}
-        {{ post_button(url_for('programmes.week_action', programme_id=programme.id, week_id=week.id, action='duplicate'), '<i class="bi bi-copy"></i>', title='Duplicate week') }}
+        {{ post_button(url_for('programmes.week_action', programme_id=programme.id, week_id=week.id, action='duplicate'), '<i class="bi bi-files"></i>', title='Duplicate week') }}
         {{ post_button(url_for('programmes.week_action', programme_id=programme.id, week_id=week.id, action='delete'), '<i class="bi bi-trash"></i>', 'btn btn-sm btn-outline-danger', confirm='Delete this week and its sessions?', title='Delete week') }}
         {% endif %}
       </div>

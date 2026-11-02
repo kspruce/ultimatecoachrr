@@ -36,7 +36,7 @@
     <div class="pg-actions">
       {{ post_button(url_for('programmes.session_action', programme_id=programme.id, session_id=s.id, action='up'), '<i class="bi bi-arrow-up"></i>', title='Move up') }}
       {{ post_button(url_for('programmes.session_action', programme_id=programme.id, session_id=s.id, action='down'), '<i class="bi bi-arrow-down"></i>', title='Move down') }}
-      {{ post_button(url_for('programmes.session_action', programme_id=programme.id, session_id=s.id, action='duplicate'), '<i class="bi bi-copy"></i>', title='Duplicate session') }}
+      {{ post_button(url_for('programmes.session_action', programme_id=programme.id, session_id=s.id, action='duplicate'), '<i class="bi bi-files"></i>', title='Duplicate session') }}
       {{ post_button(url_for('programmes.session_action', programme_id=programme.id, session_id=s.id, action='delete'), '<i class="bi bi-trash"></i>', 'btn btn-sm btn-outline-danger', confirm='Delete this session?', title='Delete session') }}
     </div>
   </div>

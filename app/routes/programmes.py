@@ -30,6 +30,7 @@ from app.models.programme import (
     ProgrammeTrack, ProgrammeWeek, SessionLog, TestResult,
 )
 from app.utils import programme_import as pimport
+from app.utils import programme_template as ptemplate
 from app.utils import programmes as svc
 from app.utils.media_embed import is_web_url
 from app.utils.team_filter import get_current_team_id
@@ -310,11 +311,19 @@ def settings(programme_id):
         except ValueError as e:
             db.session.rollback()
             flash(str(e), 'danger')
-            return render_template('programmes/settings.html', programme=programme), 400
+            return render_template('programmes/settings.html', programme=programme,
+                                   players_with_history=_players_with_history(programme)), 400
         db.session.commit()
         flash('Settings saved.', 'success')
         return redirect(url_for('programmes.show', programme_id=programme.id))
-    return render_template('programmes/settings.html', programme=programme)
+    return render_template('programmes/settings.html', programme=programme,
+                           players_with_history=_players_with_history(programme))
+
+
+def _players_with_history(programme):
+    """How many enrolled players have logged a session or a test result: a
+    programme with any can only be archived, so their history is kept."""
+    return sum(1 for e in programme.enrolments if e.logs or e.results)
 
 
 @bp.route('/<int:programme_id>/duplicate', methods=['POST'])
@@ -343,6 +352,8 @@ def archive(programme_id):
         programme.is_shared = False
     db.session.commit()
     flash('Archived.' if programme.archived else 'Restored.', 'success')
+    if request.form.get('next') == 'settings':
+        return redirect(url_for('programmes.settings', programme_id=programme.id) + '#danger-zone')
     return redirect(url_for('programmes.show', programme_id=programme.id))
 
 
@@ -350,9 +361,9 @@ def archive(programme_id):
 @coach_required
 def delete(programme_id):
     programme = _programme(programme_id)
-    if any(e.logs or e.results for e in programme.enrolments):
+    if _players_with_history(programme):
         flash('Players have logged sessions or results on this programme, so it can only be archived.', 'warning')
-        return redirect(url_for('programmes.show', programme_id=programme.id))
+        return redirect(url_for('programmes.settings', programme_id=programme.id) + '#danger-zone')
     db.session.delete(programme)
     db.session.commit()
     flash('Programme deleted.', 'success')
@@ -1127,25 +1138,22 @@ def export(programme_id, kind):
 # Import
 # --------------------------------------------------------------------------
 
+@bp.route('/import/template.xlsx')
+@coach_required
+def import_template_xlsx():
+    """The Excel template: instructions, both sheets, dropdowns and examples."""
+    return Response(ptemplate.workbook_bytes(),
+                    mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    headers={'Content-Disposition': 'attachment; filename="programme-template.xlsx"'})
+
+
 @bp.route('/import/template/<kind>.csv')
 @coach_required
 def import_template(kind):
     if kind == 'programme':
-        rows = [pimport.PROGRAMME_COLUMNS,
-                ['Speed', '1', '0', '1', 'Acceleration', '', 'Learn the drive phase', 'Arm drive', 'Speed session 1',
-                 'sprint', 'required', '', '45', '', '10 min dynamic warm-up', '', 'Lean, drive the arms',
-                 '', 'duration_minutes, rpe', '10 m sprints', '', '1', '15', '10', '', 'Walk back', 'Max', '',
-                 'Stay low', ''],
-                ['Speed', '', '', '2', 'Rest week', 'rest'] + [''] * (len(pimport.PROGRAMME_COLUMNS) - 6),
-                ['Conditioning', '0', '0', '0', 'Intervals', '', '', '', 'Intervals', 'conditioning', 'required', '',
-                 '30', '', '', '', '', '', 'duration_minutes, rpe, distance_m', 'Intervals', '', '4', '',
-                 '', '120', '2 min active recovery', 'Hard but steady', '', '', ''],
-                ]
-        return _csv_response(rows, 'programme-template.csv')
+        return _csv_response([pimport.PROGRAMME_COLUMNS] + ptemplate.EXAMPLE_PROGRAMME, 'programme-template.csv')
     if kind == 'tests':
-        rows = [pimport.TEST_COLUMNS,
-                ['10 m sprint', 's', 'time', '3', 'best', 'lower', '1', '4', 'Standing start', '', 'Speed', '1', '2']]
-        return _csv_response(rows, 'tests-template.csv')
+        return _csv_response([pimport.TEST_COLUMNS] + ptemplate.EXAMPLE_TESTS, 'tests-template.csv')
     abort(404)
 
 
@@ -1164,7 +1172,8 @@ def _uploaded_rows():
                 sheets = pimport.rows_from_xlsx(data)
             except Exception:
                 return None, None, filename, 'That file couldn\'t be read as an .xlsx spreadsheet.'
-            names = list(sheets)
+            # The programme sheet, or else the first sheet that isn't the template's instructions or tests
+            names = [n for n in sheets if n not in ('instructions', 'tests')]
             programme_rows = sheets.get('programme') or (sheets[names[0]] if names else [])
             test_rows = sheets.get('tests') or []
             return programme_rows, test_rows, filename, None
