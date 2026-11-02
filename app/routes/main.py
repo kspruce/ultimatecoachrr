@@ -68,7 +68,6 @@ def privacy():
                            backup_days=config.get('BACKUP_RETENTION_DAYS', 30),
                            email_service=email_provider(),
                            sentry=bool(config.get('SENTRY_DSN')),
-                           s3=bool(config.get('AWS_BUCKET_NAME')),
                            discord='discord.settings' in current_app.view_functions)
 
 

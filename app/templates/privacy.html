@@ -95,7 +95,6 @@
     <tr><th>{{ {'brevo': 'Brevo', 'resend': 'Resend', 'smtp': 'Our email provider'}[email_service] }}</th>
       <td>Sending emails (invitations, password resets), so it receives the recipient's address and the message.</td></tr>
     {% endif %}
-    {% if s3 %}<tr><th>Amazon Web Services</th><td>Storing uploaded files.</td></tr>{% endif %}
     {% if sentry %}<tr><th>Sentry</th><td>Error reports, without names, emails or form contents.</td></tr>{% endif %}
     {% if discord %}<tr><th>Discord</th><td>Only if your team connects its Discord server: event reminders and RSVPs.</td></tr>{% endif %}
     <tr><th>Video sites</th>

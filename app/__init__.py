@@ -88,20 +88,6 @@ def create_app(config_class=Config):
                          'shared clip links stop working on every restart. Set SECRET_KEY.')
         app.config['SECRET_KEY'] = os.urandom(24)
 
-    # Configure S3: warn if not configured, expose s3_bucket_url in templates
-    with app.app_context():
-        from app.utils.s3_utils import check_s3_configuration
-        if not check_s3_configuration():
-            app.logger.warning("S3 storage is not properly configured!")
-
-        @app.context_processor
-        def inject_s3_url():
-            return {
-                's3_bucket_url': f"https://{app.config['AWS_BUCKET_NAME']}.s3.amazonaws.com"
-                if app.config.get('AWS_BUCKET_NAME')
-                else None
-            }
-
     # Configure static file serving
     app.static_folder = 'static'
     app.static_url_path = '/static'

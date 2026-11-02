@@ -8,8 +8,6 @@ from app.models import (
 import os
 import logging
 from logging.handlers import RotatingFileHandler
-import boto3
-from botocore.exceptions import ClientError
 
 # Setup basic logging
 logging.basicConfig(level=logging.INFO)
@@ -37,35 +35,6 @@ logger.info('Ultimate Coach startup')
 
 app = create_app()
 application = app  # for WSGI servers
-
-def check_aws_credentials():
-    """Verify AWS credentials are working"""
-    try:
-        if not all([
-            app.config.get('AWS_ACCESS_KEY'),
-            app.config.get('AWS_SECRET_KEY'),
-            app.config.get('AWS_BUCKET_NAME')
-        ]):
-            logger.warning("AWS credentials not fully configured")
-            return False
-
-        s3 = boto3.client(
-            's3',
-            aws_access_key_id=app.config['AWS_ACCESS_KEY'],
-            aws_secret_access_key=app.config['AWS_SECRET_KEY'],
-            region_name=app.config['AWS_REGION']
-        )
-        
-        # Try to list objects in bucket to verify credentials
-        s3.list_objects_v2(Bucket=app.config['AWS_BUCKET_NAME'], MaxKeys=1)
-        logger.info("AWS credentials verified successfully")
-        return True
-    except ClientError as e:
-        logger.error(f"AWS credential verification failed: {str(e)}")
-        return False
-    except Exception as e:
-        logger.error(f"Unexpected error checking AWS credentials: {str(e)}")
-        return False
 
 def ensure_upload_directories():
     """Ensure all required upload directories exist"""
@@ -224,11 +193,6 @@ def create_app_instance():
         # Initialise database (create tables or run migrations)
         initialize_database()
 
-        # Verify S3 configuration if enabled
-        if app.config.get('AWS_ACCESS_KEY'):
-            if not check_aws_credentials():
-                logger.warning("AWS credentials verification failed")
-
         # Import users from user_import.json if present
         import_users_from_json()
 
@@ -262,11 +226,6 @@ if __name__ == "__main__":
             if not ensure_upload_directories():
                 logger.error("Failed to create required directories")
                 raise RuntimeError("Failed to create required directories")
-            
-            # Check S3 if configured
-            if app.config.get('AWS_ACCESS_KEY'):
-                if not check_aws_credentials():
-                    logger.warning("AWS credentials verification failed")
         
         app.run(host="0.0.0.0", port=port, debug=debug)
     except Exception as e:

@@ -75,12 +75,6 @@ class Config:
     # Set to 0 when the app is reached directly.
     PROXY_COUNT = int(os.environ.get('PROXY_COUNT', '1'))
     
-    # S3 Configuration
-    AWS_ACCESS_KEY = os.environ.get('AWS_ACCESS_KEY')
-    AWS_SECRET_KEY = os.environ.get('AWS_SECRET_KEY')
-    AWS_REGION = os.environ.get('AWS_REGION', 'us-east-1')
-    AWS_BUCKET_NAME = os.environ.get('AWS_BUCKET_NAME')
-    
     # Flask-Caching configuration
     CACHE_TYPE = "SimpleCache"  # In-memory cache
     CACHE_DEFAULT_TIMEOUT = 300  # 5 minutes
@@ -131,10 +125,6 @@ class Config:
                 os.makedirs(os.path.join(Config.UPLOAD_FOLDER, subdir), exist_ok=True)
         except Exception as e:
             app.logger.warning(f"Could not create upload directories: {e}")
-
-        # Validate S3 configuration
-        if not all([Config.AWS_ACCESS_KEY, Config.AWS_SECRET_KEY, Config.AWS_BUCKET_NAME]):
-            app.logger.warning("S3 configuration incomplete. Some features may not work properly.")
     
     @staticmethod
     def validate_file_type(filename, allowed_types):
@@ -143,10 +133,3 @@ class Config:
             return False
         ext = filename.rsplit('.', 1)[1].lower()
         return ext in Config.ALLOWED_EXTENSIONS.get(allowed_types, set())
-    
-    @staticmethod
-    def get_s3_url(key):
-        """Generate S3 URL for a given key"""
-        if not all([Config.AWS_BUCKET_NAME, key]):
-            return None
-        return f"https://{Config.AWS_BUCKET_NAME}.s3.amazonaws.com/{key}"

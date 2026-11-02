@@ -8,9 +8,6 @@ const UltimateCoach = {
             images: ['image/jpeg', 'image/png', 'image/gif'],
             documents: ['application/pdf'],
             all: ['image/jpeg', 'image/png', 'image/gif', 'application/pdf']
-        },
-        s3: {
-            baseUrl: '' // Will be set from meta tag
         }
     },
 
@@ -181,35 +178,9 @@ const UltimateCoach = {
         }
     },
 
-    // S3 handling
-    s3: {
-        getSignedUrl: async function(fileName, fileType) {
-            try {
-                const response = await fetch('/get-signed-url', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': document.querySelector('[name="csrf-token"]').content
-                    },
-                    body: JSON.stringify({ fileName, fileType })
-                });
-                return await response.json();
-            } catch (error) {
-                console.error('Error getting signed URL:', error);
-                throw error;
-            }
-        }
-    },
-
     // Initialize the application
     init: function() {
         console.log('Ultimate Coach app initializing...');
-
-        // Set S3 base URL from meta tag
-        const s3BaseUrl = document.querySelector('meta[name="s3-base-url"]')?.content;
-        if (s3BaseUrl) {
-            this.config.s3.baseUrl = s3BaseUrl;
-        }
 
         // Initialize forms
         this.forms.init();

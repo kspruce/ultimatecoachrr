@@ -6,10 +6,10 @@
 |---|---|---|
 | App hosting | EC2 via Applikku | Railway |
 | Database | PostgreSQL on EC2 | Railway managed Postgres |
-| File storage | AWS S3 | **AWS S3 (unchanged)** |
+| File storage | AWS S3 | **In the database** (photos and diagrams are stored in Postgres) |
 | Domain | ultimatecoach.applikuapp.com | Custom domain via Railway |
 
-Your S3 bucket stays exactly as-is — no file migration needed.
+S3 is no longer used: uploaded photos and diagrams live in the database, so there's no bucket to pay for or configure.
 
 ---
 
@@ -56,12 +56,6 @@ In Railway → your app service → **Variables**, add the following. Copy value
 SECRET_KEY=<your secret key>
 FLASK_ENV=production
 FLASK_DEBUG=0
-
-# AWS S3 — keep using your existing bucket
-AWS_ACCESS_KEY=<your key>
-AWS_SECRET_KEY=<your secret>
-AWS_REGION=us-east-1
-AWS_BUCKET_NAME=<your bucket>
 
 # Optional
 BASE_URL=https://<your-app>.railway.app   # update after deploy
@@ -117,8 +111,8 @@ Watch the deploy logs. You should see:
 ## Step 7: Test your app
 
 1. Railway gives you a public URL like `https://your-app.up.railway.app`
-2. Open it and test: log in, check that file uploads to S3 work, verify the database has your data
-3. Hit the `/debug-info` endpoint to confirm S3 and DB are connected correctly
+2. Open it and test: log in, check that photo uploads work, verify the database has your data
+3. Hit the `/debug-info` endpoint to confirm the DB is connected correctly
 
 ---
 
@@ -140,7 +134,7 @@ Once you've confirmed the Railway app is working:
 1. Update any DNS records pointing to the EC2 IP to point to Railway instead
 2. Cancel your Applikku subscription
 3. Stop/terminate your EC2 instance
-4. (Optional) keep S3 — you're already paying for it and Railway uses it too
+4. Empty and delete the old S3 bucket — nothing uses it any more
 
 ---
 
@@ -150,7 +144,6 @@ Once you've confirmed the Railway app is working:
 |---|---|
 | Railway Hobby plan | ~$5/month |
 | Railway Postgres | ~$5/month (or free on Hobby for small DBs) |
-| AWS S3 | unchanged (typically < $1–2/month for a small app) |
 
 ---
 
@@ -159,7 +152,5 @@ Once you've confirmed the Railway app is working:
 **Build fails:** Check that `requirements.txt` is committed. Railway uses Nixpacks to auto-detect Python.
 
 **`flask db upgrade` fails on deploy:** Check `DATABASE_URL` is set correctly in Railway Variables.
-
-**S3 uploads not working:** Confirm `AWS_ACCESS_KEY`, `AWS_SECRET_KEY`, `AWS_BUCKET_NAME` are set in Railway Variables.
 
 **App crashes on start:** Check Railway deploy logs. The `/debug-info` endpoint is useful once the app is partially up.

@@ -12,8 +12,6 @@ sys.path.insert(0, ROOT)
 os.environ['DATABASE_URL'] = os.environ.get('TEST_DATABASE_URL', 'sqlite:///:memory:')
 # Somewhere writable for uploads (.env may point at Railway's /app folder).
 os.environ['UPLOAD_FOLDER'] = tempfile.mkdtemp(prefix='herd-uploads-')
-for key in ('AWS_ACCESS_KEY', 'AWS_SECRET_KEY', 'AWS_BUCKET_NAME'):
-    os.environ.pop(key, None)
 
 from app import create_app, db  # noqa: E402
 from config import Config  # noqa: E402

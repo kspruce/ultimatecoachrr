@@ -49,7 +49,7 @@ window.sessionManager = {
                 
                 // If auto-upload is enabled, perform upload
                 if (options.autoUpload) {
-                    return this.uploadFileToS3(file, options.uploadUrl, options.onSuccess, options.onError);
+                    return this.uploadFile(file, options.uploadUrl, options.onSuccess, options.onError);
                 }
                 return true;
             }
@@ -100,7 +100,7 @@ window.sessionManager = {
         }
     },
 
-    uploadFileToS3: function(file, uploadUrl, onSuccess, onError) {
+    uploadFile: function(file, uploadUrl, onSuccess, onError) {
         const formData = new FormData();
         formData.append('file', file);
 
@@ -125,19 +125,6 @@ window.sessionManager = {
             if (onError) onError(error);
             this.showAlert('Failed to upload file: ' + error.message, 'danger');
         });
-    },
-
-    // S3 URL handling
-    handleS3Url: function(url, element) {
-        if (!url) return;
-
-        if (element.tagName === 'IMG') {
-            element.src = url;
-        } else if (element.tagName === 'A') {
-            element.href = url;
-        } else {
-            element.style.backgroundImage = `url(${url})`;
-        }
     },
 
     // Utility functions
