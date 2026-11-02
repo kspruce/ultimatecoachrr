@@ -1,12 +1,22 @@
-/* Training programmes (app/templates/programmes) */
-.pg-subnav { display: flex; gap: .4rem; overflow-x: auto; margin: 0 0 1.25rem; padding-bottom: .25rem; }
-.pg-subnav a {
-  flex: none; display: inline-flex; align-items: center; gap: .35rem; padding: .4rem .85rem;
-  border: 1px solid var(--rule); border-radius: 999px; background: var(--card); color: var(--ink-2);
-  font-size: .88rem; font-weight: 600; text-decoration: none; white-space: nowrap;
-}
-.pg-subnav a:hover { border-color: var(--rule-strong); color: var(--ink); }
-.pg-subnav a.active { background: var(--club); border-color: var(--club); color: var(--on-club); }
+/* Programme header and tabs: the same underline tabs as the Leadership hub (leadership.css). */
+.pg-top { display: flex; justify-content: space-between; align-items: flex-end; gap: .75rem; flex-wrap: wrap; margin-bottom: .5rem; }
+.pg-top-title { min-width: 0; }
+.pg-top-back { font-size: .8rem; color: var(--ink-3); text-decoration: none; }
+.pg-top-back:hover { color: var(--ink); }
+.pg-top-name { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+.pg-top-name a { font-family: var(--font-serif); font-size: 1.3rem; color: var(--ink); text-decoration: none; }
+.pg-top-actions { display: flex; gap: .4rem; align-items: center; }
+.pg-tabs { display: flex; gap: .25rem; border-bottom: 1px solid var(--rule); margin-bottom: 1.25rem; overflow-x: auto; }
+.pg-tabs a { flex: none; padding: .55rem .9rem; color: var(--ink-2); font-weight: 600; font-size: .92rem; text-decoration: none;
+  border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
+.pg-tabs a:hover { color: var(--ink); }
+.pg-tabs a.active { color: var(--club-ink); border-bottom-color: var(--club); }
+.pg-tabs a.pg-tabs-end { margin-left: auto; }
+.pg-danger { border-color: color-mix(in srgb, var(--bad, #c62828) 45%, var(--rule)); }
+.pg-danger-row { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; padding: .6rem 0; border-top: 1px solid var(--rule); }
+.pg-danger-row:first-of-type { border-top: 0; }
+.pg-danger-row > div { flex: 1 1 18rem; }
+.pg-danger-row form, .pg-danger-row > .btn { flex: none; margin: 0; }
 .pg-card {
   background: var(--card); border: 1px solid var(--rule); border-radius: var(--radius);
   box-shadow: var(--shadow-sm); padding: 1.1rem 1.25rem; margin-bottom: 1.1rem;
