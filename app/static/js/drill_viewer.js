@@ -96,10 +96,49 @@ document.addEventListener('DOMContentLoaded', function () {
     if (videoBtn && stages.length > 1 && DD.videoType() && HTMLCanvasElement.prototype.captureStream) {
         videoBtn.hidden = false;
         const label = videoBtn.innerHTML;
+        // Phones only open the share sheet straight after a tap, and
+        // recording takes a few seconds: if it's too late by then, the button
+        // becomes "Share video" and the next tap shares the finished video
+        let ready = null;
+
+        function download(file) {
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(file);
+            link.download = file.name;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            setTimeout(() => URL.revokeObjectURL(link.href), 10000);
+        }
+
+        async function deliver(file) {
+            if (!(navigator.canShare && navigator.canShare({files: [file]}))) {
+                download(file);
+                return;
+            }
+            try {
+                await navigator.share({files: [file], title: videoBtn.dataset.name || ''});
+            } catch (e) {
+                if (e.name !== 'AbortError') throw e;
+            }
+        }
+
         videoBtn.addEventListener('click', async () => {
+            if (ready) {
+                const file = ready;
+                ready = null;
+                videoBtn.innerHTML = label;
+                try {
+                    await deliver(file);  // first thing on the tap, so it's allowed
+                } catch (e) {
+                    download(file);
+                }
+                return;
+            }
             player.pause();
             videoBtn.disabled = true;
             const shown = stages.map(s => Object.assign({}, s, {objects: view(s.objects)}));
+            let waiting = false;
             try {
                 const {blob, extension} = await DD.recordVideo(field, shown, {
                     speed: player.speed,
@@ -109,26 +148,19 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
                 const name = `${(videoBtn.dataset.name || 'animation').replace(/[^\w-]+/g, '_')}.${extension}`;
                 const file = new File([blob], name, {type: blob.type});
-                if (navigator.canShare && navigator.canShare({files: [file]})) {
-                    try {
-                        await navigator.share({files: [file], title: videoBtn.dataset.name || ''});
-                    } catch (e) {
-                        if (e.name !== 'AbortError') throw e;
-                    }
-                } else {
-                    const link = document.createElement('a');
-                    link.href = URL.createObjectURL(blob);
-                    link.download = name;
-                    document.body.appendChild(link);
-                    link.click();
-                    link.remove();
-                    setTimeout(() => URL.revokeObjectURL(link.href), 10000);
+                try {
+                    await deliver(file);
+                } catch (e) {
+                    if (e.name !== 'NotAllowedError') throw e;
+                    ready = file;
+                    waiting = true;
                 }
             } catch (e) {
                 window.alert(e.message || 'The video could not be made.');
             } finally {
                 videoBtn.disabled = false;
-                videoBtn.innerHTML = label;
+                if (waiting) videoBtn.innerHTML = '<i class="bi bi-share"></i> Share video';
+                else videoBtn.innerHTML = label;
             }
         });
     }
