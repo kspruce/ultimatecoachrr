@@ -7,7 +7,9 @@ from app.models.player import Player
 from app.models.user import User
 from app.models.team_membership import TeamMembership
 from app.forms.team import PlayerForm, PlayerFilterForm
-from app.models.point import LineUp
+from app.models.point import LineUp, Point
+from app.models.throws import Throw
+from app.stats.throw_rebuild import rebuild_throws
 from app.models.event import Event, Pull
 from app.models.scouting import OpponentPlayer
 from app.models.session import Attendance, SessionRSVP
@@ -399,11 +401,6 @@ def delete_player(player_id):
             {"player_id": player_id, "team_id": get_current_team_id()}
         )
 
-        # Delete throws first (both as thrower and receiver)
-        db.session.execute(
-            text("DELETE FROM throw WHERE (thrower_id = :player_id OR receiver_id = :player_id) AND team_organization_id = :team_id"),
-            {"player_id": player_id, "team_id": get_current_team_id()}
-        )
 
         # Delete related records - Updated to use new relationship pattern
         # Remove player from clips (many-to-many relationship)
@@ -414,15 +411,22 @@ def delete_player(player_id):
             team_organization_id=get_current_team_id()
         ).delete()
         
+        # Their plays stay, as an unknown player of ours: the points they
+        # played keep their goals, passes and turnovers for the team and
+        # their teammates. The throws are rebuilt without them.
         Event.query.filter_by(
             receiver_id=player_id,
             team_organization_id=get_current_team_id()
         ).update({Event.receiver_id: None})
-        
+        their_points = [point_id for (point_id,) in db.session.query(Event.point_id).filter_by(
+            player_id=player_id, team_organization_id=get_current_team_id()).distinct()]
         Event.query.filter_by(
             player_id=player_id,
             team_organization_id=get_current_team_id()
-        ).delete()
+        ).update({Event.player_id: None, Event.is_unknown_player: True})
+        Throw.query.filter(Throw.thrower_id == player_id).update({Throw.thrower_id: None})
+        Throw.query.filter(Throw.receiver_id == player_id).update({Throw.receiver_id: None})
+        rebuild_throws(Point.query.filter(Point.id.in_(their_points)).all() if their_points else [])
         
         Pull.query.filter_by(
             player_id=player_id,

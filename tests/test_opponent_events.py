@@ -81,9 +81,9 @@ def test_opponent_block_counts_for_none_of_our_players(setup):
     assert stats[a]['hockey_assists'] == 1
     assert stats[b]['assists'] == 1
     assert stats[c]['goals'] == 1
-    # The pickup after the opponent's play has no thrower of ours.
-    pickup = Throw.query.filter_by(receiver_id=a).one()
-    assert pickup.thrower_id is None
+    # The pickup after the opponent's play wasn't a pass: no throw into it.
+    assert Throw.query.filter_by(receiver_id=a).count() == 0
+    assert Throw.query.filter_by(point_id=point_id).count() == 2
 
     # Team level: we gained the disc once and scored without turning it over.
     game = _game_stats(setup)

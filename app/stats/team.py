@@ -605,10 +605,13 @@ def calculate_additional_team_metrics(games):
     goals = goals_query.count()
     assists = sum(1 for t in throws if t.throw_type == 'assist')
 
-    # Count catch/drop events for catch_rate
-    catches = Event.query.filter_by(
-        event_type='catch',
-        team_organization_id=get_current_team_id()
+    # Count catch/drop events for catch_rate. A goal is a catch, and so
+    # are the assist and hockey assist (catches retyped when the goal was
+    # recorded). Opponent plays aren't ours.
+    catches = Event.query.filter(
+        Event.event_type.in_(['catch', 'assist', 'hockey_assist', 'goal']),
+        Event.is_opponent.isnot(True),
+        Event.team_organization_id == get_current_team_id()
     ).filter(Event.point_id.in_(point_ids)).count()
 
     drops = Event.query.filter_by(
@@ -624,14 +627,13 @@ def calculate_additional_team_metrics(games):
     blocks_query = blocks_query.filter(Event.point_id.in_(point_ids))
     blocks = blocks_query.count()
 
-    # Count turnovers forced
-    turnovers_forced_query = Event.query.filter(
-        Event.event_type.in_(['throwaway', 'drop', 'stall']),
-        Event.is_offensive == False,
+    # Turnovers we forced: blocks, forced turnovers and Callahans (not
+    # their unforced errors)
+    turnovers_forced = Event.query.filter(
+        Event.event_type.in_(['block', 'forced_turnover', 'callahan']),
+        Event.is_opponent.isnot(True),
         Event.team_organization_id == get_current_team_id()
-    )
-    turnovers_forced_query = turnovers_forced_query.filter(Event.point_id.in_(point_ids))
-    turnovers_forced = turnovers_forced_query.count() + blocks
+    ).filter(Event.point_id.in_(point_ids)).count()
 
     # Count hucks
     hucks = sum(1 for t in throws if t.calculate_distance() and t.calculate_distance() > HUCK_DISTANCE)

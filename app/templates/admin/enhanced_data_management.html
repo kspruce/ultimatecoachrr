@@ -461,6 +461,13 @@
                             <h6>Stats maintenance (current team)</h6>
                             <p class="small text-muted">Recalculate stored throw data for the team you're viewing, e.g. after importing old games.</p>
                             <div class="d-flex flex-wrap gap-2">
+                                <form method="POST" action="{{ url_for('stat.rebuild_team_throws') }}"
+                                      title="Throws are worked out from the recorded events. Rebuilding fixes throws saved by older versions, e.g. a pickup after a block counted as a pass.">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-outline-primary">
+                                        <i class="bi bi-arrow-clockwise me-1"></i>Rebuild throws from events
+                                    </button>
+                                </form>
                                 <form method="POST" action="{{ url_for('stat.mark_break_throws') }}">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <button type="submit" class="btn btn-outline-secondary">

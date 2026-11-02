@@ -9,6 +9,7 @@ from app.models.throws import Throw
 from app.utils.utils import admin_required, stat_taker_required
 from app.utils.point_flow import get_game_roster, next_point_to_analyse, sync_game_score
 from app.stats.throwing import is_break_throw
+from app.stats.throw_rebuild import rebuild_point_throws, rebuild_throws
 import math
 
 from werkzeug.exceptions import HTTPException
@@ -94,155 +95,25 @@ def record_events(point_id):
             db.session.add(event)
             db.session.flush()
 
-            # Get previous event in this point
-            previous_event = Event.query.filter(
-                Event.point_id == point_id,
-                Event.id < event.id,
-                Event.team_organization_id == get_current_team_id()
-            ).order_by(Event.id.desc()).first()
-
-            # Handle goal events and create associated throws
+            # A goal makes the catch before it the assist, and the catch
+            # before that the hockey assist (substitutions aren't play).
+            # Only catches are promoted: blocks, drops, throwaways etc. are
+            # never retyped, and opponent plays aren't part of our chain.
             if event.event_type == 'goal':
-                # Get previous events for assist and hockey assist
                 previous_events = Event.query.filter(
                     Event.point_id == point_id,
                     Event.id < event.id,
+                    Event.event_type != 'substitution',
                     Event.team_organization_id == get_current_team_id()
                 ).order_by(Event.id.desc()).limit(2).all()
 
-                # Only promote events that are valid precursors to a goal
-                # (catch or pickup). Blocks, drops, throwaways etc. should
-                # never be silently retyped as assists.
-                # Opponent plays are never part of our passing chain.
-                ASSISTABLE = ('catch', 'pickup')
-
                 def assistable(e):
-                    return e.event_type in ASSISTABLE and not e.is_opponent
+                    return e.event_type == 'catch' and not e.is_opponent
 
                 if previous_events and assistable(previous_events[0]):
-                    # Mark first previous event as assist
-                    assist_event = previous_events[0]
-                    assist_event.event_type = 'assist'
-
-                    # Create throw for the assist
-                    assist_throw = Throw(
-                        point_id=point_id,
-                        thrower_id=assist_event.player_id,
-                        receiver_id=event.player_id,
-                        throwing_event_id=assist_event.id,
-                        receiving_event_id=event.id,
-                        x_start=assist_event.field_position_x,
-                        y_start=assist_event.field_position_y,
-                        x_end=event.field_position_x,
-                        y_end=event.field_position_y,
-                        throw_type='assist',
-                        is_completion=True,
-                        break_throw=is_break_throw(
-                            assist_event.field_position_x,
-                            assist_event.field_position_y,
-                            event.field_position_x,
-                            event.field_position_y,
-                            point.force_direction
-                        ),
-                        team_organization_id=get_current_team_id()
-                    )
-                    db.session.add(assist_throw)
-
-                    # If there's a second previous event of a valid type,
-                    # mark it as hockey assist
+                    previous_events[0].event_type = 'assist'
                     if len(previous_events) >= 2 and assistable(previous_events[1]):
-                        hockey_assist_event = previous_events[1]
-                        hockey_assist_event.event_type = 'hockey_assist'
-                        
-                        # Create throw for the hockey assist
-                        hockey_throw = Throw(
-                            point_id=point_id,
-                            thrower_id=hockey_assist_event.player_id,
-                            receiver_id=assist_event.player_id,
-                            throwing_event_id=hockey_assist_event.id,
-                            receiving_event_id=assist_event.id,
-                            x_start=hockey_assist_event.field_position_x,
-                            y_start=hockey_assist_event.field_position_y,
-                            x_end=assist_event.field_position_x,
-                            y_end=assist_event.field_position_y,
-                            throw_type='hockey_assist',
-                            is_completion=True,
-                            break_throw=is_break_throw(
-                                hockey_assist_event.field_position_x,
-                                hockey_assist_event.field_position_y,
-                                assist_event.field_position_x,
-                                assist_event.field_position_y,
-                                point.force_direction
-                            ),
-                            team_organization_id=get_current_team_id()  # Add team ID
-                        )
-                        db.session.add(hockey_throw)
-                        # Remove any regular throws that are now hockey assists
-                        regular_throw = Throw.query.filter(
-                            Throw.point_id == point_id,
-                            Throw.throwing_event_id == hockey_assist_event.id,
-                            Throw.receiving_event_id == assist_event.id,
-                            Throw.throw_type == 'regular',
-                            Throw.team_organization_id == get_current_team_id()  # Add team ID
-                        ).first()
-                        
-                        if regular_throw:
-                            current_app.logger.debug(f"Removing regular throw {regular_throw.id} that is now a hockey assist")
-                            db.session.delete(regular_throw)
-
-                        
-                        
-            # Create regular throw if this is a catch. The thrower is NULL
-            # after an Opponent/Unknown play; the throw still counts for the
-            # team and the catch for the receiver.
-            elif event.event_type == 'catch' and previous_event:
-                regular_throw = Throw(
-                    point_id=point_id,
-                    thrower_id=previous_event.player_id,
-                    receiver_id=event.player_id,
-                    throwing_event_id=previous_event.id,
-                    receiving_event_id=event.id,
-                    x_start=previous_event.field_position_x,
-                    y_start=previous_event.field_position_y,
-                    x_end=event.field_position_x,
-                    y_end=event.field_position_y,
-                    throw_type='regular',
-                    is_completion=True,
-                    break_throw=is_break_throw(
-                        previous_event.field_position_x,
-                        previous_event.field_position_y,
-                        event.field_position_x,
-                        event.field_position_y,
-                        point.force_direction
-                    ),
-                    team_organization_id=get_current_team_id()  # Add team ID
-                )
-                db.session.add(regular_throw)
-
-            # Handle throwaway events
-            elif event.event_type == 'throwaway' and previous_event:
-                throwaway = Throw(
-                    point_id=point_id,
-                    thrower_id=event.player_id,
-                    receiver_id=None,
-                    throwing_event_id=event.id,       # the throwaway IS the throw
-                    receiving_event_id=None,           # no receiver on a throwaway
-                    x_start=previous_event.field_position_x,
-                    y_start=previous_event.field_position_y,
-                    x_end=event.field_position_x,
-                    y_end=event.field_position_y,
-                    throw_type='throwaway',
-                    is_completion=False,
-                    break_throw=is_break_throw(
-                        previous_event.field_position_x,
-                        previous_event.field_position_y,
-                        event.field_position_x,
-                        event.field_position_y,
-                        point.force_direction
-                    ),
-                    team_organization_id=get_current_team_id()
-                )
-                db.session.add(throwaway)
+                        previous_events[1].event_type = 'hockey_assist'
 
             # Update point status for point-ending events and keep the
             # game-level score in sync so the scoreboard stays correct
@@ -258,10 +129,8 @@ def record_events(point_id):
                 point.our_score_after = point.our_score_before
                 sync_game_score(point.game)
 
-            # Calculate distances for throws
-            for throw in db.session.new:
-                if isinstance(throw, Throw):
-                    throw.distance = throw.calculate_distance()  # Use the model's method
+            # The point's throws follow from its events
+            rebuild_point_throws(point)
 
             db.session.commit()
             return jsonify(event.to_dict()), 201
@@ -294,46 +163,21 @@ def undo_event(point_id):
             # silently retyped to 'assist' / 'hockey_assist' when the goal
             # was recorded — put them back to 'catch' so their stats remain
             # correct and a re-recorded goal will promote them cleanly.
+            # Undoing a goal puts the assist and hockey assist back to the
+            # catches they were, so a re-recorded goal promotes them cleanly.
             if last_event.event_type == 'goal':
                 prior_events = Event.query.filter(
                     Event.point_id == point_id,
                     Event.id < last_event.id,
+                    Event.event_type != 'substitution',
                     Event.team_organization_id == get_current_team_id()
                 ).order_by(Event.id.desc()).limit(2).all()
+                for prior, retyped in zip(prior_events, ('assist', 'hockey_assist')):
+                    if prior.event_type == retyped:
+                        prior.event_type = 'catch'
 
-                if prior_events:
-                    if prior_events[0].event_type == 'assist':
-                        prior_events[0].event_type = 'catch'
-                    if len(prior_events) >= 2 and prior_events[1].event_type == 'hockey_assist':
-                        prior_events[1].event_type = 'catch'
-                        # The goal replaced that pass's regular throw with a
-                        # hockey-assist throw; make it a regular throw again,
-                        # or re-recording the goal would count the pass twice.
-                        Throw.query.filter_by(
-                            receiving_event_id=prior_events[0].id,
-                            throw_type='hockey_assist',
-                            team_organization_id=get_current_team_id()
-                        ).update({'throw_type': 'regular'})
-
-            # First, delete any throws associated with this event
-            # Delete throws where this event is the receiving event
-            throws_received = Throw.query.filter_by(
-                receiving_event_id=last_event.id,
-                team_organization_id=get_current_team_id()
-            ).all()
-            for throw in throws_received:
-                db.session.delete(throw)
-
-            # Delete throws where this event is the throwing event
-            throws_thrown = Throw.query.filter_by(
-                throwing_event_id=last_event.id,
-                team_organization_id=get_current_team_id()
-            ).all()
-            for throw in throws_thrown:
-                db.session.delete(throw)
-
-            # Now delete the event itself
             db.session.delete(last_event)
+            rebuild_point_throws(point)
 
             # Update point outcome and keep game score in sync
             if last_event.event_type in ('goal', 'callahan'):
@@ -445,49 +289,8 @@ def finish_point(point_id):
         # Update game score
         sync_game_score(game)
 
-        # Remove duplicate throws (regular throws that were later marked as hockey assists)
-        from app.models.throws import Throw
-        
-        # Get all hockey assist throws in this point
-        hockey_assists = Throw.query.filter_by(
-            point_id=point_id,
-            throw_type='hockey_assist',
-            team_organization_id=get_current_team_id()  # Add team ID
-        ).all()
-        
-        # For each hockey assist, find and remove any regular throws with the same coordinates
-        for hockey in hockey_assists:
-            duplicate_throws = Throw.query.filter(
-                Throw.point_id == point_id,
-                Throw.throw_type == 'regular',
-                Throw.thrower_id == hockey.thrower_id,
-                Throw.receiver_id == hockey.receiver_id,
-                Throw.x_start == hockey.x_start,
-                Throw.y_start == hockey.y_start,
-                Throw.x_end == hockey.x_end,
-                Throw.y_end == hockey.y_end,
-                Throw.id != hockey.id,  # Make sure we don't delete the hockey assist itself
-                Throw.team_organization_id == get_current_team_id()  # Add team ID
-            ).all()
-            
-            for duplicate in duplicate_throws:
-                current_app.logger.debug(f"Removing duplicate throw: {duplicate.id} (regular) in favor of hockey assist: {hockey.id}")
-                db.session.delete(duplicate)
-
-        throws_without_distance = Throw.query.filter_by(
-            point_id=point_id,
-            team_organization_id=get_current_team_id()  # Add team ID
-        ).filter(
-            (Throw.distance.is_(None)) | (Throw.distance == 0)
-        ).all()
-        
-        for throw in throws_without_distance:
-            if throw.x_start is not None and throw.y_start is not None and throw.x_end is not None and throw.y_end is not None:
-                throw.distance = math.sqrt(
-                    (throw.x_end - throw.x_start) ** 2 +
-                    (throw.y_end - throw.y_start) ** 2
-                )
-                current_app.logger.debug(f"Calculated missing distance for throw {throw.id}: {throw.distance:.2f}m")
+        # Make sure the stored throws match the events
+        rebuild_point_throws(point)
 
         db.session.commit()
 
@@ -518,85 +321,17 @@ def finish_point(point_id):
 
 
 
-def calculate_assists(point, goal_event):
-    # Get events for the point, ordered by timestamp if available, otherwise by ID
-    events = sorted(
-        Event.query.filter_by(
-            point_id=point.id,
-            team_organization_id=get_current_team_id()
-        ).all(),
-        key=lambda e: (e.timestamp or 0, e.id)
-    )
+@bp.route('/admin/rebuild_throws', methods=['POST'])
+@login_required
+@admin_required
+def rebuild_team_throws():
+    """Rebuild every one of this team's stored throws from the events."""
+    points = Point.query.filter_by(team_organization_id=get_current_team_id()).all()
+    count, removed, added = rebuild_throws(points)
+    db.session.commit()
+    flash(f'Rebuilt throws for {count} points: {removed} throws replaced by {added}.', 'success')
+    return redirect(url_for('data_management.data_management'))
 
-    # Find the throw leading to the goal
-    for i in range(len(events) - 2, -1, -1):  # Iterate backward from the goal
-        event = events[i]
-        if event.event_type == 'throw' and event.receiver_id == goal_event.player_id:
-            event.event_type = 'assist'
-            db.session.add(event)
-
-            # Find the hockey assist
-            for j in range(i - 1, -1, -1):
-                hockey_event = events[j]
-                if hockey_event.event_type == 'throw' and hockey_event.receiver_id == event.player_id:
-                    hockey_event.event_type = 'hockey_assist'
-                    db.session.add(hockey_event)
-                    break  # Only one hockey assist per goal
-            break
-
-
-def create_throw_from_events(previous_event, current_event):
-    """Create a throw record from two consecutive events"""
-    if not (previous_event and current_event):
-        return None
-        
-    # Validate event types
-    valid_sequences = [
-        ('catch', 'catch'),
-        ('catch', 'goal'),
-        ('catch', 'hockey_assist'),
-        ('hockey_assist', 'assist'),
-        ('assist', 'goal')
-    ]
-    
-    if (previous_event.event_type, current_event.event_type) not in valid_sequences:
-        return None
-    
-    throw = Throw(
-        point_id=current_event.point_id,
-        thrower_id=previous_event.player_id,
-        receiver_id=current_event.player_id,
-        throwing_event_id=previous_event.id,
-        receiving_event_id=current_event.id,
-        x_start=previous_event.field_position_x,
-        y_start=previous_event.field_position_y,
-        x_end=current_event.field_position_x,
-        y_end=current_event.field_position_y,
-        break_throw=is_break_throw(
-            previous_event.field_position_x,
-            previous_event.field_position_y,
-            current_event.field_position_x,
-            current_event.field_position_y,
-            current_event.point.force_direction if current_event.point else None
-        ),
-        team_organization_id=get_current_team_id()  # Add team ID
-    )
-    
-    # Calculate distance
-    throw.distance = math.sqrt(
-        (throw.x_end - throw.x_start) ** 2 +
-        (throw.y_end - throw.y_start) ** 2
-    )
-    
-    # Determine throw type
-    if current_event.event_type == 'goal':
-        throw.throw_type = 'assist'
-    elif current_event.event_type == 'hockey_assist':
-        throw.throw_type = 'hockey_assist'
-    else:
-        throw.throw_type = 'regular'
-    
-    return throw
 
 @bp.route('/admin/mark_break_throws', methods=['POST'])
 @login_required
