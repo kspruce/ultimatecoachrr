@@ -15,7 +15,7 @@ import zipfile
 from datetime import date, datetime, time
 from decimal import Decimal
 
-from sqlalchemy import or_, select
+from sqlalchemy import and_, or_, select
 
 from app import db
 
@@ -34,10 +34,8 @@ def team_conditions(team_id):
     for table in db.metadata.sorted_tables:  # parents before children
         if table.name == 'team_organization':
             conditions[table] = table.c.id == team_id
-        elif 'team_organization_id' in table.c:
-            conditions[table] = table.c.team_organization_id == team_id
         else:
-            links = []
+            links, data_links = [], []
             for fk in table.foreign_keys:
                 parent = fk.column.table
                 if parent is table or parent not in conditions:
@@ -45,8 +43,17 @@ def team_conditions(team_id):
                 if parent.name == 'team_organization':
                     links.append(fk.parent == team_id)
                 else:
-                    links.append(fk.parent.in_(select(fk.column).where(conditions[parent])))
-            if links:
+                    link = fk.parent.in_(select(fk.column).where(conditions[parent]))
+                    links.append(link)
+                    if parent.name != 'user':  # a login can have made rows on other teams
+                        data_links.append(link)
+            if 'team_organization_id' in table.c:
+                own = table.c.team_organization_id == team_id
+                # Rows saved without a team (throws recorded before they were
+                # stamped with one) belong to the team of what they point at
+                conditions[table] = (or_(own, and_(table.c.team_organization_id.is_(None), or_(*data_links)))
+                                     if data_links else own)
+            elif links:
                 conditions[table] = or_(*links)
     return conditions
 

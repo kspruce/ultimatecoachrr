@@ -118,3 +118,14 @@ def _fill_opposition_team(mapper, connection, throw):
         db.select(Game.opponent).join(Point, Point.game_id == Game.id).where(Point.id == throw.point_id)
     ).scalar()
     throw.opposition_team = (opponent or '')[:50] or None
+
+
+@db.event.listens_for(Throw, 'before_insert')
+def _fill_team(mapper, connection, throw):
+    """The team of the throw's point (the stat endpoints don't set it), so
+    the throw goes with its team's data: exports, and deleting the team."""
+    if throw.team_organization_id or not throw.point_id:
+        return
+    from app.models.point import Point
+    throw.team_organization_id = connection.execute(
+        db.select(Point.team_organization_id).where(Point.id == throw.point_id)).scalar()
