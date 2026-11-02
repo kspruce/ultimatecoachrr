@@ -1,0 +1,117 @@
+{% extends "leadership/_layout.html" %}
+
+{% block lh_content %}
+<div class="lh-post-wrap">
+  <article class="hb-card lh-post">
+    <div class="hb-crumbs"><a href="{{ url_for('leadership.index') }}">Discussion</a> › {{ post.kind_label }}</div>
+    <header>
+      <h1>{% if post.pinned %}<i class="bi bi-pin-angle-fill lh-pin" title="Pinned"></i> {% endif %}{{ post.title }}</h1>
+      <div class="lh-meta">
+        <span class="lh-kind-text"><i class="bi {{ post.kind_icon }}"></i> {{ post.kind_label }}</span>
+        · {{ post.author_name }} · {{ post.created_at|lh_ago }}
+        {% if post.status != 'open' %} · <span class="lh-status lh-status-{{ post.status }}">{{ post.status|title }}</span>{% endif %}
+        {% if post.on_agenda %} · <span class="lh-flag">On the agenda</span>{% endif %}
+      </div>
+    </header>
+
+    {% if video and video.embed_url %}
+    <div class="lh-video" id="lh-video">
+      <iframe id="lh-player" src="{{ video.embed_url }}" data-base="{{ video.embed_url.split('?')[0] }}"
+              title="{{ video.label or post.title }}" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe>
+    </div>
+    {% endif %}
+    {% if post.from_player %}
+    <div class="lh-asked"><i class="bi bi-person-raised-hand"></i>
+      <span><b>{{ post.author_name }} asked the leaders.</b> They see the post and your replies, but not replies marked <i>leaders only</i>.</span></div>
+    {% endif %}
+    {% if subject %}
+    <div class="lh-attached"><i class="bi {{ subject.icon }}"></i> {{ subject.label }}: <a href="{{ subject.url }}">{{ subject.title }}</a>
+      {% if video and not video.embed_url and video.link %} · <a href="{{ video.link }}" target="_blank" rel="noopener noreferrer">Open on Veo</a>{% endif %}</div>
+    {% elif post.clip %}
+    <div class="lh-attached"><i class="bi bi-film"></i> Team clip: <a href="{{ url_for('clip.view_clip', clip_id=post.clip.id) }}">{{ post.clip.title }}</a>
+      {% if video and not video.embed_url and video.link %} · <a href="{{ video.link }}" target="_blank" rel="noopener noreferrer">Open on Veo</a>{% endif %}</div>
+    {% endif %}
+    {% if post.url %}
+    <a class="lh-linkcard" href="{{ post.url }}" target="_blank" rel="noopener noreferrer">
+      <i class="bi {{ 'bi-camera-video' if video else 'bi-box-arrow-up-right' }}"></i>
+      <span><b>{{ domain(post.url) }}</b>{% if post.start_seconds %} · from {{ format_timestamp(post.start_seconds) }}{% endif %}
+        <span class="lh-url">{{ post.url }}</span></span>
+    </a>
+    {% endif %}
+
+    {% if post.body %}<div class="lh-body">{{ render(post.body) }}</div>{% endif %}
+
+    <div class="lh-actions">
+      <form method="post" action="{{ url_for('leadership.set_flag', post_id=post.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button name="what" value="on_agenda" class="btn btn-sm {{ 'btn-success' if post.on_agenda else 'btn-outline-success' }}">
+          <i class="bi bi-list-check"></i> {{ 'On the agenda' if post.on_agenda else 'Add to agenda' }}</button>
+        <button name="what" value="pinned" class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-pin-angle"></i> {{ 'Unpin' if post.pinned else 'Pin' }}</button>
+      </form>
+      <form method="post" action="{{ url_for('leadership.set_flag', post_id=post.id) }}" class="d-flex gap-1 align-items-center">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="what" value="status">
+        <label class="visually-hidden" for="status">Status</label>
+        <select name="status" id="status" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()">
+          {% for key, label in statuses %}<option value="{{ key }}" {{ 'selected' if post.status == key }}>{{ label }}</option>{% endfor %}
+        </select>
+        <noscript><button class="btn btn-sm btn-outline-secondary">Set</button></noscript>
+      </form>
+      {% if can_change(post) %}
+      <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('leadership.edit', post_id=post.id) }}"><i class="bi bi-pencil"></i> Edit</a>
+      <form method="post" action="{{ url_for('leadership.delete', post_id=post.id) }}" onsubmit="return confirm('Delete this post and its replies?')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i> Delete</button>
+      </form>
+      {% endif %}
+    </div>
+  </article>
+
+  <section class="lh-thread" aria-label="Replies">
+    <h2>{{ post.comments|length }} repl{{ 'y' if post.comments|length == 1 else 'ies' }}</h2>
+    {% for c in post.comments %}
+    <div class="lh-comment {{ 'new' if last_seen and c.created_at > last_seen and c.author_id != current_user.id }} {{ 'private' if c.leaders_only }}" id="c{{ c.id }}">
+      <div class="lh-meta"><b>{{ c.author_name }}</b>{% if post.from_player and c.author_id == post.author_id %} <span class="lh-tag">Asker</span>{% endif %} · {{ c.created_at|lh_ago }}
+        {% if c.leaders_only %}<span class="lh-tag private"><i class="bi bi-lock"></i> Leaders only</span>{% endif %}
+        {% if last_seen and c.created_at > last_seen and c.author_id != current_user.id %}<span class="badge rounded-pill bg-success">New</span>{% endif %}</div>
+      <div class="lh-body">{{ render(c.body) }}</div>
+      {% if can_change(c) %}
+      <form method="post" action="{{ url_for('leadership.delete_comment', comment_id=c.id) }}" onsubmit="return confirm('Delete this reply?')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-link btn-sm p-0 lh-del">Delete</button>
+      </form>
+      {% endif %}
+    </div>
+    {% endfor %}
+    <form method="post" action="{{ url_for('leadership.comment', post_id=post.id) }}" class="lh-reply" id="reply">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label class="form-label" for="body">Reply</label>
+      <textarea class="form-control mb-2" id="body" name="body" rows="3" required
+                placeholder="{{ 'What did you notice? A time like 3:42 jumps the video there.' if video and video.embed_url else 'What do you think?' }}"></textarea>
+      {% if post.from_player %}
+      <div class="d-flex gap-2 flex-wrap">
+        <button class="btn btn-primary btn-sm" name="visibility" value="asker"><i class="bi bi-reply"></i> Reply to {{ post.author_name }}</button>
+        <button class="btn btn-outline-secondary btn-sm" name="visibility" value="leaders"><i class="bi bi-lock"></i> Leaders-only note</button>
+      </div>
+      {% else %}
+      <button class="btn btn-primary btn-sm">Reply</button>
+      {% endif %}
+    </form>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Timestamps in the post and replies jump the video to that moment.
+document.addEventListener('click', function (e) {
+  var link = e.target.closest('.lh-ts');
+  var player = document.getElementById('lh-player');
+  if (!link || !player) return;
+  e.preventDefault();
+  player.src = player.dataset.base + '?start=' + link.dataset.seconds + '&autoplay=1';
+  document.getElementById('lh-video').scrollIntoView({behavior: 'smooth', block: 'center'});
+});
+</script>
+{% endblock %}

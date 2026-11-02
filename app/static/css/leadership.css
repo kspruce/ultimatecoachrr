@@ -1,0 +1,87 @@
+/* Leadership hub. Colours come from theme.css tokens; cards and search reuse handbook.css. */
+
+.lh-top { display: flex; align-items: baseline; gap: .75rem; flex-wrap: wrap; margin-bottom: .5rem; }
+.lh-home { font-family: var(--font-serif); font-size: 1.3rem; color: var(--ink); text-decoration: none; display: inline-flex; gap: .45rem; align-items: center; }
+.lh-home .bi { color: var(--club-ink); }
+.lh-who { font-size: .72rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
+.lh-hubtabs { display: flex; gap: .25rem; border-bottom: 1px solid var(--rule); margin-bottom: 1.25rem; overflow-x: auto; }
+.lh-hubtabs a { flex: none; padding: .55rem .9rem; color: var(--ink-2); font-weight: 600; font-size: .92rem; text-decoration: none; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
+.lh-hubtabs a:hover { color: var(--ink); }
+.lh-hubtabs a.active { color: var(--club-ink); border-bottom-color: var(--club); }
+
+.lh-filters { display: flex; justify-content: space-between; align-items: center; gap: .75rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.lh-chips { display: flex; gap: .4rem; flex-wrap: wrap; }
+.lh-chip {
+  display: inline-flex; gap: .35rem; align-items: center; padding: .32rem .8rem; border: 1px solid var(--rule); border-radius: 999px;
+  background: var(--card); color: var(--ink-2); font-size: .86rem; font-weight: 600; text-decoration: none; cursor: pointer; margin: 0;
+}
+.lh-chip:hover { border-color: var(--rule-strong); color: var(--ink); }
+.lh-chip.active, .btn-check:checked + .lh-chip { background: var(--club); border-color: var(--club); color: var(--on-club); }
+.btn-check:focus-visible + .lh-chip { outline: 2px solid var(--accent); }
+
+.lh-agenda-note { display: inline-flex; gap: .45rem; align-items: center; margin-bottom: 1rem; padding: .45rem .85rem; border-radius: var(--radius-sm);
+  background: var(--accent-soft); color: var(--ink); text-decoration: none; font-weight: 600; font-size: .9rem; }
+
+.lh-feed { display: grid; gap: .55rem; max-width: 860px; }
+.lh-item { display: flex; gap: .85rem; align-items: flex-start; padding: .8rem 1rem; border: 1px solid var(--rule); border-radius: var(--radius-sm);
+  background: var(--card); color: var(--ink); text-decoration: none; }
+.lh-item:hover { border-color: var(--club-ink); }
+.lh-item.unread { border-left: 3px solid var(--ok); }
+.lh-item-main { display: grid; gap: .15rem; min-width: 0; }
+.lh-item-title { font-weight: 700; color: var(--ink); text-decoration: none; overflow-wrap: anywhere; }
+.lh-meta { color: var(--ink-3); font-size: .84rem; }
+.lh-kind { flex: none; width: 2.1rem; height: 2.1rem; border-radius: 50%; display: grid; place-items: center; background: var(--sunken); color: var(--club-ink); }
+.lh-kind-footage { background: var(--club-soft); }
+.lh-kind-article { background: var(--accent-soft); color: var(--ink); }
+.lh-kind-question { background: var(--warn-soft); color: var(--ink); }
+.lh-pin { color: var(--accent-ink); }
+.lh-flag { color: var(--ok); font-weight: 600; }
+.lh-status { font-weight: 600; }
+.lh-status-actioned { color: var(--ok); }
+.lh-status-archived { color: var(--ink-3); }
+.lh-empty { max-width: 640px; }
+
+.lh-form { max-width: 760px; }
+.lh-attached { font-size: .92rem; color: var(--ink-2); }
+
+.lh-post-wrap { display: grid; gap: 1.25rem; max-width: 860px; }
+.lh-post { display: grid; gap: 1rem; }
+.lh-post h1 { font-family: var(--font-serif); font-weight: 400; font-size: clamp(1.5rem, 3vw, 1.9rem); margin: 0 0 .25rem; overflow-wrap: anywhere; }
+.lh-video { position: relative; aspect-ratio: 16 / 9; border-radius: var(--radius-sm); overflow: hidden; background: #000; }
+.lh-video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.lh-linkcard { display: flex; gap: .75rem; align-items: center; padding: .7rem .9rem; border: 1px solid var(--rule); border-radius: var(--radius-sm);
+  background: var(--sunken); color: var(--ink); text-decoration: none; min-width: 0; }
+.lh-linkcard:hover { border-color: var(--club-ink); }
+.lh-linkcard .bi { font-size: 1.2rem; color: var(--club-ink); }
+.lh-linkcard > span { display: grid; min-width: 0; }
+.lh-url { color: var(--ink-3); font-size: .8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lh-body { white-space: pre-line; overflow-wrap: anywhere; line-height: 1.55; }
+.lh-ts { font-weight: 600; font-variant-numeric: tabular-nums; }
+.lh-actions { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; border-top: 1px solid var(--rule); padding-top: .75rem; }
+.lh-actions form { display: flex; gap: .4rem; margin: 0; }
+
+.lh-thread { display: grid; gap: .65rem; }
+.lh-thread h2 { font-size: 1rem; font-weight: 700; margin: 0; }
+.lh-comment { padding: .75rem 1rem; border: 1px solid var(--rule); border-radius: var(--radius-sm); background: var(--card); display: grid; gap: .3rem; }
+.lh-comment.new { border-left: 3px solid var(--ok); }
+.lh-del { color: var(--ink-3); font-size: .8rem; }
+.lh-reply { padding: .9rem 1rem; border: 1px dashed var(--rule-strong); border-radius: var(--radius-sm); }
+
+.lh-agenda { list-style: none; padding: 0; margin: 0; display: grid; gap: .65rem; max-width: 860px; counter-reset: agenda; }
+.lh-agenda li { display: flex; gap: 1rem; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; counter-increment: agenda; }
+.lh-agenda li::before { content: counter(agenda); flex: none; width: 1.8rem; height: 1.8rem; border-radius: 50%; display: grid; place-items: center;
+  background: var(--club); color: var(--on-club); font-weight: 700; font-size: .85rem; }
+.lh-agenda-main { flex: 1 1 260px; display: grid; gap: .2rem; min-width: 0; }
+.lh-snippet { margin: .2rem 0 0; color: var(--ink-2); font-size: .92rem; }
+
+/* Players' questions */
+.lh-waiting { background: var(--warn-soft); margin-right: .5rem; }
+.lh-wait { color: var(--warn); }
+.lh-tag { display: inline-flex; gap: .25rem; align-items: center; padding: .05rem .5rem; border-radius: 999px; background: var(--sunken); color: var(--ink-2); font-size: .74rem; font-weight: 700; }
+.lh-tag.private { background: var(--warn-soft); color: var(--ink); }
+.lh-comment.private { background: var(--sunken); border-style: dashed; }
+.lh-asked { display: flex; gap: .6rem; align-items: flex-start; padding: .6rem .85rem; border-radius: var(--radius-sm); background: var(--accent-soft); font-size: .92rem; }
+.lh-ask { white-space: nowrap; }
+.lh-status-answered { color: var(--ok); }
+.lh-status-waiting { color: var(--warn); }
+.lh-status-closed { color: var(--ink-3); }

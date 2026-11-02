@@ -1,5 +1,6 @@
 {# templates/playbook/play_detail.html #}
 {% extends "base.html" %}
+{% from "leadership/_ask_button.html" import ask_button with context %}
 {% from "playbook/_macros.html" import play_menu, side_badge %}
 
 {% block styles %}
@@ -58,6 +59,7 @@
     {% for tag in play.tags %}<a href="{{ url_for('playbook.index', tag=tag.name) }}" class="th-badge">#{{ tag.name }}</a>{% endfor %}
     {% if play.to_learn and play.to_learn.label %}<span class="th-badge due"><i class="bi bi-calendar-event"></i>{{ play.to_learn.label }}</span>{% endif %}
     {% if learners %}<a href="{{ url_for('playbook.learners', play_id=play.id) }}" class="th-badge"><i class="bi bi-people"></i>{{ learners[0] }} of {{ learners[1] }} learned</a>{% endif %}
+    {{ ask_button('play', play.id, 'th-badge') }}
   </div>
   {% if play.call or play.signal %}
   <div class="pb-call">

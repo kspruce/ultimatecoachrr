@@ -1,0 +1,31 @@
+{% extends "questions/_layout.html" %}
+
+{% block q_content %}
+<div class="uc-page-header">
+  <div>
+    <h1>Ask the leaders</h1>
+    <p>Your question goes to the coaches and captains. Only they and you will see it, and their answers show up under <a href="{{ url_for('questions.index') }}">My questions</a>.</p>
+  </div>
+</div>
+
+<form method="post" class="hb-card lh-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  {% if subject %}
+  <input type="hidden" name="about" value="{{ about }}">
+  <div class="lh-attached mb-3"><i class="bi {{ subject.icon }}"></i> About the {{ subject.label|lower }}: <a href="{{ subject.url }}">{{ subject.title }}</a></div>
+  {% endif %}
+  <div class="mb-3">
+    <label class="form-label" for="title">Subject <span class="hb-muted">(optional)</span></label>
+    <input class="form-control" id="title" name="title" maxlength="200" value="{{ values.title }}" placeholder="e.g. Where should I be on the pull?">
+  </div>
+  <div class="mb-3">
+    <label class="form-label" for="body">Your question</label>
+    <textarea class="form-control" id="body" name="body" rows="6" required
+              placeholder="{{ 'What would you like to know? A time like 0:42 points at a moment in the clip.' if subject and subject.label == 'Clip' else 'What would you like to know?' }}">{{ values.body }}</textarea>
+  </div>
+  <div class="d-flex gap-2">
+    <button class="btn btn-primary"><i class="bi bi-send"></i> Send to the leaders</button>
+    <a class="btn btn-outline-secondary" href="{{ subject.url if subject else url_for('questions.index') }}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

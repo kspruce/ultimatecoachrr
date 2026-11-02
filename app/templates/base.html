@@ -120,7 +120,7 @@
       {% set show_season_plan = ts and ts.season_plan_enabled and season_plan_nav() %}
       {% set show_handbook = ts and ts.leadership_handbook_enabled and handbook_nav() %}
       {% if not ts or ts.sessions_enabled or ts.fitness_enabled or show_season_plan or show_handbook or programmes_nav() %}
-      {% set in_training = in_training or request.endpoint.startswith('feedback.') or ep.startswith('season_plan.') or ep.startswith('programmes.') or ep.startswith('handbook.') %}
+      {% set in_training = in_training or request.endpoint.startswith('feedback.') or ep.startswith('season_plan.') or ep.startswith('programmes.') or ep.startswith('handbook.') or ep.startswith('leadership.') or ep.startswith('questions.') %}
       <li class="nav-item dropdown {% if in_training %}uc-active{% endif %}">
         <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
           <i class="bi bi-lightning-charge-fill"></i> Training
@@ -133,6 +133,12 @@
           {% if programmes_nav() %}
           <li><a class="dropdown-item" href="{{ url_for('programmes.index') }}">
             <i class="bi bi-journal-check"></i> Programmes</a></li>
+          {% endif %}
+          {% if my_questions_nav() %}
+          {% set answers = unseen_answers() %}
+          <li><a class="dropdown-item" href="{{ url_for('questions.index') }}">
+            <i class="bi bi-person-raised-hand"></i> My Questions
+            {% if answers %}<span class="badge rounded-pill bg-success ms-1">{{ answers }}</span>{% endif %}</a></li>
           {% endif %}
           {% if current_user.is_authenticated and current_user.player %}
           {% set unseen = unseen_feedback_count() %}
@@ -161,8 +167,10 @@
           <li><a class="dropdown-item" href="{{ url_for('feedback.hub') }}">
             <i class="bi bi-chat-square-text-fill"></i> Player Feedback</a></li>
           {% if show_handbook %}
-          <li><a class="dropdown-item" href="{{ url_for('handbook.index') }}">
-            <i class="bi bi-book"></i> Leadership Handbook</a></li>
+          {% set hub_unread = leadership_unread() %}
+          <li><a class="dropdown-item" href="{{ url_for('leadership.index') }}">
+            <i class="bi bi-people-fill"></i> Leadership Hub
+            {% if hub_unread %}<span class="badge rounded-pill bg-success ms-1">{{ hub_unread }}</span>{% endif %}</a></li>
           {% endif %}
           {% endif %}
           {% if not ts or ts.fitness_enabled %}

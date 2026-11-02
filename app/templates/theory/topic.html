@@ -1,5 +1,6 @@
 {# templates/theory/topic.html #}
 {% extends "base.html" %}
+{% from "leadership/_ask_button.html" import ask_button with context %}
 {% from "theory/_macros.html" import topic_menu %}
 
 {% block styles %}
@@ -68,6 +69,7 @@
         {% if readers %}<a href="{{ url_for('theory.readers', topic_id=topic.id) }}" class="th-badge"><i class="bi bi-people"></i>{{ readers[0] }} of {{ readers[1] }} read</a>{% endif %}
         {% if topic.assignment and topic.assignment.due_date %}<span class="th-badge due"><i class="bi bi-calendar-event"></i>Read by {{ topic.assignment.due_date.strftime('%a %-d %b') }}</span>{% endif %}
         {% for tag in topic.tags %}<a href="{{ url_for('theory.index', tag=tag.name) }}" class="th-badge">{{ tag.name }}</a>{% endfor %}
+        {% if topic.published %}{{ ask_button('topic', topic.id, 'th-badge') }}{% endif %}
       </div>
 
       {% if topic.image_url %}

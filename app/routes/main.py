@@ -83,9 +83,10 @@ def about():
 def _guide_nav():
     """The nav checks for features that only show when there's something in them."""
     from app.routes.handbook import handbook_nav
+    from app.routes.leadership import leadership_nav
     from app.routes.programmes import programme_nav
     from app.routes.season_plan import season_plan_nav
-    return {**handbook_nav(), **programme_nav(), **season_plan_nav()}
+    return {**handbook_nav(), **leadership_nav(), **programme_nav(), **season_plan_nav()}
 
 
 @bp.route('/how-to-use')

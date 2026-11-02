@@ -1,0 +1,11 @@
+{# The Leadership hub's tabs, on every hub and handbook page. #}
+<div class="lh-top">
+  <a class="lh-home" href="{{ url_for('leadership.index') }}"><i class="bi bi-people-fill"></i> Leadership hub</a>
+  <span class="lh-who">Coaches and captains only</span>
+</div>
+<nav class="lh-hubtabs" aria-label="Leadership hub">
+  {% set ep = request.endpoint or '' %}
+  <a href="{{ url_for('leadership.index') }}" class="{{ 'active' if ep in ('leadership.index', 'leadership.view', 'leadership.new', 'leadership.edit') }}"><i class="bi bi-chat-square-text"></i> Discussion</a>
+  <a href="{{ url_for('leadership.agenda') }}" class="{{ 'active' if ep == 'leadership.agenda' }}"><i class="bi bi-list-check"></i> Meeting agenda</a>
+  <a href="{{ url_for('handbook.index') }}" class="{{ 'active' if ep.startswith('handbook.') }}"><i class="bi bi-book"></i> Handbook</a>
+</nav>

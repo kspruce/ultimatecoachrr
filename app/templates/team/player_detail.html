@@ -358,6 +358,29 @@
     {% else %}
       {{ empty('No coaching notes yet.' if current_user.is_coach else 'No notes shared with you yet.') }}
     {% endfor %}
+
+    {% if is_me and my_questions_nav() %}
+    {% set q = my_recent_questions() %}
+    <div class="th-label d-flex justify-content-between align-items-center" id="my-questions">
+      <span>My Questions</span>
+      <span class="d-flex gap-3">
+        <a href="{{ url_for('questions.ask') }}" style="text-transform:none;letter-spacing:0">Ask the leaders</a>
+        {% if q[0] %}<a href="{{ url_for('questions.index') }}" style="text-transform:none;letter-spacing:0">All</a>{% endif %}
+      </span>
+    </div>
+    {% if q[0] %}
+    <div class="th-list pp-section">
+      {% for p in q[0] %}
+      <a class="th-row" href="{{ url_for('questions.view', post_id=p.id) }}">
+        <i class="bi bi-person-raised-hand" aria-hidden="true"></i>
+        <div class="th-row-text"><div class="th-row-title">{{ p.title }}</div>
+          <div class="th-row-sub">{{ {'waiting': 'Waiting for a reply', 'answered': 'Answered', 'closed': 'Closed'}[p.player_status] }} · {{ p.last_activity_at|lh_ago }}</div></div>
+        {% if p.id in q[1] %}<span class="th-badge read">New answer</span>{% endif %}
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}{{ empty('Nothing asked yet. Tap "Ask the leaders" on a play, clip, drill or theory topic, or ask here.') }}{% endif %}
+    {% endif %}
   </section>
   {% endif %}
 

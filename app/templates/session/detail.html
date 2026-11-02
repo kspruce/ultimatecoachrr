@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "leadership/_ask_button.html" import ask_button with context %}
 {% from "playbook/_macros.html" import preview_script %}
 {% from 'session/partials/_badges.html' import session_type_colour, component_colour, component_icon %}
 {% from 'training/_macros.html' import answer_buttons, squad_pills %}
@@ -26,6 +27,7 @@
                 <a href="{{ url_for('session.index') }}" class="btn btn-secondary">
                     <i class="bi bi-arrow-left"></i> Back to Sessions
                 </a>
+                {{ ask_button('session', session.id, 'btn btn-outline-secondary') }}
                 {% if current_user.is_coach %}
                 <a href="{{ url_for('training.plan', session_id=session.id) }}" class="btn btn-primary">
                     <i class="bi bi-layout-text-sidebar"></i> {{ 'Edit plan' if components else 'Plan this session' }}

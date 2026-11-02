@@ -1,0 +1,59 @@
+{% extends "questions/_layout.html" %}
+{% from "questions/_status.html" import status %}
+
+{% block q_content %}
+<article class="hb-card lh-post">
+  <div class="hb-crumbs"><a href="{{ url_for('questions.index') }}">My questions</a> › {{ status(post) }}</div>
+  <header>
+    <h1>{{ post.title }}</h1>
+    <div class="lh-meta">You asked {{ post.created_at|lh_ago }} · only you and the coaches and captains see this</div>
+  </header>
+  {% if video and video.embed_url %}
+  <div class="lh-video" id="lh-video">
+    <iframe id="lh-player" src="{{ video.embed_url }}" data-base="{{ video.embed_url.split('?')[0] }}"
+            title="{{ video.label or post.title }}" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe>
+  </div>
+  {% endif %}
+  {% if subject %}
+  <div class="lh-attached"><i class="bi {{ subject.icon }}"></i> {{ subject.label }}: <a href="{{ subject.url }}">{{ subject.title }}</a></div>
+  {% endif %}
+  <div class="lh-body">{{ render(post.body) }}</div>
+  {% if not comments %}
+  <form method="post" action="{{ url_for('questions.delete', post_id=post.id) }}" onsubmit="return confirm('Delete this question?')">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="btn btn-link btn-sm p-0 lh-del">Delete question</button>
+  </form>
+  {% endif %}
+</article>
+
+<section class="lh-thread" aria-label="Answers">
+  <h2>{{ comments|length }} repl{{ 'y' if comments|length == 1 else 'ies' }}</h2>
+  {% for c in comments %}
+  <div class="lh-comment" id="c{{ c.id }}">
+    <div class="lh-meta"><b>{{ 'You' if c.author_id == current_user.id else c.author_name }}</b> · {{ c.created_at|lh_ago }}</div>
+    <div class="lh-body">{{ render(c.body) }}</div>
+  </div>
+  {% else %}
+  <p class="hb-muted m-0">No answer yet. You'll see it here{% if current_user.discord_id %} and get a Discord message{% endif %} when a coach or captain replies.</p>
+  {% endfor %}
+  <form method="post" action="{{ url_for('questions.reply', post_id=post.id) }}" class="lh-reply" id="reply">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label class="form-label" for="body">{{ 'Follow up' if comments else 'Add something' }}</label>
+    <textarea class="form-control mb-2" id="body" name="body" rows="3" required></textarea>
+    <button class="btn btn-primary btn-sm">Send</button>
+  </form>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('click', function (e) {
+  var link = e.target.closest('.lh-ts');
+  var player = document.getElementById('lh-player');
+  if (!link || !player) return;
+  e.preventDefault();
+  player.src = player.dataset.base + '?start=' + link.dataset.seconds + '&autoplay=1';
+  document.getElementById('lh-video').scrollIntoView({behavior: 'smooth', block: 'center'});
+});
+</script>
+{% endblock %}

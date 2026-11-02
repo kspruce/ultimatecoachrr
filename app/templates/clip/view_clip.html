@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "leadership/_ask_button.html" import ask_button with context %}
 
 {% block styles %}
 <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
@@ -481,6 +482,7 @@
         <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap">
           <div style="flex:1;min-width:0">
             <h1 class="clip-main-title">{{ clip.title }}</h1>
+            {% if ask_leaders_on() %}<div class="mb-1">{{ ask_button('clip', clip.id) }}</div>{% endif %}
             <div class="clip-header-meta">
               {% if clip.game %}
               <span><i class="bi bi-calendar3"></i> vs {{ clip.game.opponent }}

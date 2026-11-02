@@ -93,7 +93,7 @@ def test_leaders_read_search_and_navigate(app, herd):
     enable(herd['team'])
     for who in ('coach', 'captain'):
         c = client(app, herd, who)
-        assert '/handbook/' in c.get(NAV_PAGE).get_data(as_text=True)
+        assert '/leadership/' in c.get(NAV_PAGE).get_data(as_text=True)
         home = c.get('/handbook/').get_data(as_text=True)
         assert 'How we lead Herd' in home and 'Lessons from great teams' in home and 'Fast break' in home
 
