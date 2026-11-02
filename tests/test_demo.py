@@ -155,3 +155,20 @@ def test_superadmin_sets_up_and_removes_the_demo_from_the_teams_page(app):
     client.post('/teams/demo', data={'action': 'remove'})
     assert demo_team() is None and demo_user() is None
     assert db.session.get(type(home), home.id) is not None
+
+
+def test_throws_saved_without_a_team_dont_stop_it_being_removed(app):
+    # Throws recorded before they were stamped with their team (as on the
+    # live site): deleting the team must take them too, and only them
+    from app.models.throws import Throw
+    other = stats_data.build_team('Thundering Herd', 'herd')
+    admin = stats_data.build_admin(other, 'herdadmin')
+    stats_data.record_season(app, other, admin, stats_data.build_players(other, 14),
+                             games_per_tournament=1, points_per_game=2)
+    team = build(app)
+    assert Throw.query.filter_by(team_organization_id=team.id).count() > 0  # stamped now
+    theirs = Throw.query.filter_by(team_organization_id=other.id).count()
+    db.session.execute(Throw.__table__.update().values(team_organization_id=None))
+    db.session.commit()
+    assert remove(app)
+    assert Throw.query.count() == theirs and demo_team() is None
