@@ -4,7 +4,7 @@
 <div class="uc-page-header">
   <div>
     <div class="pg-label">{{ 'Template' if programme.is_template else 'Programme' }}{% if programme.archived %} · archived{% endif %}</div>
-    <h1>{{ programme.name }}</h1>
+    <h1>Overview</h1>
     {% if programme.description %}<p class="pg-pre">{{ programme.description }}</p>{% endif %}
   </div>
 </div>
@@ -59,7 +59,7 @@
     {% endif %}
   </div>
   <hr>
-  <form method="post" action="{{ url_for('programmes.duplicate', programme_id=programme.id) }}" class="row g-2 align-items-end">
+  <form method="post" action="{{ url_for('programmes.duplicate', programme_id=programme.id) }}" class="row g-2 align-items-end" id="duplicate">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="col-md-4"><label class="form-label small" for="dup-name">Copy as</label>
       <input class="form-control form-control-sm" id="dup-name" name="name" value="{{ programme.name }} (copy)"></div>
@@ -68,12 +68,8 @@
         <option value="programme">Programme</option><option value="template" {{ 'selected' if programme.is_template }}>Template</option></select></div>
     <div class="col-md-3"><label class="form-label small" for="dup-start">Start date</label>
       <input type="date" class="form-control form-control-sm" id="dup-start" name="start_date"></div>
-    <div class="col-md-2"><button class="btn btn-sm btn-outline-primary w-100"><i class="bi bi-copy"></i> Duplicate</button></div>
+    <div class="col-md-2"><button class="btn btn-sm btn-outline-primary w-100"><i class="bi bi-files"></i> Duplicate</button></div>
   </form>
-  <hr>
-  <div class="d-flex gap-2 flex-wrap">
-    {{ post_button(url_for('programmes.archive', programme_id=programme.id), 'Restore' if programme.archived else 'Archive') }}
-    {{ post_button(url_for('programmes.delete', programme_id=programme.id), 'Delete', 'btn btn-sm btn-outline-danger', confirm='Delete this programme and all its versions?') }}
-  </div>
+  <p class="small pg-muted mt-3 mb-0"><i class="bi bi-archive"></i> To archive or delete this programme, go to <a href="{{ url_for('programmes.settings', programme_id=programme.id) }}#danger-zone">Settings</a>.</p>
 </div>
 {% endblock %}

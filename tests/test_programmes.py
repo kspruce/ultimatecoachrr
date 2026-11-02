@@ -729,6 +729,75 @@ def test_xlsx_import(app, clubs):
     assert 'No errors' in page and '10 m sprint' in page
 
 
+def test_excel_template_has_instructions_dropdowns_and_imports_cleanly(app, clubs):
+    from openpyxl import load_workbook
+    c = client(app, clubs, 'other_coach')
+    assert 'Excel template' in ok(c.get('/programmes/import'))
+    r = c.get('/programmes/import/template.xlsx')
+    assert r.status_code == 200 and 'spreadsheetml' in r.mimetype
+    wb = load_workbook(io.BytesIO(r.data))
+    assert wb.sheetnames == ['Instructions', 'programme', 'tests']
+    ws = wb['programme']
+    assert [cell.value for cell in ws[1]] == pimport.PROGRAMME_COLUMNS
+    assert ws.freeze_panes == 'B2' and ws['A1'].comment is not None
+    lists = {str(dv.sqref).split(':')[0][:-1] for dv in ws.data_validations.dataValidation if dv.type == 'list'}
+    letter = {col: ws.cell(row=1, column=i + 1).column_letter for i, col in enumerate(pimport.PROGRAMME_COLUMNS)}
+    assert {letter['week_type'], letter['session_type'], letter['requirement']} <= lists
+    session_type = next(dv for dv in ws.data_validations.dataValidation
+                        if str(dv.sqref).startswith(letter['session_type'] + '2:'))
+    assert not session_type.showErrorMessage  # own words are allowed
+    assert 'better' in str([wb['Instructions'].cell(row=i, column=1).value for i in range(1, 80)])
+
+    # The examples import as they are, both through the parser and the page
+    sheets = pimport.rows_from_xlsx(r.data)
+    parsed = pimport.parse(sheets['programme'], sheets['tests'])
+    assert parsed['errors'] == [] and parsed['warnings'] == []
+    assert parsed['counts']['tracks'] == 2 and parsed['counts']['tests'] == 1
+    page = ok(c.post('/programmes/import', data={'file': (io.BytesIO(r.data), 'our-plan.xlsx')},
+                     content_type='multipart/form-data'))
+    assert 'No errors' in page and '10 m sprint' in page
+    # The CSV templates are the same examples
+    csv_parsed = pimport.parse(pimport.rows_from_csv(ok(c.get('/programmes/import/template/programme.csv'))),
+                               pimport.rows_from_csv(ok(c.get('/programmes/import/template/tests.csv'))))
+    assert csv_parsed['errors'] == [] and csv_parsed['counts'] == parsed['counts']
+
+
+def test_archive_and_delete_from_settings(app, clubs):
+    c, pid = build_on_site(app, clubs)
+    page = ok(c.get(f'/programmes/{pid}/settings'))
+    assert 'id="danger-zone"' in page and f'/programmes/{pid}/delete' in page and f'/programmes/{pid}/archive' in page
+    # The programme header and tabs
+    assert 'class="pg-tabs"' in page and 'Draft v1' in page and f'/programmes/{pid}/publish' in page
+    ok(c.post(f'/programmes/{pid}/archive', data={'next': 'settings'}), 302)
+    page = ok(c.get(f'/programmes/{pid}/settings'))
+    assert 'Restore this programme' in page and 'Archived' in page
+    ok(c.post(f'/programmes/{pid}/archive', data={'next': 'settings'}), 302)
+
+    # Players enrolled but nothing logged: it can still be deleted
+    ok(c.post(f'/programmes/{pid}/publish', data={}), 302)
+    ok(c.post(f'/programmes/{pid}/players', data={'action': 'enrol', 'player_ids': [str(clubs['other_player'])]}), 302)
+    ok(c.post(f'/programmes/{pid}/delete'), 302)
+    with app.app_context():
+        assert db.session.get(Programme, pid) is None and ProgrammeEnrolment.query.count() == 0
+
+    # Once a player has logged a session it can only be archived
+    c, pid = build_on_site(app, clubs, name='Logged block')
+    ok(c.post(f'/programmes/{pid}/publish', data={}), 302)
+    ok(c.post(f'/programmes/{pid}/players', data={'action': 'enrol', 'player_ids': [str(clubs['other_player'])]}), 302)
+    with app.app_context():
+        enrolment = ProgrammeEnrolment.query.one()
+        session = db.session.get(Programme, pid).published.tracks[0].weeks[0].sessions[0]
+        db.session.add(SessionLog(enrolment_id=enrolment.id, session_id=session.id, session_key=session.key, status='completed',
+                                  team_organization_id=clubs['other']))
+        db.session.commit()
+    page = ok(c.get(f'/programmes/{pid}/settings'))
+    assert '1 player has logged' in page and 'disabled' in page
+    r = c.post(f'/programmes/{pid}/delete')
+    assert r.status_code == 302 and r.headers['Location'].endswith('/settings#danger-zone')
+    with app.app_context():
+        assert db.session.get(Programme, pid) is not None
+
+
 def test_export_round_trips(app, clubs):
     c, pid = build_on_site(app, clubs)
     ok(c.post(f'/programmes/{pid}/publish', data={}), 302)

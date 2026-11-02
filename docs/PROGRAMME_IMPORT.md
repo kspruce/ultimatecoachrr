@@ -13,7 +13,10 @@ same content is never imported twice into one club (the import is matched
 on a hash of its rows; another club importing the same file gets its own
 copy).
 
-Download blank templates from the import page, or export any programme
+Download the **Excel template** from the import page: an Instructions
+sheet, then the `programme` and `tests` sheets with a note on every
+column, dropdowns for the fixed values, number checks and example rows
+(delete them before uploading). Plain CSV templates are there too. Or export any programme
 (**Export programme / Export tests**): the export is the same format, so an
 exported programme imports back unchanged.
 
