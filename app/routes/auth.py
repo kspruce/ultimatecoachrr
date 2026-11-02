@@ -269,6 +269,22 @@ def login():
         return redirect(url_for('auth.login'))
 
 
+@bp.route('/demo', methods=['POST'])
+@limiter.limit('30 per minute')  # a club trying it together shares one IP
+def demo_login():
+    """Sign in as the shared, read-only demo coach (app/demo)."""
+    from app.demo import demo_user
+    user = demo_user()
+    if user is None or not user.memberships:
+        flash('The demo isn\'t set up on this site.', 'info')
+        return redirect(url_for('auth.login'))
+    if current_user.is_authenticated:
+        logout_user()
+    login_user(user)
+    session['current_team_id'] = user.memberships[0].team_organization_id
+    return redirect(url_for('main.index'))
+
+
 @bp.route('/register')
 def register():
     """Getting started: join an existing team with a code, or register a new

@@ -1,0 +1,11 @@
+{# "Try the demo": signs in as the shared, read-only demo coach. Shown only
+   when the demo team is set up (flask seed-demo). Pass btn_class. #}
+{% if demo_available() %}
+<form method="post" action="{{ url_for('auth.demo_login') }}" class="d-inline m-0">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <button type="submit" class="{{ btn_class|default('btn btn-outline-secondary') }}"
+          title="Look round a made-up team as its coach. Nothing you do is saved.">
+    <i class="bi bi-play-circle me-1"></i>Try the demo
+  </button>
+</form>
+{% endif %}

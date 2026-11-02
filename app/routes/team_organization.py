@@ -34,6 +34,32 @@ def index():
     teams = [t for t in accessible_teams(current_user) if _runs_team(t.id)]
     return render_template('team_organization/index.html', teams=teams)
 
+@bp.route('/demo', methods=['POST'])
+@login_required
+@superadmin_required
+def demo_team():
+    """Set up, rebuild or remove the demo team (app/demo)."""
+    from flask import current_app
+    from app import demo
+
+    try:
+        if request.form.get('action') == 'remove':
+            demo.remove(current_app)
+            flash('The demo team and the demo login are gone.', 'success')
+        else:
+            rebuilt = demo.remove(current_app)
+            demo.build(current_app)
+            flash(f'The demo team is {"rebuilt" if rebuilt else "set up"}: "Try the demo" is on the login page.',
+                  'success')
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f'Demo team: {e}', exc_info=True)
+        flash(f'Could not set up the demo team: {e}', 'danger')
+    if session.get('current_team_id') and db.session.get(TeamOrganization, session['current_team_id']) is None:
+        session.pop('current_team_id', None)
+    return redirect(url_for('team_organization.index'))
+
+
 @bp.route('/add', methods=['GET', 'POST'])
 @login_required
 def add():

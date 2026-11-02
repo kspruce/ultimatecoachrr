@@ -240,6 +240,7 @@
     <div class="sash-cta">
       <a href="{{ url_for('auth.register') }}" class="uc-nav-cta" style="padding:.6rem 1.2rem!important;font-size:.92rem">Get started</a>
       <a href="{{ url_for('auth.login') }}" class="uc-nav-ghost" style="padding:.55rem 1.2rem">Log in</a>
+      {% with btn_class='uc-nav-ghost' %}{% include 'partials/_demo_button.html' %}{% endwith %}
     </div>
     {% endif %}
   </div>

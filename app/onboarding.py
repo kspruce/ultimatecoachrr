@@ -335,8 +335,8 @@ def step_target(user, step):
 
 def needs_welcome(user):
     """New to the app, or promoted since they last saw the welcome."""
-    if not user.is_authenticated or user.role not in ROLES:
-        return False
+    if not user.is_authenticated or user.role not in ROLES or user.is_guest:
+        return False  # (the demo login is read-only: it can't be welcomed)
     record = get_record(user)
     if record is None or not record.welcomed_role:
         return True

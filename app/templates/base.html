@@ -431,8 +431,14 @@
      style="border-radius:10px">
   <i class="bi bi-eye-fill" style="font-size:1rem;flex-shrink:0"></i>
   <span>
+    {% if current_user.is_demo %}
+    <strong>Demo team</strong> — You're looking round a made-up team as its coach.
+    Open anything you like; nothing you change is saved.
+    <a href="{{ url_for('auth.register') }}" class="fw-semibold">Set up your own team</a>
+    {% else %}
     <strong>Guest / Demo Mode</strong> — You are viewing a read-only demonstration account.
     Browsing all sections is allowed, but no changes can be saved.
+    {% endif %}
   </span>
 </div>
 {% endif %}

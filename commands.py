@@ -398,4 +398,27 @@ def register_commands(app):
     app.cli.add_command(reset_two_factor)
     app.cli.add_command(backfill_seasons)
     app.cli.add_command(send_rsvp_reminders)
+    app.cli.add_command(seed_demo)
     register_tag_commands(app)
+
+
+@click.command('seed-demo')
+@click.option('--reset', is_flag=True, help='Delete the demo team first and build it again (dates move on to today).')
+@click.option('--remove', 'remove_only', is_flag=True, help='Delete the demo team and the demo login.')
+@with_appcontext
+def seed_demo(reset, remove_only):
+    """Set up the demo team and its shared read-only login (demo / demo)."""
+    from flask import current_app
+    from app import demo
+
+    if reset or remove_only:
+        click.echo('Removed the demo team.' if demo.remove(current_app) else 'There was no demo team.')
+        if remove_only:
+            return
+    if demo.demo_team() is not None:
+        click.echo('The demo team is already set up. Use --reset to rebuild it.')
+        return
+    click.echo('Building the demo team (recording its games takes a minute)...')
+    team = demo.build(current_app)
+    click.echo(f'Done: "{team.name}". Anyone can look round with "Try the demo" on the login page, '
+               f'or sign in as {demo.DEMO_USERNAME} / {demo.DEMO_PASSWORD}.')
