@@ -63,9 +63,15 @@ def throws_for_point(point, events=None):
 def rebuild_point_throws(point):
     """Replace a point's stored throws with the ones its events describe.
     Flushes but doesn't commit. Returns (removed, added)."""
-    db.session.flush()  # so new or deleted events are seen
+    # The old throws go first: they may point at an event the caller has
+    # just deleted, which the database won't let go while they do.
+    with db.session.no_autoflush:
+        old = Throw.query.filter_by(point_id=point.id).all()
+    for throw in old:
+        db.session.delete(throw)
+    removed = len(old)
+    db.session.flush()  # the throws, then new or deleted events
     events = Event.query.filter_by(point_id=point.id).all()
-    removed = Throw.query.filter_by(point_id=point.id).delete(synchronize_session='fetch')
     rows = throws_for_point(point, events)
     db.session.add_all(rows)
     db.session.flush()
