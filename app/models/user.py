@@ -45,6 +45,10 @@ class User(UserMixin, db.Model):
     # Global superadmin (you = username 'admin')
     is_superadmin = db.Column(db.Boolean, default=False, nullable=False)
 
+    # The shared demo login (app/demo): sees its team as its role does but,
+    # like a guest, can't change anything
+    is_demo = db.Column(db.Boolean, default=False, nullable=False, server_default=db.false())
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     # Set by "Connect Discord" (signing in with Discord), never typed in
     discord_id = db.Column(db.String(64), nullable=True, unique=True)
@@ -195,7 +199,7 @@ class User(UserMixin, db.Model):
     @property
     def is_guest(self):
         """True if this is a read-only guest/demo account."""
-        return self.role == "guest"
+        return self.role == "guest" or bool(self.is_demo)
 
     @property
     def is_admin(self):

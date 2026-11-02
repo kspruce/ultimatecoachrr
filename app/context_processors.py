@@ -44,7 +44,7 @@ def team_info_processor():
             **season_info,
             'current_team': current_team,
             'available_teams': available_teams,
-            'is_guest': current_user.role == 'guest',
+            'is_guest': current_user.is_guest,
             **_theme(current_team.settings if current_team else None),
         }
 

@@ -88,6 +88,12 @@
       </button>
     </form>
 
+    {% if demo_available() %}
+    <div class="text-center mt-3 pt-3" style="border-top:1px solid var(--uc-gray-200)">
+      <p style="font-size:.83rem;color:var(--uc-gray-400);margin-bottom:.5rem">Just looking? See a made-up team as its coach.</p>
+      {% with btn_class='btn btn-outline-secondary w-100' %}{% include 'partials/_demo_button.html' %}{% endwith %}
+    </div>
+    {% endif %}
   </div>
 
   <p style="text-align:center;font-size:.8rem;color:var(--uc-gray-400);margin-top:1.25rem">

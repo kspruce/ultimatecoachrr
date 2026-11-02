@@ -36,6 +36,7 @@
   <div class="d-flex gap-2 flex-wrap">
     <a href="{{ url_for('auth.register') }}" class="btn btn-light">Get your team started</a>
     <a href="{{ url_for('main.how_to_use') }}" class="btn btn-outline-light">How it works</a>
+    {% with btn_class='btn btn-outline-light' %}{% include 'partials/_demo_button.html' %}{% endwith %}
   </div>
   {% endif %}
 </div>
@@ -83,6 +84,7 @@
   <div class="d-flex gap-2 justify-content-center flex-wrap">
     <a href="{{ url_for('auth.register') }}" class="btn btn-primary">Get started</a>
     <a href="{{ url_for('auth.login') }}" class="btn btn-outline-secondary">Log in</a>
+    {% include 'partials/_demo_button.html' %}
   </div>
 </div>
 {% endif %}

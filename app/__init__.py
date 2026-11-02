@@ -112,6 +112,15 @@ def create_app(config_class=Config):
     from app.help_guide import feature_for_endpoint
     app.jinja_env.globals['help_for_endpoint'] = feature_for_endpoint
 
+    def demo_available():
+        from app.demo import demo_user
+        try:
+            return demo_user() is not None
+        except Exception:  # e.g. before the migration has run
+            db.session.rollback()
+            return False
+    app.jinja_env.globals['demo_available'] = demo_available
+
     # Register custom CLI commands
     from commands import register_commands
     register_commands(app)
@@ -340,12 +349,18 @@ def create_app(config_class=Config):
 
         if not current_user.is_authenticated:
             return None
-        if getattr(current_user, 'role', None) != 'guest':
+        if not getattr(current_user, 'is_guest', False):
             return None
+        # Pages that change something though they're opened with GET: linking
+        # a Discord account to the login, making a public link to a session
+        if ((req.blueprint == 'discord' and req.endpoint != 'discord.settings')
+                or req.endpoint == 'session.generate_share_link'):
+            flash('You are viewing in guest/demo mode — changes cannot be saved.', 'warning')
+            return redirect(url_for('main.index'))
         if req.method in ('GET', 'HEAD', 'OPTIONS'):
             return None
         # Allow the logout POST (CSRF-protected form submit)
-        if req.endpoint in ('auth.logout', 'auth.login'):
+        if req.endpoint in ('auth.logout', 'auth.login', 'auth.demo_login'):
             return None
 
         # AJAX / JSON callers
