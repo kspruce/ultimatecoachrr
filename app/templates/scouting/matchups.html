@@ -145,7 +145,7 @@ details.mu-others > summary { cursor:pointer; font-weight:600; color:var(--uc-gr
     {% if current_user.is_coach and suggestions %}
     <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
       <span class="small text-muted me-auto">{{ suggestions|length }} suggestion{{ 's' if suggestions|length != 1 }} from your defenders' strengths</span>
-      <button type="submit" name="use_all" value="1" class="btn btn-sm btn-primary"><i class="bi bi-check2-all me-1"></i>Use all suggestions</button>
+      <button type="submit" name="use_all" value="1" class="btn btn-sm btn-primary"><i class="bi bi-lightning-charge me-1"></i>Use all suggestions</button>
     </div>
     {% endif %}
 

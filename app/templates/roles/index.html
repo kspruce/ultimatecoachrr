@@ -67,7 +67,7 @@
     <p class="mb-2">No roles yet. Start from a suggested set of O-line and D-line roles and change them to match how you play, or add your own below.</p>
     <form method="post" action="{{ url_for('roles.starter') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button class="btn btn-primary" type="submit"><i class="bi bi-list-check me-1"></i>Start with suggested roles</button>
+      <button class="btn btn-primary" type="submit"><i class="bi bi-lightning-charge me-1"></i>Start with suggested roles</button>
     </form>
   </div>
   {% endif %}
