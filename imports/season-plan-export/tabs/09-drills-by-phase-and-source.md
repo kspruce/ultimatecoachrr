@@ -7,7 +7,7 @@ A one-page summary of each phase and every drill and game the sessions use, grou
 When planning or adapting a session, look in this order:
 
 1. **Ian French (IF) games** for the main block of every session (game, short drill, game). They follow the constraints-led approach: change the rules, numbers, space or scoring so players find the solution themselves, and coach by asking questions rather than giving instructions. IF still uses drills for 20-30% of the time.
-2. **Flik and GRUT drills** for that short drill block. The 14 GRUT drills are filmed with Flik and listed in their own section below. Flik has a lesson series, a theory library and a drill library of 218 short drills in the Herd notebook (Flik Drills section), most with video.
+2. **Flik and GRUT drills** for that short drill block. The 9 GRUT drills are filmed with Flik and listed in their own section below. Flik has a lesson series, a theory library and a drill library of 218 short drills in the Herd notebook (Flik Drills section), most with video.
 3. **Other sources** for technique detail and fitness: BFD (shared vocabulary, S&C, game plans), DK's Bible (throwing technique), Hildo Bijl (drill catalogue), the Ultimate Skills Project, Kieran's Session Plans and the rest of the Herd notebook.
 
 **How the lists work:** each drill is listed under the source the session table cites; where a row cites several sources, it's listed under its main one. Week numbers are in brackets. Warm-ups, water breaks, free games and recaps are left out. The Herd standard warm-up and the 4v3 mini (Kieran) run every week.
@@ -53,7 +53,7 @@ Open, skills-only sessions that welcome new players. The phase builds throwing, 
 | IF | Asymmetric offence, Golden Arm (1); Gauntlet, Front Force Only (2); First to Disc, Multi-disc, Pick 6 (3); Run with the Disc, Shortened Stall Tag (4); long- and short-throw bonus points, Space Hopper, Golden Hand (5); Honeypass, Caterpillar (6); Tag Prestall (7); Asymmetric defence, Blocks Only (8); Three-Team Transitions, Multi-disc (9); Break Force Game, Break-Throw Bonus Point (10); festive tournament rounds (11) |
 | Flik | Getting off the sideline, 45-degree dumps (1-2); solving sideline traps, power position, sideline wrinkle and attack move, 3-handler game, sideline-start game (2); centre-line game (4); Archery (5); triangle cutting, zipper, peppermills, vert from the front and ho spacing (6); triangle marking progression, marker movement one way, 3-person drill modified, tram-line game (7-9); buffering, mirror defending, defending square (8); flat mark, defending the line, Hollywood Squares (9); around throw to a lateral cut, Get 10, sideways game (10) |
 | HN | Distractor tube; give-and-go in pairs up the pitch (3) |
-| GRUT | Rinkydink, Turn and attack (3); Under-to-away lead passes, 20-20-20 (5); Three marking tips (7); 10-minute low-release session (10, 2s; Christmas home programme) |
+| GRUT | Rinkydink, Turn and attack (3); Under-to-away lead passes, 20-20-20 (5); 10-minute low-release session (10, 2s; Christmas home programme) |
 | BFD | Star throws, shared vocabulary, Five Frisbee Habits, positive and negative resets (1); threat position (2, 10); feedback exercise (7, 9); score-on-break game (10); 4v4 continuous (every week) |
 | DK | 70-pass and focused throwing (1, 6); single-leg and compass throwing (1-2); slow pivots, fake-fake-throw, three-person break force (2); strobe catching, handler weave (3); shuttle throw, five-cone and zig-zag cutting (4); Christmas tree, shoulder drill, under/lead drill, continuation pairs, vert stack game (5); gate drill, ho game with three lives, static-start game (6); four-person break force (7); piggy in the middle (7, 9); back-shoulder positioning (8); zippy and soft, wide and low throwing pairs (10) |
 | HB | Baseline tests (1); heads-on drill, look forward once then dump (3); chop stop progression, box of death (4); drop step and W drill, keeping margins (8) |
@@ -85,7 +85,7 @@ The playbook is built through test events, with an event loop: light event weeks
 | --- | --- |
 | IF | Blocks Only with a zone, Asymmetric defence (25); long- and short-throw bonus points (28); mixed team games at Herdlodge (29); Break-Throw Bonus Point (32); Help the Helper (33); Shot Clock, minimum time, Target Number of Passes (34) |
 | Flik | Arrowhead walk-through and zone reps by wind call (25); bucket swings, endzone offence (27); controller mini 3v3, pop passes, 3v2, bucket and swing against a 2-3-2 (27); ho deep shots, back of the stack goes deep from vert (28); line-trap game, arrowhead, pulls in wind, safe vert in wind (30); pulling and pull chase (31); disruptive poaching (32); El Rondo (27, 33); hammer criteria, deep cutters drag the deeps, upfield dump, offset lateral cuts (34) |
-| GRUT | Deep box-out, Find the body (25); Backhand and forehand huck technique, Read-the-defender hucking (1s) (28); Breakside flow refresher (32) |
+| GRUT | Read-the-defender hucking (1s) (28); Breakside flow refresher (32). Theory Cards 41-43 back up weeks 25 and 28 |
 | HN | Updog, boxing out, Bull zone refresh, CRUMBLE transitions (25); box hucking, dishy huck, deep-cut timing, vert deep-cut pull play (28); values workshop, season goals, spirit session (29); throwing in all directions of wind, upwind-downwind 7v7 (30); box give-and-go, 3v3 possession, pull play into the dominator (32); 7v6 against a stronger offence (33); game-plan scrimmage, "what if" scrimmage (35-36) |
 | BFD | Plans A and B (31, 36); 4v4 continuous (most weeks) |
 | DK | Throwing in wind, low upwind throws (30) |
@@ -101,7 +101,6 @@ No new structures: scouting, Plans A, B and C, O- and D-lines and mental skills,
 | --- | --- |
 | IF | Break-Throw Bonus Point (38); Tag Prestall, Blocks Only (39); Variable Stall Count (40); Golden Arm and a 4v3 mini tournament (41) |
 | Flik | Arrowhead walk-through, wall, chase and line trap; 5-pull against the arrowhead (39); offence against the scouted defences: zone offence against their zone (40) |
-| GRUT | Three marking tips refresher (39) |
 | HN | 3v3 open-side scoring game, short-stall 7v7 (38); defence after a timeout (39); escape game, scouting cards, out-of-timeout plays, O-line v D-line (40); "what if" scrimmage (41) |
 | BFD | Plan A v Plan B (38); 4v4 continuous (38-40) |
 | HB | Mark-call drill with random calls (39); retention game, dominator against a poach (40); quick-throw pairs (41) |
@@ -122,7 +121,7 @@ Recovery, three weeks to rebuild and peak, a taper, then Nationals (and Euros if
 
 ## GRUT drills
 
-Fourteen short drills from GRUT, the Amsterdam women's team that won silver at WUCC 2026, filmed with Flik Ultimate. They sit in the Flik slot of a session: short, competitive, mostly for two or three players. Each one is in the drill library as "... (GRUT)" with its video, so a session activity of that name links straight to it. Draw the diagram in the drill editor from the video; the video stays on the drill page.
+Nine short drills from GRUT, the Amsterdam women's team that won silver at WUCC 2026, filmed with Flik Ultimate. They sit in the Flik slot of a session: short, competitive, mostly for two or three players. Each one is in the drill library as "... (GRUT)" with its video, so a session activity of that name links straight to it. Draw the diagram in the drill editor from the video; the video stays on the drill page.
 
 | Drill | What it teaches | Weeks used |
 | --- | --- | --- |
@@ -130,18 +129,15 @@ Fourteen short drills from GRUT, the Amsterdam women's team that won silver at W
 | Turn and attack (GRUT) | Reacting to a disc you didn't see thrown; attacking it in front | 3 |
 | Under-to-away lead passes (GRUT) | Lead passes that sit: height, small angle, in front; the sideline version | 5 |
 | 20-20-20 (GRUT) | Focused throws at three distances, with a reset on any drop | 5 |
-| Three marking tips (GRUT) | On your toes; take away the thrower's favourite throw; full intensity | 7, 39 |
 | 10-minute low-release session (GRUT) | Low releases and nose-angle control; a weekly home routine | 10 (2s), Christmas home programme |
 | Breakside flow (GRUT) | Breaking the force into swing and continuation, or the same flow off the reset | 15, 32 |
 | Tap-in (GRUT) | 2v1 small ball: short passes, when to stop the give-and-go, scoring the 1v1 | 16 (1s) |
 | Leading pass drill (GRUT) | Continuous dish and upline; calling "in front" or "behind" | 16 (2s) |
-| Deep box-out (GRUT) | Cutter keeps their body between the disc and the defender | 25 |
-| Find the body (GRUT) | Deep defence: go to the cutter first, then the disc | 25 |
-| Backhand huck technique (GRUT) | Sideways step, rotational load, pulled not pushed, long release | 28 (homework from 5) |
-| Forehand huck technique (GRUT) | Snap, and lateral, rotational and vertical loading | 28 (homework from 5) |
 | Read-the-defender hucking (GRUT) | Choosing the huck from the deep defender's position | 28 (1s) |
 
-They also appear in the Phase 3 fix menu (drops, breaks, beaten deep, hucks). The drills are in `imports/drills/grut-drills.json`; import them with `flask import-season` before re-importing the plan, so the sessions link to them.
+Four more GRUT videos are technique and habits rather than drills, so they are theory cards with the video under Watch: Card 41 (backhand huck) and Card 42 (forehand huck) for week 28, Card 43 (winning the deep ball: box out, find the body) for week 25, and Card 44 (marking habits) for weeks 7 and 39.
+
+The drills also appear in the Phase 3 fix menu (drops, breaks, hucks). The drills are in `imports/drills/grut-drills.json`; import them with `flask import-season` before re-importing the plan, so the sessions link to them.
 
 ## Swaps towards Flik and IF
 

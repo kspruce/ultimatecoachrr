@@ -240,6 +240,6 @@ def test_grut_drill_library_imports(app, team):
     with open(path) as f:
         data = json.load(f)
     summary = import_season(data, None, team.id)
-    assert summary.counts['drill']['created'] == 14
+    assert summary.counts['drill']['created'] == 9
     titles = {d.title for d in SavedDrill.query.filter_by(team_organization_id=team.id)}
-    assert {'Tap-in (GRUT)', 'Breakside flow (GRUT)', 'Find the body (GRUT)'} <= titles
+    assert {'Tap-in (GRUT)', 'Breakside flow (GRUT)', 'Rinkydink (GRUT)'} <= titles

@@ -176,10 +176,16 @@ def test_herd_cards_file(app, teams):
     with open(HERD_CARDS, encoding='utf-8') as f:
         sections = parse_cards(f.read())['sections']
     numbers = {s['name']: [t['number'] for t in s['topics'] if t['number']] for s in sections}
-    assert numbers == {'Start here': [1, 2, 3], 'Throw and catch': list(range(4, 10)),
-                       'Get open': list(range(10, 15)), 'Handle and reset': list(range(15, 20)),
-                       'Defend': list(range(20, 27)), 'Herd systems': list(range(27, 35)),
+    assert numbers == {'Start here': [1, 2, 3], 'Throw and catch': [4, 5, 6, 7, 8, 41, 42, 9],
+                       'Get open': [10, 11, 12, 13, 14, 43], 'Handle and reset': list(range(15, 20)),
+                       'Defend': [20, 44, 21, 22, 23, 24, 25, 26], 'Herd systems': list(range(27, 35)),
                        'Compete': list(range(35, 41))}
+    # The GRUT technique cards carry their videos, and the line isn't left in the text
+    by_number = {t['number']: t for s in sections for t in s['topics']}
+    assert by_number[43]['videos'] == [
+        ('Deep box-out (GRUT)', 'https://www.youtube.com/watch?v=2mc9OVdpwMs'),
+        ('Find the body (GRUT)', 'https://www.youtube.com/watch?v=GAXfWzZi7c8')]
+    assert '**Videos:**' not in by_number[43]['content'] and by_number[8]['videos'] == []
     cards = [t for s in sections for t in s['topics'] if t['number']]
     assert cards[0]['name'] == 'The Herd Way: five habits, three jobs, one language'
     assert all('**Why it matters.**' in t['content'] and '**Source:**' in t['content'] for t in cards)
@@ -248,13 +254,13 @@ def test_command(app, teams):
     runner = app.test_cli_runner()
     result = runner.invoke(args=['import-theory', HERD_CARDS, '--team', 'herd-2028', '--dry-run'])
     assert result.exit_code == 0, result.output
-    assert 'new cards (drafts): 41' in result.output and layout(teams['team']) == {}
+    assert 'new cards (drafts): 45' in result.output and layout(teams['team']) == {}
     result = runner.invoke(args=['import-theory', HERD_CARDS, '--team', 'herd-2028'])
     assert result.exit_code == 0, result.output
     sections = layout(teams['team'])
-    assert len(sections) == 7 and sum(map(len, sections.values())) == 41 and layout(teams['other']) == {}
+    assert len(sections) == 7 and sum(map(len, sections.values())) == 45 and layout(teams['other']) == {}
     result = runner.invoke(args=['import-theory', HERD_CARDS, '--team', 'herd-2028'])
-    assert 'new cards (drafts): 0' in result.output and 'left as edited: 41' in result.output
+    assert 'new cards (drafts): 0' in result.output and 'left as edited: 45' in result.output
 
 
 def test_herd_first_upload_then_sectioned_file(app, teams):
@@ -272,6 +278,46 @@ def test_herd_first_upload_then_sectioned_file(app, teams):
     sections = layout(teams['team'])
     assert list(sections) == ['Start here', 'Throw and catch', 'Get open', 'Handle and reset', 'Defend',
                               'Herd systems', 'Compete']
-    assert len(report.moved) == 41 and report.created == [] and report.sections_removed == ['Herd Theory Cards']
+    assert len(report.moved) == 45 and report.created == [] and report.sections_removed == ['Herd Theory Cards']
     assert sections['Start here'][0] == 'How to use these cards'
     assert sections['Compete'][-1] == 'Scouting and game plans'
+
+
+VIDEO_CARDS = """# Throw and catch
+
+## Card 1 · The huck
+
+**Why it matters.** Distance.
+
+**Videos:** [Backhand](https://www.youtube.com/watch?v=HwuTNpxnzKo) · [Forehand](https://youtu.be/utwBy0UtL60)
+"""
+
+
+def test_videos_line_becomes_the_cards_videos(app, teams):
+    import_cards(VIDEO_CARDS, teams['team'], teams['coach'])
+    db.session.commit()
+    huck = topic(teams['team'], 'The huck')
+    assert [(v.title, v.order) for v in huck.related_videos] == [('Backhand', 1), ('Forehand', 2)]
+    assert huck.related_videos[0].embed_url and '**Videos:**' not in huck.content
+
+    # A re-import without --replace leaves the card (and a video a coach added) alone
+    huck.related_videos[1].title = 'Forehand (coach)'
+    db.session.commit()
+    import_cards(VIDEO_CARDS.replace('Forehand]', 'Flick]'), teams['team'], teams['coach'])
+    db.session.commit()
+    assert [v.title for v in topic(teams['team'], 'The huck').related_videos] == ['Backhand', 'Forehand (coach)']
+    # With replace, the file's videos win; a card with no Videos line keeps its videos
+    import_cards(VIDEO_CARDS.replace('Forehand]', 'Flick]'), teams['team'], teams['coach'], replace=True)
+    db.session.commit()
+    assert [v.title for v in topic(teams['team'], 'The huck').related_videos] == ['Backhand', 'Flick']
+    no_line = VIDEO_CARDS.split('**Videos:**')[0]
+    import_cards(no_line, teams['team'], teams['coach'], replace=True)
+    db.session.commit()
+    assert len(topic(teams['team'], 'The huck').related_videos) == 2
+
+
+def test_videos_line_without_links_is_an_error():
+    with pytest.raises(TheoryImportError) as e:
+        parse_cards(VIDEO_CARDS.replace('[Backhand](https://www.youtube.com/watch?v=HwuTNpxnzKo) · '
+                                        '[Forehand](https://youtu.be/utwBy0UtL60)', 'see YouTube'))
+    assert 'Videos line needs links' in str(e.value)

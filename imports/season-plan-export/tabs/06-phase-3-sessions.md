@@ -35,8 +35,8 @@ The rules from Phases 1 and 2 still apply: the source key and every-session rule
 | Breaks not coming off | Extended mark; one-crossover game; break-throw bonus; Breakside flow (GRUT) | Phase 2 weeks 15-16 |
 | Blocks but no breaks (low D-line conversion) | D-line v D-line offence reps; fast-break game | HN Coach Corner, Base Metric Analysis; Phase 2 week 22 |
 | O line broken or sloppy (low perfect conversion) | Only throw to open players; tempo games | HB 39.2; IF |
-| Beaten deep | Trade-off drill; deep running with a defender; last back; Find the body (GRUT) | HB 38.3, 27.5; HN Team Defence; week 25 here |
-| Hucks turned over or underthrown | Backhand and forehand huck technique (GRUT); Read-the-defender hucking (GRUT); Dishy Huck | Week 28 here |
+| Beaten deep | Trade-off drill; deep running with a defender; last back; box out and find the body (Card 43) | HB 38.3, 27.5; HN Team Defence; week 25 here |
+| Hucks turned over or underthrown | Huck technique (Cards 41 and 42); Read-the-defender hucking (GRUT); Dishy Huck | Week 28 here |
 | Stuck against zones | Bucket swings, controller, crashing the cup | Weeks 25 and 27 here |
 | Pull plays dying | Pull play into system: swing and flip the field | Phase 2 week 23 |
 | Poor red-zone conversion | Redzone continuous; endzone play aiming for 4 out of 5; Spread reps | IF; HB 26.4; Phase 2 week 23 |
@@ -74,8 +74,7 @@ The rules from Phases 1 and 2 still apply: the source key and every-session rule
 | --- | --- | --- | --- |
 | 0:00 | Warm-up | Herd standard warm-up and 4v3 mini | HN Practice Sessions; Kieran |
 | 0:20 | Updog | Two teams take turns on offence and defence: offence drop 0, catch 1; defence block 1, catch 2 | HN Practice Sessions 10 |
-| 0:40 | Deep box-out (GRUT) | 1v1 deep: the cutter keeps their body between the disc and the defender, slowing or curving the cut if needed. Three rounds: nobody jumps, offence jumps, both jump | GRUT; HN Practice Sessions 10; HB 27.4 |
-| 0:55 | Find the body (GRUT) | The same drill for the defender: run to the cutter and touch them first, then go for the disc. Finish with deep running, the defender staying goal-side | GRUT; HB 27.5; Flik drill: Deep Defending |
+| 0:40 | Boxing out and finding the body | 1v1 deep (theory Card 43). Offence keeps their body between the disc and the defender; defence runs to the cutter and touches them first, then goes for the disc. Three rounds: nobody jumps, offence jumps, both jump; swap roles. Finish with deep running, the defender staying goal-side | GRUT; HN Practice Sessions 10; HB 27.4, 27.5; Flik drill: Deep Defending |
 | 1:10 | Pulls and the pull chase in wind | Pullers practise bladey and rolling pulls upwind and downwind; the rest chase as a unit and call "central" or "sideline" | Flik Deep Dives, Brute Squad Pulls; HN Flik, Using the Wind |
 | 1:30 | Water |  |  |
 | 1:40 | Blocks Only, with a zone | 5v5. A turnover only counts if the defence touches the disc; the defence must start every point in a zone | IF |
@@ -192,8 +191,8 @@ The rules from Phases 1 and 2 still apply: the source key and every-session rule
 | Time | Activity | How it runs | Source |
 | --- | --- | --- | --- |
 | 0:00 | Warm-up | Herd standard warm-up and 4v3 mini | HN Practice Sessions; Kieran |
-| 0:20 | Backhand huck technique (GRUT) | Sideways step, rotational load, pulled not pushed, slightly IO, arm extended at release. Build up: wrist only, step, then full throw | GRUT; UAP Backhand hucks |
-| 0:30 | Forehand huck technique (GRUT) | Snap the arm back after release; lateral, rotational and vertical loading; extend distance as it holds | GRUT |
+| 0:20 | Backhand huck technique | Theory Card 41: sideways step, rotational load, pulled not pushed, slightly IO, arm extended at release. Build up: wrist only, step, then full throw | GRUT; UAP Backhand hucks |
+| 0:30 | Forehand huck technique | Theory Card 42: snap the arm back after release; lateral, rotational and vertical loading; extend distance as it holds | GRUT |
 | 0:40 | Sprint technique | One of Hildo's eight sprint rules per 50 m rep | HB 27.3 |
 | 1:00 | Deep running drill | As week 25, with an in-cut option after 20-25 m | HB 27.4 |
 | 1:30 | Water |  |  |

@@ -24,7 +24,7 @@ flask import-season season.json --images-dir images/ --team-org <id>
 ## Drill library files
 
 `imports/drills/` holds drill-only files in this format. `grut-drills.json` is
-the 14 GRUT drills the season plan uses. Import it before importing or
+the 9 GRUT drills the season plan uses (four more GRUT videos are theory cards 41-44). Import it before importing or
 rebuilding the season plan, so the plan's sessions link to the drills (a
 session activity links to the drill whose title it matches exactly):
 
