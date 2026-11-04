@@ -18,6 +18,9 @@ class SessionPlanForm(FlaskForm):
     notes = TextAreaField('Notes', validators=[Optional()])
     # Choices are the team's squads, filled in by the route; none ticked = everyone
     squads = SelectMultipleField('Squads', coerce=int, validators=[Optional()], choices=[])
+    # Used instead when the club has no squads set up
+    plan_squad = SelectField("Who it's for", validators=[Optional()], default='joint',
+                             choices=[('joint', 'Joint (whole club)'), ('1s', '1s'), ('2s', '2s')])
     is_published = BooleanField('Players can see the plan', default=True)
     # Add session type field with choices
     session_type = SelectField(

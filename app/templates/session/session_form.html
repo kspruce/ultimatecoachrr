@@ -104,6 +104,12 @@
                             {% endfor %}
                             <div class="form-text">Leave them all unticked for a session the whole club comes to.</div>
                         </div>
+                        {% else %}
+                        <div class="mb-3">
+                            {{ form.plan_squad.label(class="form-label") }}
+                            {{ form.plan_squad(class="form-select") }}
+                            <div class="form-text">Sets the squad filter on the sessions list. Add squads under Seasons to tick them instead.</div>
+                        </div>
                         {% endif %}
 
                         <div class="mb-3 form-check">
