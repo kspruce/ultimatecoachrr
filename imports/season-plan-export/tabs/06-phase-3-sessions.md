@@ -31,11 +31,12 @@ The rules from Phases 1 and 2 still apply: the source key and every-session rule
 | What the stats or film show | Fix | Where it's written up |
 | --- | --- | --- |
 | Turnovers on resets, stuck on the sideline | Continuous dump play; square-up and double-team drills; variable stall count | HB 26.3; HN Handler Situations; Phase 2 week 21 |
-| Drops | Catching circuit; distractor tube | Phase 1 week 3 |
-| Breaks not coming off | Extended mark; one-crossover game; break-throw bonus | Phase 2 weeks 15-16 |
+| Drops | Catching circuit; distractor tube; Turn and attack (GRUT); Rinkydink (GRUT) | Phase 1 week 3 |
+| Breaks not coming off | Extended mark; one-crossover game; break-throw bonus; Breakside flow (GRUT) | Phase 2 weeks 15-16 |
 | Blocks but no breaks (low D-line conversion) | D-line v D-line offence reps; fast-break game | HN Coach Corner, Base Metric Analysis; Phase 2 week 22 |
 | O line broken or sloppy (low perfect conversion) | Only throw to open players; tempo games | HB 39.2; IF |
-| Beaten deep | Trade-off drill; deep running with a defender; last back | HB 38.3, 27.5; HN Team Defence |
+| Beaten deep | Trade-off drill; deep running with a defender; last back; Find the body (GRUT) | HB 38.3, 27.5; HN Team Defence; week 25 here |
+| Hucks turned over or underthrown | Backhand and forehand huck technique (GRUT); Read-the-defender hucking (GRUT); Dishy Huck | Week 28 here |
 | Stuck against zones | Bucket swings, controller, crashing the cup | Weeks 25 and 27 here |
 | Pull plays dying | Pull play into system: swing and flip the field | Phase 2 week 23 |
 | Poor red-zone conversion | Redzone continuous; endzone play aiming for 4 out of 5; Spread reps | IF; HB 26.4; Phase 2 week 23 |
@@ -73,7 +74,8 @@ The rules from Phases 1 and 2 still apply: the source key and every-session rule
 | --- | --- | --- | --- |
 | 0:00 | Warm-up | Herd standard warm-up and 4v3 mini | HN Practice Sessions; Kieran |
 | 0:20 | Updog | Two teams take turns on offence and defence: offence drop 0, catch 1; defence block 1, catch 2 | HN Practice Sessions 10 |
-| 0:40 | Positioning and boxing out, then deep defence | Three rounds: nobody jumps, offence jumps, both jump. Then deep running with a defender, who must stay goal-side and read the disc | HN Practice Sessions 10; HB 27.4, 27.5; Flik drill: Deep Defending |
+| 0:40 | Deep box-out (GRUT) | 1v1 deep: the cutter keeps their body between the disc and the defender, slowing or curving the cut if needed. Three rounds: nobody jumps, offence jumps, both jump | GRUT; HN Practice Sessions 10; HB 27.4 |
+| 0:55 | Find the body (GRUT) | The same drill for the defender: run to the cutter and touch them first, then go for the disc. Finish with deep running, the defender staying goal-side | GRUT; HB 27.5; Flik drill: Deep Defending |
 | 1:10 | Pulls and the pull chase in wind | Pullers practise bladey and rolling pulls upwind and downwind; the rest chase as a unit and call "central" or "sideline" | Flik Deep Dives, Brute Squad Pulls; HN Flik, Using the Wind |
 | 1:30 | Water |  |  |
 | 1:40 | Blocks Only, with a zone | 5v5. A turnover only counts if the defence touches the disc; the defence must start every point in a zone | IF |
@@ -190,7 +192,8 @@ The rules from Phases 1 and 2 still apply: the source key and every-session rule
 | Time | Activity | How it runs | Source |
 | --- | --- | --- | --- |
 | 0:00 | Warm-up | Herd standard warm-up and 4v3 mini | HN Practice Sessions; Kieran |
-| 0:20 | Progressive distance hucking | Wrist only, then step, then shoulder and hip turn, then full throw; extend distance as it holds | UAP Backhand hucks |
+| 0:20 | Backhand huck technique (GRUT) | Sideways step, rotational load, pulled not pushed, slightly IO, arm extended at release. Build up: wrist only, step, then full throw | GRUT; UAP Backhand hucks |
+| 0:30 | Forehand huck technique (GRUT) | Snap the arm back after release; lateral, rotational and vertical loading; extend distance as it holds | GRUT |
 | 0:40 | Sprint technique | One of Hildo's eight sprint rules per 50 m rep | HB 27.3 |
 | 1:00 | Deep running drill | As week 25, with an in-cut option after 20-25 m | HB 27.4 |
 | 1:30 | Water |  |  |
@@ -203,7 +206,7 @@ The rules from Phases 1 and 2 still apply: the source key and every-session rule
 | --- | --- | --- | --- |
 | 0:00 | Warm-up | Warm-up | HN Practice Sessions |
 | 0:20 | Move the Mark: hucking against a stationary mark at 50%, 70%, then 100% | Box hucking drill: count hucks landing in the box | HN Excel Premium; UAP Backhand hucks |
-| 0:40 | Race to huck: thrower and mark race to the power-position cone | Deep cut timing with a dish | HN Excel Premium; HN Next Gen 10 |
+| 0:40 | Read-the-defender hucking (GRUT): the thrower on the sideline reads which cone the deep defender is on and picks the huck; then the upline is live | Deep cut timing with a dish | GRUT; HN Next Gen 10 |
 | 1:10 | Dishy Huck drill, then with a defender on the deep cutter | Vert deep-cut pull play: the stack clears so the front of stack can go deep | HN 10 Big Drills; HN Excel Premium, Dynamic Pull Plays |
 | 1:40 | 4v4 continuous, stall 5 | 4v4 continuous, stall 7 | BFD S&C |
 | 2:00 | Ho deep shots: isolate a cutter and run diagonal scoring cuts from the open side to the break-side back corner | Back of stack goes deep from vert | HN Deep Dives, Italy Mixed WUC 2024; HN Flik, Vertical Stack |
@@ -335,6 +338,7 @@ The rules from Phases 1 and 2 still apply: the source key and every-session rule
 | --- | --- | --- | --- |
 | 0:00 | Warm-up and review | 4v3 mini; 10 minutes on the Tour 2 stats | Kieran; HN Coach Corner, Base Metric Analysis |
 | 0:30 | Extended mark refresher | Two discs, stall 4, two pivots, no repeated throw | UAP Breaking the mark (Saul) |
+| 0:40 | Breakside flow (GRUT) | Refresher from week 15: break, swing, continue; or the same flow off the reset | GRUT |
 | 0:50 | Fix from the Tour 2 review | Drill, then a constrained game | Fix menu above |
 | 1:30 | Water |  |  |
 | 1:40 | Break-throw bonus point | 5v5 | IF |

@@ -24,6 +24,8 @@ from flask import current_app
 from app import db
 from app.models.drill import SavedDrill, DrillDiagram
 from app.models.session import SessionPlan, SessionComponent
+from app.utils.media_embed import embed_url
+from markupsafe import escape
 
 SCHEMA = 'herd-session-v1'
 SQUADS = {'joint', '1s', '2s'}
@@ -229,6 +231,19 @@ def _prepare(data, images_dir, team_org_id):
         else:
             values['description'] = raw.get('description')
             values['setup_instructions'] = raw.get('setup_instructions')
+        # Only drills that name a video set it, so a re-import never clears a
+        # video a coach added on the site.
+        if 'video_url' in raw:
+            video = raw.get('video_url')
+            src = embed_url(video) if isinstance(video, str) else None
+            if video is not None and not src:
+                errors.append(f'{where}: video_url must be a YouTube, Vimeo or Google Drive '
+                              f'link, got {video!r}')
+            values['ultiplay_embed'] = (
+                f'<iframe src="{escape(src)}" title="{escape(raw.get("title") or "Drill video")}" '
+                'width="560" height="315" frameborder="0" loading="lazy" '
+                'allow="encrypted-media; picture-in-picture" allowfullscreen></iframe>'
+                if src else None)
         _check_lengths(errors, where, values, DRILL_LIMITS)
 
         diagrams = []

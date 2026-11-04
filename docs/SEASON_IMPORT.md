@@ -21,6 +21,19 @@ flask import-season season.json --images-dir images/ --team-org <id>
   every deploy) and served from `/sessions/drills/diagrams/...`. PNG, JPEG,
   GIF and WebP up to 5MB; SVG optional alongside.
 
+## Drill library files
+
+`imports/drills/` holds drill-only files in this format. `grut-drills.json` is
+the 14 GRUT drills the season plan uses. Import it before importing or
+rebuilding the season plan, so the plan's sessions link to the drills (a
+session activity links to the drill whose title it matches exactly):
+
+```
+flask import-season imports/drills/grut-drills.json --team-org <id>
+```
+
+Diagrams drawn in the drill editor are kept when the file is re-imported.
+
 ## Format
 
 | JSON | Stored as |
@@ -28,6 +41,7 @@ flask import-season season.json --images-dir images/ --team-org <id>
 | `season` (top level) | `SessionPlan.season` |
 | **drills[]** `external_id`, `title`, `description`, `setup_instructions`, `source`, `focus_area`, `equipment_needed` | same-named `SavedDrill` columns |
 | drills[] optional: `recommended_duration`, `min_players`, `max_players`, `skill_level` | same-named columns |
+| drills[] optional: `video_url` (YouTube, Vimeo or Google Drive link) | the drill's video, shown on the drill page even after a diagram is drawn. Leave the key out to keep a video added on the site; `null` removes it |
 | drills[] `diagrams[]`: `file`, `svg`, `step_label`, `caption`, `source` | `DrillDiagram` rows, in list order; paths are relative to `--images-dir` |
 | **cards[]** `external_id`, `card_code`, `title`, `summary`, `sections[{heading, lines}]` | `SavedDrill` with `is_standard_card`; summary + sections become a Markdown description. Cards may have `diagrams` too |
 | **sessions[]** `external_id`, `title`, `week`, `week_commencing` (YYYY-MM-DD), `phase_number`, `phase`, `block`, `squad` (`joint`/`1s`/`2s`), `run_by`, `kit`, `aim`, `sources` | `SessionPlan` (`week` → `week_number`, `phase` → `phase_name`) |

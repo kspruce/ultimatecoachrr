@@ -38,7 +38,9 @@
         <div class="col-md-8">
             {# An old Ultiplays link: shown until the drill is drawn, then
                only to coaches, to check the drawing against #}
-            {% if drill.ultiplay_embed and not drill.diagrams %}
+            {# A video (YouTube, Vimeo) stays for everyone after the drill is drawn #}
+            {% set is_ultiplays = drill.ultiplay_embed and 'ultiplay' in drill.ultiplay_embed|lower %}
+            {% if drill.ultiplay_embed and (not drill.diagrams or not is_ultiplays) %}
             <div class="card mb-4">
                 <div class="card-header">
                     <h4>Drill Video</h4>
@@ -98,7 +100,7 @@
                 </div>
                 <div class="card-body">
                     {% if drill.description %}
-                        {% if drill.is_standard_card %}
+                        {% if drill.is_standard_card or drill.external_id %}
                         <div class="markdown-content mb-3">{{ drill.description|markdown }}</div>
                         {% else %}
                         <p><strong>Description:</strong> {{ drill.description }}</p>

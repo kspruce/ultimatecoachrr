@@ -101,7 +101,8 @@ CUSB put their 2019 EUCF result down to scouting: a team of scouts watched three
 | Time | Activity | How it runs | Source |
 | --- | --- | --- | --- |
 | 0:00 | Warm-up | Herd standard warm-up and 4v3 mini | HN Practice Sessions; Kieran |
-| 0:20 | Mark-call drill | Thrower v mark; the coach calls "triangle" or "flat" mid-stall and the mark changes at once | HB 29.5 (random calls); BFD |
+| 0:20 | Three marking tips (GRUT) | Refresher: on your toes, take away the thrower's favourite throw, full intensity | GRUT |
+| 0:30 | Mark-call drill | Thrower v mark; the coach calls "triangle" or "flat" mid-stall and the mark changes at once | HB 29.5 (random calls); BFD |
 | 0:40 | Tag prestall | As in Phase 2 trials | Phase 2 week 20 |
 | 1:00 | Blocks Only | As in Phase 2 | Phase 2 week 24 |
 | 1:30 | Water |  |  |

@@ -278,3 +278,24 @@ def test_sessions_page(app, herd):
     player = client(app, herd, 'player')
     assert player.get('/season-plan/sessions').status_code in (302, 403, 404)
     assert player.post('/season-plan/sessions', data={'action': 'build'}).status_code in (302, 403, 404)
+
+
+@needs_export
+def test_grut_drills_link_to_the_real_plan(app, herd):
+    """Every GRUT drill is used in the plan, and each GRUT activity links to it."""
+    import json
+    import os
+    from app.utils.season_import import import_season
+    path = os.path.join(os.path.dirname(__file__), '..', 'imports', 'drills', 'grut-drills.json')
+    with open(path) as f:
+        import_season(json.load(f), None, herd['team'])
+    build_sessions(_setup(herd['team']))
+
+    grut = SavedDrill.query.filter(SavedDrill.team_organization_id == herd['team'],
+                                   SavedDrill.external_id.like('grut-%')).all()
+    comps = SessionComponent.query.join(SessionPlan).filter(
+        SessionPlan.team_organization_id == herd['team'],
+        SessionComponent.title.like('%(GRUT)%')).all()
+    assert comps and all(c.saved_drill is not None for c in comps)
+    assert {c.saved_drill.external_id for c in comps} == {d.external_id for d in grut}
+    assert len(grut) == 14

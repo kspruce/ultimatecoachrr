@@ -103,6 +103,7 @@ The same rules as Phase 1 apply. The source key (IF, BFD, DK, HB, UAP, Flik, SP,
 | 0:20 | Quick throwing, then zippy and soft | Pairs: catch and release as fast as possible without wobble; then IO and OI throws, zippy and soft | HB 34.1; HN Case Studies, Ring 2021 |
 | 0:40 | Break Force Game | A cone line down the middle; defenders can't enter one half unless marking, so break-side cuts are free | IF |
 | 1:00 | Threat position and cutting through, then off-balance throws | Cutter 15 m away V-cuts open then break, catching in the 75-degree window; then throws scored +1/-1 to 10 while a partner bumps lightly | BFD ch. 1; UAP Breaking the mark wk 2 |
+| 1:15 | Breakside flow (GRUT) | Break the backhand force to the first swing; the second cutter leaves as the first catches. If the break isn't on, run the same flow off the reset (dump, then swing) | GRUT |
 | 1:30 | Water |  |  |
 | 1:40 | Break-Throw Bonus Point | 5v5: cones split the endzone; a goal on the break side scores 2 | IF |
 | 2:20 | Conditioned 7v7 | Each team may recover one incomplete break per point | DK ch. 7 |
@@ -158,7 +159,7 @@ The same rules as Phase 1 apply. The source key (IF, BFD, DK, HB, UAP, Flik, SP,
 | 0:00 | Warm-up | Warm-up | HN Practice Sessions |
 | 0:20 | Zippy and soft, then the extended mark | Get 10 | HN Case Studies, Ring 2021; UAP Saul; Flik L4 Lesson 1 |
 | 0:40 | Dominator drill: one player works the disc upfield through a set of cones taking every second pass; then add a tired defender | Break inside | HB 34.2; Flik L3 Lesson 2 |
-| 1:10 | Give-and-go moves: pylons drill, then with defence | Backhand and forehand give-and-go on the open side, then the break side | HN Handler Offense; HN Practice Sessions 7 |
+| 1:10 | Tap-in (GRUT): 2v1 into a tiny endzone box, stall 4, defender guards whoever is open; warm up with the give-and-go moves (pylons drill) | Leading pass drill (GRUT): dish, upline, dish back; the dish thrower calls "in front" or "behind" | GRUT; HN Handler Offense |
 | 1:40 | 4v4 continuous, stall 5 | 4v4 continuous, stall 7 | BFD S&C |
 | 2:00 | Dominator from the ho: two or three handlers play give-and-go in front while cutters clear vertically; the cutters become options when the handlers stop | Inside break, then continuation: Break to a Point, then the next cutter goes as the first one catches | BFD, Dominator; HN Team Analysis, PoNY 2021; HN 10 Big Drills |
 | 2:40 | Scrimmage: a 15 m+ gain from the dominator set scores a bonus. Consequence: losing line does dominator-drill sprints | Scrimmage, recover one incomplete break per point | Plan; DK ch. 7 |
@@ -420,7 +421,7 @@ The same rules as Phase 1 apply. The source key (IF, BFD, DK, HB, UAP, Flik, SP,
 | Time | Activity | How it runs | Source |
 | --- | --- | --- | --- |
 | 0:00 | Game-day warm-up rehearsal | Herd standard warm-up, then throw, throw and run, the 4v3 mini as the intense part (score, then rotate out), and individual prep. This is the routine before every Solent game | HN Practice Sessions; HB App. A.3 |
-| 0:30 | Throwing in pairs | Short, focused set |  |
+| 0:30 | Rinkydink (GRUT) | Pairs throw deliberately odd discs and catch one-handed at the rim; loosens hands before the first game. Part of the game-day routine from now on | GRUT |
 | 0:40 | Redzone continuous | 20 m pitch: after a score, the other team attacks from where the goal was caught | IF |
 | 1:00 | Endzone setup and endzone play | 7v7 jogs, then the disc is dropped and the new offence sets up the endzone stack; then 4v4 from 10 m out, aiming to score 4 out of 5; then 7v7 "Spread" reps: three handlers dominate at the front of the endzone, four spread across the back, and the defence is told to poach, so the handlers learn to punish it | HB 26.5, 26.4 |
 | 1:30 | Water |  |  |

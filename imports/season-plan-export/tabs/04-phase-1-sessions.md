@@ -18,6 +18,7 @@ Each week lists three learning points, a timed joint session and both split sess
 | Flik | Flik lesson plans (level and lesson given) |
 | SP | Kieran's session plans spreadsheet (drill library) |
 | HN | Herd OneNote coaching notebook (section and page given, e.g. HN Practice Sessions 3 = Herd's own 2023 'Forcing the disc' session) |
+| GRUT | GRUT (Amsterdam) drill videos, filmed with Flik Ultimate. Each is in the drill library as "... (GRUT)", with its video |
 
 **Every session**
 
@@ -163,10 +164,12 @@ Each week lists three learning points, a timed joint session and both split sess
 | Time | Activity | How it runs | Source |
 | --- | --- | --- | --- |
 | 0:00 | Warm-up | Three-part warm-up | HB App. A.3 |
+| 0:15 | Rinkydink (GRUT) | Pairs throw deliberately odd discs (wobbly, odd spin); catch one-handed at the rim; loose and fun | GRUT |
 | 0:20 | Catching zones | Pairs: clap catches in the middle zone, crab claw high and low, then which edge to take by spin; finish on the mac line | UAP Catching (Shardlow) |
 | 0:40 | First to Disc | 1v1: coach throws, both chase, first to catch scores; teaches attacking the disc | IF |
 | 1:00 | Heads-on drill, then square | Receivers run straight at the thrower and catch heads-on; then the square drill with continuous catching on the move | HB 15.1, 15.2 |
-| 1:15 | Strobe catching and boxing out | Catching circuit: strobe (blink), no-blink (watch the rim all the way in), lie-down catches, stand-and-turn, compass one-handed (HN Amsterdam Conference, "Don't throw it to stone hands"); then 1v1 boxing out on floaty throws | DK 9.3; UAP Catching wk 4 |
+| 1:15 | Strobe catching | Catching circuit: strobe (blink), no-blink (watch the rim all the way in), lie-down catches, stand-and-turn, compass one-handed (HN Amsterdam Conference, "Don't throw it to stone hands") | DK 9.3 |
+| 1:22 | Turn and attack (GRUT) | Pairs: the receiver faces away, the thrower puts up a floaty disc and calls "Up!", the receiver turns and attacks it. Then add a defender who also turns on the call, for 1v1 boxing out | GRUT; UAP Catching wk 4 |
 | 1:30 | Water |  |  |
 | 1:40 | Multi-disc | Small-sided game with two or three discs live at once; lots of catches, chaos and fun | IF |
 | 2:20 | Pick 6 | 7v7: a block caught by the defence counts as a point | IF |
@@ -275,10 +278,10 @@ Each week lists three learning points, a timed joint session and both split sess
 | Time | Activity | How it runs | Source |
 | --- | --- | --- | --- |
 | 0:00 | Warm-up | Three-part warm-up | HB App. A.3 |
-| 0:20 | Lead pass drill | Receiver jogs across; thrower leads them into space, then speed up | DK 9.12 |
+| 0:20 | Under-to-away lead passes (GRUT) | Thrower with a static mark; the cutter jabs in, turns and sprints away. Check every throw for height, a small angle and arriving in front. Cutter points first, then doesn't | GRUT; DK 9.12 |
 | 0:40 | Space Hopper | Game where passes must be caught in marked zones of open space | IF |
 | 1:00 | Archery | Throwers aim at cone targets at 10, 20 and 30 m; points for landing in the hoop zone | Flik L4 Lesson 4 |
-| 1:15 | Three throws | Same receiver, three throws: short, medium, long into space | DK 9.9 |
+| 1:15 | 20-20-20 (GRUT) | 20 completions at short range, 20 wider and longer, then 20 into the endzone; any drop restarts stage 1; groups race each other | GRUT; DK 9.9 |
 | 1:30 | Water |  |  |
 | 1:40 | Long and short bonus points | 5v5: bonus point if the scoring sequence contains one throw over 30 m and one under 5 m | IF |
 | 2:20 | Golden Hand | 7v7: a nominated catcher's goal counts double | IF |
@@ -301,6 +304,7 @@ Each week lists three learning points, a timed joint session and both split sess
 
 - "Throw to space" is the root of retention: a receiver running into space is easier to hit than a static one (DK 9.12).
 - Hucks: give one cue at a time and count discs landing in the box (UAP Backhand hucks, box hucking drill).
+- Homework: send the Backhand huck technique (GRUT) and Forehand huck technique (GRUT) videos from the drill library to watch before week 28.
 - Vert from the back is the 2s' default offence this year; keep it simple: one cutter, one clear.
 
 **From the Herd notebook**
@@ -386,7 +390,7 @@ Each week lists three learning points, a timed joint session and both split sess
 | Time | Activity | How it runs | Source |
 | --- | --- | --- | --- |
 | 0:00 | Warm-up | Fast feet and replacement hops added to the usual warm-up | UAP Marking (Wiseman) |
-| 0:20 | 3-person drill | Thrower, mark, receiver; mark works one side at a time | Flik |
+| 0:20 | Three marking tips (GRUT) | Thrower, mark, receiver: the thrower names their favourite throw and the mark takes it away, one side at a time; the thrower rates the mark's intensity 1-3 | GRUT; Flik |
 | 0:40 | Tag Prestall | Game where the mark must tag the thrower's shoulder before stalling | IF |
 | 1:00 | Base hold, hop into base, 5 m side shuffle with pause and reach; marker movement with hands clasped, ten touches then swap (Herd's own version: HN Practice Sessions 3, Forcing the disc) | Progression from static to moving | UAP Marking wk 1; Flik L4 Lesson 7 |
 | 1:15 | Four-person break force, then break force elimination | Marks lose a life for each break given up | DK 8.22, 9.20 |
@@ -567,7 +571,7 @@ Each week lists three learning points, a timed joint session and both split sess
 | Time | 1s group | 2s group (suggested) | Source |
 | --- | --- | --- | --- |
 | 0:00 | Warm-up | Warm-up | HB App. A.3 |
-| 0:20 | Zippy and soft: IO zippy, IO soft, OI zippy, OI soft on forehand then backhand, three steps back and repeat (HN Case Studies, Ring 2021) | Throwing pairs, wide and low | DK 9.14 |
+| 0:20 | Zippy and soft: IO zippy, IO soft, OI zippy, OI soft on forehand then backhand, three steps back and repeat (HN Case Studies, Ring 2021) | 10-minute low-release session (GRUT) | HN Case Studies, Ring 2021 (1s); GRUT (2s) |
 | 0:40 | Extended mark: 2 discs, stall 4, 2 pivots, no repeated throw; aim to get point-blocked sometimes | Around throw to a lateral cut | UAP Breaking the mark (Saul) wk 1; Flik L3 Lesson 1 |
 | 1:10 | Off-balance throws | Sideways game | UAP Breaking the mark wk 2; Flik L3 Lesson 1 |
 | 1:40 | Small-sided games: 4v4, stall 5 | 4v4, stall 7 | BFD S&C |
