@@ -72,7 +72,7 @@ Ph = phase. Letters A-L are the training blocks. Dates are week commencing (Mond
 | 9 | 29 Nov | 1 | C | Reaction and reading the thrower (star drill, reactive shuffles) | Flat mark and switching marks on a call | Mark and downfield defence working together |  |  |
 | 10 | 6 Dec | 1 | D. Breaking the mark: technique | Wide and low releases (pool noodle, Get 10) | Extended-mark breaks into continuation | Around break to a lateral cut | C3 Leaders, not stars (online, leaders) | Benchmarks re-run informally |
 | 11 | 13 Dec | 1 | D | Festive mixed tournament: Golden Arm, Honeypass, Pick 6 | Games | Games |  |  |
-| — | 20 Dec, 27 Dec | — | Break | Optional home programme: throwing to a target, bodyweight sheet | — | — |  |  |
+| — | 20 Dec, 27 Dec | — | Break | Optional home programme: throwing to a target, the 10-minute low-release session (GRUT), bodyweight sheet | — | — |  |  |
 | 14 | 3 Jan | 2 | Restart | Back to basics: throwing ladder, Five Frisbee Habits | Resets under a live mark | Dump and swing refresh | C4 Our 2028 priorities (online) | Season priorities shared |
 | 15 | 10 Jan | 2 | E. Breaking the mark under pressure | Threat positions and off-balance throws | Horizontal stack: breaks to the active pair (break-throw bonus point) | Break force game (a defender-free half) |  |  |
 | 16 | 17 Jan | 2 | E | One-crossover marking game, both sides of the disc | Dominator from the horizontal: give-and-go and early breaks | Inside break, then continuation |  |  |

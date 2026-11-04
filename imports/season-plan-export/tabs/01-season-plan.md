@@ -169,7 +169,7 @@ Players call these out loud as they move. BFD's reset rule: a reset handler on t
 - **Vertical stack**, cutting from the back or the front: the 2s' main offence and the 1s' second.
 - **Horizontal stack**, with a **dominator** set from it: the 1s' main offence.
 - **Zone offence** for both teams: going around, through and over the zone. Endzone calls: "Endzone" (a vert stack) and "Spread", where three handlers work a dominator at the front of the endzone while the other four spread wide across the back, ready to punish defenders who sag in to poach (Kieran).
-- **Style model:** the Grut women's team. Collect clips of the patterns we want to copy, remembering their players are elite.
+- **Style model:** GRUT, the Amsterdam women's team (WUCC 2026 silver). Their 14 drill videos are in the drill library as "... (GRUT)" and used through the season (see Drills by phase and source). Two ways to attack: small ball and break-side flow (Tap-in, Breakside flow) and a deep game (huck technique, box-out, read the defender). Collect game clips of the patterns we want to copy, remembering their players are elite: the WUCC 2026 final against Scandal is a good start.
 - Roles are defined by space, not position (BFD): any player can be handler or cutter depending on where they are.
 
 **Every touch should do one of three things** (BFD): gain yards, change the point of attack, or break the mark.
@@ -295,7 +295,7 @@ The Phase 1 skills sessions double as the club's shop window: open to any player
 - [ ] Selection criteria for trials, published before the first trial.
 - [ ] Which internal guest coaches to ask, and which blocks they take.
 - [ ] How the 1s captains and 2s captains share planning each month.
-- [ ] Which Grut clips form the offence clip library.
+- [x] Which GRUT clips form the offence clip library: the 14 GRUT drill videos are in the drill library and the sessions. Still to add: game clips from the WUCC 2026 final (Scandal v GRUT).
 - [ ] The 2s' target events for the season.
 - [ ] Material from OneNote: mined for Phases 1-4 and the overview (Flik theory, Coach Corner, deep dives and case studies); Phase 5 draws on the same notes.
 
@@ -307,6 +307,7 @@ The Phase 1 skills sessions double as the club's shop window: open to any player
 - Hildo Bijl, *Ultimate Trainer's Manual* v2.5 — season planning, handler rules, running technique, fitness
 - The Ultimate Skills Project (theUAP) modules — cutting, marking, breaking the mark, decision making, benchmarks
 - Flik lesson plans (Levels 1-4, zone concepts, cup zone, zone offence) and Kieran's session plans spreadsheet
+- GRUT (Amsterdam) drill videos, filmed with Flik Ultimate: 14 drills for catching, throwing, marking, small ball, break-side flow and the deep game
 
 * **Herd OneNote coaching notebook (HN).** Sections used:
   - Herd's own material: Practice Sessions (2023), Bull Zone, Testing.

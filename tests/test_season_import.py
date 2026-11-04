@@ -174,6 +174,7 @@ def test_diagram_routes_and_guest_page(app, team, season):
 
 def test_logged_in_pages_show_season_fields(app, team, season):
     from app.models.user import User
+    season['drills'][0]['video_url'] = 'https://www.youtube.com/watch?v=zyWG3qKItHU'
     import_season(season, IMAGES, team.id)
     user = User(username='coach', role='admin', is_admin_flag=True, team_organization_id=team.id)
     user.set_password('x')
@@ -205,9 +206,40 @@ def test_logged_in_pages_show_season_fields(app, team, season):
 
     drill_page = get(f'/sessions/drills/{wrinkle_id}')
     assert '2 Reset' in drill_page and 'Reset cuts up the line' in drill_page
+    # A YouTube video stays on the page after the drill has diagrams
+    assert 'Drill Video' in drill_page and 'youtube-nocookie.com/embed/zyWG3qKItHU' in drill_page
 
     listing = get('/sessions/?season=2027/28&squad=joint')
     assert 'Joint session: resets under pressure' in listing
     assert 'Getting off the sideline' not in listing
     listing = get('/sessions/?phase=1&block=Block A: throwing, catching, resets')
     assert 'Getting off the sideline' in listing
+
+
+def test_video_url_becomes_an_embed_and_is_kept_when_left_out(app, team, season):
+    season['drills'][0]['video_url'] = 'https://youtu.be/zyWG3qKItHU'
+    import_season(season, IMAGES, team.id)
+    drill = SavedDrill.query.filter_by(external_id='flik-sideline-wrinkle').one()
+    assert 'src="https://www.youtube-nocookie.com/embed/zyWG3qKItHU"' in drill.ultiplay_embed
+
+    # A file without video_url leaves a video added earlier alone
+    del season['drills'][0]['video_url']
+    import_season(season, IMAGES, team.id)
+    assert 'zyWG3qKItHU' in SavedDrill.query.filter_by(
+        external_id='flik-sideline-wrinkle').one().ultiplay_embed
+
+    bad = copy.deepcopy(season)
+    bad['drills'][0]['video_url'] = 'javascript:alert(1)'
+    with pytest.raises(SeasonImportError) as exc:
+        import_season(bad, IMAGES, team.id)
+    assert 'video_url must be' in str(exc.value)
+
+
+def test_grut_drill_library_imports(app, team):
+    path = os.path.join(os.path.dirname(FIXTURES), '..', 'imports', 'drills', 'grut-drills.json')
+    with open(path) as f:
+        data = json.load(f)
+    summary = import_season(data, None, team.id)
+    assert summary.counts['drill']['created'] == 14
+    titles = {d.title for d in SavedDrill.query.filter_by(team_organization_id=team.id)}
+    assert {'Tap-in (GRUT)', 'Breakside flow (GRUT)', 'Find the body (GRUT)'} <= titles

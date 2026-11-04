@@ -34,7 +34,7 @@ Technique comes first, in open sessions that welcome new players. Split tactics 
 | 9 | 29 Nov | C | Reaction and reading the thrower (star drill, reactive shuffles) | Flat mark and switching marks on a call | Mark and downfield defence working together |
 | 10 | 6 Dec | D. Breaking the mark: technique | Wide and low releases (pool noodle, Get 10) | Extended-mark breaks into continuation | Around break to a lateral cut |
 | 11 | 13 Dec | D | Festive mixed tournament: Golden Arm, Honeypass, Pick 6 | Games | Games |
-| — | 20 Dec, 27 Dec | Break | Optional home programme: throwing to a target, bodyweight sheet |  |  |
+| — | 20 Dec, 27 Dec | Break | Optional home programme: throwing to a target, the 10-minute low-release session (GRUT), bodyweight sheet |  |  |
 
 **Classroom sessions:** C1 How we learn: the Heckler and the Hero (week 3, online); C2 Belonging (week 7, after training); C3 Leaders, not stars (week 10, online, leaders). Details are in the Classroom sessions tab.
 

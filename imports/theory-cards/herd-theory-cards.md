@@ -8,6 +8,7 @@ Each card is one idea a player can read in three minutes, posted the week it is 
 - **Next level** is for experienced and elite players. Everyone else can skip it.
 - **Diagram** lines say what to draw. Pull the figure from the Ultimate Coach Figures folder or sketch a new one.
 - **Source** names the OneNote section (HN) the card is adapted from, so you can check the detail.
+- **Drills** (on some cards) link to the matching drills in the drill library, with their videos. The drills are what the sessions use; the card is the reading.
 
 | Card | Release week | Theme that week |
 | --- | --- | --- |
@@ -168,6 +169,8 @@ Each card is one idea a player can read in three minutes, posted the week it is 
 
 **Try it:** week 3 joint session, the heads-on drill and then the square drill, followed by the Multi-disc game.
 
+**Drills:** [Turn and attack (GRUT)](/sessions/drills?q=Turn+and+attack) · [Rinkydink (GRUT)](/sessions/drills?q=Rinkydink)
+
 **Next level:** attack the disc. Take a hard step as you catch, run through it in go-to drills, and in the air read the throw, hold your position and go up with your outside hand. If you never drop in drills, you aren’t attacking hard enough.
 
 **Source:** UAP Catching (Shardlow); HB 15.1–15.2; HN Excel Premium (Reading the Disc); HN Next Gen 10 (Winning Discs in the Air); HN Handler Offense (Moment of Catching).
@@ -189,6 +192,8 @@ Each card is one idea a player can read in three minutes, posted the week it is 
 **Diagram:** a cutter’s path with the disc landing ahead of them, marked “throw here”, and a ghost receiver at the release point marked “not here”.
 
 **Try it:** week 5 joint session, the lead-pass drill, then Space Hopper and Golden Hand.
+
+**Drills:** [Under-to-away lead passes (GRUT)](/sessions/drills?q=Under-to-away) · [20-20-20 (GRUT)](/sessions/drills?q=20-20-20)
 
 **Next level:** throw to the shoulder away from the defender, and a little wider than expected, so the catch flows straight into the next throw. Accuracy comes from spin: drive the disc through the target with a full follow-through rather than guiding it.
 
@@ -212,6 +217,8 @@ Each card is one idea a player can read in three minutes, posted the week it is 
 
 **Try it:** week 10 joint session, wide-release pairs, the cone-width ladder, low releases, then Get 10 with no throws above the marker’s arm. Finish with Classic Breakmark, the Herd classic.
 
+**Drills:** [10-minute low-release session (GRUT)](/sessions/drills?q=low-release+session) · [Breakside flow (GRUT)](/sessions/drills?q=Breakside+flow)
+
 **Next level:** train against an extended mark. Getting point-blocked sometimes means you’re finding your limits, and never throw the same throw twice in a row. Add a quick-release backhand: release before your pivot foot lands, just to get it past the marker’s shoulder. Then pick one or two unusual throws to master.
 
 **Source:** BFD ch. 1; DK (Breaking the mark); UAP Breaking the Mark (Saul); HN Practice Sessions 5–6; HN 10 Big Drills (Breakmark); HN Next Gen 10.
@@ -234,6 +241,8 @@ Each card is one idea a player can read in three minutes, posted the week it is 
 
 **Try it:** week 28 joint session, hucking shapes and deep-space games. Score with Archery: +2 caught in stride, +1 overthrown, 0 if the cutter has to wait.
 
+**Drills:** [Backhand huck technique (GRUT)](/sessions/drills?q=Backhand+huck+technique) · [Forehand huck technique (GRUT)](/sessions/drills?q=Forehand+huck+technique) · [Read-the-defender hucking (GRUT)](/sessions/drills?q=Read-the-defender)
+
 **Next level:** huck past a mark. Pump-fake one side and huck the other. Against a flat, no-huck mark, add OI and aim outside the receiver. Practise at 110% of your range. Check your progress on the hucking alley benchmark: 10 hucks into a 20 m lane.
 
 **Source:** DK’s Bible 4.7; Flik L4 Lesson 4; HN Practice Sessions 9; HN Excel Premium (Improve your Hucking, Hucking with a Mark, Backhand Huck); HN Deep Dives (Ring of Fire Hucking).
@@ -255,6 +264,8 @@ Each card is one idea a player can read in three minutes, posted the week it is 
 **Diagram:** a pitch with a wind arrow, labelling the upwind “high side” and the downwind “low side”, with a low release going upwind and a high release going downwind.
 
 **Try it:** week 30 joint session, throwing in all directions and upwind–downwind games.
+
+**Drills:** [10-minute low-release session (GRUT)](/sessions/drills?q=low-release+session)
 
 **Next level:** in a crosswind, swings towards the high side are harder but worth more. Downwind, cutters can sit deeper, which opens big flat under cuts. Decide the toss and wind choice before the game; in strong wind, choosing defence and pulling downwind can earn an early break.
 
@@ -368,6 +379,8 @@ Each card is one idea a player can read in three minutes, posted the week it is 
 
 **Try it:** week 28 joint session, deep-space games. Practise deep-cut timing with the Dishy Huck drill.
 
+**Drills:** [Deep box-out (GRUT)](/sessions/drills?q=Deep+box-out) · [Read-the-defender hucking (GRUT)](/sessions/drills?q=Read-the-defender)
+
 **Next level:** run the L cut. Start it once the swing is caught, come far enough across to break the thrower’s plane, let the defender bite, then strike deep. If the defender takes away the deep, counter back to the open side. In the air, convert your speed into height: reach your leg forward, plant your heel, pop up. If the disc hangs, attack it at its highest point.
 
 **Source:** HN Excel Premium (Deep Cutting, The L Cut, How to Jump); HN Next Gen 10 (Deep Cut Timing); HN 10 Big Drills; HB 27.3–27.4.
@@ -413,6 +426,8 @@ Each card is one idea a player can read in three minutes, posted the week it is 
 **Diagram:** two thrower positions, one with the reset negative on the open side and one with it positive on the break side, plus the swing path after the dump.
 
 **Try it:** week 14 split session, resets under a live mark. In week 1, 2v2 on a long, narrow pitch where the only legal throw before stall 5 is an assist.
+
+**Drills:** [Breakside flow (GRUT)](/sessions/drills?q=Breakside+flow)
 
 **Next level:** every throw that loses yards must be followed by a change in the point of attack (BFD’s Jedi). Avoid the forbidden region: catching behind the thrower on the trap sideline solves nothing and is a last resort only.
 
@@ -480,6 +495,8 @@ Each card is one idea a player can read in three minutes, posted the week it is 
 
 **Try it:** week 16 split session, dominator from the horizontal stack with give-and-go and early breaks. The 2s run give-and-go in 3v3 possession in week 32.
 
+**Drills:** [Tap-in (GRUT)](/sessions/drills?q=Tap-in) · [Leading pass drill (GRUT)](/sessions/drills?q=Leading+pass+drill)
+
 **Next level:** learn four give-and-go moves: immediate, delayed, break-side, and the Sockeye move (after an around break, the receiver charges and dishes back). Watch for the inverse give-and-go when the marker overcommits after you break them.
 
 **Source:** HB 34.2; HN Flik (Give and Go, Sealing the Lane, The Dish); HN Handler Offense (Give-Go Moves).
@@ -503,6 +520,8 @@ Each card is one idea a player can read in three minutes, posted the week it is 
 **Diagram:** the triangle mark from above: marker’s body, hand and shoulder against the shown throw, around and inside break, with the four lanes marked.
 
 **Try it:** week 7 joint session, Herd’s Forcing the Disc session. In week 16, the one-crossover marking game.
+
+**Drills:** [Three marking tips (GRUT)](/sessions/drills?q=Three+marking+tips)
 
 **Next level:** the flat mark (1s, on the call). Shoulders and hips parallel to the endzone, except on the trap. Close down on the first threatened throw, then stay within 3 m for the second. On the call, everyone downfield knows the open side has changed. Mark by stack: 45° against vert, flatter against ho, and straight up on the open-side sideline.
 
@@ -569,6 +588,8 @@ Each card is one idea a player can read in three minutes, posted the week it is 
 **Diagram:** a cutter in a vert stack with the defender on the deep, open-side shoulder, the deep space shaded as “ours” and the under space as “conceded”.
 
 **Try it:** week 20 trial session, Tag Prestall and Blocks Only.
+
+**Drills:** [Find the body (GRUT)](/sessions/drills?q=Find+the+body)
 
 **Next level:** steal a look at the field when your player is stationary, has committed to a line, or is clearing. That’s heads-up D, and it’s what lets you poach and switch later. Tell the 2s which order they’re protecting: some teams protect the open under first, then deep, then break.
 
@@ -937,6 +958,8 @@ Each card is one idea a player can read in three minutes, posted the week it is 
 **Diagram:** the routine above is the diagram; print it for the team bag.
 
 **Try it:** run the full routine at the Solent warm-up (week 23) and judge the day on process goals, not results.
+
+**Drills:** [Rinkydink (GRUT)](/sessions/drills?q=Rinkydink)
 
 **Next level:** know the timeout rules. Save them for preventing turnovers at high stall, not after a lone huck. Keep them to one message and one play. Straight after the opposition’s timeout, expect a set play: double-team the reset or poach the nearest lane for three seconds. In heat, plan water, shade, sunscreen and food between games.
 
