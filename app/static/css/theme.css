@@ -300,6 +300,7 @@ small, .small { color: inherit; }
 .uc-theme-btn:hover { background: color-mix(in srgb, var(--on) 18%, transparent); color: var(--on); }
 .uc-nav-right { display: flex; align-items: center; gap: .5rem; flex-shrink: 0; }
 .uc-user-name { max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.uc-user-chevron { font-size: .65rem; opacity: .6; margin-left: .1rem; }
 /* Between 1200px and 1400px the full menu only just fits: drop the icons,
    the username next to the avatar and some padding so nothing is pushed off */
 @media (min-width: 1200px) and (max-width: 1399.98px) {
@@ -326,8 +327,15 @@ small, .small { color: inherit; }
     max-height: calc(100dvh - 64px);
     overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
   }
-  .uc-nav-right { align-items: flex-start; padding: .5rem 0 .25rem; }
+  .uc-nav-right { align-items: flex-start; flex-wrap: wrap; padding: .5rem 0 .25rem; }
   .uc-nav-right > .nav-item { flex: 1 1 auto; min-width: 0; }
+  .uc-season-badge { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  /* The account button gets a full-width row of its own, with the name shown,
+     so its menu opens across the screen rather than squeezed into half of it */
+  .uc-nav-right > .uc-user-item { flex: 1 1 100%; }
+  .uc-user-item .uc-user-btn { width: 100%; padding-right: .9rem; }
+  .uc-user-item .uc-user-name { display: inline !important; max-width: none; flex: 1 1 auto; min-width: 0; }
+  .uc-user-item .uc-user-chevron { margin-left: auto; }
   .uc-nav-links .nav-item.uc-active > .nav-link { text-underline-offset: 5px; }
   /* Inside the collapsed nav, menus open inline on the header colour */
   #navbarNav .dropdown-menu {

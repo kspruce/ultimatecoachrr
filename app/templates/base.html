@@ -23,7 +23,7 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Young+Serif&display=swap">
     {# Team colours (Team settings -> Colours & crest); theme.css builds everything else from them #}
     <style>{{ team_theme_css | default('') | safe }}</style>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}?v=4">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}?v=5">
 
     {% block styles %}{% endblock %}
 </head>
@@ -63,7 +63,7 @@
   {# ── Mobile: right side (badge + toggler) ──────────────── #}
   <div class="d-flex align-items-center gap-2 ms-auto d-xl-none">
     {% if current_user.is_authenticated and current_user.is_admin and current_team %}
-    <a href="#" class="uc-team-badge d-none d-sm-flex" data-bs-toggle="dropdown">
+    <a href="{{ url_for('team_organization.index') }}" class="uc-team-badge d-none d-sm-flex" title="Manage teams">
       <i class="bi bi-shield-check" style="font-size:.7rem"></i>{{ current_team.name }}
     </a>
     {% endif %}
@@ -90,7 +90,7 @@
       {% if current_user.is_authenticated %}
       <li class="nav-item {% if in_record %}uc-active{% endif %}">
         <a class="nav-link" href="{{ url_for('gameday.index') }}">
-          <i class="bi bi-lightning-charge-fill"></i> Record
+          <i class="bi bi-record-circle-fill"></i> Record
         </a>
       </li>
       {% endif %}
@@ -120,7 +120,7 @@
       {% set show_season_plan = ts and ts.season_plan_enabled and season_plan_nav() %}
       {% set show_handbook = ts and ts.leadership_handbook_enabled and handbook_nav() %}
       {% if not ts or ts.sessions_enabled or ts.fitness_enabled or show_season_plan or show_handbook or programmes_nav() %}
-      {% set in_training = in_training or request.endpoint.startswith('feedback.') or ep.startswith('season_plan.') or ep.startswith('programmes.') or ep.startswith('handbook.') or ep.startswith('leadership.') or ep.startswith('questions.') %}
+      {% set in_training = in_training or ep.startswith('feedback.') or ep.startswith('season_plan.') or ep.startswith('programmes.') or ep.startswith('handbook.') or ep.startswith('leadership.') or ep.startswith('questions.') %}
       <li class="nav-item dropdown {% if in_training %}uc-active{% endif %}">
         <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
           <i class="bi bi-lightning-charge-fill"></i> Training
@@ -308,13 +308,14 @@
       {% endif %}
 
       {# User dropdown #}
-      <div class="nav-item dropdown">
-        <a class="uc-user-btn dropdown-toggle" data-bs-toggle="dropdown" role="button">
+      <div class="nav-item dropdown uc-user-item">
+        <a class="uc-user-btn dropdown-toggle" href="#" data-bs-toggle="dropdown" role="button"
+           aria-expanded="false" aria-label="Account menu for {{ current_user.username }}">
           <div class="uc-user-avatar">{{ current_user.username[0].upper() }}</div>
           <span class="uc-user-name d-none d-md-inline">
             {{ current_user.username }}
           </span>
-          <i class="bi bi-chevron-down" style="font-size:.65rem;opacity:.6;margin-left:.1rem"></i>
+          <i class="bi bi-chevron-down uc-user-chevron"></i>
         </a>
 
         <ul class="dropdown-menu dropdown-menu-end uc-nav-links uc-user-menu" style="min-width:230px">
