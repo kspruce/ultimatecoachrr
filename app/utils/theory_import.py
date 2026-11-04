@@ -9,6 +9,9 @@ first card (e.g. "How to use these cards") becomes a note for coaches.
 Cards arrive as drafts, so coaches can publish each one in the week it is
 taught.
 
+A card line `**Videos:** [Title](https://youtube.com/...) · [Title](...)`
+becomes the card's videos (shown under "Watch") instead of text.
+
 Re-importing adds new cards and moves cards already on the site (matched
 on title, anywhere in the hub) into the section the file puts them in. Their
 wording is left as coaches edited it unless replace is set. A section left
@@ -18,7 +21,7 @@ import re
 from dataclasses import dataclass, field
 
 from app import db
-from app.models.theory import TheorySection, TheoryTopic, unique_slug
+from app.models.theory import TheorySection, TheoryTopic, TheoryVideo, unique_slug
 
 MAX_FILE_BYTES = 1024 * 1024
 MAX_CARDS = 200
@@ -29,6 +32,9 @@ HEADING_RE = re.compile(r'^##\s+(.+?)\s*#*\s*$')
 CARD_RE = re.compile(r'^Card\s+(\d+)\s*[·:.\-–—|]\s*(.+)$', re.I)
 FENCE_RE = re.compile(r'^\s*(```|~~~)')
 BYLINE_RE = re.compile(r'·\s*@\S+\s*$')  # "Oct 29, 2026 · @Kieran"
+VIDEOS_RE = re.compile(r'^\*\*Videos?:\*\*\s*(.*)$')
+LINK_RE = re.compile(r'\[([^\]]+)\]\((https?://[^)\s]+)\)')
+VIDEO_TITLE_MAX, VIDEO_URL_MAX = 200, 500
 
 
 class TheoryImportError(Exception):
@@ -81,8 +87,21 @@ def parse_cards(text):
                 errors.append(f'"{block["heading"][:60]}" comes after cards in {section["name"]} '
                               'but isn\'t a "Card N · Title" heading.')
                 continue
-            content = '\n'.join(block['lines']).strip('\n')
             label = f'Card {number}' if number is not None else f'"{name[:60]}"'
+            lines, videos = [], []
+            for line in block['lines']:
+                m = VIDEOS_RE.match(line.strip())
+                if not m:
+                    lines.append(line)
+                    continue
+                links = LINK_RE.findall(m.group(1))
+                if not links:
+                    errors.append(f'{label}: the Videos line needs links like [Title](https://...).')
+                for title, url in links:
+                    if len(title) > VIDEO_TITLE_MAX or len(url) > VIDEO_URL_MAX:
+                        errors.append(f'{label}: the video "{title[:40]}" has a title or link that is too long.')
+                    videos.append((title.strip(), url))
+            content = '\n'.join(lines).strip('\n')
             if len(name) > NAME_MAX:
                 errors.append(f'{label}: the title is {len(name)} characters; the most is {NAME_MAX}.')
             if not content.strip():
@@ -90,7 +109,7 @@ def parse_cards(text):
             if name.lower() in names:
                 errors.append(f'Two cards are called "{name[:60]}". Titles must differ.')
             names.add(name.lower())
-            topics.append({'name': name, 'content': content, 'number': number})
+            topics.append({'name': name, 'content': content, 'number': number, 'videos': videos})
         # The section blurb: the first paragraph under its heading, if any
         paragraphs = [p for p in '\n'.join(section.pop('intro')).strip().split('\n\n')
                       if p.strip() and not BYLINE_RE.search(p.strip())]
@@ -173,6 +192,16 @@ class ImportReport:
         return ', '.join(parts) + '.'
 
 
+def _set_videos(topic, videos, team_id):
+    """The card's videos, in file order; a video already on it keeps its row."""
+    old = {v.url: v for v in topic.related_videos}
+    topic.related_videos = []
+    for n, (title, url) in enumerate(videos, start=1):
+        video = old.pop(url, None) or TheoryVideo(url=url, team_organization_id=team_id)
+        video.title, video.order = title, n
+        topic.related_videos.append(video)
+
+
 def import_cards(text, team_id, user_id=None, dry_run=False, replace=False):
     """Put the file's cards in the team's sections of the same names (made
     if needed). The caller commits; with dry_run nothing is changed."""
@@ -209,6 +238,7 @@ def import_cards(text, team_id, user_id=None, dry_run=False, replace=False):
                     topic = TheoryTopic(section_id=section.id, section=section, name=card['name'],
                                         content=card['content'], published=False,
                                         team_organization_id=team_id, created_by=user_id)
+                    _set_videos(topic, card['videos'], team_id)
                     db.session.add(topic)
                     placed.append(topic)
                 continue
@@ -223,6 +253,8 @@ def import_cards(text, team_id, user_id=None, dry_run=False, replace=False):
                 if not dry_run:
                     topic.name, topic.content = card['name'], card['content']
                     topic.updated_by = user_id or topic.updated_by
+                    if card['videos']:  # a card without a Videos line keeps the site's videos
+                        _set_videos(topic, card['videos'], team_id)
             else:
                 report.kept.append(card['name'])
             placed.append(topic)

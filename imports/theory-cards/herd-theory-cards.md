@@ -9,6 +9,7 @@ Each card is one idea a player can read in three minutes, posted the week it is 
 - **Diagram** lines say what to draw. Pull the figure from the Ultimate Coach Figures folder or sketch a new one.
 - **Source** names the OneNote section (HN) the card is adapted from, so you can check the detail.
 - **Drills** (on some cards) link to the matching drills in the drill library, with their videos. The drills are what the sessions use; the card is the reading.
+- **Videos** (on some cards) appear under Watch on the card's page.
 
 | Card | Release week | Theme that week |
 | --- | --- | --- |
@@ -52,6 +53,10 @@ Each card is one idea a player can read in three minutes, posted the week it is 
 | 38 Sideline talk | 23 | Solent warm-up |
 | 39 Tournament day | 23 | Solent warm-up |
 | 40 Scouting and game plans | 38 | Classroom C9 |
+| 41 The backhand huck | 5, 28 | Huck homework; hucking to space |
+| 42 The forehand huck | 5, 28 | Huck homework; hucking to space |
+| 43 Winning the deep ball | 25 | Aerial contests and deep defence |
+| 44 Marking: three habits from GRUT | 7 | Marking base |
 
 ## Card 1 · The Herd Way: five habits, three jobs, one language
 
@@ -241,11 +246,59 @@ Each card is one idea a player can read in three minutes, posted the week it is 
 
 **Try it:** week 28 joint session, hucking shapes and deep-space games. Score with Archery: +2 caught in stride, +1 overthrown, 0 if the cutter has to wait.
 
-**Drills:** [Backhand huck technique (GRUT)](/sessions/drills?q=Backhand+huck+technique) · [Forehand huck technique (GRUT)](/sessions/drills?q=Forehand+huck+technique) · [Read-the-defender hucking (GRUT)](/sessions/drills?q=Read-the-defender)
+**Drills:** [Read-the-defender hucking (GRUT)](/sessions/drills?q=Read-the-defender). Technique: Cards 41 and 42.
 
 **Next level:** huck past a mark. Pump-fake one side and huck the other. Against a flat, no-huck mark, add OI and aim outside the receiver. Practise at 110% of your range. Check your progress on the hucking alley benchmark: 10 hucks into a 20 m lane.
 
 **Source:** DK’s Bible 4.7; Flik L4 Lesson 4; HN Practice Sessions 9; HN Excel Premium (Improve your Hucking, Hucking with a Mark, Backhand Huck); HN Deep Dives (Ring of Fire Hucking).
+
+## Card 41 · The backhand huck: step sideways, pull it through
+
+**Release:** week 5 as homework (huck flight is introduced), then week 28
+
+**Why it matters.** The backhand huck is the long throw most players can learn to control. Power comes from the step and the turn of the body, not from the arm, so a small thrower with good technique can out-huck a big one.
+
+**Three key points**
+
+1. **Step sideways.** Unlike the forehand, step to the side, not forward. A comfortable length: too big and you lose balance, too small and you lose power.
+2. **Load, then pull.** Wind up until your shoulders face away from the target, then rotate explosively towards it. The disc is pulled through by the turn, not pushed by the arm.
+3. **Release long and slightly IO.** Release further forward than a normal backhand, with your whole arm stretched out in front: the longer the contact, the more power. A slight inside-out angle flattens out in the air.
+
+**Coaching cue:** “Turn away, pull it through.”
+
+**Diagram:** a thrower from above: sideways step, shoulders turned away at the load, then the arm fully extended towards the target at release.
+
+**Try it:** week 28 joint session, backhand huck technique, building up from wrist only to step to full throw. Check progress on the hucking alley benchmark.
+
+**Videos:** [Backhand huck technique (GRUT)](https://www.youtube.com/watch?v=HwuTNpxnzKo)
+
+**Next level:** see Card 8 for when to huck and how to shape it. Then add a pump fake before the step, so the mark has to respect the short throw too.
+
+**Source:** GRUT (Amsterdam) huck video, filmed with Flik Ultimate; UAP Backhand hucks.
+
+## Card 42 · The forehand huck: load it, snap it
+
+**Release:** week 5 as homework, then week 28; recapped in week 30 for hucking downwind
+
+**Why it matters.** A forehand huck gets off quickly and on the break side, so it beats marks that take away the backhand. Like the backhand, its power comes from loading the body, not from throwing harder.
+
+**Three key points**
+
+1. **Load sideways.** Stretch the arm back like an elastic band: the more it stretches, the more energy it stores. As your front foot lands, the arm is pulled forward, not pushed.
+2. **Turn the shoulders.** They face the field at the start, turn side-on as you wind up, and turn back to the field as you release.
+3. **Snap and plant.** Pull the arm back straight after the release for a snappy release and lots of spin, which helps most downwind. Planting your foot hard just before you throw adds a little extra speed.
+
+**Coaching cue:** “Stretch, turn, snap.”
+
+**Diagram:** a thrower side-on at full stretch, an arrow showing the shoulder turn back to the field, and the arm snapping back after release.
+
+**Try it:** week 28 joint session, forehand huck technique, then deep-space games. In week 30 use the snap for downwind hucks.
+
+**Videos:** [Forehand huck technique (GRUT)](https://www.youtube.com/watch?v=utwBy0UtL60)
+
+**Next level:** combine all three loads (sideways, rotational and the foot plant) and practise at 110% of your range. Throw both hucks to the same target so the mark can't take one away.
+
+**Source:** GRUT (Amsterdam) huck video, filmed with Flik Ultimate.
 
 ## Card 9 · Throwing in the wind
 
@@ -379,11 +432,35 @@ Each card is one idea a player can read in three minutes, posted the week it is 
 
 **Try it:** week 28 joint session, deep-space games. Practise deep-cut timing with the Dishy Huck drill.
 
-**Drills:** [Deep box-out (GRUT)](/sessions/drills?q=Deep+box-out) · [Read-the-defender hucking (GRUT)](/sessions/drills?q=Read-the-defender)
+**Drills:** [Read-the-defender hucking (GRUT)](/sessions/drills?q=Read-the-defender). Winning the contest: Card 43.
 
 **Next level:** run the L cut. Start it once the swing is caught, come far enough across to break the thrower’s plane, let the defender bite, then strike deep. If the defender takes away the deep, counter back to the open side. In the air, convert your speed into height: reach your leg forward, plant your heel, pop up. If the disc hangs, attack it at its highest point.
 
 **Source:** HN Excel Premium (Deep Cutting, The L Cut, How to Jump); HN Next Gen 10 (Deep Cut Timing); HN 10 Big Drills; HB 27.3–27.4.
+
+## Card 43 · Winning the deep ball: box out, find the body
+
+**Release:** week 25, alongside aerial contests and deep defence
+
+**Why it matters.** Many deep throws end in a contest. The player who wins the position, not the one who jumps highest, usually comes down with the disc.
+
+**Three key points**
+
+1. **On offence, box out.** When the deep throw goes up, keep your body between the disc and your defender. Read the disc early and take the space in front of them.
+2. **Change your run if you need to.** Slow down, push out a little, or curve your cut, so the defender can't get their body between you and the disc.
+3. **On defence, find the body first.** Don't run to where you think the disc will land. Run to the cutter, touch them and get as close as possible, then jump for the block when the disc arrives.
+
+**Coaching cue:** “Offence: body between. Defence: body first.”
+
+**Diagram:** a deep throw with the cutter boxing out in front of the defender; beside it, the defender's path straight to the cutter's body, not to the disc.
+
+**Try it:** week 25 joint session, the 1v1 deep drill: three rounds (nobody jumps, offence jumps, both jump), then swap roles so everyone practises both halves.
+
+**Videos:** [Deep box-out (GRUT)](https://www.youtube.com/watch?v=2mc9OVdpwMs) · [Find the body (GRUT)](https://www.youtube.com/watch?v=GAXfWzZi7c8)
+
+**Next level:** time your jump for the disc's highest point (Card 14), and on defence stay goal-side so the cutter never gets free behind you (Card 23).
+
+**Source:** GRUT (Amsterdam) deep drill videos, filmed with Flik Ultimate; HN Practice Sessions 10; HB 27.4–27.5.
 
 # Handle and reset
 
@@ -521,11 +598,35 @@ Each card is one idea a player can read in three minutes, posted the week it is 
 
 **Try it:** week 7 joint session, Herd’s Forcing the Disc session. In week 16, the one-crossover marking game.
 
-**Drills:** [Three marking tips (GRUT)](/sessions/drills?q=Three+marking+tips)
+**See also:** Card 44, GRUT's three marking habits, with video.
 
 **Next level:** the flat mark (1s, on the call). Shoulders and hips parallel to the endzone, except on the trap. Close down on the first threatened throw, then stay within 3 m for the second. On the call, everyone downfield knows the open side has changed. Mark by stack: 45° against vert, flatter against ho, and straight up on the open-side sideline.
 
 **Source:** UAP Marking (Wiseman); DK (triangle marking); BFD (flat mark); HN Practice Sessions 3; HN Point of Attack (Triangle Marking; Marking Vert and Ho Stack).
+
+## Card 44 · Marking: three habits from GRUT
+
+**Release:** week 7, recapped in week 39
+
+**Why it matters.** “You're responsible for stopping half of the field.” A mark that switches off gives the thrower every option; a mark who stays sharp takes away the throw they want most.
+
+**Three key points**
+
+1. **Stay active on your feet.** Always on your toes, ready to move fast in either direction.
+2. **Know how your thrower likes to throw.** If they throw low, keep your hands low. Take away their favourite throw first.
+3. **Keep your intensity up.** Don't slack off when you reach the mark: go into it at full intensity and try to win there.
+
+**Coaching cue:** “On your toes, take their favourite, full intensity.”
+
+**Diagram:** a thrower and mark from above: the mark's hands low to take away a low release, and the half of the field the mark is stopping shaded.
+
+**Try it:** week 7 joint session, 3-person marking: before each set the thrower names their favourite throw and the mark takes it away; the thrower rates the mark's intensity 1–3. Refresher in week 39.
+
+**Videos:** [Three marking tips (GRUT)](https://www.youtube.com/watch?v=U4SmIgLh9bM)
+
+**Next level:** add each opponent's favourite throws to the scouting card (Card 40), so every mark knows what to take away before the game.
+
+**Source:** GRUT (Amsterdam) marking video, filmed with Flik Ultimate.
 
 ## Card 21 · Defensive footwork: low, fast feet, pick your spot
 
@@ -589,7 +690,7 @@ Each card is one idea a player can read in three minutes, posted the week it is 
 
 **Try it:** week 20 trial session, Tag Prestall and Blocks Only.
 
-**Drills:** [Find the body (GRUT)](/sessions/drills?q=Find+the+body)
+**See also:** Card 43, winning the deep ball, with video.
 
 **Next level:** steal a look at the field when your player is stationary, has committed to a line, or is clearing. That’s heads-up D, and it’s what lets you poach and switch later. Tell the 2s which order they’re protecting: some teams protect the open under first, then deep, then break.
 

@@ -298,4 +298,4 @@ def test_grut_drills_link_to_the_real_plan(app, herd):
         SessionComponent.title.like('%(GRUT)%')).all()
     assert comps and all(c.saved_drill is not None for c in comps)
     assert {c.saved_drill.external_id for c in comps} == {d.external_id for d in grut}
-    assert len(grut) == 14
+    assert len(grut) == 9
