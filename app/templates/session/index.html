@@ -45,6 +45,12 @@
                             {{ form.session_type(class="form-select") }}
                         </div>
                         
+                        <!-- Squad Filter -->
+                        <div class="col-md-3">
+                            {{ form.squad.label(class="form-label") }}
+                            {{ form.squad(class="form-select") }}
+                        </div>
+
                         {% if form.season.choices|length > 1 %}
                         <!-- Season Plan Filters -->
                         <div class="col-md-3">
@@ -58,10 +64,6 @@
                         <div class="col-md-3">
                             {{ form.block.label(class="form-label") }}
                             {{ form.block(class="form-select") }}
-                        </div>
-                        <div class="col-md-3">
-                            {{ form.squad.label(class="form-label") }}
-                            {{ form.squad(class="form-select") }}
                         </div>
                         {% endif %}
 

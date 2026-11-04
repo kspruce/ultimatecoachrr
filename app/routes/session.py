@@ -76,9 +76,7 @@ def index():
         (str(n), name or f'Phase {n}')
         for n, name in distinct_values(SessionPlan.phase_number, SessionPlan.phase_name)]
     form.block.choices = [('', 'All Blocks')] + [(b, b) for (b,) in distinct_values(SessionPlan.block)]
-    form.squad.choices = [('', 'All Squads')] + [
-        (value, label) for value, label in SessionPlan.SQUAD_CHOICES
-        if value in {s for (s,) in distinct_values(SessionPlan.squad)}]
+    form.squad.choices = [('', 'All Squads')] + list(SessionPlan.SQUAD_CHOICES)
     form.season.data, form.phase.data, form.block.data, form.squad.data = season, phase, block, squad
 
     if season:
@@ -89,8 +87,8 @@ def index():
         query = query.filter(SessionPlan.phase_number == int(phase))
     if block:
         query = query.filter(SessionPlan.block == block)
-    if squad:
-        query = query.filter(SessionPlan.squad == squad)
+    if squad in {value for value, _ in SessionPlan.SQUAD_CHOICES}:
+        query = _filter_by_squad(query, squad)
     
     if date_range != 'all':
         today = datetime.now().date()
@@ -167,7 +165,7 @@ def add_session():
             is_published=form.is_published.data,
             team_organization_id=get_current_team_id()  # Add team organization ID
         )
-        session_plan.squads = [s for s in squads if s.id in (form.squads.data or [])]
+        _save_squads(session_plan, form, squads)
         
         db.session.add(session_plan)
         db.session.commit()
@@ -189,6 +187,43 @@ def _squad_choices(form):
     squads = team_squads(get_current_team_id())
     form.squads.choices = [(s.id, s.name) for s in squads]
     return squads
+
+
+def plan_squad_for(picked, all_squads):
+    """The joint / 1s / 2s label the session list filters on, from the squads
+    ticked: none (or all of them) is joint; one squad named 1s or 2s is that
+    squad; anything else has no label."""
+    if not picked or (all_squads and len(picked) == len(all_squads)):
+        return 'joint'
+    if len(picked) == 1:
+        name = picked[0].name.strip().lower()
+        if name in {value for value, _ in SessionPlan.SQUAD_CHOICES}:
+            return name
+    return None
+
+
+def _save_squads(session_plan, form, squads):
+    """Store who a session is for, from the squad ticks or (for a club with
+    no squads set up) the Joint / 1s / 2s choice."""
+    if squads:
+        session_plan.squads = [s for s in squads if s.id in (form.squads.data or [])]
+        session_plan.squad = plan_squad_for(session_plan.squads, squads)
+    else:
+        session_plan.squads = []
+        session_plan.squad = form.plan_squad.data or 'joint'
+
+
+def _filter_by_squad(query, squad):
+    """Sessions for a joint / 1s / 2s filter. A session with no label yet
+    counts by its ticked squads, and as joint when it has none."""
+    from app.models.season import Squad
+    unlabelled = SessionPlan.squad.is_(None)
+    if squad == 'joint':
+        return query.filter(db.or_(SessionPlan.squad == 'joint',
+                                   db.and_(unlabelled, ~SessionPlan.squads.any())))
+    return query.filter(db.or_(
+        SessionPlan.squad == squad,
+        db.and_(unlabelled, SessionPlan.squads.any(db.func.lower(Squad.name) == squad))))
 
 # Drill Library Routes
 @bp.route('/drills')
@@ -1129,6 +1164,7 @@ def edit_session(session_id):
     squads = _squad_choices(form)
     if request.method == 'GET':
         form.squads.data = [s.id for s in session_plan.squads]
+        form.plan_squad.data = session_plan.squad or 'joint'
 
     if form.validate_on_submit():
         session_plan.title = form.title.data
@@ -1140,7 +1176,7 @@ def edit_session(session_id):
         session_plan.notes = form.notes.data
         session_plan.session_type = form.session_type.data
         session_plan.is_published = form.is_published.data
-        session_plan.squads = [s for s in squads if s.id in (form.squads.data or [])]
+        _save_squads(session_plan, form, squads)
         
         db.session.commit()
         
