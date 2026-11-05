@@ -91,11 +91,15 @@ def _play_point(client, rng, point_id, line_type, line):
         if rng.random() < 0.45:
             post(rng.choice(line), 'scored_on', 0, rng.uniform(5, 30), is_offensive=False)
             return
-        post(rng.choice(line), rng.choice(['block', 'block', 'forced_turnover']),
-             rng.uniform(30, 80), rng.uniform(3, 34), is_offensive=False)
+        # The regain: a block or forced turnover, or now and then a Callahan
+        # (which is the regain itself, as on the recording screen). The
+        # draws stay in the same order so the rest of the season is unchanged.
+        regain = (rng.choice(line), rng.choice(['block', 'block', 'forced_turnover']),
+                  rng.uniform(30, 80), rng.uniform(3, 34))
         if rng.random() < 0.08:
             post(rng.choice(line), 'callahan', 95, rng.uniform(5, 30), is_offensive=False)
             return
+        post(*regain, is_offensive=False)
     holder = rng.choice(line)
     post(holder, 'catch', x, y)
     for _ in range(rng.randint(2, 9)):

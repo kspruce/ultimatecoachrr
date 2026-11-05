@@ -51,6 +51,22 @@ def test_scoring_efficiency():
     assert formulas.scoring_efficiency(0, 0) == formulas.DEFAULT_SE
 
 
+@pytest.mark.parametrize('offence, scored, events, ok', [
+    (True, True, ['catch', 'goal'], True),                                   # clean hold
+    (True, True, ['throwaway', 'block', 'goal'], True),                      # hold after a turn
+    (True, False, ['drop', 'scored_on'], True),                              # broken
+    (True, False, ['scored_on'], False),                                     # broken, no turn
+    (False, True, ['unforced_turnover', 'catch', 'goal'], True),             # break
+    (False, True, ['callahan'], True),
+    (False, True, ['catch', 'goal'], False),                                 # break, no regain
+    (False, False, ['scored_on'], True),
+    (False, False, ['block', 'scored_on'], False),                           # regained, never lost
+    (False, True, ['block', 'throwaway', 'forced_turnover', 'goal'], True),
+])
+def test_possession_gap(offence, scored, events, ok):
+    assert (formulas.possession_gap(offence, scored, events) is None) == ok
+
+
 def test_goal_equivalents_by_hand():
     se = 0.5
     ge = formulas.goal_equivalents(BASE, se)
@@ -148,6 +164,40 @@ def test_ratings_page_explains_with_the_teams_numbers(app, season):
     assert 'Scoring efficiency (SE)' in html
     assert '%.3f' % se['se'] in html
     assert 'A worked example' in html and 'Once points are recorded' not in html
+    assert "Points that don't add up" in html
+
+
+def test_incomplete_points_are_found_and_left_out_of_se(app, season):
+    from flask_login import login_user
+    from app.models.event import Event
+    from app.models.point import Point
+    from app.models.user import User
+    from app.stats.team import calculate_scoring_efficiency, find_incomplete_points
+    with app.test_request_context():
+        login_user(User.query.first())
+        before = calculate_scoring_efficiency(None)
+        assert find_incomplete_points(None) == []
+        # Wipe the turns from a point we broke: it can't add up any more
+        point = next(p for p in Point.query.all()
+                     if p.point_outcome == 'scored' and p.our_line_type == 'D-line'
+                     and any(e.event_type == 'goal' for e in p.events))
+        for e in list(point.events):
+            if e.event_type in formulas.POSSESSION_CHANGES:
+                db.session.delete(e)
+        db.session.commit()
+        point_id = point.id
+        cache.clear()
+        db.session.remove()  # a new request: games forget their loaded points
+    with app.test_request_context():
+        login_user(User.query.first())
+        found = find_incomplete_points(None)
+        after = calculate_scoring_efficiency(None)
+    assert [p['point_id'] for p in found] == [point_id]
+    assert 'no block or turnover' in found[0]['reason']
+    assert after['se_incomplete'] == 1
+    assert after['se_goals'] == before['se_goals'] - 1
+    html = season['client'].get('/stats/ratings').get_data(as_text=True)
+    assert f'/points/{point_id}' in html
 
 
 def test_dashboard_shows_epm_and_eff(app, season):

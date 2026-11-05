@@ -26,6 +26,35 @@ POSSESSION_CHANGES = ('throwaway', 'drop', 'stall', 'block',
                       'forced_turnover', 'unforced_turnover', 'callahan')
 
 
+OUR_TURNS = ('throwaway', 'drop', 'stall')
+REGAINS = ('block', 'forced_turnover', 'unforced_turnover', 'callahan')
+
+
+def possession_gap(started_on_offence, we_scored, event_types):
+    """Why a finished point's recorded possession changes can't be right,
+    or None if they add up.
+
+    Possession alternates, so the number of times we got the disc back
+    (regains) less the number of times we gave it away (our turns) is fixed
+    by how the point started and who scored: 0 for a hold, 1 for a break,
+    -1 for a broken O point and 0 for a D point they scored. Anything else
+    means a change of possession wasn't recorded (or one too many was)."""
+    our_turns = sum(1 for t in event_types if t in OUR_TURNS)
+    regains = sum(1 for t in event_types if t in REGAINS)
+    expected = (0 if we_scored else -1) if started_on_offence else (1 if we_scored else 0)
+    if regains - our_turns == expected:
+        return None
+    if not started_on_offence and we_scored and regains == 0:
+        return 'We scored on a D point, but no block or turnover by them was recorded'
+    if started_on_offence and not we_scored and our_turns == 0:
+        return 'They scored on our O point, but none of our turns was recorded'
+    start = 'O' if started_on_offence else 'D'
+    result = 'we scored' if we_scored else 'they scored'
+    return (f"Possession changes don't add up: {start} point, {result}, "
+            f"{our_turns} of our turn{'s' if our_turns != 1 else ''} and "
+            f"{regains} regain{'s' if regains != 1 else ''} recorded")
+
+
 def scoring_efficiency(goals, turns):
     """SE: the share of possessions (both teams') that end in a goal,
     goals / (goals + turns). DEFAULT_SE when there's nothing to go on."""

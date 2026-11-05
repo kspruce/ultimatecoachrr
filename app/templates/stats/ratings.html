@@ -105,6 +105,7 @@
       blocks, forced and unforced turnovers, and Callahans.</li>
     <li>Points only recorded live on Game Day (just the line and the result) are left out, because they don't
       record the turns.</li>
+    <li>Points whose possession changes don't add up are left out too (<a href="#incomplete">see below</a>).</li>
     <li>With no recorded points yet, the site uses {{ DEFAULT_SE }}, which is about where club Nationals sits.</li>
   </ul>
   {% if has_games and team_avgs.get('se_goals') %}
@@ -116,6 +117,8 @@
   <p>
     {{ team_avgs.se_goals }} ÷ ({{ team_avgs.se_goals }} + {{ team_avgs.se_turns }}) = <strong>{{ n3|format(se) }}</strong>.
     About {{ (se * 100)|round|int }} in every 100 possessions in your games end in a goal.
+    {%- if team_avgs.get('se_incomplete') %} ({{ team_avgs.se_incomplete }} point{{ 's' if team_avgs.se_incomplete != 1 }}
+    that <a href="#incomplete">don't add up</a> {{ 'are' if team_avgs.se_incomplete != 1 else 'is' }} left out.){% endif %}
   </p>
   {% else %}
   <p class="text-muted">No points with full stats yet, so your ratings use SE = {{ DEFAULT_SE }} for now.</p>
@@ -123,6 +126,41 @@
   <p class="text-muted small">
     One game with few recorded points can swing SE a lot. Over a season it settles down.
   </p>
+
+  <h3 id="incomplete">Points that don't add up</h3>
+  <p>
+    You don't need to record the other team's stats for SE. When they lose the disc, the stat taker has to press
+    block, forced turnover, unforced turnover or Callahan to get back on offence, and that press counts their turn.
+    If a point skips that step, its turns go missing and SE comes out too high. Turns would then look more costly
+    than they are.
+  </p>
+  <p>
+    Possession alternates, so the result of a point fixes how its possession changes have to balance. On an O point
+    we held, every turn of ours needs a regain to match it. A D point we scored needs one more regain than turns.
+    A point that doesn't balance is missing something, so it's <strong>left out of SE</strong> (players' own stats
+    from it still count).
+  </p>
+  {% if incomplete %}
+  <p>
+    <strong>{{ incomplete|length }}</strong> point{{ 's' if incomplete|length != 1 }} with full stats
+    {{ "doesn't" if incomplete|length == 1 else "don't" }} add up. Opening a point lets you add the missing play:
+  </p>
+  <table>
+    <thead><tr><th>Game</th><th class="num">Point</th><th>What's wrong</th></tr></thead>
+    <tbody>
+      {% for p in incomplete[:50] %}
+      <tr>
+        <td>vs {{ p.opponent }}{% if p.date %} <span class="text-muted small">{{ p.date.strftime('%-d %b') }}</span>{% endif %}</td>
+        <td class="num"><a href="{{ url_for('point.point_detail', point_id=p.point_id) }}">{{ p.point_number }}</a></td>
+        <td>{{ p.reason }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if incomplete|length > 50 %}<p class="text-muted small">Showing the first 50.</p>{% endif %}
+  {% elif has_games %}
+  <p><i class="bi bi-check-circle-fill text-success"></i> Every point with full stats adds up.</p>
+  {% endif %}
 
   <h2 id="ge">3. Goal equivalents</h2>
   <p>Each play is converted into goal equivalents (GE) using SE:</p>

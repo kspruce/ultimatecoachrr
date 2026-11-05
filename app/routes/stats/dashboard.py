@@ -11,7 +11,7 @@ from app.stats.formulas import (DEFAULT_SE, PER_PRIOR_POINTS, PER_SCALE, apply_r
                                 calculate_team_avg_stats, ge_coefficients)
 from app.stats.players import get_players_base_stats, get_point_ids_from_games
 from app.utils.season import scope_games, season_players, viewing_season, viewing_squad
-from app.stats.team import calculate_additional_team_metrics, calculate_game_stats, calculate_possession_based_team_metrics, calculate_team_summary, generate_player_connections, process_heatmap_data
+from app.stats.team import find_incomplete_points, calculate_additional_team_metrics, calculate_game_stats, calculate_possession_based_team_metrics, calculate_team_summary, generate_player_connections, process_heatmap_data
 from app.stats.loaders import preload_game_points
 
 
@@ -142,6 +142,7 @@ def ratings():
         reference=[(s, ge_coefficients(s)) for s in (0.4, 0.5, 0.6, 0.7, 0.8)],
         example_player=example_player,
         example=example_stats,
+        incomplete=find_incomplete_points(games) if games else [],
         DEFAULT_SE=DEFAULT_SE,
         PER_PRIOR_POINTS=PER_PRIOR_POINTS,
         PER_SCALE=PER_SCALE,

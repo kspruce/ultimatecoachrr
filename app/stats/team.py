@@ -9,7 +9,7 @@ from jinja2.utils import htmlsafe_json_dumps  # JSON that is safe inside <script
 from app.utils.team_filter import get_current_team_id
 
 from app.stats.formulas import (POSSESSION_CHANGES, TURNOVER_EVENTS, get_point_starting_possession, goal_equivalents,
-                                point_we_scored, scoring_efficiency)
+                                point_we_scored, possession_gap, scoring_efficiency)
 from app.stats.players import HUCK_DISTANCE, get_players_base_stats
 from app.stats.loaders import preload_game_points, game_points, game_line_points, is_analysed
 
@@ -20,23 +20,55 @@ def point_has_result(point):
     return outcome in ('scored', 'conceded')
 
 
-def calculate_scoring_efficiency(games=None):
-    """Scoring efficiency (SE) for these games: goals / (goals + turns),
-    counting both teams, from points with full stats. A goal is a point
-    with a result; a turn is any recorded change of possession (ours or
-    theirs). None means every game the team has."""
+def _point_gap(point):
+    """possession_gap for a loaded point with full stats and a result."""
+    return possession_gap(get_point_starting_possession(point) == 'offence',
+                          point_we_scored(point), [e.event_type for e in point.events])
+
+
+def _games_or_all(games):
     if games is None:
         games = Game.query.filter_by(team_organization_id=get_current_team_id()).all()
     games = games if isinstance(games, list) else [games]
     preload_game_points(games)
-    goals = turns = 0
-    for game in games:
+    return games
+
+
+def find_incomplete_points(games=None):
+    """Points with full stats whose possession changes can't produce the
+    result (see formulas.possession_gap): something was missed while
+    recording. Plain dicts, in game and point order."""
+    found = []
+    for game in sorted(_games_or_all(games), key=lambda g: (g.date is None, g.date, g.id)):
+        for point in game_points(game):
+            if is_analysed(point) and point_has_result(point):
+                reason = _point_gap(point)
+                if reason:
+                    found.append({'point_id': point.id, 'point_number': point.point_number,
+                                  'game_id': game.id, 'opponent': game.opponent,
+                                  'date': game.date, 'reason': reason})
+    return found
+
+
+def calculate_scoring_efficiency(games=None):
+    """Scoring efficiency (SE) for these games: goals / (goals + turns),
+    counting both teams, from points with full stats. A goal is a point
+    with a result; a turn is any recorded change of possession (ours or
+    theirs). Points whose possession changes don't add up (a turn wasn't
+    recorded) are left out, so they don't make turns look rarer than they
+    are. None means every game the team has."""
+    goals = turns = incomplete = 0
+    for game in _games_or_all(games):
         for point in game_points(game):
             if not is_analysed(point):
                 continue
+            if point_has_result(point) and _point_gap(point):
+                incomplete += 1
+                continue
             goals += point_has_result(point)
             turns += sum(1 for e in point.events if e.event_type in POSSESSION_CHANGES)
-    return {'se': scoring_efficiency(goals, turns), 'se_goals': goals, 'se_turns': turns}
+    return {'se': scoring_efficiency(goals, turns), 'se_goals': goals, 'se_turns': turns,
+            'se_incomplete': incomplete}
 
 
 def calculate_team_averages(games=None):
