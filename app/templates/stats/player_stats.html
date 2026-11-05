@@ -459,10 +459,11 @@
                         <div class="card-header">
                             <h5 class="mb-0">
                                 Player Efficiency Rating (PER)
-                                <i class="bi bi-info-circle" 
-                                   data-bs-toggle="tooltip" 
-                                   title="PER factors in scoring, assists, turnovers, defense, throw efficiency, and plus/minus relative to team averages">
-                                </i>
+                                <a href="{{ url_for('stats_dashboard.ratings') }}" class="text-reset"
+                                   data-bs-toggle="tooltip"
+                                   title="Goal equivalents per 10 points played, with turns priced by how often possessions end in a goal. Click for how it's worked out.">
+                                    <i class="bi bi-info-circle"></i>
+                                </a>
                             </h5>
                         </div>
                         <div class="card-body text-center d-flex flex-column justify-content-center">
@@ -471,6 +472,9 @@
                                 <div class="text-muted">Player Efficiency Rating</div>
                             </div>
                             <div class="small text-muted mt-3">
+                                {% if stats.analysed_points %}
+                                <div>EPM: {{ stats.epm|default(0)|round(2) }} · Eff: {{ '%.3f'|format(stats.eff|default(0)) }}</div>
+                                {% endif %}
                                 <div>O-Line: {{ stats.o_line_plus_minus|default(0)|round(2) }}</div>
                                 <div>D-Line: {{ stats.d_line_plus_minus|default(0)|round(2) }}</div>
                             </div>

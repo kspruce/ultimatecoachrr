@@ -28,26 +28,71 @@ BASE = {'points_played': 10, 'goals': 2, 'assists': 3, 'hockey_assists': 1, 'thr
         'o_line_plus_minus_per_point': 0.5, 'd_line_plus_minus_per_point': 0.25}
 
 
-def test_unadjusted_per_by_hand():
-    w = formulas.PER_WEIGHTS
-    box = (w['scoring'] * 2 ** 0.75 + w['assist'] * 3 ** 0.75 + w['assist'] * 0.5 * 1
-           + w['turnover'] * 1 + w['defense'] * 1)
-    passing = w['throw'] * (18 ** 0.75 * 0.9 ** 3 + 15 ** 0.75 * 1.0)
-    assert formulas.calculate_unadjusted_per(BASE) == pytest.approx((box + passing) / 10)
+def test_coefficients_match_bbsm_club_nationals():
+    """The men's division at 2026 Club Nationals had G .605, A .802, B/T .592."""
+    c = formulas.ge_coefficients(0.592)
+    assert c['goal'] == pytest.approx(0.605, abs=0.001)
+    assert c['assist'] == pytest.approx(0.803, abs=0.001)
+    assert c['block'] == c['turn'] == 0.592
 
 
-def test_per_is_15_for_an_average_player():
-    team_avgs = {'avg_uper': formulas.calculate_unadjusted_per(BASE),
-                 'avg_o_line_plus_minus_per_point': 0.5,
-                 'avg_d_line_plus_minus_per_point': 0.25}
-    assert formulas.calculate_per(BASE, team_avgs) == pytest.approx(15)
+@pytest.mark.parametrize('se', [0.4, 0.6, 0.8])
+def test_offence_adds_up_to_goals(se):
+    """However many turns, a team's goals and assists less its turns are
+    worth its goals: with SE = goals / (goals + turns)."""
+    goals = 30
+    turns = goals * (1 - se) / se
+    ge = formulas.goal_equivalents({'goals': goals, 'assists': goals, 'turnovers': turns}, se)
+    assert ge['total'] == pytest.approx(goals)
 
 
-def test_per_rewards_better_plus_minus_than_team():
-    team_avgs = {'avg_uper': formulas.calculate_unadjusted_per(BASE),
-                 'avg_o_line_plus_minus_per_point': 0.0, 'avg_d_line_plus_minus_per_point': 0.0}
-    assert formulas.calculate_per(BASE, team_avgs) > 15
+def test_scoring_efficiency():
+    assert formulas.scoring_efficiency(15, 10) == pytest.approx(0.6)
+    assert formulas.scoring_efficiency(0, 0) == formulas.DEFAULT_SE
+
+
+def test_goal_equivalents_by_hand():
+    se = 0.5
+    ge = formulas.goal_equivalents(BASE, se)
+    plus = 2 * (0.86 - 0.43 * se) + 3 * (1.14 - 0.57 * se) + 1 * se
+    assert ge['gab'] == pytest.approx(plus)
+    assert ge['turns'] == pytest.approx(0.5)
+    assert ge['total'] == pytest.approx(plus - 0.5)
+    # A Callahan is a goal and a block
+    cal = formulas.goal_equivalents({'callahans': 1}, se)
+    assert cal['total'] == pytest.approx((0.86 - 0.43 * se) + se)
+
+
+def test_per_is_team_rate_for_an_average_player_and_shrinks_small_samples():
+    se = 0.5
+    rate = formulas.goal_equivalents(BASE, se)['total'] / 10
+    team_avgs = {'se': se, 'avg_ge_per_point': rate}
+    assert formulas.calculate_per(BASE, team_avgs) == pytest.approx(formulas.PER_SCALE * rate)
+    # Same rate, different sample: same PER (no volume penalty)
+    double = {k: v * 2 if isinstance(v, int) else v for k, v in BASE.items()}
+    assert formulas.calculate_per(double, team_avgs) == pytest.approx(formulas.PER_SCALE * rate)
+    # One great point is pulled most of the way back to the team
+    hot = {'points_played': 1, 'goals': 1, 'assists': 1}
+    hot_rate = formulas.goal_equivalents(hot, se)['total']
+    assert formulas.PER_SCALE * rate < formulas.calculate_per(hot, team_avgs) < formulas.PER_SCALE * hot_rate / 2
     assert formulas.calculate_per({**BASE, 'points_played': 0}, team_avgs) == 0
+
+
+def test_eff_rewards_not_giving_it_back():
+    team_avgs = {'se': 0.6, 'eff_prior': 1.0}
+    clean = formulas.calculate_eff({'goals': 3, 'assists': 3}, team_avgs)
+    loose = formulas.calculate_eff({'goals': 3, 'assists': 3, 'turnovers': 4}, team_avgs)
+    assert 0 < loose < clean < 1
+    assert formulas.calculate_eff({'turnovers': 2}, team_avgs) == 0
+    # The prior keeps one goal and no turns from beating a big clean line
+    assert formulas.calculate_eff({'goals': 1}, team_avgs) < clean
+
+
+def test_apply_ratings_fills_every_rating():
+    stats = formulas.apply_ratings(dict(BASE), {'se': 0.6, 'avg_ge_per_point': 0.2, 'eff_prior': 1.0})
+    for key in ('per', 'eff', 'epm', 'ge_plus', 'ge_turns'):
+        assert key in stats
+    assert stats['epm'] == pytest.approx(stats['ge_plus'] - stats['ge_turns'])
 
 
 def test_line_efficiency_ranks_by_conversion():
@@ -88,6 +133,27 @@ def test_team_csv_export_works_and_fills_every_column(app, season):
     assert any(float(row['goals_per_point']) > 0 for row in rows)
     assert any(float(row['o_line_conversion_rate']) > 0 for row in rows)
     assert any(int(row['hucks']) > 0 for row in rows)
+
+
+def test_ratings_page_explains_with_the_teams_numbers(app, season):
+    from app.stats.team import calculate_scoring_efficiency
+    with app.test_request_context():
+        from flask_login import login_user
+        from app.models.user import User
+        login_user(User.query.first())
+        se = calculate_scoring_efficiency(None)
+    assert se['se_goals'] > 0
+    assert se['se'] == pytest.approx(se['se_goals'] / (se['se_goals'] + se['se_turns']))
+    html = season['client'].get('/stats/ratings').get_data(as_text=True)
+    assert 'Scoring efficiency (SE)' in html
+    assert '%.3f' % se['se'] in html
+    assert 'A worked example' in html and 'Once points are recorded' not in html
+
+
+def test_dashboard_shows_epm_and_eff(app, season):
+    html = season['client'].get('/stats/').get_data(as_text=True)
+    assert '>EPM<' in html and '>Eff<' in html
+    assert '/stats/ratings' in html
 
 
 def test_per_matches_between_dashboard_api_and_game_csv(app, season):

@@ -8,60 +8,65 @@ from app.models.throws import Throw
 from jinja2.utils import htmlsafe_json_dumps  # JSON that is safe inside <script>
 from app.utils.team_filter import get_current_team_id
 
-from app.stats.formulas import TURNOVER_EVENTS, calculate_unadjusted_per, get_point_starting_possession, point_we_scored
+from app.stats.formulas import (POSSESSION_CHANGES, TURNOVER_EVENTS, get_point_starting_possession, goal_equivalents,
+                                point_we_scored, scoring_efficiency)
 from app.stats.players import HUCK_DISTANCE, get_players_base_stats
 from app.stats.loaders import preload_game_points, game_points, game_line_points, is_analysed
 
 
+def point_has_result(point):
+    """Did the point end in a goal for either team?"""
+    outcome = (getattr(point, 'point_outcome', None) or '').strip().lower()
+    return outcome in ('scored', 'conceded')
+
+
+def calculate_scoring_efficiency(games=None):
+    """Scoring efficiency (SE) for these games: goals / (goals + turns),
+    counting both teams, from points with full stats. A goal is a point
+    with a result; a turn is any recorded change of possession (ours or
+    theirs). None means every game the team has."""
+    if games is None:
+        games = Game.query.filter_by(team_organization_id=get_current_team_id()).all()
+    games = games if isinstance(games, list) else [games]
+    preload_game_points(games)
+    goals = turns = 0
+    for game in games:
+        for point in game_points(game):
+            if not is_analysed(point):
+                continue
+            goals += point_has_result(point)
+            turns += sum(1 for e in point.events if e.event_type in POSSESSION_CHANGES)
+    return {'se': scoring_efficiency(goals, turns), 'se_goals': goals, 'se_turns': turns}
+
+
 def calculate_team_averages(games=None):
-    """
-    Calculate team averages for PER normalization with optimizations
-    """
+    """What the player ratings are measured against, for these games: the
+    scoring efficiency (SE) that prices turns, the team's goal equivalents
+    per point played (where PER starts each player) and the Eff prior (the
+    average player's turns in goal equivalents). See formulas.apply_ratings."""
     players = Player.query.filter_by(
         active=True,
         team_organization_id=get_current_team_id()
     ).all()
-    
-    # Use batch loading for player stats
     player_stats = get_players_base_stats(players, games)
-    
-    totals = {
-        'o_line_plus_minus': 0,
-        'o_line_points': 0,
-        'd_line_plus_minus': 0,
-        'd_line_points': 0,
-        'uper_total': 0,
-        'player_count': 0
-    }
 
-    # First pass to calculate basic averages (points with full stats only)
-    for player_id, stats in player_stats.items():
+    result = calculate_scoring_efficiency(games)
+    se = result['se']
+
+    ge_total = points = turns = player_count = 0
+    for stats in player_stats.values():
         if stats['analysed_points'] > 0:
-            totals['player_count'] += 1
-            totals['o_line_plus_minus'] += stats.get('o_line_plus_minus', 0)
-            totals['o_line_points'] += stats.get('analysed_o_line_points', 0)
-            totals['d_line_plus_minus'] += stats.get('d_line_plus_minus', 0)
-            totals['d_line_points'] += stats.get('analysed_d_line_points', 0)
-    
-    # Calculate initial averages
-    initial_avgs = {
-        'avg_o_line_plus_minus_per_point': (totals['o_line_plus_minus'] / totals['o_line_points']) if totals['o_line_points'] > 0 else 0,
-        'avg_d_line_plus_minus_per_point': (totals['d_line_plus_minus'] / totals['d_line_points']) if totals['d_line_points'] > 0 else 0,
-        'avg_uper': 1  # Initial placeholder
-    }
-    
-    # Second pass to calculate uPER using the initial averages
-    for player_id, stats in player_stats.items():
-        if stats['analysed_points'] > 0:
-            # Calculate unadjusted PERwithout the plus-minus component
-            # since we don't have the final team averages yet
-            raw_uper = calculate_unadjusted_per(stats)
-            totals['uper_total'] += raw_uper
-    
-    # Update with final avg_uper
-    initial_avgs['avg_uper'] = totals['uper_total'] / totals['player_count'] if totals['player_count'] > 0 else 1
-    
-    return initial_avgs
+            player_count += 1
+            points += stats['analysed_points']
+            ge_total += goal_equivalents(stats, se)['total']
+            turns += stats.get('turnovers', 0)
+
+    result.update({
+        'avg_ge_per_point': ge_total / points if points else 0,
+        'eff_prior': se * turns / player_count if player_count else 0,
+        'player_count': player_count,
+    })
+    return result
 
 def calculate_game_stats(game):
     """

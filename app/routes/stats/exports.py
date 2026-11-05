@@ -11,7 +11,7 @@ from app.utils.team_filter import get_current_team_id
 from app.utils.season import scope_games, season_players, viewing_season
 
 from app.routes.stats import bp
-from app.stats.formulas import calculate_per
+from app.stats.formulas import apply_ratings
 from app.stats.cache import get_cached_team_averages
 from app.stats.history import get_player_game_history
 from app.stats.players import get_players_base_stats
@@ -63,6 +63,8 @@ def _stat_columns(s):
         'o_line_conversion_rate': round(s.get('o_line_conversion_rate', 0), 1),
         'd_line_conversion_rate': round(s.get('d_line_conversion_rate', 0), 1),
         'per':                    round(s.get('per', 0), 2),
+        'epm':                    round(s.get('epm', 0), 2),
+        'eff':                    round(s.get('eff', 0), 3),
     }
 
 
@@ -97,7 +99,7 @@ def export_player_history_csv(player_id):
         'throwaways', 'turnovers', 'plus_minus',
         'hucks', 'break_throws', 'break_throw_percentage',
         'o_line_conversion_rate', 'd_line_conversion_rate',
-        'per',
+        'per', 'epm', 'eff',
     ]
 
     rows = []
@@ -148,7 +150,7 @@ def export_game_csv(game_id):
         'throwaways', 'drops', 'turnovers', 'plus_minus',
         'hucks', 'break_throws', 'break_throw_percentage',
         'o_line_conversion_rate', 'd_line_conversion_rate',
-        'per',
+        'per', 'epm', 'eff',
     ]
 
     rows = []
@@ -156,7 +158,7 @@ def export_game_csv(game_id):
         if player.id not in player_stats_dict:
             continue
         s = player_stats_dict[player.id]
-        s['per'] = calculate_per(s, team_avgs)
+        apply_ratings(s, team_avgs)
         rows.append({**_player_columns(player), **_stat_columns(s)})
 
     date_str = game.date.strftime('%Y%m%d') if game.date else 'unknown'
@@ -192,7 +194,7 @@ def export_team_season_csv():
         'hucks', 'break_throws', 'break_throw_percentage',
         'goals_per_point', 'assists_per_point', 'blocks_per_point',
         'o_line_conversion_rate', 'd_line_conversion_rate',
-        'per',
+        'per', 'epm', 'eff',
     ]
 
     rows = []
@@ -202,7 +204,7 @@ def export_team_season_csv():
         s = player_stats_dict[player.id]
         if s.get('points_played', 0) == 0:
             continue  # Skip players with no recorded activity
-        s['per'] = calculate_per(s, team_avgs)
+        apply_ratings(s, team_avgs)
         rows.append({**_player_columns(player), **_stat_columns(s)})
 
     return _csv_response(rows, headers, f'team_season_stats_{season.year}' if season else 'team_stats_all_time')

@@ -215,7 +215,8 @@ FEATURES = [
             flag='stats_enabled',
             steps=_m('Stats are built automatically as points are recorded',
                      "Visit the Stats dashboard for team-wide numbers, for the season you've picked",
-                     'Click any player to see their profile, where they turn it over and what to work on'),
+                     'Click any player to see their profile, where they turn it over and what to work on',
+                     'See <em>How PER, EPM and Eff work</em> on the dashboard for where the ratings come from'),
             coach_steps=_m('Stat takers find the quick Game Day tallies under Stats → Game Day summary',),
             pages=('stats_dashboard.', 'stat.')),
     Feature('clips', 'Clip Library', 'bi-camera-video-fill', 'Video clips with notes, for review '
