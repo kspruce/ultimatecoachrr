@@ -7,7 +7,7 @@ from app.utils.team_filter import get_current_team_id
 from app.utils.season import scope_games, scope_tournaments, season_players, team_seasons, viewing_season, viewing_squad
 
 from app.routes.stats import bp
-from app.stats.formulas import calculate_per
+from app.stats.formulas import apply_ratings
 from app.stats.cache import get_cached_team_averages
 from app.stats.formulas import calculate_optimized_line_efficiency
 from app.stats.players import get_players_base_stats
@@ -90,7 +90,7 @@ def team_stats():
         if player.id in player_stats_dict:
             stats = player_stats_dict[player.id]
             if stats['points_played'] > 0:
-                stats['per'] = calculate_per(stats, team_avgs)
+                apply_ratings(stats, team_avgs)
                 player_stats.append({
                     'player': player,
                     'stats': stats

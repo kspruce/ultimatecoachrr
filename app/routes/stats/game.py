@@ -9,9 +9,8 @@ from app.utils.team_filter import get_current_team_id
 from app.utils.point_flow import analysis_progress
 
 from app.routes.stats import bp
-from app.stats.formulas import calculate_per
+from app.stats.formulas import apply_ratings
 from app.stats.cache import get_cached_team_averages
-from app.stats.formulas import calculate_impact_score
 from app.stats.players import get_players_base_stats
 from app.stats.team import calculate_additional_team_metrics, calculate_game_stats, generate_player_connections, process_heatmap_data
 from app.stats.loaders import game_points
@@ -55,7 +54,7 @@ def game_stats(game_id):
     for player in players:
         if player.id in player_stats_dict:
             stats = player_stats_dict[player.id]
-            stats['per'] = calculate_per(stats, team_avgs)
+            apply_ratings(stats, team_avgs)
             player_stats.append({
                 'player': player,
                 'stats': stats
@@ -80,6 +79,5 @@ def game_stats(game_id):
         player_stats=player_stats,
         heatmap_data=htmlsafe_json_dumps(heatmap_data),
         connections=htmlsafe_json_dumps(connection_data),
-        calculate_impact_score=calculate_impact_score,
         progress=analysis_progress(game),
     )

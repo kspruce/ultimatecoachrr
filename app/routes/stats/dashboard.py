@@ -7,10 +7,11 @@ from app.utils.team_filter import get_current_team_id
 
 from app.routes.stats import bp
 from app.stats.cache import get_cached_team_averages
-from app.stats.formulas import calculate_optimized_line_efficiency, calculate_per, calculate_team_avg_stats
+from app.stats.formulas import (DEFAULT_SE, PER_PRIOR_POINTS, PER_SCALE, apply_ratings, calculate_optimized_line_efficiency,
+                                calculate_team_avg_stats, ge_coefficients)
 from app.stats.players import get_players_base_stats, get_point_ids_from_games
 from app.utils.season import scope_games, season_players, viewing_season, viewing_squad
-from app.stats.team import calculate_additional_team_metrics, calculate_game_stats, calculate_possession_based_team_metrics, calculate_team_summary, generate_player_connections, process_heatmap_data
+from app.stats.team import find_incomplete_points, calculate_additional_team_metrics, calculate_game_stats, calculate_possession_based_team_metrics, calculate_team_summary, generate_player_connections, process_heatmap_data
 from app.stats.loaders import preload_game_points
 
 
@@ -48,7 +49,7 @@ def index():
     player_stats = get_players_base_stats(players, recent_games)
     for stats in player_stats.values():
         if stats['points_played'] > 0:
-            stats['per'] = calculate_per(stats, team_avgs)
+            apply_ratings(stats, team_avgs)
 
     o_line_efficiency = calculate_optimized_line_efficiency(players, player_stats, is_offensive=True)
     d_line_efficiency = calculate_optimized_line_efficiency(players, player_stats, is_offensive=False)
@@ -104,3 +105,45 @@ EMPTY_CONTEXT = {
     'connection_data': {'nodes': [], 'links': []},
     'team_avg_stats': {},
 }
+
+
+@bp.route('/ratings')
+@login_required
+def ratings():
+    """How the player ratings (SE, goal equivalents, EPM, PER, Eff) are
+    worked out, with this team's own numbers for the season being viewed."""
+    team_id = get_current_team_id()
+    games = scope_games(Game.query.filter_by(team_organization_id=team_id), team_id).all()
+    team_avgs = get_cached_team_averages(games) if games else {}
+    se = team_avgs.get('se', DEFAULT_SE)
+
+    # A worked example: your own line if you're a player, otherwise the
+    # player with the most recorded points (players only see their own).
+    example_player = example_stats = None
+    if games:
+        if current_user.player and not current_user.is_coach:
+            candidates = [current_user.player]
+        else:
+            candidates = season_players(team_id)
+        stats_by_id = get_players_base_stats(candidates, games) if candidates else {}
+        recorded = [p for p in candidates if stats_by_id.get(p.id, {}).get('analysed_points', 0) > 0]
+        if recorded:
+            example_player = max(recorded, key=lambda p: stats_by_id[p.id]['analysed_points'])
+            example_stats = apply_ratings(stats_by_id[example_player.id], team_avgs)
+
+    return render_template(
+        'stats/ratings.html',
+        title='How the ratings work',
+        season=viewing_season(team_id),
+        has_games=bool(games),
+        team_avgs=team_avgs,
+        se=se,
+        coeffs=ge_coefficients(se),
+        reference=[(s, ge_coefficients(s)) for s in (0.4, 0.5, 0.6, 0.7, 0.8)],
+        example_player=example_player,
+        example=example_stats,
+        incomplete=find_incomplete_points(games) if games else [],
+        DEFAULT_SE=DEFAULT_SE,
+        PER_PRIOR_POINTS=PER_PRIOR_POINTS,
+        PER_SCALE=PER_SCALE,
+    )

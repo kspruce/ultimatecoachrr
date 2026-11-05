@@ -6,7 +6,7 @@ from app.utils.team_filter import get_current_team_id
 from app.utils.season import scope_games, season_players
 
 from app.routes.stats import bp
-from app.stats.formulas import calculate_per
+from app.stats.formulas import apply_ratings
 from app.stats.cache import get_cached_team_averages
 from app.stats.players import generate_player_sankey_data, get_players_base_stats, get_point_ids_from_games
 from app.stats.team import generate_player_connections, process_heatmap_data
@@ -133,7 +133,7 @@ def api_player_stats():
         if stats['points_played'] > 0:
             player = next((p for p in players if p.id == player_id), None)
             if player:
-                stats['per'] = calculate_per(stats, team_avgs)
+                apply_ratings(stats, team_avgs)
     
     # Format data for DataTables
     result = []
@@ -158,7 +158,9 @@ def api_player_stats():
                     'throwaways': stats['throwaways'],
                     'drops': stats['drops'],
                     'plus_minus': stats['plus_minus'],
-                    'per': stats['per']
+                    'per': stats['per'],
+                    'epm': stats['epm'],
+                    'eff': stats['eff'],
                 })
     
     return jsonify(result)

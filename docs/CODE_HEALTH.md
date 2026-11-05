@@ -59,6 +59,9 @@ SQLite and Postgres in GitHub Actions on every pull request.
 **Stats** (`app/stats/` for calculations, `app/routes/stats/` for pages)
 - One player-stats calculation and one PER formula used by every page; the
   old per-player path undercounted catches and reported 0 break throws.
+- Player ratings (EPM, PER, Eff) price turns by scoring efficiency, following
+  BBSM on Ultiworld (`app/stats/formulas.py`); `/stats/ratings` explains them
+  and lists recorded points whose possession changes don't add up.
 - Team CSV export works and fills every column; `games_played` is per player.
 - Player conversion rates are real (the radar's O-line value was always 0).
 - Dashboard ~1,660 -> ~90 queries; team page ~4,300 -> 20 (24-game season).

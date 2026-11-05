@@ -550,6 +550,7 @@
             <h5 class="mb-0">Player Statistics
                 <i class="bi bi-info-circle ms-2" data-bs-toggle="tooltip" 
                    title="Comprehensive player statistics from recent games"></i>
+                <a href="{{ url_for('stats_dashboard.ratings') }}" class="small fw-normal ms-2">How PER, EPM and Eff work</a>
             </h5>
             <div class="btn-group btn-group-sm">
                 <button class="btn btn-outline-primary stats-filter-btn active" data-view="all">All Stats</button>
@@ -576,7 +577,9 @@
                             <th class="offensive-stat" data-toggle="tooltip" title="Throwaways">Throwaways</th>
                             <th class="offensive-stat" data-toggle="tooltip" title="Drops">Drops</th>
                             <th data-toggle="tooltip" title="Plus/Minus">+/-</th>
-                            <th data-toggle="tooltip" title="Player Efficiency Rating">PER</th>
+                            <th data-toggle="tooltip" title="Player Efficiency Rating: goal equivalents per 10 points played">PER</th>
+                            <th data-toggle="tooltip" title="EDGE Plus/Minus: total goal equivalents, a fairer plus/minus">EPM</th>
+                            <th data-toggle="tooltip" title="Efficiency: share of goal equivalents not given back in turns (0 to 1)">Eff</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -610,6 +613,8 @@
                                        player_stats[player.id].blocks - player_stats[player.id].throwaways - 
                                        player_stats[player.id].drops)|round(1) }}</td>
                                     <td>{{ player_stats[player.id].per|round(1) }}</td>
+                                <td>{{ player_stats[player.id].epm|default(0)|round(1) }}</td>
+                                <td>{{ '%.2f'|format(player_stats[player.id].eff|default(0)) }}</td>
                                 </tr>
                                 {% endif %}
                             {% endfor %}
@@ -642,6 +647,8 @@
                                    player_stats[current_user.player.id].blocks - player_stats[current_user.player.id].throwaways - 
                                    player_stats[current_user.player.id].drops)|round(1) }}</td>
                                 <td>{{ player_stats[current_user.player.id].per|round(1) }}</td>
+                                <td>{{ player_stats[current_user.player.id].epm|default(0)|round(1) }}</td>
+                                <td>{{ '%.2f'|format(player_stats[current_user.player.id].eff|default(0)) }}</td>
                             </tr>
                             {% endif %}
                         {% endif %}
@@ -667,6 +674,8 @@
                             <td class="offensive-stat">{{ team_avg_stats.drops|round(1) }}</td>
                             <td>{{ team_avg_stats.plus_minus|round(1) }}</td>
                             <td>{{ team_avg_stats.per|round(1) }}</td>
+                            <td>{{ team_avg_stats.epm|default(0)|round(1) }}</td>
+                            <td>{{ '%.2f'|format(team_avg_stats.eff|default(0)) }}</td>
                         </tr>
                         {% endif %}
                     </tbody>

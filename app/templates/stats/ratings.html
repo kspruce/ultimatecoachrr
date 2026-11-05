@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+{# How the player ratings are worked out. Keep in step with app/stats/formulas.py. #}
+
+{% block styles %}
+<style>
+  .rt { max-width: 820px; margin: 0 auto 3rem; line-height: 1.6; }
+  .rt h1 { margin-bottom: .25rem; }
+  .rt .rt-lede { color: var(--ink-3); margin-bottom: 1.5rem; }
+  .rt h2 { font-size: 1.3rem; margin: 2.4rem 0 .6rem; }
+  .rt h3 { font-size: 1.05rem; margin: 1.4rem 0 .4rem; }
+  .rt table { width: 100%; border-collapse: collapse; font-size: .92rem; margin: .5rem 0 1rem; }
+  .rt th, .rt td { text-align: left; vertical-align: top; padding: .45rem .6rem; border-top: 1px solid var(--rule); }
+  .rt th { font-weight: 700; }
+  .rt td.num, .rt th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .rt tr.rt-ours td { font-weight: 700; }
+  .rt .rt-box { border: 1px solid var(--rule); border-radius: var(--radius); padding: 1rem 1.25rem;
+                background: var(--card); margin: 1rem 0; }
+  .rt .rt-box ul { margin: 0; padding-left: 1.1rem; }
+  .rt .rt-formula { font-family: var(--bs-font-monospace, monospace); font-size: .95rem;
+                    background: var(--card); border: 1px solid var(--rule); border-radius: var(--radius);
+                    padding: .6rem .9rem; margin: .6rem 0 1rem; overflow-x: auto; white-space: nowrap; }
+  .rt .rt-big { font-size: 2rem; font-weight: 700; line-height: 1.1; }
+  .rt .rt-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .75rem; margin: 1rem 0; }
+  .rt .rt-stats > div { border: 1px solid var(--rule); border-radius: var(--radius); padding: .75rem 1rem; background: var(--card); }
+  .rt .rt-stats small { color: var(--ink-3); display: block; }
+  .rt .rt-toc { columns: 2; padding-left: 1.1rem; }
+  @media (max-width: 576px) { .rt .rt-toc { columns: 1; } }
+</style>
+{% endblock %}
+
+{% block content %}
+{% set n2 = '%.2f' %}
+{% set n3 = '%.3f' %}
+<article class="rt">
+  <h1>How the player ratings work</h1>
+  <p class="rt-lede">
+    Where PER, EPM and Eff come from, what scoring efficiency (SE) is, and the sums the site does in the
+    background. Your team's own numbers are shown
+    {%- if season %} for the {{ season.name }} season{% else %} for every game you've recorded{% endif %}.
+  </p>
+
+  <div class="rt-box">
+    <strong>In short</strong>
+    <ul>
+      <li><strong>SE</strong> (scoring efficiency) is the share of possessions that end in a goal, counting both
+        teams. It sets how much a turn costs.</li>
+      <li>Every goal, assist, block and turn is converted into <strong>goal equivalents</strong> (GE) using SE.</li>
+      <li><strong>EPM</strong> is a player's total GE: a fairer plus/minus.</li>
+      <li><strong>PER</strong> is GE per {{ PER_SCALE }} points played. It shows how much a player gives the team
+        per point, with small samples pulled towards the team's rate.</li>
+      <li><strong>Eff</strong> is between 0 and 1. It shows how much of what a player produces they keep, rather
+        than give back in turns.</li>
+    </ul>
+  </div>
+
+  <ol class="rt-toc">
+    <li><a href="#why">Why not plain plus/minus?</a></li>
+    <li><a href="#se">Scoring efficiency (SE)</a></li>
+    <li><a href="#ge">Goal equivalents</a></li>
+    <li><a href="#epm">EPM</a></li>
+    <li><a href="#per">PER</a></li>
+    <li><a href="#eff">Eff</a></li>
+    <li><a href="#example">A worked example</a></li>
+    <li><a href="#counts">What counts, and what doesn't</a></li>
+  </ol>
+
+  <h2 id="why">1. Why not plain plus/minus?</h2>
+  <p>
+    Plus/minus is goals + assists + blocks − turns. It treats every turn as costing exactly what a goal is worth,
+    whoever throws it and however your games are going. That's rarely true:
+  </p>
+  <ul>
+    <li>In a windy game, or at a level where the disc changes hands a lot, possessions are cheap. Losing one costs
+      less, because the next one probably wouldn't have ended in a goal either.</li>
+    <li>In a clean game where most possessions end in a goal, every turn is expensive.</li>
+    <li>Handlers throw the most, so they take most of the risk. Plain plus/minus punishes them for it, especially
+      in women's and mixed play, where turns are more common.</li>
+  </ul>
+  <p>The ratings on this site fix that by pricing a turn according to how often possessions actually end in a goal.</p>
+
+  <h2 id="se">2. Scoring efficiency (SE)</h2>
+  <div class="rt-formula">SE = goals ÷ (goals + turns)</div>
+  <p>
+    Every possession ends in one of two ways: a goal or a turn. So SE is the chance that a possession ends in a goal.
+    It counts <em>both</em> teams, because it describes the game being played rather than either side.
+  </p>
+  <h3>Where it comes from</h3>
+  <p>
+    SE and the way it's used here come from <strong>Better Box Score Metrics</strong> (BBSM), Paul Würtztack's stats
+    column on <a href="https://ultiworld.com" rel="noopener" target="_blank">Ultiworld</a>. His main metric, EDGE,
+    prices turns and blocks by the scoring environment. His EDGE Plus/Minus (EPM) and Eff apply the same idea to
+    plain goals-assists-blocks-turns box scores, like USA Ultimate's. At the 2026 Club Nationals, SE was about 0.59
+    in the men's division and lower in mixed and women's. A turn in the women's division cost almost 30% less than
+    in the men's.
+  </p>
+  <p>
+    BBSM works SE out per game for the semi-pro leagues, and per division for a whole tournament. This site works
+    it out from whichever games you're looking at: the season on the dashboard, one tournament, or one game on a
+    game's page.
+  </p>
+  <h3>How the site counts it</h3>
+  <ul>
+    <li><strong>Goals:</strong> every point with full stats that ended in a goal, for either team.</li>
+    <li><strong>Turns:</strong> every recorded change of possession, by either team: throwaways, drops, stalls,
+      blocks, forced and unforced turnovers, and Callahans.</li>
+    <li>Points only recorded live on Game Day (just the line and the result) are left out, because they don't
+      record the turns.</li>
+    <li>Points whose possession changes don't add up are left out too (<a href="#incomplete">see below</a>).</li>
+    <li>With no recorded points yet, the site uses {{ DEFAULT_SE }}, which is about where club Nationals sits.</li>
+  </ul>
+  {% if has_games and team_avgs.get('se_goals') %}
+  <div class="rt-stats">
+    <div><small>Goals (both teams)</small><span class="rt-big">{{ team_avgs.se_goals }}</span></div>
+    <div><small>Turns (both teams)</small><span class="rt-big">{{ team_avgs.se_turns }}</span></div>
+    <div><small>Your SE</small><span class="rt-big">{{ n3|format(se) }}</span></div>
+  </div>
+  <p>
+    {{ team_avgs.se_goals }} ÷ ({{ team_avgs.se_goals }} + {{ team_avgs.se_turns }}) = <strong>{{ n3|format(se) }}</strong>.
+    About {{ (se * 100)|round|int }} in every 100 possessions in your games end in a goal.
+    {%- if team_avgs.get('se_incomplete') %} ({{ team_avgs.se_incomplete }} point{{ 's' if team_avgs.se_incomplete != 1 }}
+    that <a href="#incomplete">don't add up</a> {{ 'are' if team_avgs.se_incomplete != 1 else 'is' }} left out.){% endif %}
+  </p>
+  {% else %}
+  <p class="text-muted">No points with full stats yet, so your ratings use SE = {{ DEFAULT_SE }} for now.</p>
+  {% endif %}
+  <p class="text-muted small">
+    One game with few recorded points can swing SE a lot. Over a season it settles down.
+  </p>
+
+  <h3 id="incomplete">Points that don't add up</h3>
+  <p>
+    You don't need to record the other team's stats for SE. When they lose the disc, the stat taker has to press
+    block, forced turnover, unforced turnover or Callahan to get back on offence, and that press counts their turn.
+    If a point skips that step, its turns go missing and SE comes out too high. Turns would then look more costly
+    than they are.
+  </p>
+  <p>
+    Possession alternates, so the result of a point fixes how its possession changes have to balance. On an O point
+    we held, every turn of ours needs a regain to match it. A D point we scored needs one more regain than turns.
+    A point that doesn't balance is missing something, so it's <strong>left out of SE</strong> (players' own stats
+    from it still count).
+  </p>
+  {% if incomplete %}
+  <p>
+    <strong>{{ incomplete|length }}</strong> point{{ 's' if incomplete|length != 1 }} with full stats
+    {{ "doesn't" if incomplete|length == 1 else "don't" }} add up. Opening a point lets you add the missing play:
+  </p>
+  <table>
+    <thead><tr><th>Game</th><th class="num">Point</th><th>What's wrong</th></tr></thead>
+    <tbody>
+      {% for p in incomplete[:50] %}
+      <tr>
+        <td>vs {{ p.opponent }}{% if p.date %} <span class="text-muted small">{{ p.date.strftime('%-d %b') }}</span>{% endif %}</td>
+        <td class="num"><a href="{{ url_for('point.point_detail', point_id=p.point_id) }}">{{ p.point_number }}</a></td>
+        <td>{{ p.reason }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if incomplete|length > 50 %}<p class="text-muted small">Showing the first 50.</p>{% endif %}
+  {% elif has_games %}
+  <p><i class="bi bi-check-circle-fill text-success"></i> Every point with full stats adds up.</p>
+  {% endif %}
+
+  <h2 id="ge">3. Goal equivalents</h2>
+  <p>Each play is converted into goal equivalents (GE) using SE:</p>
+  <table>
+    <thead><tr><th>Play</th><th>Worth</th><th class="num">For you now (SE {{ n3|format(se) }})</th></tr></thead>
+    <tbody>
+      <tr><td>Goal</td><td>0.86 − 0.43 × SE</td><td class="num">{{ n3|format(coeffs.goal) }}</td></tr>
+      <tr><td>Assist</td><td>1.14 − 0.57 × SE</td><td class="num">{{ n3|format(coeffs.assist) }}</td></tr>
+      <tr><td>Block</td><td>+ SE</td><td class="num">{{ n3|format(coeffs.block) }}</td></tr>
+      <tr><td>Turn (throwaway, drop, stall)</td><td>− SE</td><td class="num">−{{ n3|format(coeffs.turn) }}</td></tr>
+      <tr><td>Callahan</td><td>a goal and a block</td><td class="num">{{ n3|format(coeffs.goal + coeffs.block) }}</td></tr>
+    </tbody>
+  </table>
+  <h3>Why these numbers</h3>
+  <ul>
+    <li><strong>A turn costs SE, and a block earns SE.</strong> When the disc changes hands, what changes is the
+      chance of scoring with it, and that chance is SE. The scarcer goals are, the less any one possession is worth.</li>
+    <li><strong>Goals and assists share out the rest</strong>, so that across a team the goals and assists minus
+      the turns add up to the goals the team actually scored. Per goal there's one goal and one assist, worth
+      2 − SE between them. The turns behind that goal cost (1 − SE). The difference is exactly 1.</li>
+    <li><strong>Assists are worth a bit more than goals.</strong> Throwers handle the disc more and take more turnover
+      risk, and assists track that higher throwing volume better than goals do.</li>
+  </ul>
+  <p>How the values move with SE:</p>
+  <table>
+    <thead><tr><th>SE</th><th class="num">Goal</th><th class="num">Assist</th><th class="num">Block / turn</th></tr></thead>
+    <tbody>
+      {% for s, c in reference %}
+      <tr><td>{{ s }}</td><td class="num">{{ n3|format(c.goal) }}</td><td class="num">{{ n3|format(c.assist) }}</td>
+          <td class="num">±{{ n3|format(c.block) }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p>
+    Around SE 0.65 every value is close to the others, and the ratings agree with plain plus/minus. The further
+    SE is from 0.65, the more they differ, and the more plain plus/minus misleads.
+  </p>
+
+  <h2 id="epm">4. EPM: EDGE Plus/Minus</h2>
+  <div class="rt-formula">EPM = goals × G + assists × A + blocks × SE − turns × SE</div>
+  <p>
+    EPM is a player's total goal equivalents for the games you're looking at. Read it like plus/minus, but with turns
+    and blocks priced properly. As a total, it grows with playing time: it's the player's overall contribution.
+  </p>
+
+  <h2 id="per">5. PER: Player Efficiency Rating</h2>
+  <div class="rt-formula">PER = {{ PER_SCALE }} × (EPM + {{ PER_PRIOR_POINTS }} × team rate) ÷ (points played + {{ PER_PRIOR_POINTS }})</div>
+  <p>
+    PER is goal equivalents per {{ PER_SCALE }} points played, so players who play different amounts can be
+    compared. <em>Points played</em> only counts points with full stats.
+  </p>
+  <p>
+    The <strong>team rate</strong> is your team's goal equivalents per point played, over every player
+    {%- if has_games and team_avgs.get('player_count') %}: <strong>{{ n3|format(team_avgs.avg_ge_per_point) }}</strong>
+    for you, which is a PER of {{ '%.1f'|format(PER_SCALE * team_avgs.avg_ge_per_point) }}{% endif %}.
+    Every player starts as if they'd already played {{ PER_PRIOR_POINTS }} points at that rate. With only a few
+    points played, PER stays close to the team's rate. As points add up, the player's own numbers take over.
+    So one great or terrible point doesn't put someone top or bottom of the table.
+  </p>
+  <ul>
+    <li>Above {{ '%.1f'|format(PER_SCALE * team_avgs.get('avg_ge_per_point', 0)) if has_games else 'the team rate' }}:
+      more value per point than the average player on your team.</li>
+    <li>Below zero: turns are costing more than goals, assists and blocks bring in.</li>
+  </ul>
+  <p class="text-muted small">
+    Earlier versions of PER were scaled so that the team average was 15. They also gave a little credit for
+    completions, catches, hockey assists and on-field plus/minus. That's gone: PER is now in goal equivalents, the
+    same units as EPM.
+  </p>
+
+  <h2 id="eff">6. Eff: efficiency</h2>
+  <div class="rt-formula">Eff = plus GE ÷ (plus GE + turn GE + prior)</div>
+  <p>
+    <strong>Plus GE</strong> is the goals, assists and blocks part of EPM. <strong>Turn GE</strong> is the turns part.
+    Eff is the share of what a player produces that they don't give back. A player with no turns at all would
+    approach 1. Unlike EPM and PER, Eff doesn't reward volume: it rewards clean play.
+  </p>
+  <p>
+    The <strong>prior</strong> is the average player's turns for these games, priced at SE
+    {%- if has_games and team_avgs.get('player_count') %} (<strong>{{ n3|format(team_avgs.eff_prior) }}</strong> for you){% endif %}.
+    Without it, someone with one goal and no turns would score a perfect 1 and top the list. With it, Eff only gets
+    high for players who produce a lot and turn it over little. BBSM does the same: Peter Boerth's 10 goals,
+    15 assists, 1 block and 0 turns at 2026 Club Nationals came out at 0.931, the best in the men's division.
+  </p>
+
+  <h2 id="example">7. A worked example</h2>
+  {% if example %}
+  {% set c = coeffs %}
+  <p>
+    <strong>{{ example_player.name }}</strong>{% if season %}, {{ season.name }}{% endif %}:
+    {{ example.goals }} goals, {{ example.assists }} assists, {{ example.blocks }} blocks{% if example.callahans %},
+    {{ example.callahans }} Callahan{{ 's' if example.callahans != 1 }}{% endif %} and {{ example.turnovers }} turns
+    ({{ example.throwaways }} throwaways, {{ example.drops }} drops, {{ example.stalls }} stalls)
+    in {{ example.analysed_points }} points with full stats.
+  </p>
+  <table>
+    <tbody>
+      <tr><td>Plus GE</td>
+          <td>{{ example.goals + example.callahans }} × {{ n3|format(c.goal) }}
+            + {{ example.assists }} × {{ n3|format(c.assist) }}
+            + {{ example.blocks + example.callahans }} × {{ n3|format(c.block) }}</td>
+          <td class="num">{{ n2|format(example.ge_plus) }}</td></tr>
+      <tr><td>Turn GE</td><td>{{ example.turnovers }} × {{ n3|format(c.turn) }}</td>
+          <td class="num">{{ n2|format(example.ge_turns) }}</td></tr>
+      <tr class="rt-ours"><td>EPM</td><td>{{ n2|format(example.ge_plus) }} − {{ n2|format(example.ge_turns) }}</td>
+          <td class="num">{{ n2|format(example.epm) }}</td></tr>
+      <tr class="rt-ours"><td>PER</td>
+          <td>{{ PER_SCALE }} × ({{ n2|format(example.epm) }} + {{ PER_PRIOR_POINTS }} × {{ n3|format(team_avgs.avg_ge_per_point) }})
+            ÷ ({{ example.analysed_points }} + {{ PER_PRIOR_POINTS }})</td>
+          <td class="num">{{ n2|format(example.per) }}</td></tr>
+      <tr class="rt-ours"><td>Eff</td>
+          <td>{{ n2|format(example.ge_plus) }} ÷ ({{ n2|format(example.ge_plus) }} + {{ n2|format(example.ge_turns) }}
+            + {{ n3|format(team_avgs.eff_prior) }})</td>
+          <td class="num">{{ n3|format(example.eff) }}</td></tr>
+    </tbody>
+  </table>
+  <p>
+    For comparison, plain plus/minus would be {{ example.goals + example.assists + example.blocks - example.turnovers }}.
+    <a href="{{ url_for('stats_dashboard.player_stats', player_id=example_player.id) }}">See {{ example_player.name }}'s stats</a>.
+  </p>
+  {% else %}
+  <p class="text-muted">Once points are recorded with full stats, this section works through a real player's numbers step by step.</p>
+  {% endif %}
+
+  <h2 id="counts">8. What counts, and what doesn't</h2>
+  <ul>
+    <li>Only points with full stats count, the same as the site's other per-point rates.</li>
+    <li>Hockey assists, completions, catches, throwing distance and break throws aren't part of the ratings. They're
+      still on every stats page. BBSM treats goals and assists as a sample of a player's wider involvement, and
+      keeping the ratings to goals, assists, blocks and turns keeps the books balanced.</li>
+    <li>Defence without a block (marking, poaching, forcing a bad throw) and offence without a goal or assist (cuts
+      that open space) don't show up in any box score. Use the ratings to ask questions, not to settle them.</li>
+    <li>Each rating uses the SE of the games you're looking at. A player's PER for one game is priced by that game's
+      SE, so it can differ from their season PER even at the same rate.</li>
+  </ul>
+
+  <p class="mt-4"><a href="{{ url_for('stats_dashboard.index') }}">&larr; Back to the stats dashboard</a></p>
+</article>
+{% endblock %}

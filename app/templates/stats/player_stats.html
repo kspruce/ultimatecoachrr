@@ -459,10 +459,11 @@
                         <div class="card-header">
                             <h5 class="mb-0">
                                 Player Efficiency Rating (PER)
-                                <i class="bi bi-info-circle" 
-                                   data-bs-toggle="tooltip" 
-                                   title="PER factors in scoring, assists, turnovers, defense, throw efficiency, and plus/minus relative to team averages">
-                                </i>
+                                <a href="{{ url_for('stats_dashboard.ratings') }}" class="text-reset"
+                                   data-bs-toggle="tooltip"
+                                   title="Goal equivalents per 10 points played, with turns priced by how often possessions end in a goal. Click for how it's worked out.">
+                                    <i class="bi bi-info-circle"></i>
+                                </a>
                             </h5>
                         </div>
                         <div class="card-body text-center d-flex flex-column justify-content-center">
@@ -471,6 +472,9 @@
                                 <div class="text-muted">Player Efficiency Rating</div>
                             </div>
                             <div class="small text-muted mt-3">
+                                {% if stats.analysed_points %}
+                                <div>EPM: {{ stats.epm|default(0)|round(2) }} · Eff: {{ '%.3f'|format(stats.eff|default(0)) }}</div>
+                                {% endif %}
                                 <div>O-Line: {{ stats.o_line_plus_minus|default(0)|round(2) }}</div>
                                 <div>D-Line: {{ stats.d_line_plus_minus|default(0)|round(2) }}</div>
                             </div>
@@ -1189,6 +1193,8 @@
                                             <th>Blocks</th>
                                             <th>Turnovers</th>
                                             <th>PER</th>
+                                            <th>EPM</th>
+                                            <th>Eff</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -1209,6 +1215,8 @@
                                             <td>{{ game_data.stats.box.blocks }}</td>
                                             <td>{{ game_data.stats.box.turnovers }}</td>
                                             <td>{{ game_data.stats.per|round(2) if game_data.stats.analysed_points else '–' }}</td>
+                                            <td>{{ game_data.stats.epm|round(2) if game_data.stats.analysed_points else '–' }}</td>
+                                            <td>{{ '%.3f'|format(game_data.stats.eff) if game_data.stats.analysed_points else '–' }}</td>
                                         </tr>
                                         {% endfor %}
                                     </tbody>
@@ -1283,15 +1291,18 @@ function debounce(func, wait) {
     };
 }
 
+// PER is coloured against the team's own PER for the same games (an
+// average player), since its range depends on the team and level.
+const TEAM_PER = {{ '%.4f'|format(team_per|default(0)) }};
 function getPerColor(value) {
-    // Convert to 0-100 scale for color determination
-    const value100 = value * (100/30);
-    
-    if (value100 >= 67) return '#28a745';  // Green for excellent (67-100)
-    if (value100 >= 50) return '#17a2b8';  // Blue for good (50-67)
-    if (value100 >= 33) return '#ffc107';  // Yellow for average (33-50)
-    if (value100 >= 17) return '#fd7e14';  // Orange for below average (17-33)
-    return '#dc3545';                      // Red for poor (0-17)
+    if (isNaN(value)) return '';
+    const base = Math.max(TEAM_PER, 0.1);
+    const ratio = value / base;
+    if (ratio >= 1.5) return '#28a745';  // Green: well above the team
+    if (ratio >= 1.1) return '#17a2b8';  // Blue: above the team
+    if (ratio >= 0.9) return '#ffc107';  // Yellow: about the team
+    if (ratio >= 0.5) return '#fd7e14';  // Orange: below the team
+    return '#dc3545';                    // Red: well below the team
 }
 
 // =================================================================================
@@ -2566,6 +2577,7 @@ function generatePrintableReport() {
                         ${perValue}
                     </div>
                     <div class="stat-label">Player Efficiency Rating</div>
+                    <div class="stat-label">EPM {{ '%.2f'|format(stats.epm|default(0)) }} · Eff {{ '%.3f'|format(stats.eff|default(0)) }}</div>
                 </div>
             </div>
             

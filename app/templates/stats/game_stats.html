@@ -347,8 +347,9 @@
                                     <th>Completions</th>
                                     <th>Turnovers</th>
                                     <th>+/-</th>
-                                    <th>PER</th>
-                                    <!-- <th>Impact Score</th> -->
+                                    <th><a href="{{ url_for('stats_dashboard.ratings') }}" class="text-reset" title="Goal equivalents per 10 points. Click for how it's worked out">PER</a></th>
+                                    <th><a href="{{ url_for('stats_dashboard.ratings') }}#epm" class="text-reset" title="EDGE Plus/Minus: total goal equivalents">EPM</a></th>
+                                    <th><a href="{{ url_for('stats_dashboard.ratings') }}#eff" class="text-reset" title="Share of goal equivalents not given back in turns">Eff</a></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -372,7 +373,8 @@
                                         <td>{{ item.stats.turnovers }}</td>
                                         <td>{{ (item.stats.goals + item.stats.assists + item.stats.blocks - item.stats.turnovers)|round(1) }}</td>
                                         <td>{{ item.stats.per|round(1) }}</td>
-                                       <!-- <td>{{ calculate_impact_score(item.stats)|round(1) }}</td> -->
+                                        <td>{{ item.stats.epm|default(0)|round(1) }}</td>
+                                        <td>{{ '%.2f'|format(item.stats.eff|default(0)) }}</td>
                                     </tr>
                                     {% endif %}
                                 {% endfor %}
