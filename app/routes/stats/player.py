@@ -9,7 +9,7 @@ from app.utils.season import scope_games, scope_tournaments
 
 from app.routes.stats import bp
 from app.stats.cache import get_cached_team_averages
-from app.stats.formulas import apply_ratings
+from app.stats.formulas import PER_SCALE, apply_ratings
 from app.stats.history import get_player_game_history
 from app.stats.players import calculate_cutting_stats, get_players_base_stats, get_point_ids_from_games
 from app.stats import cutting, turnovers
@@ -178,6 +178,8 @@ def player_stats(player_id):
         'stats/player_stats.html',
         player=player,
         stats=stats,
+        # The team's PER for these games (an average player), for colouring PER
+        team_per=PER_SCALE * team_avgs.get('avg_ge_per_point', 0),
         team_summary=team_summary, 
         player_games=player_games,
         tournaments=tournaments,

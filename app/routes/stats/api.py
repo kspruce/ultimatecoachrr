@@ -158,7 +158,9 @@ def api_player_stats():
                     'throwaways': stats['throwaways'],
                     'drops': stats['drops'],
                     'plus_minus': stats['plus_minus'],
-                    'per': stats['per']
+                    'per': stats['per'],
+                    'epm': stats['epm'],
+                    'eff': stats['eff'],
                 })
     
     return jsonify(result)

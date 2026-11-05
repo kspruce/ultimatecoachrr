@@ -11,7 +11,6 @@ from app.utils.point_flow import analysis_progress
 from app.routes.stats import bp
 from app.stats.formulas import apply_ratings
 from app.stats.cache import get_cached_team_averages
-from app.stats.formulas import calculate_impact_score
 from app.stats.players import get_players_base_stats
 from app.stats.team import calculate_additional_team_metrics, calculate_game_stats, generate_player_connections, process_heatmap_data
 from app.stats.loaders import game_points
@@ -80,6 +79,5 @@ def game_stats(game_id):
         player_stats=player_stats,
         heatmap_data=htmlsafe_json_dumps(heatmap_data),
         connections=htmlsafe_json_dumps(connection_data),
-        calculate_impact_score=calculate_impact_score,
         progress=analysis_progress(game),
     )

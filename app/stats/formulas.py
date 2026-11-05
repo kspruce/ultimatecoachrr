@@ -147,11 +147,6 @@ def apply_ratings(stats, team_avgs):
     return stats
 
 
-def calculate_impact_score(stats):
-    """Calculate impact score for a player"""
-    return (stats['goals'] * 2 + stats['assists'] * 1.5 +
-            stats['blocks'] * 1.5 - stats['turnovers'])
-
 def calculate_team_avg_stats(player_stats):
     """Calculate team average stats from preloaded player stats"""
     team_avg_stats = {
