@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% import "stats/_turnover_macros.html" as tm %}
+{% import "stats/_profile_macros.html" as pm %}
 
 {# base.html has no "head" block: this was never rendered, so none of
    these styles or scripts loaded. #}
@@ -10,12 +11,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 
 <style>
-    .stat-card {
-        transition: transform 0.3s;
-    }
-    .stat-card:hover {
-        transform: translateY(-5px);
-    }
     .per-gauge {
         width: 200px;
         height: 200px;
@@ -30,35 +25,34 @@
         font-weight: 700;
     }
     
-    #perDisplay {
-        transition: transform 0.3s ease;
-    }
-    
-    #perDisplay:hover {
-        transform: scale(1.05);
-    }
-    
     #perValue {
         transition: color 0.3s ease;
         line-height: 1;
         margin-bottom: 0.2em;
     }
 
-    /* Add Radar style */
+    /* Radars: percentile among teammates, with the numbers underneath */
     .radar-container {
         position: relative;
         height: 300px;
         width: 100%;
-        margin-bottom: 20px;
-        border: 1px solid var(--uc-gray-100);
+        margin-bottom: 12px;
+    }
+    .radar-table td, .radar-table th { vertical-align: middle; }
+    .radar-table .low-sample { opacity: .55; }
+    .pctile-bar {
+        position: relative; height: 6px; min-width: 60px;
+        background: var(--uc-gray-100); border-radius: 3px;
+    }
+    .pctile-bar > span {
+        position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px;
+        background: var(--uc-blue);
+    }
+    .pctile-bar::after {  /* the median teammate */
+        content: ''; position: absolute; left: 50%; top: -2px; bottom: -2px;
+        border-left: 1px dashed var(--uc-gray-500);
     }
     
-    .stat-card {
-        transition: transform 0.3s;
-    }
-    .stat-card:hover {
-        transform: translateY(-5px);
-    }
 
     /* Cutting Skills Styles */
     .field-container {
@@ -451,10 +445,10 @@
                         </div>
                     </div>
                 </div>
-            <!-- PER and Summary Stats -->
+            <!-- PER and rates from points with full stats -->
             <div class="row mb-4">
                 <!-- PER Display -->
-                <div class="col-md-4">
+                <div class="col-md-5 mb-3 mb-md-0">
                     <div class="card stat-card h-100">
                         <div class="card-header">
                             <h5 class="mb-0">
@@ -466,80 +460,59 @@
                                 </a>
                             </h5>
                         </div>
-                        <div class="card-body text-center d-flex flex-column justify-content-center">
-                            <div id="perDisplay">
+                        <div class="card-body d-flex flex-column">
+                            <div id="perDisplay" class="text-center">
                                 <div class="display-1 fw-bold" id="perValue">{{ stats.per|round(1) if stats.analysed_points else '–' }}</div>
                                 <div class="text-muted">Player Efficiency Rating</div>
                             </div>
-                            <div class="small text-muted mt-3">
-                                {% if stats.analysed_points %}
-                                <div>EPM: {{ stats.epm|default(0)|round(2) }} · Eff: {{ '%.3f'|format(stats.eff|default(0)) }}</div>
-                                {% endif %}
-                                <div>O-Line: {{ stats.o_line_plus_minus|default(0)|round(2) }}</div>
-                                <div>D-Line: {{ stats.d_line_plus_minus|default(0)|round(2) }}</div>
-                            </div>
+                            {% if stats.analysed_points %}
+                            <table class="table table-sm small mt-3 mb-0" id="ratingsTable">
+                                <thead><tr><th></th><th class="text-end">You</th><th class="text-end">Median</th><th class="text-end">Rank</th></tr></thead>
+                                <tbody>
+                                {% for r in ratings.rows %}
+                                <tr>
+                                    <th class="fw-normal">{{ r.label }}</th>
+                                    <td class="text-end fw-bold">{{ r.fmt|format(r.value) }}</td>
+                                    <td class="text-end text-muted">{{ r.fmt|format(r.team_median) if r.team_median is not none else '–' }}</td>
+                                    <td class="text-end text-muted">{{ '%d of %d'|format(r.rank, r.of) if r.rank else '–' }}</td>
+                                </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                            <p class="small text-muted mt-2 mb-0">
+                                Median and rank among teammates with {{ ratings.min_points }}+ points with full stats in these games.
+                                {% if not ratings.qualifies %}You need {{ ratings.min_points }} to be ranked.{% endif %}
+                            </p>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
-                
-                <!-- Summary Statistics -->
-                <div class="col-md-8">
+
+                <!-- Rates: only the points with full stats (the box score above has the totals) -->
+                <div class="col-md-7">
                     <div class="card stat-card h-100">
                         <div class="card-header">
-                            <h5 class="mb-0">Summary Statistics</h5>
+                            <h5 class="mb-0">Rates
+                                <i class="bi bi-info-circle" data-bs-toggle="tooltip"
+                                   title="Worked out from the {{ stats.analysed_points }} points with full stats. Totals for every point are in the Season Box Score."></i>
+                            </h5>
                         </div>
                         <div class="card-body">
                             <div class="row">
-                                <div class="col-md-6">
+                                <div class="col-sm-6">
                                     <table class="table table-sm">
-                                        <tr>
-                                            <th>Games Played</th>
-                                            <td>{{ stats.games_played }}</td>
-                                        </tr>
-                                        <tr>
-                                            <th>Points Played</th>
-                                            <td>{{ stats.points_played }}</td>
-                                        </tr>
-                                        <tr>
-                                            <th>Goals</th>
-                                            <td>{{ stats.goals }}</td>
-                                        </tr>
-                                        <tr>
-                                            <th>Assists</th>
-                                            <td>{{ stats.assists }}</td>
-                                        </tr>
-                                        <tr>
-                                            <th>Blocks</th>
-                                            <td>{{ stats.blocks }}</td>
-                                        </tr>
+                                        <tr><th>Games Played</th><td>{{ stats.games_played }}</td></tr>
+                                        <tr><th>Points with full stats</th><td>{{ stats.analysed_points }}{% if stats.gameday_only_points %} <small class="text-muted">of {{ stats.points_played }}</small>{% endif %}</td></tr>
+                                        <tr><th>Throws / point</th><td>{{ '%.2f'|format(stats.throws_per_point) }}</td></tr>
+                                        <tr><th>Hucks / point</th><td>{{ '%.2f'|format(stats.hucks_per_point) }}</td></tr>
                                     </table>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-sm-6">
                                     <table class="table table-sm">
-                                        <tr>
-                                            <th>Completion Rate</th>
-                                            <td>{{ stats.completion_rate|round(1) }}%</td>
-                                        </tr>
-                                        <tr>
-                                            <th>Catch Rate</th>
-                                            <td>{{ stats.catch_rate|round(1) }}%</td>
-                                        </tr>
-                                        <tr>
-                                            <th>Throwaways</th>
-                                            <td>{{ stats.throwaways }}</td>
-                                        </tr>
-                                        <tr>
-                                            <th>Drops</th>
-                                            <td>{{ stats.drops }}</td>
-                                        </tr>
-                                        <tr>
-                                            <th>Hockey Assists</th>
-                                            <td>{{ stats.hockey_assists }}</td>
-                                        </tr>
-                                        <tr>
-                                            <th>Break Throws</th>
-                                            <td>{{ stats.break_throws }}</td>
-                                        </tr>
+                                        <tr><th>Completion Rate</th><td>{{ stats.completion_rate|round(1) }}% <small class="text-muted">({{ stats.completions }}/{{ stats.throws }})</small></td></tr>
+                                        <tr><th>Catch Rate</th><td>{{ stats.catch_rate|round(1) }}%</td></tr>
+                                        <tr><th>Hockey Assists</th><td>{{ stats.hockey_assists }}</td></tr>
+                                        <tr><th>Break Throws</th><td>{{ stats.break_throws }} <small class="text-muted">({{ stats.break_throw_percentage|round(0)|int }}% of throws)</small></td></tr>
                                     </table>
                                 </div>
                             </div>
@@ -547,51 +520,42 @@
                     </div>
                 </div>
             </div>
-            
-            <!-- Radar Charts -->
+
+            <!-- Radar Charts: percentile among teammates who played in these games -->
             <div class="row mb-4">
-                <div class="col-md-6">
-                    <div class="card stat-card h-100">
+                <div class="col-lg-6 mb-3 mb-lg-0">
+                    <div class="card h-100">
                         <div class="card-header">
-                            <h5 class="mb-0">Offensive Radar</h5>
+                            <h5 class="mb-0">Offensive Profile
+                                <i class="bi bi-info-circle" data-bs-toggle="tooltip"
+                                   title="Each axis is your percentile among teammates who played in these games: 50 (the dashed ring) is the median teammate, the edge is the best. Faded axes have a small sample."></i>
+                            </h5>
                         </div>
                         <div class="card-body">
                             <div class="radar-container">
-                                <canvas id="offensiveRadar"></canvas>
+                                <canvas id="offensiveRadar" role="img" aria-label="Offensive profile radar chart"></canvas>
                             </div>
-                            <div class="radar-legend mt-2">
-                                <small class="text-muted">
-                                    <strong>Elite benchmarks</strong> (outer ring = 100 score):
-                                    Completion Rate ≥95% · O-Line Conversion ≥80% ·
-                                    Goals/Point ≥0.3 · Assists/Point ≥0.3 ·
-                                    Break Throw% ≥25% · Hucks/Point ≥0.2
-                                </small>
-                            </div>
+                            {{ pm.radar_table(profile.offence) }}
                         </div>
                     </div>
                 </div>
-                
-                <div class="col-md-6">
-                    <div class="card stat-card h-100">
+
+                <div class="col-lg-6">
+                    <div class="card h-100">
                         <div class="card-header">
-                            <h5 class="mb-0">Defensive Radar</h5>
+                            <h5 class="mb-0">Defensive Profile
+                                <i class="bi bi-info-circle" data-bs-toggle="tooltip"
+                                   title="Each axis is your percentile among teammates who played in these games: 50 (the dashed ring) is the median teammate. Blocks and takeaways only count D-line points."></i>
+                            </h5>
                         </div>
                         <div class="card-body">
                             <div class="radar-container">
-                                <canvas id="defensiveRadar"></canvas>
+                                <canvas id="defensiveRadar" role="img" aria-label="Defensive profile radar chart"></canvas>
                             </div>
-                            <div class="radar-legend mt-2">
-                                <small class="text-muted">
-                                    <strong>Elite benchmarks</strong> (outer ring = 100 score):
-                                    D-Line Conversion ≥50% · Blocks/D-Point ≥0.3 ·
-                                    Catch Rate ≥90% · Turnovers Forced/D-Point ≥0.5 ·
-                                    Completion Rate ≥95%
-                                </small>
-                            </div>
+                            {{ pm.radar_table(profile.defence) }}
                         </div>
-                    </div>                                        
+                    </div>
                 </div>
-                
             </div>
         </div>
         
@@ -1474,191 +1438,102 @@ function initializeBallSecurityTrendChart() {
     });
 }
 
-// Radar chart initialization
+// Radar charts: each axis is the player's percentile among teammates who
+// played in these games (50 = the median teammate). The table under each
+// chart has the numbers behind it.
+const RADAR_PROFILE = {{ profile|tojson }};
+
+function cssVar(name, fallback) {
+    const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return v || fallback;
+}
+
+// Chart.js can't read CSS colour-mix()/var(): paint a pixel to get rgb
+function resolveColour(colour) {
+    const ctx = document.createElement('canvas').getContext('2d');
+    ctx.fillStyle = '#000';
+    ctx.fillStyle = colour;
+    ctx.fillRect(0, 0, 1, 1);
+    const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
+    return `${r}, ${g}, ${b}`;
+}
+
+function drawProfileRadar(canvas, axes, colourVar) {
+    if (!canvas) return;
+    const existing = Chart.getChart(canvas);
+    if (existing) existing.destroy();
+
+    const rgb = resolveColour(cssVar(colourVar, '#1f4e8c'));
+    const grey = resolveColour(cssVar('--uc-gray-500', '#888'));
+    const grid = resolveColour(cssVar('--uc-gray-200', '#ddd'));
+    const ink = resolveColour(cssVar('--uc-gray-600', '#555'));
+    // Low-sample axes get a hollow, faded point
+    const pointFill = axes.map(a => a.enough ? `rgba(${rgb}, 1)` : `rgba(${rgb}, 0.15)`);
+
+    new Chart(canvas, {
+        type: 'radar',
+        data: {
+            // * marks a low sample; an axis with no data at all just has no point
+            labels: axes.map(a => {
+                const name = a.short || a.label;
+                return (a.value !== null && !a.enough) ? `${name} *` : name;
+            }),
+            datasets: [{
+                label: 'You (percentile)',
+                data: axes.map(a => a.percentile),
+                backgroundColor: `rgba(${rgb}, 0.18)`,
+                borderColor: `rgba(${rgb}, 1)`,
+                pointBackgroundColor: pointFill,
+                pointBorderColor: `rgba(${rgb}, 1)`,
+                pointRadius: 4,
+                borderWidth: 2,
+                spanGaps: true,
+            }, {
+                label: 'Median teammate',
+                data: axes.map(() => 50),
+                borderColor: `rgba(${grey}, 0.9)`,
+                borderDash: [4, 4],
+                borderWidth: 1,
+                backgroundColor: 'transparent',
+                pointRadius: 0,
+                pointHitRadius: 0,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                r: {
+                    min: 0, max: 100,
+                    ticks: { display: false, stepSize: 25 },
+                    grid: { color: `rgba(${grid}, 1)` },
+                    angleLines: { color: `rgba(${grid}, 1)` },
+                    pointLabels: { color: `rgba(${ink}, 1)`, font: { size: 11 } },
+                }
+            },
+            plugins: {
+                legend: { position: 'bottom', labels: { boxWidth: 12, color: `rgba(${ink}, 1)` } },
+                tooltip: {
+                    filter: item => item.datasetIndex === 0,
+                    callbacks: {
+                        title: items => axes[items[0].dataIndex].label,
+                        label: ctx => {
+                            const a = axes[ctx.dataIndex];
+                            if (a.percentile === null) return 'Not enough data to rank';
+                            const lines = [`Percentile: ${a.percentile}`];
+                            if (!a.enough) lines.push(`Low sample: ${a.sample_size} ${a.unit} (needs ${a.min})`);
+                            return lines;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
 function initializeRadarCharts() {
-    console.log('Initializing radar charts');
-    
-    const offensiveCtx = document.getElementById('offensiveRadar');
-    const defensiveCtx = document.getElementById('defensiveRadar');
-
-    if (!offensiveCtx || !defensiveCtx) {
-        console.error('Radar canvas elements not found');
-        return;
-    }
-
-    // Destroy existing charts if they exist to prevent conflicts
-    if (Chart.getChart(offensiveCtx)) Chart.getChart(offensiveCtx).destroy();
-    if (Chart.getChart(defensiveCtx)) Chart.getChart(defensiveCtx).destroy();
-
-    // Helper function for normalization
-    const normalize = (value, maxValue) => {
-        if (maxValue === 0) return 0; // Avoid division by zero
-        return Math.min(100, (value / maxValue) * 100);
-    };
-
-    // --- Offensive Radar Chart ---
-    // Axis "excellent" values represent elite-but-achievable benchmarks, not absolute maxima.
-    // Goals/Assists Per Point use 0.3 because scoring/assisting in ~30% of played points
-    // is genuinely elite. Completion Rate uses 95 (not 100) as the elite ceiling.
-    // Break Throw % replaces "Throws Per Point" (volume ≠ quality).
-    const offensiveLabels = ['Completion Rate', 'O-Line Conversion', 'Goals Per Point', 'Assists Per Point', 'Break Throw %', 'Hucks Per Point'];
-    const offensiveExcellentValues = {
-        'Completion Rate': 95,      // 95% completion = elite
-        'O-Line Conversion': 80,    // 80% O-line conversion = very good
-        'Goals Per Point': 0.3,     // 0.3 goals/point played = excellent scorer
-        'Assists Per Point': 0.3,   // 0.3 assists/point played = excellent handler
-        'Break Throw %': 25,        // 25% of throws from the break side = excellent
-        'Hucks Per Point': 0.2      // 0.2 hucks/point = very active huck game
-    };
-
-    // Get raw values from the template variables
-    const playerOffensiveRaw = {
-        'Completion Rate': {{ stats.completion_rate|default(0)|round(1) }},
-        'O-Line Conversion': {{ stats.o_line_conversion_rate|default(0)|round(1) }},
-        'Goals Per Point': {{ stats.goals_per_point|default(0)|round(2) }},
-        'Assists Per Point': {{ stats.assists_per_point|default(0)|round(2) }},
-        'Break Throw %': {{ stats.break_throw_percentage|default(0)|round(1) }},
-        'Hucks Per Point': {{ stats.hucks_per_point|default(0)|round(2) }}
-    };
-
-    const teamOffensiveRaw = {
-        'Completion Rate': {{ team_summary.completion_rate|default(0)|round(1) }},
-        'O-Line Conversion': {{ team_summary.o_line_conversion_rate|default(0)|round(1) }},
-        'Goals Per Point': {{ team_summary.goals_per_point|default(0)|round(2) }},
-        'Assists Per Point': {{ team_summary.assists_per_point|default(0)|round(2) }},
-        'Break Throw %': {{ team_summary.break_percentage|default(0)|round(1) }},
-        'Hucks Per Point': {{ team_summary.hucks_per_point|default(0)|round(2) }}
-    };
-
-    // Debug output
-    console.log("Player offensive raw values:", playerOffensiveRaw);
-    console.log("Team offensive raw values:", teamOffensiveRaw);
-
-    new Chart(offensiveCtx, {
-        type: 'radar',
-        data: {
-            labels: offensiveLabels,
-            datasets: [{
-                label: 'Player Stats',
-                data: offensiveLabels.map(label => normalize(playerOffensiveRaw[label], offensiveExcellentValues[label])),
-                backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                borderColor: 'rgba(75, 192, 192, 1)',
-                borderWidth: 2
-            }, {
-                label: 'Team Average',
-                data: offensiveLabels.map(label => normalize(teamOffensiveRaw[label], offensiveExcellentValues[label])),
-                backgroundColor: 'rgba(153, 102, 255, 0.2)',
-                borderColor: 'rgba(153, 102, 255, 1)',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: { r: { suggestedMin: 0, suggestedMax: 100, ticks: { stepSize: 20 } } },
-            plugins: {
-                legend: { position: 'bottom' },
-                tooltip: {
-                    callbacks: {
-                        title: function(items) {
-                            const axisLabel = items[0].chart.data.labels[items[0].dataIndex];
-                            const excellent = offensiveExcellentValues[axisLabel];
-                            const suffix = ['Completion Rate','O-Line Conversion','Break Throw %'].includes(axisLabel) ? '%' : '';
-                            return `${axisLabel} (elite ≥ ${excellent}${suffix})`;
-                        },
-                        label: function(context) {
-                            const axisLabel = context.chart.data.labels[context.dataIndex];
-                            const rawValue = context.dataset.label === 'Player Stats' ?
-                                playerOffensiveRaw[axisLabel] : teamOffensiveRaw[axisLabel];
-                            const suffix = ['Completion Rate','O-Line Conversion','Break Throw %'].includes(axisLabel) ? '%' : '';
-                            return `${context.dataset.label}: ${rawValue}${suffix} (score: ${Math.round(context.raw)}/100)`;
-                        }
-                    }
-                }
-            }
-        }
-    });
-
-    // --- Defensive Radar Chart ---
-    // NOTE: The previous version had 3 of 5 axes all reading from d_line_conversion_rate
-    // (D-Line Conversion, Break Percentage, AND Defensive Efficiency were all identical).
-    // Fixed: Break Percentage → Catch Rate, Defensive Efficiency → Completion Rate.
-    // This gives 5 genuinely distinct defensive dimensions.
-    const defensiveLabels = ['D-Line Conversion', 'Blocks Per Point', 'Catch Rate', 'Turnovers Forced/Point', 'Completion Rate'];
-    const defensiveExcellentValues = {
-        'D-Line Conversion': 50,        // 50% of D-line points scored = very good
-        'Blocks Per Point': 0.3,        // 0.3 blocks per D-line point = excellent (was 0.8, unreachable)
-        'Catch Rate': 90,               // 90% catch rate = elite
-        'Turnovers Forced/Point': 0.5,  // 0.5 forced TOs per D-line point = excellent (was 1.0, unreachable)
-        'Completion Rate': 95           // 95% completion = elite
-    };
-
-    const playerDefensiveRaw = {
-        'D-Line Conversion': {{ stats.d_line_conversion_rate|default(0)|round(1) }},
-        'Blocks Per Point': {{ stats.blocks_per_point|default(0)|round(2) }},
-        'Catch Rate': {{ stats.catch_rate|default(0)|round(1) }},
-        'Turnovers Forced/Point': {{ stats.turnovers_forced_per_point|default(0)|round(2) }},
-        'Completion Rate': {{ stats.completion_rate|default(0)|round(1) }}
-    };
-
-    const teamDefensiveRaw = {
-        'D-Line Conversion': {{ team_summary.d_line_conversion_rate|default(0)|round(1) }},
-        'Blocks Per Point': {{ team_summary.blocks_per_point|default(0)|round(2) }},
-        'Catch Rate': {{ team_summary.catch_rate|default(0)|round(1) }},
-        'Turnovers Forced/Point': {{ team_summary.turnovers_forced_per_point|default(0)|round(2) }},
-        'Completion Rate': {{ team_summary.completion_rate|default(0)|round(1) }}
-    };
-
-    // Debug output
-    console.log("Player defensive raw values:", playerDefensiveRaw);
-    console.log("Team defensive raw values:", teamDefensiveRaw);
-
-    new Chart(defensiveCtx, {  // Use defensiveCtx here, not defensiveCanvas
-        type: 'radar',
-        data: {
-            labels: defensiveLabels,
-            datasets: [{
-                label: 'Player Stats',
-                data: defensiveLabels.map(label => normalize(playerDefensiveRaw[label], defensiveExcellentValues[label])),
-                backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                borderColor: 'rgba(255, 99, 132, 1)',
-                borderWidth: 2
-            }, {
-                label: 'Team Average',
-                data: defensiveLabels.map(label => normalize(teamDefensiveRaw[label], defensiveExcellentValues[label])),
-                backgroundColor: 'rgba(153, 102, 255, 0.2)',
-                borderColor: 'rgba(153, 102, 255, 1)',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: { r: { suggestedMin: 0, suggestedMax: 100, ticks: { stepSize: 20 } } },
-            plugins: {
-                legend: { position: 'bottom' },
-                tooltip: {
-                    callbacks: {
-                        title: function(items) {
-                            const axisLabel = items[0].chart.data.labels[items[0].dataIndex];
-                            const excellent = defensiveExcellentValues[axisLabel];
-                            const suffix = ['D-Line Conversion','Catch Rate','Completion Rate'].includes(axisLabel) ? '%' : '';
-                            return `${axisLabel} (elite ≥ ${excellent}${suffix})`;
-                        },
-                        label: function(context) {
-                            const axisLabel = context.chart.data.labels[context.dataIndex];
-                            const rawValue = context.dataset.label === 'Player Stats' ?
-                                playerDefensiveRaw[axisLabel] : teamDefensiveRaw[axisLabel];
-                            const suffix = ['D-Line Conversion','Catch Rate','Completion Rate'].includes(axisLabel) ? '%' : '';
-                            return `${context.dataset.label}: ${rawValue}${suffix} (score: ${Math.round(context.raw)}/100)`;
-                        }
-                    }
-                }
-            }
-        }
-    });
-    
-    console.log('Radar charts updated successfully.');
+    drawProfileRadar(document.getElementById('offensiveRadar'), RADAR_PROFILE.offence, '--uc-blue');
+    drawProfileRadar(document.getElementById('defensiveRadar'), RADAR_PROFILE.defence, '--uc-red');
 }
 
 
@@ -2589,19 +2464,19 @@ function generatePrintableReport() {
                         <div class="stat-label">Games Played</div>
                     </div>
                     <div class="stat-box">
-                        <div class="stat-value">{{ stats.points_played }}</div>
+                        <div class="stat-value">{{ stats.box.points }}</div>
                         <div class="stat-label">Points Played</div>
                     </div>
                     <div class="stat-box">
-                        <div class="stat-value">{{ stats.goals }}</div>
+                        <div class="stat-value">{{ stats.box.goals }}</div>
                         <div class="stat-label">Goals</div>
                     </div>
                     <div class="stat-box">
-                        <div class="stat-value">{{ stats.assists }}</div>
+                        <div class="stat-value">{{ stats.box.assists }}</div>
                         <div class="stat-label">Assists</div>
                     </div>
                     <div class="stat-box">
-                        <div class="stat-value">{{ stats.blocks }}</div>
+                        <div class="stat-value">{{ stats.box.blocks }}</div>
                         <div class="stat-label">Blocks</div>
                     </div>
                     <div class="stat-box">
@@ -2611,6 +2486,17 @@ function generatePrintableReport() {
                 </div>
             </div>
             
+            <div class="stats-section">
+                <h2>Profile vs Teammates</h2>
+                <p class="stat-label">Percentile among teammates who played in these games (50 = median). * low sample.</p>
+                <table>
+                    <tr><th>Offence</th><th>You</th><th>Median</th><th>Percentile</th></tr>
+                    {% for a in profile.offence %}<tr><td>{{ a.label }}{{ '' if a.enough or a.value is none else ' *' }}</td><td>{{ pm.fmt_axis(a.value, a.fmt) }}</td><td>{{ pm.fmt_axis(a.team_median, a.fmt) }}</td><td>{{ a.percentile if a.percentile is not none else '–' }}</td></tr>{% endfor %}
+                    <tr><th>Defence</th><th>You</th><th>Median</th><th>Percentile</th></tr>
+                    {% for a in profile.defence %}<tr><td>{{ a.label }}{{ '' if a.enough or a.value is none else ' *' }}</td><td>{{ pm.fmt_axis(a.value, a.fmt) }}</td><td>{{ pm.fmt_axis(a.team_median, a.fmt) }}</td><td>{{ a.percentile if a.percentile is not none else '–' }}</td></tr>{% endfor %}
+                </table>
+            </div>
+
             <div class="stats-section">
                 <h2>Offensive Statistics</h2>
                 <table>

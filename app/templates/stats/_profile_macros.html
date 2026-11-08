@@ -1,0 +1,43 @@
+{# Radar profile tables (app/stats/profile.py) for the player stats page #}
+{% macro fmt_axis(v, kind) -%}
+{%- if v is none -%}–
+{%- elif kind == 'pct' -%}{{ '%.0f'|format(v) }}%
+{%- elif kind == 'per10' -%}{{ '%.1f'|format(v) }}
+{%- elif kind == 'signed' -%}{{ '%+.2f'|format(v) }}
+{%- elif kind == 'secs' -%}{{ '%.1f'|format(v) }}s
+{%- else -%}{{ '%.2f'|format(v) }}
+{%- endif %}
+{%- endmacro %}
+{% macro radar_table(rows) %}
+<table class="table table-sm radar-table mb-0 small">
+    <thead><tr>
+        <th></th><th class="text-end">You</th><th class="text-end">Median</th>
+        <th style="width:30%">Percentile</th>
+    </tr></thead>
+    <tbody>
+    {% for a in rows %}
+    <tr class="{{ '' if a.enough else 'low-sample' }}">
+        <th class="fw-normal">{{ a.label }}
+            {% if a.help %}<i class="bi bi-info-circle text-muted" data-bs-toggle="tooltip" title="{{ a.help }}"></i>{% endif %}
+            {% if a.value is not none and not a.enough %}
+            <span class="badge text-bg-light border" data-bs-toggle="tooltip"
+                  title="Only {{ a.sample_size }} {{ a.unit }}: needs {{ a.min }}+ to be reliable">low sample</span>
+            {% endif %}
+        </th>
+        <td class="text-end fw-bold">{{ fmt_axis(a.value, a.fmt) }}</td>
+        <td class="text-end text-muted">{{ fmt_axis(a.team_median, a.fmt) }}</td>
+        <td>
+            {% if a.percentile is not none %}
+            <div class="d-flex align-items-center gap-2">
+                <div class="pctile-bar flex-grow-1"><span style="width: {{ a.percentile }}%"></span></div>
+                <span class="text-muted" style="min-width:2.2em">{{ a.percentile }}</span>
+            </div>
+            {% else %}
+            <span class="text-muted">{{ 'not enough teammates' if a.value is not none else 'no data' }}</span>
+            {% endif %}
+        </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endmacro %}
