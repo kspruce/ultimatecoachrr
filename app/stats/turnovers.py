@@ -230,7 +230,7 @@ def zone_grid(data, player_id=None, game_ids=None):
     mine_cells, team_cells = cells(mine), cells(team)
     rows = []
     for lane_key, lane_label, _, _ in LANES:
-        row = {'label': lane_label, 'cells': []}
+        row = {'label': lane_label, 'short': SHORT_LANE[lane_key], 'cells': []}
         for depth_key, depth_label, _, _ in DEPTH_ZONES:
             attempts, turnovers = mine_cells[(lane_key, depth_key)]
             team_attempts, team_turnovers = team_cells[(lane_key, depth_key)]
@@ -243,7 +243,14 @@ def zone_grid(data, player_id=None, game_ids=None):
                 'vs_team': (rate - team_rate) if rate is not None and team_rate is not None else None,
             })
         rows.append(row)
-    return {'columns': [label for _, label, _, _ in DEPTH_ZONES], 'rows': rows}
+    return {'columns': [label for _, label, _, _ in DEPTH_ZONES],
+            'short_columns': [SHORT_DEPTH[key] for key, _, _, _ in DEPTH_ZONES], 'rows': rows}
+
+
+# Column and row labels short enough for a phone
+SHORT_DEPTH = {'own_endzone': 'Own EZ', 'own_third': 'Own ⅓', 'middle_third': 'Mid ⅓',
+               'attacking_third': 'Att ⅓', 'red_zone': 'Att EZ'}
+SHORT_LANE = {'left': 'Left', 'centre': 'Middle', 'right': 'Right'}
 
 
 # --- focus areas -------------------------------------------------------------

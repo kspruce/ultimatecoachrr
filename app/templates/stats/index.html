@@ -80,6 +80,12 @@
     .side-bar { display: flex; height: 18px; border-radius: 3px; overflow: hidden; background: var(--sunken); min-width: 120px; }
     .side-bar .open { background: var(--uc-blue); }
     .side-bar .break { background: var(--warn); }
+    @media (max-width: 575.98px) {
+        .card-body { padding-left: .75rem; padding-right: .75rem; }
+        .card-body .table-sm > :not(caption) > * > * { padding: .3rem .3rem; }
+        .card-body .table-sm th { letter-spacing: 0; }
+        #recentGames .game-date { display: none; }
+    }
     .legend-swatch { display: inline-block; width: 12px; height: 12px; border-radius: 2px; vertical-align: -1px; margin-right: 3px; }
 </style>
 {% endblock %}
@@ -332,16 +338,16 @@
                     {% if pairs %}
                     <div class="table-responsive">
                     <table class="table table-sm mb-0" id="throwingPairs">
-                        <thead><tr><th>#</th><th>Thrower</th><th></th><th>Receiver</th>
-                            <th class="text-end">Completions</th><th class="text-end">Goals</th><th class="text-end">Share</th></tr></thead>
+                        <thead><tr><th class="d-none d-sm-table-cell">#</th><th>Thrower</th><th></th><th>Receiver</th>
+                            <th class="text-end"><span class="d-none d-sm-inline">Completions</span><span class="d-sm-none">Cmp</span></th><th class="text-end">Goals</th><th class="text-end d-none d-sm-table-cell">Share</th></tr></thead>
                         <tbody>
                         {% for p in pairs %}
                         <tr data-pair="{{ p.thrower.id }}-{{ p.receiver.id }}" data-completions="{{ p.completions }}">
-                            <td class="text-muted">{{ loop.index }}</td>
-                            <td class="text-nowrap">{{ p.thrower.name }}</td><td class="text-muted">→</td><td class="text-nowrap">{{ p.receiver.name }}</td>
+                            <td class="text-muted d-none d-sm-table-cell">{{ loop.index }}</td>
+                            <td>{{ p.thrower.name }}</td><td class="text-muted px-0">→</td><td>{{ p.receiver.name }}</td>
                             <td class="text-end fw-bold">{{ p.completions }}</td>
                             <td class="text-end">{{ p.assists }}</td>
-                            <td class="text-end text-muted">{{ num(p.share, 'pct') }}</td>
+                            <td class="text-end text-muted d-none d-sm-table-cell">{{ num(p.share, 'pct') }}</td>
                         </tr>
                         {% endfor %}
                         </tbody>
@@ -362,13 +368,13 @@
                 <div class="card-body p-0">
                     <div class="table-responsive">
                     <table class="table table-sm table-hover mb-0" id="recentGames">
-                        <thead><tr><th>Date</th><th>Opponent</th><th>Score</th>
+                        <thead><tr><th class="game-date">Date</th><th>Opponent</th><th>Score</th>
                             <th class="text-end" data-bs-toggle="tooltip" title="O-line points we scored">Hold</th>
                             <th class="text-end" data-bs-toggle="tooltip" title="D-line points we scored">Break</th></tr></thead>
                         <tbody>
                         {% for game, gs in recent_games %}
                         <tr>
-                            <td class="text-muted text-nowrap">{{ game.date.strftime('%d %b') if game.date else '—' }}</td>
+                            <td class="text-muted text-nowrap game-date">{{ game.date.strftime('%d %b') if game.date else '—' }}</td>
                             <td><a href="{{ url_for('stats_dashboard.game_stats', game_id=game.id) }}">{{ game.opponent }}</a></td>
                             <td class="text-nowrap fw-semibold {{ 'text-success' if game.is_win else ('text-danger' if game.is_loss else '') }}">
                                 {{ 'W' if game.is_win else ('L' if game.is_loss else '–') }} {{ game.our_score }}–{{ game.their_score }}</td>
@@ -393,12 +399,12 @@
         <div class="card-body p-0">
             <div class="table-responsive">
             <table class="table table-sm mb-0">
-                <thead><tr><th></th><th class="text-end">Players</th><th class="text-end">Points played</th>
-                    <th class="text-end">Share</th><th class="text-end">Per player</th><th class="text-end">On O-line</th></tr></thead>
+                <thead><tr><th></th><th class="text-end d-none d-sm-table-cell">Players</th><th class="text-end">Points</th>
+                    <th class="text-end">Share</th><th class="text-end d-none d-sm-table-cell">Per player</th><th class="text-end">On O</th></tr></thead>
                 <tbody>
                 {% for g in line_usage %}
-                <tr><td>{{ g.label }}</td><td class="text-end">{{ g.players }}</td><td class="text-end">{{ g.points }}</td>
-                    <td class="text-end">{{ num(g.share, 'pct') }}</td><td class="text-end">{{ num(g.per_player, 'dec1') }}</td>
+                <tr><td>{{ g.label }}</td><td class="text-end d-none d-sm-table-cell">{{ g.players }}</td><td class="text-end">{{ g.points }}</td>
+                    <td class="text-end">{{ num(g.share, 'pct') }}</td><td class="text-end d-none d-sm-table-cell">{{ num(g.per_player, 'dec1') }}</td>
                     <td class="text-end">{{ num(g.o_share, 'pct') }}</td></tr>
                 {% endfor %}
                 </tbody>

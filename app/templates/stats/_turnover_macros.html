@@ -32,6 +32,14 @@
     .verdict-better { color: var(--ok); font-weight: 700; }
     .verdict-worse  { color: var(--bad); font-weight: 700; }
     .verdict-same   { color: var(--ink-3); }
+    /* Phones: tighter tables so they fit the card instead of scrolling */
+    @media (max-width: 575.98px) {
+        .card-body { padding-left: .75rem; padding-right: .75rem; }
+        .card-body .table-sm > :not(caption) > * > * { padding: .3rem .3rem; }
+        .zone-grid td, .zone-grid th { min-width: 0; padding: .25rem .15rem !important; font-size: .7rem; letter-spacing: 0; }
+        .zone-grid td .rate { font-size: .85rem; }
+        .zone-grid td .n { font-size: .65rem; }
+    }
 </style>
 {% endmacro %}
 
@@ -83,18 +91,18 @@
 <div class="table-responsive">
 <table class="table table-bordered table-sm zone-grid mb-0">
     <thead>
-        <tr><th></th>{% for col in grid.columns %}<th class="small">{{ col }}</th>{% endfor %}</tr>
+        <tr><th></th>{% for col in grid.columns %}<th class="small"><span class="d-none d-sm-inline">{{ col }}</span><span class="d-sm-none">{{ grid.short_columns[loop.index0] }}</span></th>{% endfor %}</tr>
     </thead>
     <tbody>
         {% for row in grid.rows %}
         <tr>
-            <th class="small text-start">{{ row.label }}</th>
+            <th class="small text-start"><span class="d-none d-sm-inline">{{ row.label }}</span><span class="d-sm-none">{{ row.short }}</span></th>
             {% for cell in row.cells %}
             <td class="{{ vs_team_class(cell.completion_rate, cell.team_completion_rate, cell.attempts >= 5) if compare else '' }}"
                 title="{{ cell.attempts }} throws, {{ cell.turnovers }} turnovers{% if compare %}; team {{ pct(cell.team_completion_rate) }}{% endif %}">
                 {% if cell.attempts %}
                 <div class="rate">{{ pct(cell.completion_rate) }}</div>
-                <div class="n">{{ cell.turnovers }}/{{ cell.attempts }} lost</div>
+                <div class="n">{{ cell.turnovers }}/{{ cell.attempts }}<span class="d-none d-sm-inline"> lost</span></div>
                 {% else %}<span class="text-muted">–</span>{% endif %}
             </td>
             {% endfor %}

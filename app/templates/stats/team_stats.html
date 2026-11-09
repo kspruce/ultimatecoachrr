@@ -275,8 +275,8 @@
                                 <tr>
                                     <th>#</th>
                                     <th>Name</th>
-                                    <th>Position</th>
-                                    <th>Gender</th>
+                                    <th class="d-none d-sm-table-cell">Position</th>
+                                    <th class="d-none d-sm-table-cell">Gender</th>
                                     <th>Points</th>  <!-- New column -->
                                     <th>Efficiency</th>
                                 </tr>
@@ -295,8 +295,8 @@
                                             {{ player.name }}
                                         </a>
                                     </td>
-                                    <td>{{ player.position|capitalize if player.position else 'N/A' }}</td>
-                                    <td>F</td>
+                                    <td class="d-none d-sm-table-cell">{{ player.position|capitalize if player.position else 'N/A' }}</td>
+                                    <td class="d-none d-sm-table-cell">F</td>
                                     <td>{{ player_stats[player.id]['o_line_points_played'] }}</td>  <!-- New cell -->
                                     <td>{{ (o_line_efficiency[player] * 100)|round(1) if player in o_line_efficiency else 0 }}%</td>
                                 </tr>
@@ -316,8 +316,8 @@
                                             {{ player.name }}
                                         </a>
                                     </td>
-                                    <td>{{ player.position|capitalize if player.position else 'N/A' }}</td>
-                                    <td>M</td>
+                                    <td class="d-none d-sm-table-cell">{{ player.position|capitalize if player.position else 'N/A' }}</td>
+                                    <td class="d-none d-sm-table-cell">M</td>
                                     <td>{{ player_stats[player.id]['o_line_points_played'] }}</td>  <!-- New cell -->
                                     <td>{{ (o_line_efficiency[player] * 100)|round(1) if player in o_line_efficiency else 0 }}%</td>
                                 </tr>
@@ -337,8 +337,8 @@
                                             {{ player.name }}
                                         </a>
                                     </td>
-                                    <td>{{ player.position|capitalize if player.position else 'N/A' }}</td>
-                                    <td>{{ player.gender|capitalize if player.gender else 'N/A' }}</td>
+                                    <td class="d-none d-sm-table-cell">{{ player.position|capitalize if player.position else 'N/A' }}</td>
+                                    <td class="d-none d-sm-table-cell">{{ player.gender|capitalize if player.gender else 'N/A' }}</td>
                                     <td>{{ player_stats[player.id]['o_line_points_played'] }}</td>  <!-- New cell -->
                                     <td>{{ (o_line_efficiency[player] * 100)|round(1) if player in o_line_efficiency else 0 }}%</td>
                                 </tr>
@@ -372,8 +372,8 @@
                                 <tr>
                                     <th>#</th>
                                     <th>Name</th>
-                                    <th>Position</th>
-                                    <th>Gender</th>
+                                    <th class="d-none d-sm-table-cell">Position</th>
+                                    <th class="d-none d-sm-table-cell">Gender</th>
                                     <th>Points</th>  <!-- New column -->
                                     <th>Efficiency</th>
                                 </tr>
@@ -392,8 +392,8 @@
                                             {{ player.name }}
                                         </a>
                                     </td>
-                                    <td>{{ player.position|capitalize if player.position else 'N/A' }}</td>
-                                    <td>F</td>
+                                    <td class="d-none d-sm-table-cell">{{ player.position|capitalize if player.position else 'N/A' }}</td>
+                                    <td class="d-none d-sm-table-cell">F</td>
                                     <td>{{ player_stats[player.id]['d_line_points_played'] }}</td>  <!-- New cell -->
                                     <td>{{ (d_line_efficiency[player] * 100)|round(1) if player in d_line_efficiency else 0 }}%</td>
                                 </tr>
@@ -413,8 +413,8 @@
                                             {{ player.name }}
                                         </a>
                                     </td>
-                                    <td>{{ player.position|capitalize if player.position else 'N/A' }}</td>
-                                    <td>M</td>
+                                    <td class="d-none d-sm-table-cell">{{ player.position|capitalize if player.position else 'N/A' }}</td>
+                                    <td class="d-none d-sm-table-cell">M</td>
                                     <td>{{ player_stats[player.id]['d_line_points_played'] }}</td>  <!-- New cell -->
                                     <td>{{ (d_line_efficiency[player] * 100)|round(1) if player in d_line_efficiency else 0 }}%</td>
                                 </tr>
@@ -434,8 +434,8 @@
                                             {{ player.name }}
                                         </a>
                                     </td>
-                                    <td>{{ player.position|capitalize if player.position else 'N/A' }}</td>
-                                    <td>{{ player.gender|capitalize if player.gender else 'N/A' }}</td>
+                                    <td class="d-none d-sm-table-cell">{{ player.position|capitalize if player.position else 'N/A' }}</td>
+                                    <td class="d-none d-sm-table-cell">{{ player.gender|capitalize if player.gender else 'N/A' }}</td>
                                     <td>{{ player_stats[player.id]['d_line_points_played'] }}</td>  <!-- New cell -->
                                     <td>{{ (d_line_efficiency[player] * 100)|round(1) if player in d_line_efficiency else 0 }}%</td>
                                 </tr>
@@ -551,13 +551,13 @@
                     {% if bs.leaderboard %}
                     <div class="table-responsive">
                     <table class="table table-sm mb-0">
-                        <thead><tr><th>Player</th><th class="text-end">Touches</th><th class="text-end">TOs</th><th class="text-end">Per 10</th><th class="text-end">Comp.</th></tr></thead>
+                        <thead><tr><th>Player</th><th class="text-end">Touches</th><th class="text-end d-none d-sm-table-cell">TOs</th><th class="text-end">Per 10</th><th class="text-end">Comp.</th></tr></thead>
                         <tbody>
                             {% for row in bs.leaderboard %}
                             <tr>
                                 <td><a href="{{ url_for('stats_dashboard.player_stats', player_id=row.player.id) }}">{{ row.player.name }}</a></td>
                                 <td class="text-end">{{ row.touches }}</td>
-                                <td class="text-end">{{ row.turnovers }}</td>
+                                <td class="text-end d-none d-sm-table-cell">{{ row.turnovers }}</td>
                                 <td class="text-end fw-bold {{ 'to-bad' if bs.handling.turnovers_per_10 and row.turnovers_per_10 >= bs.handling.turnovers_per_10 * 1.5 else ('to-ok' if bs.handling.turnovers_per_10 and row.turnovers_per_10 <= bs.handling.turnovers_per_10 * 0.5 else '') }}">{{ "%.1f"|format(row.turnovers_per_10) }}</td>
                                 <td class="text-end">{{ tm.pct(row.completion_rate) }}</td>
                             </tr>
