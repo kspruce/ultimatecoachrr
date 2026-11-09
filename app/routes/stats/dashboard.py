@@ -2,16 +2,15 @@ from flask import render_template, flash
 from flask_login import login_required, current_user
 from app import db
 from app.models.game import Game
-from jinja2.utils import htmlsafe_json_dumps  # JSON that is safe inside <script>
 from app.utils.team_filter import get_current_team_id
 
 from app.routes.stats import bp
 from app.stats.cache import get_cached_team_averages
-from app.stats.formulas import (DEFAULT_SE, PER_PRIOR_POINTS, PER_SCALE, apply_ratings, calculate_optimized_line_efficiency,
-                                calculate_team_avg_stats, ge_coefficients)
-from app.stats.players import get_players_base_stats, get_point_ids_from_games
+from app.stats.formulas import DEFAULT_SE, PER_PRIOR_POINTS, PER_SCALE, apply_ratings, ge_coefficients
+from app.stats.players import get_players_base_stats, players_in_games
 from app.utils.season import scope_games, season_players, viewing_season, viewing_squad
-from app.stats.team import find_incomplete_points, calculate_additional_team_metrics, calculate_game_stats, calculate_possession_based_team_metrics, calculate_team_summary, generate_player_connections, process_heatmap_data
+from app.stats.team import find_incomplete_points, calculate_game_stats, get_previous_period_games
+from app.stats import dashboard as dash, turnovers
 from app.stats.loaders import preload_game_points
 
 
@@ -20,91 +19,58 @@ from app.stats.loaders import preload_game_points
 def index():
     team_id = get_current_team_id()
     # The season (and squad) being viewed; all time if "All time" is picked
-    season = viewing_season(team_id)
-    players = season_players(team_id)
-    recent_games = (scope_games(Game.query.filter_by(team_organization_id=team_id), team_id)
-                    .options(db.joinedload(Game.tournament))
-                    .order_by(Game.date.desc()).all())
+    season, squad = viewing_season(team_id), viewing_squad(team_id)
+    games = (scope_games(Game.query.filter_by(team_organization_id=team_id), team_id)
+             .options(db.joinedload(Game.tournament))
+             .order_by(Game.date.desc()).all())
 
-    if not players or not recent_games:
-        if not players:
-            flash("No active players found", "warning")
-        elif season is not None:
+    if not games:
+        if season is not None:
             flash(f"No games in the {season.name} season yet. Pick another season from the season menu to see "
                   "earlier stats.", "info")
-        return render_template('stats/index.html', **EMPTY_CONTEXT)
+        else:
+            flash("No games recorded yet.", "info")
+        return render_template('stats/index.html', has_games=False)
 
-    # Load every game's points (and events) in one go for the calculations below
-    preload_game_points(recent_games)
-    # Heatmap and connections for these games only (None: every game)
-    point_ids = (get_point_ids_from_games(recent_games) or [-1]) if season is not None or viewing_squad(team_id) else None
+    preload_game_points(games)
+    game_ids = {g.id for g in games}
+    prev_games = get_previous_period_games(season, None, squad) if season is not None else []
+    throwing = turnovers.ThrowingData(games + prev_games)
 
-    team_summary = calculate_team_summary(recent_games)
-    team_summary.update(calculate_additional_team_metrics(recent_games))
-    team_summary.update(calculate_possession_based_team_metrics(recent_games))
-
-    team_stats = [{'stats': calculate_game_stats(game)} for game in recent_games[:5]]
-
-    team_avgs = get_cached_team_averages(recent_games)
-    player_stats = get_players_base_stats(players, recent_games)
-    for stats in player_stats.values():
+    # Everyone who played in these games: the group every average, median
+    # and percentile on the stats pages is measured over
+    players = players_in_games(games)
+    team_avgs = get_cached_team_averages(games)
+    stats_by_player = get_players_base_stats(players, games)
+    for stats in stats_by_player.values():
         if stats['points_played'] > 0:
             apply_ratings(stats, team_avgs)
 
-    o_line_efficiency = calculate_optimized_line_efficiency(players, player_stats, is_offensive=True)
-    d_line_efficiency = calculate_optimized_line_efficiency(players, player_stats, is_offensive=False)
+    # Coaches (and accounts without a player) see everyone; a player sees
+    # their own row against the team's medians
+    sees_all = current_user.is_coach or not current_user.player
+    table = dash.player_table(players, stats_by_player, throwing, game_ids)
+    if not sees_all:
+        table['rows'] = [r for r in table['rows'] if r['player'].id == current_user.player.id]
 
-    # Best four women and four men by line conversion; if gender isn't
-    # recorded, the best seven overall.
-    def best_line(efficiency):
-        women = [p for p, _ in efficiency if p.gender == 'female'][:4]
-        men = [p for p, _ in efficiency if p.gender == 'male'][:4]
-        return women, men, (women + men if women or men else [p for p, _ in efficiency][:7])
-
-    o_line_women, o_line_men, o_line_players = best_line(o_line_efficiency)
-    d_line_women, d_line_men, d_line_players = best_line(d_line_efficiency)
-
+    recent = games[:8]
+    prev_label = "the season before" if prev_games else None
     return render_template(
         'stats/index.html',
-        team_summary=team_summary,
-        players=players,
-        recent_games=recent_games,
-        team_stats=team_stats,
-        player_stats=player_stats,
-        o_line_players=o_line_players,
-        d_line_players=d_line_players,
-        o_line_women=o_line_women,
-        o_line_men=o_line_men,
-        d_line_women=d_line_women,
-        d_line_men=d_line_men,
-        o_line_efficiency=dict(o_line_efficiency),
-        d_line_efficiency=dict(d_line_efficiency),
-        heatmap_data=htmlsafe_json_dumps(process_heatmap_data(limit=1000, point_ids=point_ids)),
-        connection_data=htmlsafe_json_dumps(generate_player_connections(point_ids=point_ids)),
-        team_avg_stats=calculate_team_avg_stats(player_stats),
-        is_admin=current_user.is_admin,
-        is_coach=current_user.is_coach,
+        has_games=True,
+        season=season,
+        games_count=len(games),
+        headline=dash.headline(throwing, games, prev_games, prev_label),
+        coverage=dash.coverage(throwing, games),
+        incomplete=len(find_incomplete_points(games)),
+        recent_games=[(g, calculate_game_stats(g)) for g in recent],
+        table=table,
+        leaders=dash.leaders(table, throwing, game_ids) if sees_all else None,
+        line_usage=dash.line_usage(table) if sees_all else None,
+        field=dash.field_maps(throwing, game_ids),
+        pairs=dash.throwing_pairs(throwing, game_ids, {p.id: p for p in players}),
+        sees_all=sees_all,
     )
-
-
-EMPTY_CONTEXT = {
-    'team_summary': {
-        'wins': 0, 'losses': 0, 'ties': 0, 'total_points': 0,
-        'o_line_points': 0, 'o_line_conversions': 0,
-        'd_line_points': 0, 'd_line_conversions': 0,
-        'breaks': 0, 'win_percentage': 0,
-        'o_line_conversion_rate': 0, 'd_line_conversion_rate': 0,
-    },
-    'players': [],
-    'recent_games': [],
-    'team_stats': [],
-    'player_stats': {},
-    'o_line_players': [],
-    'd_line_players': [],
-    'heatmap_data': [],
-    'connection_data': {'nodes': [], 'links': []},
-    'team_avg_stats': {},
-}
 
 
 @bp.route('/ratings')

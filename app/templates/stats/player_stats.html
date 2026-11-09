@@ -666,8 +666,8 @@
                                             <td>{{ stats.blocks }}</td>
                                         </tr>
                                         <tr>
-                                            <th>Shutdowns</th>
-                                            <td>{{ stats.shutdowns }}</td>
+                                            <th>Callahans</th>
+                                            <td>{{ stats.callahans }}</td>
                                         </tr>
                                         <tr>
                                             <th>Forced Turnovers</th>
@@ -1299,7 +1299,7 @@ function initializePerformanceTrendChart() {
             opponent: "{{ game_data.game.opponent }}",
             points_played: {{ game_data.stats.points_played }},
             per:             {{ game_data.stats.per|default(0)|round(2) }},
-            plus_minus:      {{ (game_data.stats.goals + game_data.stats.assists + game_data.stats.blocks - (game_data.stats.throwaways + game_data.stats.drops))|round(1) }},
+            plus_minus:      {{ game_data.stats.plus_minus }},
             completion_rate: {{ ((game_data.stats.completions / game_data.stats.throws * 100) if game_data.stats.throws > 0 else 0)|round(1) }},
             goals_per_point: {{ (game_data.stats.goals / game_data.stats.analysed_points if game_data.stats.analysed_points > 0 else 0)|round(3) }},
             assists_per_point: {{ (game_data.stats.assists / game_data.stats.analysed_points if game_data.stats.analysed_points > 0 else 0)|round(3) }},
@@ -2527,12 +2527,12 @@ function generatePrintableReport() {
                     <tr>
                         <th>Blocks</th>
                         <td>{{ stats.blocks }}</td>
-                        <th>Shutdowns</th>
-                        <td>{{ stats.shutdowns }}</td>
+                        <th>Callahans</th>
+                        <td>{{ stats.callahans }}</td>
                     </tr>
                     <tr>
-                        <th>Forced Turnovers</th>
-                        <td>{{ stats.blocks + stats.forced_turnovers }}</td>
+                        <th>Takeaways</th>
+                        <td>{{ stats.blocks + stats.forced_turnovers + stats.callahans }}</td>
                         <th>D-Line Points</th>
                         <td>{{ stats.d_line_points_played }}</td>
                     </tr>
@@ -2550,9 +2550,9 @@ function generatePrintableReport() {
                     </tr>
                     <tr>
                         <th>Turnovers</th>
-                        <td>{{ stats.throwaways + stats.drops }}</td>
+                        <td>{{ stats.turnovers }}</td>
                         <th>Plus/Minus</th>
-                        <td>{{ (stats.goals + stats.assists + stats.blocks - stats.throwaways - stats.drops)|round(2) }}</td>
+                        <td>{{ stats.plus_minus }}</td>
                     </tr>
                 </table>
             </div>

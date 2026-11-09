@@ -13,6 +13,26 @@ from app.stats.loaders import analysed_point_ids, preload_game_points, game_poin
 
 
 
+def players_in_games(games=None):
+    """Everyone who was on a line in these games (every game: None): the
+    group that team averages, medians and percentiles are measured over,
+    on every stats page."""
+    query = LineUp.query.with_entities(LineUp.player_id).filter(
+        LineUp.team_organization_id == get_current_team_id())
+    if games is not None:
+        games = games if isinstance(games, list) else [games]
+        preload_game_points(games)
+        point_ids = [p.id for g in games for p in game_points(g)]
+        if not point_ids:
+            return []
+        query = query.filter(LineUp.point_id.in_(point_ids))
+    ids = {pid for (pid,) in query.distinct()}
+    if not ids:
+        return []
+    return Player.query.filter(Player.id.in_(ids),
+                               Player.team_organization_id == get_current_team_id()).order_by(Player.name).all()
+
+
 def get_players_base_stats(players, games=None):
     """Get stats for multiple players in a single batch of queries"""
     current_app.logger.debug(f"Batch loading stats for {len(players)} players")

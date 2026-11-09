@@ -318,7 +318,10 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <h5 class="mb-0">Player Statistics</h5>
+                    <h5 class="mb-0">Player Statistics
+                        <i class="bi bi-info-circle" data-bs-toggle="tooltip"
+                           title="Points counts every point played. Everything else is from points with full stats; points only taken live on Game Day aren't in these totals."></i>
+                    </h5>
                     <div class="d-flex gap-2 align-items-center flex-wrap">
                         {% if current_user.is_coach %}
                         <span class="badge bg-info">Admin/Coach View</span>
@@ -371,10 +374,10 @@
                                             <small class="text-muted">({{ item.stats.completion_rate|round(1) }}%)</small>
                                         </td>
                                         <td>{{ item.stats.turnovers }}</td>
-                                        <td>{{ (item.stats.goals + item.stats.assists + item.stats.blocks - item.stats.turnovers)|round(1) }}</td>
-                                        <td>{{ item.stats.per|round(1) }}</td>
-                                        <td>{{ item.stats.epm|default(0)|round(1) }}</td>
-                                        <td>{{ '%.2f'|format(item.stats.eff|default(0)) }}</td>
+                                        <td>{{ item.stats.plus_minus }}</td>
+                                        <td>{{ item.stats.per|round(1) if item.stats.analysed_points else '–' }}</td>
+                                        <td>{{ '%.2f'|format(item.stats.epm|default(0)) }}</td>
+                                        <td>{{ '%.3f'|format(item.stats.eff|default(0)) }}</td>
                                     </tr>
                                     {% endif %}
                                 {% endfor %}

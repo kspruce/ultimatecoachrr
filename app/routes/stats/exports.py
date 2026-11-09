@@ -8,13 +8,13 @@ from app.models.game import Game
 from app.models.point import Point, LineUp
 from datetime import datetime
 from app.utils.team_filter import get_current_team_id
-from app.utils.season import scope_games, season_players, viewing_season
+from app.utils.season import scope_games, viewing_season
 
 from app.routes.stats import bp
 from app.stats.formulas import apply_ratings
 from app.stats.cache import get_cached_team_averages
 from app.stats.history import get_player_game_history
-from app.stats.players import get_players_base_stats
+from app.stats.players import get_players_base_stats, players_in_games
 
 
 def _csv_response(rows, headers, filename):
@@ -60,6 +60,8 @@ def _stat_columns(s):
         'goals_per_point':        round(s.get('goals', 0) / points, 3) if points else 0,
         'assists_per_point':      round(s.get('assists', 0) / points, 3) if points else 0,
         'blocks_per_point':       round(s.get('blocks', 0) / points, 3) if points else 0,
+        'blocks_per_d_point':     round(s.get('blocks_per_d_point', 0), 3),
+        'takeaways_per_d_point':  round(s.get('takeaways_per_d_point', 0), 3),
         'o_line_conversion_rate': round(s.get('o_line_conversion_rate', 0), 1),
         'd_line_conversion_rate': round(s.get('d_line_conversion_rate', 0), 1),
         'per':                    round(s.get('per', 0), 2),
@@ -179,7 +181,7 @@ def export_team_season_csv():
         team_organization_id=get_current_team_id()
     )).order_by(Game.date).all()
 
-    players = season_players()
+    players = players_in_games(games)
 
     team_avgs = get_cached_team_averages(games)
     player_stats_dict = get_players_base_stats(players, games)
@@ -192,7 +194,7 @@ def export_team_season_csv():
         'catches', 'drops', 'catch_rate',
         'throwaways', 'turnovers', 'plus_minus',
         'hucks', 'break_throws', 'break_throw_percentage',
-        'goals_per_point', 'assists_per_point', 'blocks_per_point',
+        'goals_per_point', 'assists_per_point', 'blocks_per_point', 'blocks_per_d_point', 'takeaways_per_d_point',
         'o_line_conversion_rate', 'd_line_conversion_rate',
         'per', 'epm', 'eff',
     ]

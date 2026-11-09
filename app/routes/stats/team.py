@@ -4,16 +4,17 @@ from app import db
 from app.models.game import Game
 from app.models.tournament import Tournament
 from app.utils.team_filter import get_current_team_id
-from app.utils.season import scope_games, scope_tournaments, season_players, team_seasons, viewing_season, viewing_squad
+from app.utils.season import scope_games, scope_tournaments, team_seasons, viewing_season, viewing_squad
 
 from app.routes.stats import bp
 from app.stats.formulas import apply_ratings
 from app.stats.cache import get_cached_team_averages
 from app.stats.formulas import calculate_optimized_line_efficiency
-from app.stats.players import get_players_base_stats
+from app.stats.players import get_players_base_stats, players_in_games
 from app.stats.team import calculate_additional_team_metrics, calculate_performance_trends, calculate_possession_based_team_metrics, calculate_team_summary, get_previous_period_games
 from app.stats.loaders import game_points, is_analysed, preload_game_points
 from app.stats import turnovers
+from app.stats.profile import team_profile
 
 
 @bp.route('/team')
@@ -75,8 +76,8 @@ def team_stats():
     for key, value in prev_poss_metrics.items():
         team_summary[f'prev_{key}'] = value
     
-    # Calculate player statistics scoped to the current team organisation
-    players = season_players()
+    # Everyone who played in these games (the same group as every stats page)
+    players = players_in_games(games)
     
     # Get cached team averages
     team_avgs = get_cached_team_averages(games)
@@ -154,6 +155,9 @@ def team_stats():
     # Trend over the games in the filter only
     ball_security['trends'] = turnovers.game_trends(throwing, None, game_ids)
 
+    # The radars: this period (and the one before) against the team's history
+    team_radar = team_profile(throwing, game_ids, {g.id for g in prev_games}, all_games)
+
     # Get filter options
     tournaments = scope_tournaments(Tournament.query.filter_by(
         team_organization_id=get_current_team_id()
@@ -177,4 +181,5 @@ def team_stats():
         d_line_efficiency=dict(d_line_efficiency),
         performance_trends=performance_trends,
         ball_security=ball_security,
+        team_radar=team_radar,
     )

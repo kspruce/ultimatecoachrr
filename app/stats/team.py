@@ -10,7 +10,7 @@ from app.utils.team_filter import get_current_team_id
 
 from app.stats.formulas import (POSSESSION_CHANGES, TURNOVER_EVENTS, get_point_starting_possession, goal_equivalents,
                                 point_we_scored, possession_gap, scoring_efficiency)
-from app.stats.players import HUCK_DISTANCE, get_players_base_stats
+from app.stats.players import HUCK_DISTANCE, get_players_base_stats, players_in_games
 from app.stats.loaders import preload_game_points, game_points, game_line_points, is_analysed
 
 
@@ -76,10 +76,9 @@ def calculate_team_averages(games=None):
     scoring efficiency (SE) that prices turns, the team's goal equivalents
     per point played (where PER starts each player) and the Eff prior (the
     average player's turns in goal equivalents). See formulas.apply_ratings."""
-    players = Player.query.filter_by(
-        active=True,
-        team_organization_id=get_current_team_id()
-    ).all()
+    # Everyone who played in these games (not the active roster, which
+    # ignores the season being viewed)
+    players = players_in_games(games)
     player_stats = get_players_base_stats(players, games)
 
     result = calculate_scoring_efficiency(games)

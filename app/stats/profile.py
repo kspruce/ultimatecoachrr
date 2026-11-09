@@ -131,3 +131,106 @@ def rating_comparison(player_id, stats_by_player):
             'of': len(values),
         })
     return {'rows': rows, 'min_points': MIN_RATED_POINTS, 'qualifies': qualifies}
+
+
+# --- the team's radars: this period against the team's own history ----------
+
+TEAM_AXES = {
+    'offence': [
+        {'key': 'hold', 'label': 'Hold %', 'fmt': 'pct', 'help': 'O-line points we scored'},
+        {'key': 'completion', 'label': 'Completion', 'fmt': 'pct'},
+        {'key': 'huck_completion', 'label': 'Huck completion', 'fmt': 'pct'},
+        {'key': 'break_completion', 'label': 'Break-side completion', 'fmt': 'pct'},
+        {'key': 'turnovers_per_o_point', 'label': 'Turnovers / O-pt', 'short': 'Ball security', 'fmt': 'rate',
+         'lower_better': True, 'help': 'Our turnovers per O-line point (full stats). Fewer ranks higher.'},
+    ],
+    'defence': [
+        {'key': 'break', 'label': 'Break %', 'fmt': 'pct', 'help': 'D-line points we scored'},
+        {'key': 'blocks_per_d_point', 'label': 'Blocks / D-pt', 'fmt': 'rate'},
+        {'key': 'takeaways_per_d_point', 'label': 'Takeaways / D-pt', 'fmt': 'rate',
+         'help': 'Blocks, forced turnovers and Callahans on D-line points'},
+        {'key': 'regain_rate', 'label': 'Got the disc', 'fmt': 'pct',
+         'help': 'D-line points where we got the disc back (any turnover by them)'},
+        {'key': 'regain_conversion', 'label': 'Scored after getting it', 'short': 'Conversion', 'fmt': 'pct',
+         'help': 'Of the D-line points where we got the disc, the share we scored'},
+    ],
+}
+# Fewer periods of history than this and percentiles mean little
+MIN_HISTORY = 3
+
+
+def team_period_metrics(data, game_ids):
+    """The team radar values for one set of games (from turnovers.ThrowingData)."""
+    from app.stats.formulas import point_we_scored
+
+    def rate(part, whole):
+        return 100.0 * part / whole if whole else None
+
+    points = [p for pid, p in data.points.items() if data.game_of_point[pid].id in game_ids]
+    o_points = [p for p in points if p.our_line_type == 'O-line']
+    d_points = [p for p in points if p.our_line_type == 'D-line']
+    o_full = [p for p in o_points if p.id in data.analysed]
+    d_full = [p for p in d_points if p.id in data.analysed]
+    events = data.events_by_point
+    our_turnovers = sum(1 for p in o_full for e in events.get(p.id, [])
+                        if e.event_type in turnovers.OUR_TURNOVERS and not e.is_opponent and e.is_offensive is not False)
+    blocks = takeaways = regained = regained_scored = 0
+    for p in d_full:
+        evs = events.get(p.id, [])
+        blocks += sum(1 for e in evs if e.event_type == 'block' and not e.is_opponent)
+        takeaways += sum(1 for e in evs if e.event_type in ('block', 'forced_turnover', 'callahan') and not e.is_opponent)
+        if any(e.event_type in turnovers.WE_REGAIN for e in evs):
+            regained += 1
+            regained_scored += point_we_scored(p)
+    h = turnovers.handling_summary(data, None, game_ids)
+    return {
+        'hold': rate(sum(1 for p in o_points if point_we_scored(p)), len(o_points)),
+        'break': rate(sum(1 for p in d_points if point_we_scored(p)), len(d_points)),
+        'completion': h['completion_rate'],
+        'huck_completion': h['huck_completion_rate'],
+        'break_completion': h['break_completion_rate'],
+        'turnovers_per_o_point': our_turnovers / len(o_full) if o_full else None,
+        'blocks_per_d_point': blocks / len(d_full) if d_full else None,
+        'takeaways_per_d_point': takeaways / len(d_full) if d_full else None,
+        'regain_rate': rate(regained, len(d_full)),
+        'regain_conversion': rate(regained_scored, regained),
+    }
+
+
+def team_profile(data, game_ids, prev_ids, all_games):
+    """Each team radar axis for these games (and the period before) as a
+    percentile among the team's tournaments with full stats, or its games
+    when there are fewer than MIN_HISTORY tournaments."""
+    by_tournament = {}
+    for g in all_games:
+        if g.tournament_id is not None:
+            by_tournament.setdefault(g.tournament_id, set()).add(g.id)
+    analysed_games = {data.game_of_point[pid].id for pid in data.analysed}
+    periods = [ids for ids in by_tournament.values() if ids & analysed_games]
+    unit = 'tournaments'
+    if len(periods) < MIN_HISTORY:
+        periods = [{gid} for gid in analysed_games]
+        unit = 'games'
+    history = [team_period_metrics(data, ids) for ids in periods]
+    now = team_period_metrics(data, game_ids)
+    before = team_period_metrics(data, prev_ids) if prev_ids else None
+    out = {'unit': unit, 'periods': len(history), 'enough': len(history) >= MIN_HISTORY}
+    for side, axes in TEAM_AXES.items():
+        rows = []
+        for axis in axes:
+            key = axis['key']
+            past = [m[key] for m in history if m[key] is not None]
+            ranked = len(past) >= MIN_HISTORY
+
+            def pct(v):
+                return round(percentile(v, past, axis.get('lower_better'))) if ranked and v is not None else None
+            rows.append({
+                **axis,
+                'value': now[key], 'percentile': pct(now[key]),
+                'previous': before[key] if before else None,
+                'previous_percentile': pct(before[key]) if before else None,
+                'history_median': median(past) if past else None,
+                'best': (min(past) if axis.get('lower_better') else max(past)) if past else None,
+            })
+        out[side] = rows
+    return out

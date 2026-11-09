@@ -4,7 +4,6 @@ from app.models.player import Player
 from app.models.game import Game
 from app.models.tournament import Tournament
 from app.models.cutting_skill import CuttingSkill
-from app.models.point import LineUp
 from app.utils.team_filter import get_current_team_id
 from app.utils.season import scope_games, scope_tournaments
 
@@ -12,7 +11,7 @@ from app.routes.stats import bp
 from app.stats.cache import get_cached_team_averages
 from app.stats.formulas import PER_SCALE, apply_ratings
 from app.stats.history import get_player_game_history
-from app.stats.players import calculate_cutting_stats, get_players_base_stats, get_point_ids_from_games
+from app.stats.players import calculate_cutting_stats, get_players_base_stats, get_point_ids_from_games, players_in_games
 from app.stats import cutting, turnovers
 from app.stats.profile import radar_profile, rating_comparison
 
@@ -55,11 +54,7 @@ def player_stats(player_id):
     # Everyone who played in these games: the player's teammates are what
     # the radars and ratings are ranked against
     point_ids = get_point_ids_from_games(games)
-    peer_ids = {pid for (pid,) in LineUp.query.with_entities(LineUp.player_id).filter(
-        LineUp.point_id.in_(point_ids),
-        LineUp.team_organization_id == get_current_team_id()).distinct()} if point_ids else set()
-    peers = Player.query.filter(Player.id.in_(peer_ids - {player.id}),
-                                Player.team_organization_id == get_current_team_id()).all()
+    peers = [p for p in players_in_games(games) if p.id != player.id]
     stats_by_player = get_players_base_stats([player] + peers, games)
     stats = stats_by_player[player.id]
 

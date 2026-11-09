@@ -119,8 +119,11 @@ def test_line_efficiency_ranks_by_conversion():
     stats = {1: {'o_line_points_played': 4, 'o_line_points_scored': 2},
              2: {'o_line_points_played': 4, 'o_line_points_scored': 3},
              3: {'o_line_points_played': 0, 'o_line_points_scored': 0}}
-    ranked = formulas.calculate_optimized_line_efficiency([a, b, c], stats, is_offensive=True)
+    ranked = formulas.calculate_optimized_line_efficiency([a, b, c], stats, is_offensive=True, min_points=1)
     assert ranked == [(b, 0.75), (a, 0.5)]
+    # One point at 100% isn't the best O-line player: too few points to rank
+    stats[3] = {'o_line_points_played': 1, 'o_line_points_scored': 1}
+    assert formulas.calculate_optimized_line_efficiency([a, b, c], stats, is_offensive=True, min_points=4) == [(b, 0.75), (a, 0.5)]
 
 
 # --- pages ------------------------------------------------------------------
