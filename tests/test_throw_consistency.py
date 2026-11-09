@@ -195,3 +195,32 @@ def test_catch_rate_and_turnovers_forced(app, setup):
     assert round(metrics['catch_rate'], 1) == round(500 / 6, 1)
     # The forced turnover and the block
     assert metrics['turnovers_forced_per_point'] == 2
+
+
+def test_d_point_rates_only_count_d_line_points(app, setup):
+    """A block on an O-line point (after a turn) isn't a D-point block, for
+    the team or the player."""
+    from app.stats.players import get_players_base_stats
+    blocker = setup['line'][2]
+    d_point = _point(setup, start='defense')
+    _record(setup, d_point, 'block', 2, 40, 20, False)
+    _record(setup, d_point, 'catch', 0, 45, 20, True)
+    _record(setup, d_point, 'goal', 1, 88, 20, True)
+    o_point = _point(setup, number=2)
+    _record(setup, o_point, 'catch', 0, 20, 18, True)
+    _record(setup, o_point, 'throwaway', 0, 60, 30, True)
+    _record(setup, o_point, 'block', 2, 40, 20, False)
+    _record(setup, o_point, 'catch', 3, 42, 20, True)
+    _record(setup, o_point, 'goal', 4, 88, 20, True)
+
+    admin = User.query.filter_by(username='admin').one()
+    with app.test_request_context():
+        login_user(admin)
+        game = db.session.get(Game, setup['game_id'])
+        metrics = calculate_additional_team_metrics([game])
+        stats = get_players_base_stats([db.session.get(Player, blocker)], [game])[blocker]
+    assert metrics['blocks_per_point'] == 1          # 1 D-line block / 1 D-line point
+    assert stats['blocks'] == 2                      # both still in the totals
+    assert stats['d_line_blocks'] == 1
+    assert stats['blocks_per_d_point'] == 1
+    assert stats['takeaways_per_d_point'] == 1

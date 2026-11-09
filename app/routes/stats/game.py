@@ -1,9 +1,6 @@
 from flask import render_template
 from flask_login import login_required
-from app import db
-from app.models.player import Player
 from app.models.game import Game
-from app.models.point import Point, LineUp
 from jinja2.utils import htmlsafe_json_dumps  # JSON that is safe inside <script>
 from app.utils.team_filter import get_current_team_id
 from app.utils.point_flow import analysis_progress
@@ -11,7 +8,7 @@ from app.utils.point_flow import analysis_progress
 from app.routes.stats import bp
 from app.stats.formulas import apply_ratings
 from app.stats.cache import get_cached_team_averages
-from app.stats.players import get_players_base_stats
+from app.stats.players import get_players_base_stats, players_in_games
 from app.stats.team import calculate_additional_team_metrics, calculate_game_stats, generate_player_connections, process_heatmap_data
 from app.stats.loaders import game_points
 
@@ -30,19 +27,9 @@ def game_stats(game_id):
     # Calculate team statistics
     team_stats = calculate_game_stats(game)
     
-    # Get all players who participated in this game
-    player_ids = db.session.query(LineUp.player_id).join(Point).filter(
-        Point.game_id == game_id,
-        LineUp.team_organization_id == get_current_team_id(),
-        Point.team_organization_id == get_current_team_id()
-    ).distinct().all()
-    
-    player_ids = [pid[0] for pid in player_ids]
-    players = Player.query.filter(
-        Player.id.in_(player_ids),
-        Player.team_organization_id == get_current_team_id()
-    ).all()
-    
+    # Everyone who played in this game
+    players = players_in_games([game])
+
     # Calculate team averages for this game
     team_avgs = get_cached_team_averages([game])
     

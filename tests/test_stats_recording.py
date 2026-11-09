@@ -20,6 +20,12 @@ def _links(html):
     return {(link['source'], link['target']): link['value'] for link in data['links']}
 
 
+def _dashboard_pairs(html):
+    """The dashboard's top throwing pairs: {(thrower, receiver): completions}."""
+    return {tuple(int(x) for x in pair.split('-')): int(n)
+            for pair, n in re.findall(r'data-pair="(\d+-\d+)" data-completions="(\d+)"', html)}
+
+
 def _pairs():
     return sorted((t.thrower_id, t.receiver_id, t.throw_type) for t in Throw.query.all())
 
@@ -36,7 +42,7 @@ def test_every_pass_in_a_game_is_a_connection(setup):
     expected = {(a, b): 1, (b, a): 2, (a, c): 1, (c, b): 1}
     game_page = setup['client'].get(f"/stats/game/{setup['game_id']}").get_data(as_text=True)
     assert _links(game_page) == expected
-    assert _links(setup['client'].get('/stats/').get_data(as_text=True)) == expected
+    assert _dashboard_pairs(setup['client'].get('/stats/').get_data(as_text=True)) == expected
     api = setup['client'].get('/stats/api/connection-data').get_json()
     assert {(link['source'], link['target']): link['value'] for link in api['links']} == expected
 

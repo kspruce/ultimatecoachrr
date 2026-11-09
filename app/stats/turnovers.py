@@ -104,6 +104,7 @@ class ThrowingData:
                     'id': t.id, 'point_id': t.point_id, 'game_id': self.game_of_point[t.point_id].id,
                     'thrower_id': t.thrower_id, 'receiver_id': t.receiver_id,
                     'turnover': t.throw_type == 'throwaway',
+                    'assist': t.throw_type == 'assist',
                     'kind': throw_kind(t.x_start, t.y_start, t.x_end, t.y_end),
                     'side': None if t.break_throw is None else ('break' if t.break_throw else 'open'),
                     'depth': depth_zone(t.x_start), 'lane': lane(t.y_start),

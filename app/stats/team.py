@@ -10,7 +10,7 @@ from app.utils.team_filter import get_current_team_id
 
 from app.stats.formulas import (POSSESSION_CHANGES, TURNOVER_EVENTS, get_point_starting_possession, goal_equivalents,
                                 point_we_scored, possession_gap, scoring_efficiency)
-from app.stats.players import HUCK_DISTANCE, get_players_base_stats
+from app.stats.players import HUCK_DISTANCE, get_players_base_stats, players_in_games
 from app.stats.loaders import preload_game_points, game_points, game_line_points, is_analysed
 
 
@@ -76,10 +76,9 @@ def calculate_team_averages(games=None):
     scoring efficiency (SE) that prices turns, the team's goal equivalents
     per point played (where PER starts each player) and the Eff prior (the
     average player's turns in goal equivalents). See formulas.apply_ratings."""
-    players = Player.query.filter_by(
-        active=True,
-        team_organization_id=get_current_team_id()
-    ).all()
+    # Everyone who played in these games (not the active roster, which
+    # ignores the season being viewed)
+    players = players_in_games(games)
     player_stats = get_players_base_stats(players, games)
 
     result = calculate_scoring_efficiency(games)
@@ -656,21 +655,18 @@ def calculate_additional_team_metrics(games):
         team_organization_id=get_current_team_id()
     ).filter(Event.point_id.in_(point_ids)).count()
 
-    # Count blocks
-    blocks_query = Event.query.filter_by(
-        event_type='block',
-        team_organization_id=get_current_team_id()
-    )
-    blocks_query = blocks_query.filter(Event.point_id.in_(point_ids))
-    blocks = blocks_query.count()
-
-    # Turnovers we forced: blocks, forced turnovers and Callahans (not
-    # their unforced errors)
-    turnovers_forced = Event.query.filter(
-        Event.event_type.in_(['block', 'forced_turnover', 'callahan']),
+    # Blocks and takeaways (blocks, forced turnovers, Callahans) made on
+    # D-line points with full stats: the per-D-point rates divide by those
+    # points, so a block on an O-line point (after a turn) doesn't count.
+    analysed_d_ids = [p.id for game in games for p in game_line_points(game, 'D-line') if is_analysed(p)]
+    d_events = Event.query.filter(
         Event.is_opponent.isnot(True),
-        Event.team_organization_id == get_current_team_id()
-    ).filter(Event.point_id.in_(point_ids)).count()
+        Event.team_organization_id == get_current_team_id(),
+        Event.point_id.in_(analysed_d_ids),
+    )
+    blocks = d_events.filter(Event.event_type == 'block').count() if analysed_d_ids else 0
+    turnovers_forced = d_events.filter(
+        Event.event_type.in_(['block', 'forced_turnover', 'callahan'])).count() if analysed_d_ids else 0
 
     # Count hucks
     hucks = sum(1 for t in throws if t.calculate_distance() and t.calculate_distance() > HUCK_DISTANCE)
@@ -712,7 +708,7 @@ def calculate_additional_team_metrics(games):
         'assists_per_point': assists / total_points,
         'throws_per_point': throws_per_point,
         'hucks_per_point': hucks / total_points,
-        # blocks_per_point: blocks earned on D-line per D-line point played
+        # blocks / takeaways on D-line points per D-line point (full stats)
         'blocks_per_point': blocks / analysed_d_points if analysed_d_points > 0 else 0,
         'turnovers_forced_per_point': turnovers_forced / analysed_d_points if analysed_d_points > 0 else 0,
         'break_throw_percentage': break_throw_percentage,

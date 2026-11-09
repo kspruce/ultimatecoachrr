@@ -147,74 +147,21 @@ def apply_ratings(stats, team_avgs):
     return stats
 
 
-def calculate_team_avg_stats(player_stats):
-    """Calculate team average stats from preloaded player stats"""
-    team_avg_stats = {
-        'games_played': 0,
-        'points_played': 0,
-        'o_line_points_played': 0,
-        'd_line_points_played': 0,
-        'goals': 0,
-        'assists': 0,
-        'hockey_assists': 0,
-        'break_throws': 0,
-        'blocks': 0,
-        'completions': 0,
-        'throwaways': 0,
-        'drops': 0,
-        'plus_minus': 0,
-        'per': 0,
-        'eff': 0,
-        'epm': 0,
-        'completion_rate': 0
-    }
-    
-    # Count players with stats
-    player_count = len(player_stats)
-    
-    if player_count > 0:
-        # Sum all stats
-        for player_id, stats in player_stats.items():
-            team_avg_stats['games_played'] += stats.get('games_played', 0)
-            team_avg_stats['points_played'] += stats.get('points_played', 0)
-            team_avg_stats['o_line_points_played'] += stats.get('o_line_points_played', 0)
-            team_avg_stats['d_line_points_played'] += stats.get('d_line_points_played', 0)
-            team_avg_stats['goals'] += stats.get('goals', 0)
-            team_avg_stats['assists'] += stats.get('assists', 0)
-            team_avg_stats['hockey_assists'] += stats.get('hockey_assists', 0)
-            team_avg_stats['break_throws'] += stats.get('break_throws', 0)
-            team_avg_stats['blocks'] += stats.get('blocks', 0)
-            team_avg_stats['completions'] += stats.get('completions', 0)
-            team_avg_stats['throwaways'] += stats.get('throwaways', 0)
-            team_avg_stats['drops'] += stats.get('drops', 0)
-            team_avg_stats['plus_minus'] += (stats.get('goals', 0) + stats.get('assists', 0) + 
-                                           stats.get('blocks', 0) - stats.get('throwaways', 0) - 
-                                           stats.get('drops', 0))
-            team_avg_stats['per'] += stats.get('per', 0)
-            team_avg_stats['eff'] += stats.get('eff', 0)
-            team_avg_stats['epm'] += stats.get('epm', 0)
-        
-        # Calculate averages
-        for key in team_avg_stats:
-            team_avg_stats[key] /= player_count
-        
-        # Calculate completion rate separately
-        total_throws = sum((stats.get('completions', 0) + stats.get('throwaways', 0)) for stats in player_stats.values())
-        total_completions = sum(stats.get('completions', 0) for stats in player_stats.values())
-        team_avg_stats['completion_rate'] = (total_completions / total_throws * 100) if total_throws > 0 else 0
-    
-    return team_avg_stats
+# Fewer O- (or D-) line points than this and a player's line conversion is
+# too noisy to rank them for the optimal line (1 point, 100% isn't the best)
+MIN_LINE_POINTS = 5
 
 
-def calculate_optimized_line_efficiency(players, player_stats, is_offensive=True):
+def calculate_optimized_line_efficiency(players, player_stats, is_offensive=True, min_points=MIN_LINE_POINTS):
     """Players ranked by line conversion (share of their O-line points we
-    held, or D-line points we broke), for the games player_stats covers.
+    held, or D-line points we broke), for the games player_stats covers,
+    among those with min_points+ points on that line.
     Returns [(player, fraction 0-1), ...], best first."""
     line = 'o_line' if is_offensive else 'd_line'
     player_efficiency = {}
     for player in players:
         stats = player_stats.get(player.id)
-        if stats and stats.get(f'{line}_points_played', 0) > 0:
+        if stats and stats.get(f'{line}_points_played', 0) >= max(1, min_points):
             player_efficiency[player] = (stats[f'{line}_points_scored']
                                          / stats[f'{line}_points_played'])
     return sorted(player_efficiency.items(), key=lambda x: x[1], reverse=True)

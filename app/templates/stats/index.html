@@ -1,1373 +1,480 @@
 {% extends "base.html" %}
 
+{% macro num(v, fmt) -%}
+{%- if v is none -%}–
+{%- elif fmt == 'int' -%}{{ v|int }}
+{%- elif fmt == 'dec1' -%}{{ '%.1f'|format(v) }}
+{%- elif fmt == 'dec2' -%}{{ '%.2f'|format(v) }}
+{%- elif fmt == 'dec3' -%}{{ '%.3f'|format(v) }}
+{%- elif fmt == 'pct' -%}{{ '%.0f'|format(v) }}%
+{%- elif fmt == 'signed0' -%}{{ '%+d'|format(v|int) }}
+{%- elif fmt == 'signed2' -%}{{ '%+.2f'|format(v) }}
+{%- else -%}{{ v }}
+{%- endif -%}
+{%- endmacro %}
+
+{# Shading for a percentile: green above the median teammate, red below #}
+{% macro shade(p, prefix) -%}
+{%- if p is not none -%}
+--{{ prefix }}c: var({{ '--ok' if p >= 50 else '--bad' }}); --{{ prefix }}s: {{ ((p - 50)|abs * 0.5)|round|int }}%;
+{%- endif -%}
+{%- endmacro %}
+
+{# The field, attacking right, with counts in a grid of cells #}
+{% macro field_grid(grid, colour, uid, goals=none) %}
+<svg class="dash-field" viewBox="-1 -1 102 39" role="img" aria-label="Field map">
+    <rect x="0" y="0" width="100" height="37" fill="var(--sunken)" stroke="var(--rule-strong)" stroke-width="0.3"></rect>
+    <rect x="0" y="0" width="18" height="37" fill="var(--rule)" opacity="0.5"></rect>
+    <rect x="82" y="0" width="18" height="37" fill="var(--rule)" opacity="0.5"></rect>
+    {% for c in grid.cells %}
+    <rect x="{{ c.x }}" y="{{ c.y }}" width="{{ c.w }}" height="{{ c.h }}" fill="var({{ colour }})"
+          opacity="{{ '%.2f'|format(0.12 + 0.78 * c.strength) }}">
+        <title>{{ c.count }} here</title>
+    </rect>
+    <text x="{{ c.x + c.w / 2 }}" y="{{ c.y + c.h / 2 + 0.9 }}" font-size="2.4" text-anchor="middle"
+          fill="{{ 'var(--card)' if c.strength > 0.55 else 'var(--ink-2)' }}" pointer-events="none">{{ c.count }}</text>
+    {% endfor %}
+    {% if goals %}
+    {% for g in goals %}<circle cx="{{ g.x }}" cy="{{ g.y }}" r="0.6" fill="var(--ink)" opacity="0.7"></circle>{% endfor %}
+    {% endif %}
+    <line x1="50" y1="0" x2="50" y2="37" stroke="var(--rule-strong)" stroke-width="0.2" stroke-dasharray="1 1"></line>
+    <text x="99" y="36" font-size="2.2" text-anchor="end" fill="var(--ink-3)">attacking →</text>
+</svg>
+{% endmacro %}
+
 {% block styles %}
-<link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
-<link rel="stylesheet" href="https://cdn.datatables.net/fixedcolumns/4.1.0/css/fixedColumns.dataTables.min.css">
-<script src="https://cdn.datatables.net/fixedcolumns/4.1.0/js/dataTables.fixedColumns.min.js"></script>
 <style>
-    .stat-card {
-        transition: all 0.3s ease;
-        border-radius: 8px;
-        overflow: hidden;
-    }
-    
-    .stat-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    }
-    
-    .stat-value {
-        font-size: 2rem;
-        font-weight: 700;
-        color: var(--uc-gray-800);
-    }
+    .kpi { border: 1px solid var(--rule); border-radius: var(--radius); padding: .75rem 1rem; background: var(--card); height: 100%; }
+    .kpi .kpi-label { font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-3); font-weight: 600; }
+    .kpi .kpi-value { font-size: 1.75rem; font-weight: 700; color: var(--ink); line-height: 1.2; }
+    .kpi .kpi-change { font-size: .8rem; color: var(--ink-3); }
+    .kpi .kpi-change.better { color: var(--ok); }
+    .kpi .kpi-change.worse { color: var(--bad); }
 
-    .stat-label {
-        font-size: 0.82rem;
-        color: var(--uc-gray-400);
-        text-transform: uppercase;
-        letter-spacing: .04em;
-        font-weight: 600;
-    }
-    
-    .trend-indicator {
-        font-size: 0.9rem;
-        margin-left: 5px;
-    }
-    
-    .trend-up { color: var(--uc-green); }
-    .trend-down { color: var(--uc-red); }
-    
-    .line-card {
-        background: var(--sunken);
-    }
-    
-    .player-card {
-        border-left: 4px solid transparent;
-    }
-    
-    .o-line { border-left-color: var(--uc-blue); }
-    .d-line { border-left-color: var(--uc-red); }
-    
-    .field-container {
-        position: relative;
-        width: 100%;
-        height: 400px;
-        background-color: #4CAF50;
-        border: 2px solid #333;
-        margin-bottom: 20px;
-        overflow: hidden;
-        isolation: isolate; /* contain child z-indices; prevents bleeding over footer */
-    }
+    .leader-card h6 { font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-3); }
+    .leader-card ol { padding-left: 1.1rem; margin: 0; }
+    .leader-card li { display: flex; justify-content: space-between; gap: .5rem; font-size: .9rem; }
+    .leader-card li::marker { color: var(--ink-3); }
 
-    .field-container svg {
-        pointer-events: none;
+    .dash-table-wrap { overflow-x: auto; }
+    .dash-table { font-size: .85rem; white-space: nowrap; margin-bottom: 0; }
+    .dash-table th, .dash-table td { text-align: right; padding: .35rem .5rem; }
+    .dash-table th:first-child, .dash-table td:first-child {
+        text-align: left; position: sticky; left: 0; z-index: 1; background: var(--card);
     }
-    
-    .field-container text {
-        font-family: Arial, sans-serif;
-        font-weight: bold;
-        text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-    }
+    .dash-table thead th { cursor: pointer; user-select: none; }
+    .dash-table thead th[aria-sort="ascending"]::after { content: ' ▲'; font-size: .7em; }
+    .dash-table thead th[aria-sort="descending"]::after { content: ' ▼'; font-size: .7em; }
+    .dash-table .group-row th { cursor: default; text-align: center; font-size: .7rem; text-transform: uppercase;
+                                letter-spacing: .05em; color: var(--ink-3); border-bottom: 0; }
+    .dash-table tr.low td { opacity: .5; }
+    .dash-table tfoot td { font-weight: 600; color: var(--ink-2); border-top: 2px solid var(--rule-strong); }
+    .mode-tot .rate, .mode-rate .tot { display: none; }
+    .mode-tot td[data-tshade] { background: color-mix(in srgb, var(--tc) var(--ts), transparent); }
+    .mode-rate td[data-rshade] { background: color-mix(in srgb, var(--rc) var(--rs), transparent); }
+    .hide-usage .g-usage, .hide-offence .g-offence, .hide-defence .g-defence, .hide-ratings .g-ratings { display: none; }
+    .hide-low tr.low { display: none; }
+    .g-usage + .g-offence, .g-offence + .g-defence, .g-defence + .g-ratings { border-left: 2px solid var(--rule-strong); }
 
-    
-    .endzone {
-        position: absolute;
-        height: 100%;
-        width: 18%;
-        background-color: #388E3C;
-        z-index: 1;
-    }
-    
-    .endzone-left { left: 0; }
-    .endzone-right { right: 0; }
-    
-    #field-heatmap canvas {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        z-index: 2;
-    }
-
-    .heatmap-canvas {
-        z-index: 2;
-    }
-    
-    .network-chart {
-        height: 400px;
-        width: 100%;
-        background-color: var(--uc-gray-50);
-        border: 1px solid var(--uc-gray-200);
-    }
-    
-    .tooltip-inner {
-        max-width: 300px;
-        text-align: left;
-    }
-
-    .loading-overlay {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(255,255,255,0.8);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 1000;
-    }
-
-    .chart-container {
-        position: relative;
-        min-height: 300px;
-    }
-    
-    /* Table styling for fixed headers and columns */
-    .dataTable th {
-        position: sticky;
-        top: 0;
-        background-color: var(--uc-gray-50);
-        z-index: 10;
-        border-bottom: 2px solid var(--uc-gray-200);
-    }
-
-    .dataTable td:first-child,
-    .dataTable th:first-child {
-        position: sticky;
-        left: 0;
-        background-color: var(--uc-gray-50);
-        z-index: 5;
-        border-right: 2px solid var(--uc-gray-200);
-    }
-
-    .dataTable th:first-child {
-        z-index: 15; /* Higher than other headers to appear above them */
-    }
-
-    /* Highlight rows on hover */
-    .dataTable tr:hover {
-        background-color: color-mix(in srgb, var(--club-ink) 8%, transparent) !important;
-    }
-
-    /* Card body for tables */
-    .card-body.p-0 {
-        overflow: visible !important;
-    }
-
-    /* DataTables wrapper adjustments */
-    .dataTables_wrapper {
-        width: 100%;
-        overflow: hidden;
-    }
-
-    /* Make sure the fixed column has proper background on hover */
-    .dataTable tr:hover td:first-child {
-        background-color: color-mix(in srgb, var(--club-ink) 8%, transparent) !important;
-    }
-    
-    /* Filter buttons styling */
-    .stats-filter-btn.active {
-        background-color: var(--uc-blue);
-        color: white;
-    }
-    
-    /* Stats category indicators */
-    .stat-cell {
-        position: relative;
-    }
-    
-    .offensive-stat {
-        background-color: color-mix(in srgb, var(--club-ink) 7%, transparent);
-    }
-
-    .defensive-stat {
-        background-color: color-mix(in srgb, var(--bad) 7%, transparent);
-    }
-    
-    /* Tooltip improvements */
-    .stats-tooltip {
-        position: absolute;
-        background: rgba(0,0,0,0.8);
-        color: white;
-        padding: 5px 10px;
-        border-radius: 4px;
-        font-size: 12px;
-        z-index: 100;
-        display: none;
-    }
-
-    /* Gender styling for optimal lines */
-    .player-card.female {
-        border-left: 4px solid var(--uc-purple);
-    }
-
-    .player-card.male {
-        border-left: 4px solid var(--uc-blue);
-    }
-
-    /* Section dividers */
-    .gender-divider {
-        background-color: var(--uc-gray-50);
-        font-weight: 700;
-        text-transform: uppercase;
-        font-size: 0.75rem;
-        color: var(--uc-gray-400);
-    }  
-    
-    .d3-tooltip {
-        position: absolute;
-        background: rgba(0,0,0,0.8);
-        color: white;
-        padding: 8px 12px;
-        border-radius: 4px;
-        font-size: 12px;
-        pointer-events: none;
-        z-index: 1000;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        max-width: 200px;
-        text-align: left;
-    }
-  
-    /* Enhanced Navigation Styling */
-    .stats-nav-container {
-        background: var(--card);
-        border-radius: var(--uc-radius);
-        box-shadow: var(--uc-shadow-sm);
-        overflow: hidden;
-        border: 1px solid var(--uc-gray-200);
-    }
-
-    .stats-nav-header {
-        padding: 12px 20px;
-        background: var(--uc-gray-50);
-        border-bottom: 1px solid var(--uc-gray-100);
-    }
-
-    .stats-nav-header h5 {
-        margin: 0;
-        color: var(--uc-gray-600);
-        font-weight: 700;
-        font-size: .75rem;
-        text-transform: uppercase;
-        letter-spacing: .07em;
-    }
-    
-    .stats-nav-buttons {
-        display: flex;
-        flex-wrap: wrap;
-        padding: 15px;
-        gap: 15px;
-    }
-    
-    .stats-nav-btn {
-        flex: 1;
-        min-width: 200px;
-        display: flex;
-        align-items: center;
-        padding: 15px;
-        border-radius: 8px;
-        text-decoration: none;
-        color: var(--on-club);
-        transition: all 0.2s ease;
-        border: none;
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .stats-nav-btn::after {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(255,255,255,0);
-        transition: background 0.3s ease;
-        z-index: 1;
-    }
-    
-    .stats-nav-btn:hover::after {
-        background: rgba(255,255,255,0.1);
-    }
-    
-    .stats-nav-btn:active {
-        transform: translateY(2px);
-    }
-    
-    .btn-icon {
-        font-size: 1.8rem;
-        margin-right: 15px;
-        z-index: 2;
-    }
-    
-    .btn-content {
-        display: flex;
-        flex-direction: column;
-        z-index: 2;
-    }
-    
-    .btn-title {
-        font-weight: 600;
-        font-size: 1.1rem;
-        margin-bottom: 3px;
-    }
-    
-    .btn-subtitle {
-        font-size: 0.8rem;
-        opacity: 0.9;
-    }
-    
-    .player-btn {
-        background: var(--club);
-        box-shadow: inset 0 -3px 0 var(--accent);
-    }
-
-    .team-btn {
-        background: var(--club);
-        box-shadow: inset 0 -3px 0 var(--accent);
-    }
-
-    .games-btn {
-        background: var(--club);
-        box-shadow: inset 0 -3px 0 var(--accent);
-    }
-    
-    /* Responsive adjustments */
-    @media (max-width: 768px) {
-        .stats-nav-buttons {
-            flex-direction: column;
-        }
-
-        .stats-nav-btn {
-            width: 100%;
-        }
-    }
-
-    /* ─── Dark mode overrides ────────────────────────────────── */
-    [data-theme="dark"] .stats-nav-container {
-        background: var(--uc-card-bg);
-        border-color: var(--uc-card-border);
-    }
-    [data-theme="dark"] .stats-nav-header {
-        background: var(--uc-gray-100);
-        border-bottom-color: var(--uc-card-border);
-    }
-    /* White loading overlay → dark equivalent */
-    [data-theme="dark"] .loading-overlay {
-        background: rgba(15, 23, 42, 0.82);
-    }
-    /* Sticky table header/first-column cells use var(--uc-gray-50) which is
-       a light colour; override with the card background in dark mode */
-    [data-theme="dark"] .dataTable th,
-    [data-theme="dark"] .dataTable td:first-child,
-    [data-theme="dark"] .dataTable th:first-child {
-        background-color: var(--uc-card-bg) !important;
-        color: var(--uc-page-text);
-        border-color: var(--uc-card-border);
-    }
-    [data-theme="dark"] .line-card {
-        background: var(--sunken);
-    }
-    [data-theme="dark"] .network-chart {
-        background-color: var(--uc-gray-100);
-        border-color: var(--uc-card-border);
-    }
-
+    .dash-field { width: 100%; height: auto; max-height: 360px; display: block; }
+    .side-bar { display: flex; height: 18px; border-radius: 3px; overflow: hidden; background: var(--sunken); min-width: 120px; }
+    .side-bar .open { background: var(--uc-blue); }
+    .side-bar .break { background: var(--warn); }
+    .legend-swatch { display: inline-block; width: 12px; height: 12px; border-radius: 2px; vertical-align: -1px; margin-right: 3px; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container py-4">
-    <!-- Header Section -->
-    <div class="uc-page-header mb-4">
+    <div class="uc-page-header mb-3">
         <div>
             <h2>Statistics Dashboard</h2>
-            <p>Real-time analytics and performance metrics</p>
+            <p>{{ season.name if season else 'All time' }}{% if has_games %} · {{ games_count }} game{{ '' if games_count == 1 else 's' }}{% endif %}</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{{ url_for('stats_dashboard.team_stats') }}" class="btn btn-outline-secondary">Team Stats</a>
+            {% if current_user.player %}
+            <a href="{{ url_for('stats_dashboard.player_stats', player_id=current_user.player.id) }}" class="btn btn-outline-secondary">My Stats</a>
+            {% endif %}
         </div>
     </div>
-    <!-- Navigation Section -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="stats-nav-container">
-                <div class="stats-nav-header">
-                    <h5><i class="bi bi-compass"></i> Navigation</h5>
+
+    {% if not has_games %}
+    <div class="alert alert-info">No player statistics available yet.</div>
+    {% else %}
+
+    <!-- How much of this has full stats -->
+    <div class="alert alert-light border small mb-4 coverage-note">
+        <i class="bi bi-info-circle me-1"></i>
+        <strong>{{ coverage.analysed }} of {{ coverage.total }}</strong> points have full stats.
+        Points played, holds and breaks count every point; everything else comes from the points with full stats.
+        {% if incomplete %}
+        <a href="{{ url_for('stats_dashboard.ratings') }}">{{ incomplete }} point{{ '' if incomplete == 1 else 's' }}</a>
+        look{{ 's' if incomplete == 1 else '' }} like a turnover wasn't recorded.
+        {% endif %}
+    </div>
+
+    <!-- Headline -->
+    {% set rec = headline.record %}
+    <div class="row g-3 mb-4" id="headline">
+        <div class="col-6 col-md-4 col-lg-2">
+            <div class="kpi">
+                <div class="kpi-label">Record</div>
+                <div class="kpi-value">{{ rec.wins }}–{{ rec.losses }}{% if rec.ties %}–{{ rec.ties }}{% endif %}</div>
+                {% if headline.prev_record %}
+                <div class="kpi-change">{{ headline.prev_record.wins }}–{{ headline.prev_record.losses }} {{ headline.prev_label }}</div>
+                {% endif %}
+            </div>
+        </div>
+        {% for t in headline.tiles %}
+        <div class="col-6 col-md-4 col-lg-2">
+            <div class="kpi" data-bs-toggle="tooltip" title="{{ t.help }}">
+                <div class="kpi-label">{{ t.label }}</div>
+                <div class="kpi-value">{{ num(t.value, t.fmt) }}</div>
+                {% if t.change is not none %}
+                <div class="kpi-change {{ 'better' if t.better else ('worse' if t.better == false else '') }}">
+                    {{ '▲' if t.change > 0 else ('▼' if t.change < 0 else '') }}
+                    {{ num(t.change|abs, t.fmt) }}{{ ' pts' if t.fmt == 'pct' else '' }} vs {{ headline.prev_label }}
                 </div>
-                <div class="stats-nav-buttons">
-                    {% if current_user.player %}
-                    <a href="{{ url_for('stats_dashboard.player_stats', player_id=current_user.player.id) }}" class="stats-nav-btn player-btn">
-                        <div class="btn-icon"><i class="bi bi-person-badge"></i></div>
-                        <div class="btn-content">
-                            <span class="btn-title">My Stats</span>
-                            <span class="btn-subtitle">View your personal statistics</span>
-                        </div>
-                    </a>
-                    {% endif %}
-                    <a href="{{ url_for('stats_dashboard.team_stats') }}" class="stats-nav-btn team-btn">
-                        <div class="btn-icon"><i class="bi bi-people-fill"></i></div>
-                        <div class="btn-content">
-                            <span class="btn-title">Team Stats</span>
-                            <span class="btn-subtitle">Team performance analytics</span>
-                        </div>
-                    </a>
-                    <a href="{{ url_for('game.index') }}" class="stats-nav-btn games-btn">
-                        <div class="btn-icon"><i class="bi bi-controller"></i></div>
-                        <div class="btn-content">
-                            <span class="btn-title">Games</span>
-                            <span class="btn-subtitle">View all game records</span>
-                        </div>
-                    </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if leaders %}
+    <!-- Leaders -->
+    <div class="row g-3 mb-4" id="leaders">
+        {% for board in leaders %}
+        <div class="col-6 col-md-4 col-lg">
+            <div class="card h-100 leader-card">
+                <div class="card-body py-2">
+                    <h6 class="mb-2">{{ board.label }}
+                        {% if board.help %}<i class="bi bi-info-circle" data-bs-toggle="tooltip" title="{{ board.help }}"></i>{% endif %}
+                    </h6>
+                    {% if board.rows %}
+                    <ol>
+                        {% for r in board.rows %}
+                        <li><a href="{{ url_for('stats_dashboard.player_stats', player_id=r.player.id) }}">{{ r.player.name }}</a>
+                            <strong>{{ num(r.value, board.fmt) }}</strong></li>
+                        {% endfor %}
+                    </ol>
+                    {% else %}<span class="small text-muted">Not enough data yet</span>{% endif %}
                 </div>
             </div>
         </div>
+        {% endfor %}
     </div>
-    
-    <!-- Recent Games quick-access -->
-    {% if recent_games %}
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
+    {% endif %}
+
+    <!-- Player table -->
+    <div class="card mb-4">
+        <div class="card-header d-flex flex-wrap gap-2 justify-content-between align-items-center">
+            <h5 class="mb-0">Players
+                <a href="{{ url_for('stats_dashboard.ratings') }}" class="small fw-normal ms-2">How PER, EPM and Eff work</a>
+            </h5>
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+                <div class="btn-group btn-group-sm" role="group" aria-label="Totals or per point">
+                    <button type="button" class="btn btn-outline-primary active" data-mode="tot">Totals</button>
+                    <button type="button" class="btn btn-outline-primary" data-mode="rate">Per point</button>
+                </div>
+                <div class="btn-group btn-group-sm" role="group" aria-label="Columns">
+                    {% for key, label in table.groups %}
+                    <button type="button" class="btn btn-outline-secondary active" data-group="{{ key }}" aria-pressed="true">{{ label }}</button>
+                    {% endfor %}
+                </div>
+                {% if current_user.is_coach %}
+                <a href="{{ url_for('stats_dashboard.export_team_season_csv') }}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-download me-1"></i>CSV
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        <div class="card-body p-0">
+            {% if sees_all %}
+            <div class="d-flex flex-wrap gap-3 align-items-center px-3 py-2 small border-bottom">
+                <input type="search" class="form-control form-control-sm" id="playerSearch" placeholder="Search players" style="max-width: 200px">
+                <div class="form-check mb-0">
+                    <input class="form-check-input" type="checkbox" id="hideLow">
+                    <label class="form-check-label" for="hideLow">Hide players with fewer than {{ table.min_points }} full-stat points</label>
+                </div>
+                <span class="text-muted">
+                    Shading: percentile among the {{ table.qualified }} players with {{ table.min_points }}+ full-stat points
+                    (<span class="legend-swatch" style="background: color-mix(in srgb, var(--ok) 25%, transparent)"></span>above the median,
+                    <span class="legend-swatch" style="background: color-mix(in srgb, var(--bad) 25%, transparent)"></span>below).
+                </span>
+            </div>
+            {% endif %}
+            <div class="dash-table-wrap">
+            <table class="table table-sm dash-table mode-tot" id="playerTable">
+                <thead>
+                    <tr class="group-row">
+                        <th></th>
+                        {% for key, label in table.groups %}
+                        <th class="g-{{ key }}" colspan="{{ table.columns|selectattr('group', 'equalto', key)|list|length }}">{{ label }}</th>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        <th data-sort="name">Player</th>
+                        {% for col in table.columns %}
+                        <th class="g-{{ col.group }}" data-sort="{{ loop.index }}" data-lower-better="{{ 1 if col.lower_better else 0 }}"
+                            data-bs-toggle="tooltip" title="{{ col.help }}">{{ col.label }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in table.rows %}
+                    <tr class="{{ '' if r.qualified else 'low' }}" data-name="{{ r.player.name|lower }}">
+                        <td><a href="{{ url_for('stats_dashboard.player_stats', player_id=r.player.id) }}">{{ r.player.name }}</a>
+                            {% if r.player.jersey_number is not none %}<small class="text-muted">#{{ r.player.jersey_number }}</small>{% endif %}</td>
+                        {% for col in table.columns %}
+                        {% set v = r['values'][col.key] %}
+                        {% set pt = r.pct[(col.key, 0)] if r.pct and (col.key, 0) in r.pct else none %}
+                        {% set pr = r.pct[(col.key, 1)] if r.pct and (col.key, 1) in r.pct else none %}
+                        <td class="g-{{ col.group }}" data-tot="{{ v[0] if v[0] is not none else '' }}" data-rate="{{ v[1] if v[1] is not none else '' }}"
+                            {% if pt is not none %}data-tshade{% endif %} {% if pr is not none %}data-rshade{% endif %}
+                            style="{{ shade(pt, 't') }} {{ shade(pr, 'r') }}"
+                            {% if pt is not none or pr is not none %}title="Percentile: {{ pt if pt is not none else '–' }} (totals), {{ pr if pr is not none else '–' }} (per point)"{% endif %}>
+                            <span class="tot">{{ num(v[0], col.fmt) }}</span><span class="rate">{{ num(v[1], col.rate_fmt) }}</span>
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="{{ table.columns|length + 1 }}" class="text-muted">No points played in these games yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td data-bs-toggle="tooltip" title="The median of players with {{ table.min_points }}+ full-stat points">Median player</td>
+                        {% for col in table.columns %}
+                        <td class="g-{{ col.group }}">
+                            <span class="tot">{{ num(table.median[(col.key, 0)], 'dec1' if col.fmt == 'int' else col.fmt) }}</span><span class="rate">{{ num(table.median[(col.key, 1)], 'dec1' if col.rate_fmt == 'int' else col.rate_fmt) }}</span>
+                        </td>
+                        {% endfor %}
+                    </tr>
+                </tfoot>
+            </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Where we score, turn it over, and use the break side -->
+    <div class="card mb-4" id="fieldMaps">
+        <div class="card-header d-flex flex-wrap gap-2 justify-content-between align-items-center">
+            <h5 class="mb-0">On the Field</h5>
+            <ul class="nav nav-pills nav-sm" role="tablist">
+                <li class="nav-item"><button class="nav-link active py-1" data-bs-toggle="pill" data-bs-target="#map-scoring" type="button" role="tab">Where we score from</button></li>
+                <li class="nav-item"><button class="nav-link py-1" data-bs-toggle="pill" data-bs-target="#map-turnovers" type="button" role="tab">Where we turn it over</button></li>
+                <li class="nav-item"><button class="nav-link py-1" data-bs-toggle="pill" data-bs-target="#map-sides" type="button" role="tab">Open vs break side</button></li>
+            </ul>
+        </div>
+        <div class="card-body tab-content">
+            <div class="tab-pane fade show active" id="map-scoring" role="tabpanel">
+                {% if field.scoring.total %}
+                {{ field_grid(field.scoring, '--ok', 'scoring', field.scoring.goals) }}
+                <p class="small text-muted mt-2 mb-0">
+                    Where the assist was thrown from, for {{ field.scoring.total }} goals (darker = more), and where each goal was caught (dots).
+                </p>
+                {% else %}<p class="text-muted mb-0">No goals with positions recorded yet.</p>{% endif %}
+            </div>
+            <div class="tab-pane fade" id="map-turnovers" role="tabpanel">
+                {% if field.turnovers.total %}
+                {{ field_grid(field.turnovers, '--bad', 'turnovers') }}
+                <p class="small text-muted mt-2 mb-0">
+                    {{ field.turnovers.total }} turnovers: {{ field.turnovers.by_type.throwaway }} throwaways (where they were thrown from),
+                    {{ field.turnovers.by_type.drop }} drops and {{ field.turnovers.by_type.stall }} stalls (where they happened).
+                    The team page has each turnover drawn on the field.
+                </p>
+                {% else %}<p class="text-muted mb-0">No turnovers recorded in these games.</p>{% endif %}
+            </div>
+            <div class="tab-pane fade" id="map-sides" role="tabpanel">
+                {% set sd = field.sides %}
+                {% if sd.throws %}
+                <p class="mb-3">
+                    <strong>{{ num(sd.break_share, 'pct') }}</strong> of {{ sd.throws }} throws went to the break side.
+                    Open side completion <strong>{{ num(sd.open_completion, 'pct') }}</strong>,
+                    break side <strong>{{ num(sd.break_completion, 'pct') }}</strong>.
+                </p>
+                <div class="table-responsive">
+                <table class="table table-sm mb-0 align-middle">
+                    <thead><tr><th>Thrown from</th><th class="text-end">Throws</th><th style="width:35%">
+                        <span class="legend-swatch" style="background: var(--uc-blue)"></span>Open
+                        <span class="legend-swatch ms-2" style="background: var(--warn)"></span>Break</th>
+                        <th class="text-end">Break share</th><th class="text-end">Open cmp</th><th class="text-end">Break cmp</th></tr></thead>
+                    <tbody>
+                    {% for z in sd.zones %}
+                    <tr>
+                        <td>{{ z.label }}</td>
+                        <td class="text-end">{{ z.throws }}</td>
+                        <td>{% if z.throws %}<div class="side-bar"><div class="open" style="width: {{ 100 - z.break_share }}%"></div><div class="break" style="width: {{ z.break_share }}%"></div></div>{% endif %}</td>
+                        <td class="text-end">{{ num(z.break_share, 'pct') }}</td>
+                        <td class="text-end">{{ num(z.open_completion, 'pct') }} <small class="text-muted">({{ z.open }})</small></td>
+                        <td class="text-end">{{ num(z.break_completion, 'pct') }} <small class="text-muted">({{ z.break }})</small></td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                </div>
+                <p class="small text-muted mt-2 mb-0">Only throws where the stat-taker marked the side.</p>
+                {% else %}<p class="text-muted mb-0">No throws with the open or break side recorded yet.</p>{% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <!-- Throwing pairs -->
+        <div class="col-lg-7">
+            <div class="card h-100">
+                <div class="card-header"><h5 class="mb-0">Top Throwing Pairs
+                    <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="Thrower → receiver pairs with the most completions. Share is how many of the thrower's completions went to that receiver."></i>
+                </h5></div>
+                <div class="card-body p-0">
+                    {% if pairs %}
+                    <div class="table-responsive">
+                    <table class="table table-sm mb-0" id="throwingPairs">
+                        <thead><tr><th>#</th><th>Thrower</th><th></th><th>Receiver</th>
+                            <th class="text-end">Completions</th><th class="text-end">Goals</th><th class="text-end">Share</th></tr></thead>
+                        <tbody>
+                        {% for p in pairs %}
+                        <tr data-pair="{{ p.thrower.id }}-{{ p.receiver.id }}" data-completions="{{ p.completions }}">
+                            <td class="text-muted">{{ loop.index }}</td>
+                            <td class="text-nowrap">{{ p.thrower.name }}</td><td class="text-muted">→</td><td class="text-nowrap">{{ p.receiver.name }}</td>
+                            <td class="text-end fw-bold">{{ p.completions }}</td>
+                            <td class="text-end">{{ p.assists }}</td>
+                            <td class="text-end text-muted">{{ num(p.share, 'pct') }}</td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                    </div>
+                    {% else %}<p class="text-muted m-3">No completed passes recorded yet.</p>{% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent games -->
+        <div class="col-lg-5">
+            <div class="card h-100">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Recent Games</h5>
                     <a href="{{ url_for('game.index') }}" class="btn btn-sm btn-outline-secondary">All Games</a>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-sm table-hover mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Opponent</th>
-                                    <th>Result</th>
-                                    <th>Score</th>
-                                    <th>O-Line%</th>
-                                    <th>D-Line%</th>
-                                    <th></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for game in recent_games[:8] %}
-                                {% set gs = team_stats[loop.index0] if loop.index0 < team_stats|length else none %}
-                                <tr>
-                                    <td class="text-muted" style="white-space:nowrap">
-                                        {{ game.date.strftime('%d %b %Y') if game.date else '—' }}
-                                    </td>
-                                    <td>{{ game.opponent }}</td>
-                                    <td>
-                                        {% if game.is_win %}<span class="badge bg-success">W</span>
-                                        {% elif game.is_loss %}<span class="badge bg-danger">L</span>
-                                        {% else %}<span class="badge bg-secondary">—</span>{% endif %}
-                                    </td>
-                                    <td>
-                                        <span class="{% if game.is_win %}text-success{% elif game.is_loss %}text-danger{% endif %} fw-semibold">
-                                            {{ game.our_score }}–{{ game.their_score }}
-                                        </span>
-                                    </td>
-                                    <td>{% if gs %}{{ gs.stats.o_line_conversion_rate|round(0)|int }}%{% else %}—{% endif %}</td>
-                                    <td>{% if gs %}{{ gs.stats.d_line_conversion_rate|round(0)|int }}%{% else %}—{% endif %}</td>
-                                    <td class="text-end">
-                                        <a href="{{ url_for('stats_dashboard.game_stats', game_id=game.id) }}"
-                                           class="btn btn-outline-primary"
-                                           style="font-size:0.75rem;padding:2px 8px">
-                                            Stats →
-                                        </a>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                    <table class="table table-sm table-hover mb-0" id="recentGames">
+                        <thead><tr><th>Date</th><th>Opponent</th><th>Score</th>
+                            <th class="text-end" data-bs-toggle="tooltip" title="O-line points we scored">Hold</th>
+                            <th class="text-end" data-bs-toggle="tooltip" title="D-line points we scored">Break</th></tr></thead>
+                        <tbody>
+                        {% for game, gs in recent_games %}
+                        <tr>
+                            <td class="text-muted text-nowrap">{{ game.date.strftime('%d %b') if game.date else '—' }}</td>
+                            <td><a href="{{ url_for('stats_dashboard.game_stats', game_id=game.id) }}">{{ game.opponent }}</a></td>
+                            <td class="text-nowrap fw-semibold {{ 'text-success' if game.is_win else ('text-danger' if game.is_loss else '') }}">
+                                {{ 'W' if game.is_win else ('L' if game.is_loss else '–') }} {{ game.our_score }}–{{ game.their_score }}</td>
+                            <td class="text-end">{{ num(gs.o_line_conversion_rate if gs.o_line_points else none, 'pct') }}</td>
+                            <td class="text-end">{{ num(gs.d_line_conversion_rate if gs.d_line_points else none, 'pct') }}</td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    {% if line_usage %}
+    <!-- Line usage -->
+    <div class="card mb-4" id="lineUsage">
+        <div class="card-header"><h5 class="mb-0">Line Usage
+            <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="Who's playing the points. Pts/G and O % per player are in the table's Usage columns."></i>
+        </h5></div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+            <table class="table table-sm mb-0">
+                <thead><tr><th></th><th class="text-end">Players</th><th class="text-end">Points played</th>
+                    <th class="text-end">Share</th><th class="text-end">Per player</th><th class="text-end">On O-line</th></tr></thead>
+                <tbody>
+                {% for g in line_usage %}
+                <tr><td>{{ g.label }}</td><td class="text-end">{{ g.players }}</td><td class="text-end">{{ g.points }}</td>
+                    <td class="text-end">{{ num(g.share, 'pct') }}</td><td class="text-end">{{ num(g.per_player, 'dec1') }}</td>
+                    <td class="text-end">{{ num(g.o_share, 'pct') }}</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
             </div>
         </div>
     </div>
     {% endif %}
-
-    <!-- Visualization Sections -->
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5>Field Heatmap
-                        <i class="bi bi-info-circle ms-2" data-bs-toggle="tooltip" 
-                           title="Heat map showing concentration of throws on the field"></i>
-                    </h5>
-                    <div class="btn-group btn-group-sm mt-2">
-                        <button class="btn btn-outline-primary active" data-filter="all">All Events</button>
-                        <button class="btn btn-outline-primary" data-filter="throws">Throws</button>
-                        <button class="btn btn-outline-primary" data-filter="goals">Goals</button>
-                        <button class="btn btn-outline-primary" data-filter="turnovers">Turnovers</button>
-                        <button class="btn btn-outline-primary" data-filter="scored_on">Scored On</button>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div class="field-container" id="field-heatmap">
-                        <div class="endzone endzone-left"></div>
-                        <div class="endzone endzone-right"></div>
-                        {% if not heatmap_data %}
-                        <div class="loading-overlay">
-                            <p>No throw data available</p>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Player Connections Section -->
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5>Player Connections
-                        <i class="bi bi-info-circle ms-2" data-bs-toggle="tooltip" 
-                           title="Network diagram showing throw connections between players"></i>
-                    </h5>
-                    <div class="btn-group btn-group-sm mt-2">
-                        <button class="btn btn-outline-primary active" data-strength="all">All Connections</button>
-                        <button class="btn btn-outline-primary" data-strength="strong">Strong Connections</button>
-                        <button class="btn btn-outline-primary" data-strength="weak">Weak Connections</button>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div class="network-chart" id="player-connections">
-                        {% if not connection_data %}
-                        <div class="loading-overlay">
-                            <p>No connection data available</p>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <!-- Player Statistics Table -->
-    <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">Player Statistics
-                <i class="bi bi-info-circle ms-2" data-bs-toggle="tooltip" 
-                   title="Comprehensive player statistics from recent games"></i>
-                <a href="{{ url_for('stats_dashboard.ratings') }}" class="small fw-normal ms-2">How PER, EPM and Eff work</a>
-            </h5>
-            <div class="btn-group btn-group-sm">
-                <button class="btn btn-outline-primary stats-filter-btn active" data-view="all">All Stats</button>
-                <button class="btn btn-outline-primary stats-filter-btn" data-view="offense">Offensive Stats</button>
-                <button class="btn btn-outline-primary stats-filter-btn" data-view="defense">Defensive Stats</button>
-            </div>
-        </div>
-        <div class="card-body p-0">
-            {% if players and player_stats %}
-                <table class="table table-striped" id="player-stats-table">
-                    <thead>
-                        <tr>
-                            <th>Player</th>
-                            <th data-toggle="tooltip" title="Games Played">Games</th>
-                            <th data-toggle="tooltip" title="Points Played">Points</th>
-                            <th data-toggle="tooltip" title="O-Line Points Played">O Points</th>
-                            <th data-toggle="tooltip" title="D-Line Points Played">D Points</th>
-                            <th class="offensive-stat" data-toggle="tooltip" title="Goals Scored">Goals</th>
-                            <th class="offensive-stat" data-toggle="tooltip" title="Assists Thrown">Assists</th>
-                            <th class="offensive-stat" data-toggle="tooltip" title="Hockey Assists">Hockey</th>
-                            <th class="offensive-stat" data-toggle="tooltip" title="Break Throws">Breaks</th>
-                            <th class="defensive-stat" data-toggle="tooltip" title="Blocks Made">Blocks</th>
-                            <th class="offensive-stat" data-toggle="tooltip" title="Completions (Completion Rate)">Comp</th>
-                            <th class="offensive-stat" data-toggle="tooltip" title="Throwaways">Throwaways</th>
-                            <th class="offensive-stat" data-toggle="tooltip" title="Drops">Drops</th>
-                            <th data-toggle="tooltip" title="Plus/Minus">+/-</th>
-                            <th data-toggle="tooltip" title="Player Efficiency Rating: goal equivalents per 10 points played">PER</th>
-                            <th data-toggle="tooltip" title="EDGE Plus/Minus: total goal equivalents, a fairer plus/minus">EPM</th>
-                            <th data-toggle="tooltip" title="Efficiency: share of goal equivalents not given back in turns (0 to 1)">Eff</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% if is_admin or is_coach or not current_user.player %}
-                            <!-- Show all players for admins, coaches, or users without player accounts -->
-                            {% for player in players %}
-                                {% if player.id in player_stats %}
-                                <tr>
-                                    <td>
-                                        <a href="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}">
-                                            {{ player.name }}
-                                            <small class="text-muted">#{{ player.jersey_number }}</small>
-                                        </a>
-                                    </td>
-                                    <td>{{ player_stats[player.id].games_played }}</td>
-                                    <td>{{ player_stats[player.id].points_played }}</td>
-                                    <td>{{ player_stats[player.id].o_line_points_played }}</td>
-                                    <td>{{ player_stats[player.id].d_line_points_played }}</td>
-                                    <td class="offensive-stat">{{ player_stats[player.id].goals }}</td>
-                                    <td class="offensive-stat">{{ player_stats[player.id].assists }}</td>
-                                    <td class="offensive-stat">{{ player_stats[player.id].hockey_assists }}</td>
-                                    <td class="offensive-stat">{{ player_stats[player.id].break_throws }}</td>
-                                    <td class="defensive-stat">{{ player_stats[player.id].blocks }}</td>
-                                    <td class="offensive-stat">
-                                        {{ player_stats[player.id].completions }}
-                                        <small class="text-muted">({{ player_stats[player.id].completion_rate|round(1) }}%)</small>
-                                    </td>
-                                    <td class="offensive-stat">{{ player_stats[player.id].throwaways }}</td>
-                                    <td class="offensive-stat">{{ player_stats[player.id].drops }}</td>
-                                    <td>{{ (player_stats[player.id].goals + player_stats[player.id].assists + 
-                                       player_stats[player.id].blocks - player_stats[player.id].throwaways - 
-                                       player_stats[player.id].drops)|round(1) }}</td>
-                                    <td>{{ player_stats[player.id].per|round(1) }}</td>
-                                <td>{{ player_stats[player.id].epm|default(0)|round(1) }}</td>
-                                <td>{{ '%.2f'|format(player_stats[player.id].eff|default(0)) }}</td>
-                                </tr>
-                                {% endif %}
-                            {% endfor %}
-                        {% else %}
-                            <!-- Show only current user's player stats -->
-                            {% if current_user.player and current_user.player.id in player_stats %}
-                            <tr>
-                                <td>
-                                    <a href="{{ url_for('stats_dashboard.player_stats', player_id=current_user.player.id) }}">
-                                        {{ current_user.player.name }}
-                                        <small class="text-muted">#{{ current_user.player.jersey_number }}</small>
-                                    </a>
-                                </td>
-                                <td>{{ player_stats[current_user.player.id].games_played }}</td>
-                                <td>{{ player_stats[current_user.player.id].points_played }}</td>
-                                <td>{{ player_stats[current_user.player.id].o_line_points_played }}</td>
-                                <td>{{ player_stats[current_user.player.id].d_line_points_played }}</td>
-                                <td class="offensive-stat">{{ player_stats[current_user.player.id].goals }}</td>
-                                <td class="offensive-stat">{{ player_stats[current_user.player.id].assists }}</td>
-                                <td class="offensive-stat">{{ player_stats[current_user.player.id].hockey_assists }}</td>
-                                <td class="offensive-stat">{{ player_stats[current_user.player.id].break_throws }}</td>
-                                <td class="defensive-stat">{{ player_stats[current_user.player.id].blocks }}</td>
-                                <td class="offensive-stat">
-                                    {{ player_stats[current_user.player.id].completions }}
-                                    <small class="text-muted">({{ player_stats[current_user.player.id].completion_rate|round(1) }}%)</small>
-                                </td>
-                                <td class="offensive-stat">{{ player_stats[current_user.player.id].throwaways }}</td>
-                                <td class="offensive-stat">{{ player_stats[current_user.player.id].drops }}</td>
-                                <td>{{ (player_stats[current_user.player.id].goals + player_stats[current_user.player.id].assists + 
-                                   player_stats[current_user.player.id].blocks - player_stats[current_user.player.id].throwaways - 
-                                   player_stats[current_user.player.id].drops)|round(1) }}</td>
-                                <td>{{ player_stats[current_user.player.id].per|round(1) }}</td>
-                                <td>{{ player_stats[current_user.player.id].epm|default(0)|round(1) }}</td>
-                                <td>{{ '%.2f'|format(player_stats[current_user.player.id].eff|default(0)) }}</td>
-                            </tr>
-                            {% endif %}
-                        {% endif %}
-                        
-                        <!-- Team Average Row - Always show this regardless of user role -->
-                        {% if team_avg_stats %}
-                        <tr class="table-secondary">
-                            <td><strong>Team Average</strong></td>
-                            <td>{{ team_avg_stats.games_played|round(1) }}</td>
-                            <td>{{ team_avg_stats.points_played|round(1) }}</td>
-                            <td>{{ team_avg_stats.o_line_points_played|round(1) }}</td>
-                            <td>{{ team_avg_stats.d_line_points_played|round(1) }}</td>
-                            <td class="offensive-stat">{{ team_avg_stats.goals|round(1) }}</td>
-                            <td class="offensive-stat">{{ team_avg_stats.assists|round(1) }}</td>
-                            <td class="offensive-stat">{{ team_avg_stats.hockey_assists|round(1) }}</td>
-                            <td class="offensive-stat">{{ team_avg_stats.break_throws|round(1) }}</td>
-                            <td class="defensive-stat">{{ team_avg_stats.blocks|round(1) }}</td>
-                            <td class="offensive-stat">
-                                {{ team_avg_stats.completions|round(1) }}
-                                <small class="text-muted">({{ team_avg_stats.completion_rate|round(1) }}%)</small>
-                            </td>
-                            <td class="offensive-stat">{{ team_avg_stats.throwaways|round(1) }}</td>
-                            <td class="offensive-stat">{{ team_avg_stats.drops|round(1) }}</td>
-                            <td>{{ team_avg_stats.plus_minus|round(1) }}</td>
-                            <td>{{ team_avg_stats.per|round(1) }}</td>
-                            <td>{{ team_avg_stats.epm|default(0)|round(1) }}</td>
-                            <td>{{ '%.2f'|format(team_avg_stats.eff|default(0)) }}</td>
-                        </tr>
-                        {% endif %}
-                    </tbody>
-                </table>
-            {% else %}
-                <div class="alert alert-info m-3">No player statistics available yet.</div>
-            {% endif %}
-        </div>
-    </div>
-
-
+    {% endif %}
 </div>
 {% endblock %}
 
 {% block scripts %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
-<script src="https://cdn.jsdelivr.net/npm/heatmap.js"></script>
-<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
-
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize tooltips
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl)
-    });
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
 
-    // Initialize DataTable with improved configuration
-    const playerStatsTable = $('#player-stats-table').DataTable({
-        pageLength: 25,
-        order: [[14, "desc"]], // Sort by PER by default (column 14)
-        dom: "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
-             "<'row'<'col-sm-12'tr>>" +
-             "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
-        language: {
-            search: "Search players:",
-            lengthMenu: "Show _MENU_ players"
-        },
-        scrollX: true,
-        scrollY: "500px",
-        scrollCollapse: true,
-        paging: true, // Enable paging
-        fixedColumns: {
-            leftColumns: 1 // Fix Player column
-        },
-        columnDefs: [
-            { targets: [10], // Completion percentage column
-                render: function(data, type, row) {
-                    if (type === 'sort') {
-                        const match = data.match(/\((.*?)%\)/);
-                        return match ? parseFloat(match[1]) : 0;
-                    }
-                    return data;
-                }
-            }
-        ],
-        responsive: true
-    });
+    const table = document.getElementById('playerTable');
+    if (!table) return;
+    const tbody = table.tBodies[0];
+    let mode = 'tot';
 
-    // Add responsive behavior
-    $(window).on('resize', function() {
-        playerStatsTable.columns.adjust().draw();
-    });
-    
-    // Add filtering functionality for the player stats table
-    document.querySelectorAll('[data-view]').forEach(button => {
-        button.addEventListener('click', function() {
-            // Update active button
-            document.querySelectorAll('[data-view]').forEach(btn => btn.classList.remove('active'));
-            this.classList.add('active');
-            
-            const view = this.dataset.view;
-            const table = $('#player-stats-table').DataTable();
-            
-            // Clear any existing search
-            table.search('').columns().search('');
-            
-            if (view === 'offense') {
-                // Custom filtering function for offensive stats
-                $.fn.dataTable.ext.search.push(
-                    function(settings, data, dataIndex) {
-                        // Check goals, assists, hockey assists, or completions
-                        const goals = parseInt(data[5]) || 0;
-                        const assists = parseInt(data[6]) || 0;
-                        const hockey = parseInt(data[7]) || 0;
-                        const completions = parseInt(data[10].split('(')[0].trim()) || 0;
-                        
-                        return goals > 0 || assists > 0 || hockey > 0 || completions > 5;
-                    }
-                );
-            } else if (view === 'defense') {
-                // Custom filtering function for defensive stats
-                $.fn.dataTable.ext.search.push(
-                    function(settings, data, dataIndex) {
-                        // Check blocks
-                        const blocks = parseInt(data[9]) || 0;
-                        return blocks > 0;
-                    }
-                );
-            } else {
-                // Remove any custom filtering for 'all' view
-                $.fn.dataTable.ext.search.pop();
-            }
-            
-            // Redraw the table with the new filter
-            table.draw();
-            
-            // Clear the custom filter after drawing
-            if (view !== 'all') {
-                $.fn.dataTable.ext.search.pop();
-            }
-        });
-    });
+    // Totals or per point
+    document.querySelectorAll('[data-mode]').forEach(btn => btn.addEventListener('click', () => {
+        mode = btn.dataset.mode;
+        document.querySelectorAll('[data-mode]').forEach(b => b.classList.toggle('active', b === btn));
+        table.classList.toggle('mode-tot', mode === 'tot');
+        table.classList.toggle('mode-rate', mode === 'rate');
+        const sorted = table.querySelector('th[aria-sort]');
+        if (sorted) sortBy(sorted, sorted.getAttribute('aria-sort'));
+    }));
 
+    // Column groups
+    document.querySelectorAll('[data-group]').forEach(btn => btn.addEventListener('click', () => {
+        const on = btn.classList.toggle('active');
+        btn.setAttribute('aria-pressed', on);
+        table.classList.toggle('hide-' + btn.dataset.group, !on);
+    }));
 
-    // Initialize Heatmap
-    // Initialize Heatmap
-    if (document.getElementById('field-heatmap')) {
-        const heatmapContainer = document.getElementById('field-heatmap');
-        const heatmapInstance = h337.create({
-            container: heatmapContainer,
-            radius: 18,             // Increased from 15
-            maxOpacity: 0.9,        // Increased from 0.7
-            minOpacity: 0.35,       // Increased from 0.1
-            blur: 0.6,              // Reduced from 0.75 for sharper points
-            gradient: {
-                '.2': '#99ccff',
-                '.5': '#3399ff',
-                '.8': '#0066cc',
-                '.95': '#003366'
-            }
-        });
-    
-        {% if heatmap_data %}
-        const heatmapData = {{ heatmap_data|safe }};
-        
-        // Convert field coordinates to pixel coordinates
-        const fieldWidth = heatmapContainer.offsetWidth;
-        const fieldHeight = heatmapContainer.offsetHeight;
-        const fieldLengthMeters = 100;  // Length in meters
-        const fieldWidthMeters = 37;    // Width in meters
-        
-        // Draw field markings
-        function drawFieldMarkings() {
-            // Create SVG overlay for field markings
-            const svg = d3.select('#field-heatmap')
-                .append('svg')
-                .attr('width', '100%')
-                .attr('height', '100%')
-                .style('position', 'absolute')
-                .style('top', 0)
-                .style('left', 0)
-                .style('pointer-events', 'none') // Allow clicks to pass through
-                .style('z-index', 3); // Above the heatmap
-            
-            // Add midfield line
-            svg.append('line')
-                .attr('x1', fieldWidth / 2)
-                .attr('y1', 0)
-                .attr('x2', fieldWidth / 2)
-                .attr('y2', fieldHeight)
-                .attr('stroke', 'white')
-                .attr('stroke-width', 2)
-                .attr('stroke-dasharray', '5,5')
-                .attr('opacity', 0.7);
-            
-            // Add brick marks (20 yards from each endzone)
-            // Left brick mark (defensive)
-            svg.append('circle')
-                .attr('cx', fieldWidth * 0.2 + (fieldWidth * 0.2)) // 20 yards from left endzone
-                .attr('cy', fieldHeight / 2)
-                .attr('r', 5)
-                .attr('fill', 'white')
-                .attr('opacity', 0.7);
-            
-            // Right brick mark (offensive)
-            svg.append('circle')
-                .attr('cx', fieldWidth - (fieldWidth * 0.2 + (fieldWidth * 0.2))) // 20 yards from right endzone
-                .attr('cy', fieldHeight / 2)
-                .attr('r', 5)
-                .attr('fill', 'white')
-                .attr('opacity', 0.7);
-            
-            // Add field labels
-            svg.append('text')
-                .attr('x', fieldWidth / 2)
-                .attr('y', 20)
-                .attr('text-anchor', 'middle')
-                .attr('fill', 'white')
-                .attr('font-size', '12px')
-                .attr('opacity', 0.7)
-                .text('Midfield');
-            
-            svg.append('text')
-                .attr('x', fieldWidth * 0.2 + (fieldWidth * 0.2))
-                .attr('y', fieldHeight / 2 - 15)
-                .attr('text-anchor', 'middle')
-                .attr('fill', 'white')
-                .attr('font-size', '12px')
-                .attr('opacity', 0.7)
-                .text('Brick');
-            
-            svg.append('text')
-                .attr('x', fieldWidth - (fieldWidth * 0.2 + (fieldWidth * 0.2)))
-                .attr('y', fieldHeight / 2 - 15)
-                .attr('text-anchor', 'middle')
-                .attr('fill', 'white')
-                .attr('font-size', '12px')
-                .attr('opacity', 0.7)
-                .text('Brick');
-        }
-        
-        // Add a legend for the heatmap
-        function addHeatmapLegend(filter) {
-            // Remove any existing legend
-            d3.select('#heatmap-legend').remove();
-            
-            const legendContainer = d3.select('#field-heatmap')
-                .append('div')
-                .attr('id', 'heatmap-legend')
-                .style('position', 'absolute')
-                .style('bottom', '10px')
-                .style('right', '10px')
-                .style('background', 'rgba(255,255,255,0.7)')
-                .style('padding', '5px')
-                .style('border-radius', '5px')
-                .style('z-index', 4);
-            
-            // Get the appropriate title based on filter
-            let title = 'All Events';
-            if (filter === 'throws') title = 'Throws';
-            else if (filter === 'goals') title = 'Goals';
-            else if (filter === 'turnovers') title = 'Turnovers';
-            else if (filter === 'scored_on') title = 'Scored On';
-            
-            legendContainer.append('div')
-                .style('font-weight', 'bold')
-                .style('font-size', '12px')
-                .style('margin-bottom', '5px')
-                .text(title + ' Intensity');
-            
-            // Create gradient bar
-            const gradientSvg = legendContainer.append('svg')
-                .attr('width', 150)
-                .attr('height', 20);
-            
-            // Define gradient based on current filter
-            let gradientColors;
-            if (filter === 'turnovers') {
-                gradientColors = [
-                    {offset: '0%', color: '#ffcccc'},
-                    {offset: '50%', color: '#ff6666'},
-                    {offset: '80%', color: '#cc0000'},
-                    {offset: '100%', color: '#800000'}
-                ];
-            } else if (filter === 'goals') {
-                gradientColors = [
-                    {offset: '0%', color: '#ccffcc'},
-                    {offset: '50%', color: '#66ff66'},
-                    {offset: '80%', color: '#00cc00'},
-                    {offset: '100%', color: '#008000'}
-                ];
-            } else if (filter === 'scored_on') {
-                gradientColors = [
-                    {offset: '0%', color: '#ffccff'},
-                    {offset: '50%', color: '#ff66ff'},
-                    {offset: '80%', color: '#cc00cc'},
-                    {offset: '100%', color: '#800080'}
-                ];
-            } else {
-                gradientColors = [
-                    {offset: '0%', color: '#99ccff'},
-                    {offset: '50%', color: '#3399ff'},
-                    {offset: '80%', color: '#0066cc'},
-                    {offset: '100%', color: '#003366'}
-                ];
-            }
-            
-            // Create linear gradient
-            const gradient = gradientSvg.append('defs')
-                .append('linearGradient')
-                .attr('id', 'heatmap-gradient')
-                .attr('x1', '0%')
-                .attr('x2', '100%')
-                .attr('y1', '0%')
-                .attr('y2', '0%');
-            
-            // Add gradient stops
-            gradientColors.forEach(stop => {
-                gradient.append('stop')
-                    .attr('offset', stop.offset)
-                    .attr('stop-color', stop.color);
-            });
-            
-            // Draw gradient rectangle
-            gradientSvg.append('rect')
-                .attr('width', 150)
-                .attr('height', 15)
-                .style('fill', 'url(#heatmap-gradient)');
-            
-            // Add labels
-            legendContainer.append('div')
-                .style('display', 'flex')
-                .style('justify-content', 'space-between')
-                .style('font-size', '10px')
-                .html('<span>Low</span><span>High</span>');
-        }
-        
-        function updateHeatmap(filter = 'all') {
-            let filteredData = heatmapData;
-            if (filter !== 'all') {
-                filteredData = heatmapData.filter(point => {
-                    switch(filter) {
-                        case 'throws':
-                            return point.type === 'throw_start';
-                        case 'goals':
-                            return point.type === 'goal';
-                        case 'turnovers':
-                            return point.type === 'throwaway';
-                        case 'scored_on':
-                            return point.type === 'scored_on';
-                        default:
-                            return true;
-                    }
-                });
-            }
-        
-            // Configure gradient and appearance based on filter
-            if (filter === 'turnovers') {
-                heatmapInstance.configure({
-                    gradient: {
-                        '.0': 'rgba(255,200,200,0.1)',
-                        '.25': 'rgba(255,150,150,0.6)',
-                        '.55': 'rgba(255,100,100,0.7)',
-                        '.85': 'rgba(200,0,0,0.8)',
-                        '1.0': 'rgba(128,0,0,0.9)'
-                    },
-                    radius: 22,
-                    maxOpacity: 0.95,
-                    minOpacity: 0.4,
-                    blur: 0.5
-                });
-            } else if (filter === 'goals') {
-                heatmapInstance.configure({
-                    gradient: {
-                        '.0': 'rgba(200,255,200,0.1)',
-                        '.25': 'rgba(150,255,150,0.6)',
-                        '.55': 'rgba(100,255,100,0.7)',
-                        '.85': 'rgba(0,200,0,0.8)',
-                        '1.0': 'rgba(0,128,0,0.9)'
-                    },
-                    radius: 22,
-                    maxOpacity: 0.95,
-                    minOpacity: 0.4,
-                    blur: 0.5
-                });
-            } else if (filter === 'scored_on') {
-                heatmapInstance.configure({
-                    gradient: {
-                        '.0': 'rgba(255,200,255,0.1)',
-                        '.25': 'rgba(255,150,255,0.6)',
-                        '.55': 'rgba(255,100,255,0.7)',
-                        '.85': 'rgba(200,0,200,0.8)',
-                        '1.0': 'rgba(128,0,128,0.9)'
-                    },
-                    radius: 22,
-                    maxOpacity: 0.95,
-                    minOpacity: 0.4,
-                    blur: 0.5
-                });
-            } else if (filter === 'throws') {
-                // Special configuration for throws to enhance intensity
-                heatmapInstance.configure({
-                    gradient: {
-                        '.0': 'rgba(0,0,255,0.1)',
-                        '.25': 'rgba(0,0,255,0.6)',
-                        '.55': 'rgba(0,255,255,0.7)',
-                        '.85': 'rgba(0,255,0,0.8)',
-                        '1.0': 'rgba(255,255,0,0.9)'
-                    },
-                    radius: 15,
-                    maxOpacity: 0.95,
-                    minOpacity: 0.4,
-                    blur: 0.6
-                });
-            } else {
-                heatmapInstance.configure({
-                    gradient: {
-                        '.0': 'rgba(0,0,255,0.1)',
-                        '.25': 'rgba(0,0,255,0.5)',
-                        '.55': 'rgba(0,255,0,0.6)',
-                        '.85': 'rgba(255,255,0,0.7)',
-                        '1.0': 'rgba(255,0,0,0.8)'
-                    },
-                    radius: 18,
-                    maxOpacity: 0.9,
-                    minOpacity: 0.35,
-                    blur: 0.6
-                });
-            }
-            
-            // Pre-process data to aggregate overlapping points
-            const gridSize = 5; // Size of grid cells in pixels for aggregation
-            const pointGrid = {};
-            
-            // Map field coordinates to pixel coordinates and group by grid cells
-            filteredData.forEach(point => {
-                const x = Math.round((point.x / fieldLengthMeters) * fieldWidth);
-                const y = Math.round((point.y / fieldWidthMeters) * fieldHeight);
-                
-                // Create grid cell key
-                const cellX = Math.floor(x / gridSize);
-                const cellY = Math.floor(y / gridSize);
-                const cellKey = `${cellX}-${cellY}`;
-                
-                // Increment count for this cell or initialize it
-                if (pointGrid[cellKey]) {
-                    pointGrid[cellKey].count += 1;
-                } else {
-                    pointGrid[cellKey] = {
-                        x: x,
-                        y: y,
-                        count: 1
-                    };
-                }
-            });
-            
-            // Convert grid to data points with intensity based on count
-            let aggregatedData = Object.values(pointGrid).map(cell => ({
-                x: cell.x,
-                y: cell.y,
-                value: Math.min(10, cell.count * 2) // Default scaling
-            }));
-            
-            // Special handling for throws
-            if (filter === 'throws') {
-                aggregatedData = Object.values(pointGrid).map(cell => ({
-                    x: cell.x,
-                    y: cell.y,
-                    value: Math.min(15, cell.count * 3) // More aggressive scaling for throws
-                }));
-            }
-            
-            // Calculate a reasonable max value based on the data
-            const maxCount = Math.max(...aggregatedData.map(point => point.value), 1);
-            const reasonableMax = Math.ceil(maxCount * 0.7); // Use 70% of max as the "max" for better visualization
-            
-            const pixelData = {
-                max: reasonableMax,
-                min: 0,
-                data: aggregatedData
-            };
-            
-            console.log(`Heatmap data (${filter}): ${aggregatedData.length} points, max value: ${reasonableMax}`);
-            
-            // Set data with our aggregated points
-            heatmapInstance.setData(pixelData);
-            
-            // Update the legend
-            addHeatmapLegend(filter);
-        }
-
-    
-        // Initialize with all data
-        updateHeatmap();
-        
-        // Draw field markings after heatmap is initialized
-        drawFieldMarkings();
-    
-        // Add event listeners to heatmap filter buttons
-        document.querySelectorAll('[data-filter]').forEach(button => {
-            button.addEventListener('click', function() {
-                document.querySelectorAll('[data-filter]').forEach(btn => btn.classList.remove('active'));
-                this.classList.add('active');
-                updateHeatmap(this.dataset.filter);
-            });
-        });
-        {% endif %}
-    }
-
-
-
-    // Enhanced Player Connections Network
-    if (document.getElementById('player-connections')) {
-        {% if connection_data %}
-        const connections = {{ connection_data|safe }};
-        const width = document.getElementById('player-connections').offsetWidth;
-        const height = 400;
-    
-        const svg = d3.select('#player-connections')
-            .append('svg')
-            .attr('width', width)
-            .attr('height', height)
-            .call(d3.zoom().on("zoom", function(event) {
-                g.attr("transform", event.transform);
-            }));
-    
-        // Create a group for all elements to enable zooming
-        const g = svg.append("g");
-    
-        // Create force simulation
-        const simulation = d3.forceSimulation(connections.nodes)
-            .force('link', d3.forceLink(connections.links).id(d => d.id).distance(100))
-            .force('charge', d3.forceManyBody().strength(-400)) // repusion strength
-            .force('center', d3.forceCenter(width / 2, height / 2));
-    
-        // Draw links
-        const link = g.append('g')
-            .selectAll('line')
-            .data(connections.links)
-            .enter().append('line')
-            .attr('stroke-width', d => Math.sqrt(d.value) * 2) // 2 is the scale factor
-            .attr('stroke', '#999')
-            .attr('stroke-opacity', 0.6);
-    
-        // Draw nodes
-        const node = g.append('g')
-            .selectAll('circle')
-            .data(connections.nodes)
-            .enter().append('circle')
-            .attr('r', 25)  // increase size here
-            .attr('fill', d => d.position === 'handler' ? '#ff7f0e' : 
-                             (d.position === 'cutter' ? '#1f77b4' : '#2ca02c'))
-            .call(d3.drag()
-                .on('start', dragstarted)
-                .on('drag', dragged)
-                .on('end', dragended));
-        
-        // Create custom tooltips instead of using the default title attribute
-        const tooltip = d3.select("body").append("div")
-            .attr("class", "d3-tooltip")
-            .style("position", "absolute")
-            .style("background", "rgba(0,0,0,0.7)")
-            .style("color", "white")
-            .style("padding", "8px")
-            .style("border-radius", "4px")
-            .style("font-size", "12px")
-            .style("pointer-events", "none")
-            .style("opacity", 0)
-            .style("z-index", 1000);
-        
-        // Add tooltip behavior
-        node.on("mouseover", function(event, d) {
-                tooltip.transition()
-                    .duration(200)
-                    .style("opacity", .9);
-                tooltip.html(`<strong>${d.name}</strong> (#${d.jersey_number})<br/>Position: ${d.position || 'N/A'}`)
-                    .style("left", (event.pageX + 10) + "px")
-                    .style("top", (event.pageY - 28) + "px");
-            })
-            .on("mouseout", function() {
-                tooltip.transition()
-                    .duration(500)
-                    .style("opacity", 0);
-            });
-        
-        // Add tooltips for links to show connection strength
-        link.on("mouseover", function(event, d) {
-                const source = connections.nodes.find(n => n.id === d.source.id);
-                const target = connections.nodes.find(n => n.id === d.target.id);
-                
-                tooltip.transition()
-                    .duration(200)
-                    .style("opacity", .9);
-                tooltip.html(`<strong>Connection:</strong><br/>${source.name} → ${target.name}<br/><strong>Throws:</strong> ${d.value}`)
-                    .style("left", (event.pageX + 10) + "px")
-                    .style("top", (event.pageY - 28) + "px");
-            })
-            .on("mouseout", function() {
-                tooltip.transition()
-                    .duration(500)
-                    .style("opacity", 0);
-            });
-        
-        // Add labels - use jersey numbers instead of initials
-        const label = g.append('g')
-            .selectAll('text')
-            .data(connections.nodes)
-            .enter().append('text')
-            .text(d => d.jersey_number || '?')  // Use jersey number as the label
-            .attr('font-size', 14)  // node font size
-            .attr('text-anchor', 'middle')  // Center the text
-            .attr('dy', 4)  // Slight vertical adjustment
-            .attr('fill', 'white');
-
-
-        // Update positions on tick
-        simulation.on('tick', () => {
-            link
-                .attr('x1', d => d.source.x)
-                .attr('y1', d => d.source.y)
-                .attr('x2', d => d.target.x)
-                .attr('y2', d => d.target.y);
-        
-            node
-                .attr('cx', d => d.x)
-                .attr('cy', d => d.y);
-        
-            label
-                .attr('x', d => d.x)  // Center the text horizontally
-                .attr('y', d => d.y); // Center the text vertically
-        });
-
-
-        // Add reset zoom button
-        svg.append("rect")
-            .attr("x", 10)
-            .attr("y", 10)
-            .attr("width", 80)
-            .attr("height", 30)
-            .attr("rx", 5)
-            .attr("fill", "rgba(255,255,255,0.7)")
-            .attr("stroke", "#999");
-            
-        svg.append("text")
-            .attr("x", 50)
-            .attr("y", 30)
-            .attr("text-anchor", "middle")
-            .text("Reset Zoom")
-            .style("font-size", "12px")
-            .style("cursor", "pointer")
-            .on("click", function() {
-                svg.transition().duration(750).call(
-                    d3.zoom().transform,
-                    d3.zoomIdentity
-                );
-            });
-    
-        // Drag functions
-        function dragstarted(event, d) {
-            if (!event.active) simulation.alphaTarget(0.3).restart();
-            d.fx = d.x;
-            d.fy = d.y;
-        }
-    
-        function dragged(event, d) {
-            d.fx = event.x;
-            d.fy = event.y;
-        }
-    
-        function dragended(event, d) {
-            if (!event.active) simulation.alphaTarget(0);
-            d.fx = null;
-            d.fy = null;
-        }
-    
-        // Add connection strength filter functionality
-        document.querySelectorAll('[data-strength]').forEach(button => {
-            button.addEventListener('click', function() {
-                document.querySelectorAll('[data-strength]').forEach(btn => btn.classList.remove('active'));
-                this.classList.add('active');
-                const strength = this.dataset.strength;
-                
-                link.style('display', d => {
-                    if (strength === 'strong') return d.value >= 3 ? 'block' : 'none';
-                    if (strength === 'weak') return d.value < 3 ? 'block' : 'none';
-                    return 'block';
-                });
-            });
-        });
-        {% endif %}
-    }
-
-
-    // Add window resize handler
-    window.addEventListener('resize', debounce(function() {
-        // Redraw visualizations on window resize
-        if (typeof heatmapInstance !== 'undefined') {
-            updateHeatmap();
-        }
-        if (typeof simulation !== 'undefined') {
-            const width = document.getElementById('player-connections').offsetWidth;
-            simulation.force('center', d3.forceCenter(width / 2, height / 2));
-            simulation.alpha(0.3).restart();
-        }
-    }, 250));
-
-    // Debounce function
-    function debounce(func, wait) {
-        let timeout;
-        return function() {
-            const context = this, args = arguments;
-            clearTimeout(timeout);
-            timeout = setTimeout(function() {
-                func.apply(context, args);
-            }, wait);
+    // Sorting: numbers from the cell's value for the current mode, blanks last
+    function sortBy(th, dir) {
+        const key = th.dataset.sort;
+        const rows = Array.from(tbody.rows).filter(r => r.cells.length > 1);
+        const value = row => {
+            if (key === 'name') return row.dataset.name || '';
+            const cell = row.cells[Number(key)];
+            const raw = cell.dataset[mode];
+            return raw === '' ? null : Number(raw);
         };
+        rows.sort((a, b) => {
+            const va = value(a), vb = value(b);
+            if (va === null && vb === null) return 0;
+            if (va === null) return 1;
+            if (vb === null) return -1;
+            const c = typeof va === 'string' ? va.localeCompare(vb) : va - vb;
+            return dir === 'ascending' ? c : -c;
+        });
+        rows.forEach(r => tbody.appendChild(r));
+        table.querySelectorAll('th[aria-sort]').forEach(h => h.removeAttribute('aria-sort'));
+        th.setAttribute('aria-sort', dir);
     }
-});
+    table.querySelectorAll('thead th[data-sort]').forEach(th => th.addEventListener('click', () => {
+        const current = th.getAttribute('aria-sort');
+        // Names A-Z first; numbers best first (lowest first where lower is better)
+        const first = th.dataset.sort === 'name' || th.dataset.lowerBetter === '1' ? 'ascending' : 'descending';
+        const dir = current ? (current === 'ascending' ? 'descending' : 'ascending') : first;
+        sortBy(th, dir);
+    }));
 
+    const search = document.getElementById('playerSearch');
+    if (search) search.addEventListener('input', () => {
+        const q = search.value.trim().toLowerCase();
+        Array.from(tbody.rows).forEach(r => { r.hidden = q && !(r.dataset.name || '').includes(q); });
+    });
+    const hideLow = document.getElementById('hideLow');
+    if (hideLow) hideLow.addEventListener('change', () => table.classList.toggle('hide-low', hideLow.checked));
+});
 </script>
 {% endblock %}
-

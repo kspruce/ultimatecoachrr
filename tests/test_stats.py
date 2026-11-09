@@ -119,8 +119,11 @@ def test_line_efficiency_ranks_by_conversion():
     stats = {1: {'o_line_points_played': 4, 'o_line_points_scored': 2},
              2: {'o_line_points_played': 4, 'o_line_points_scored': 3},
              3: {'o_line_points_played': 0, 'o_line_points_scored': 0}}
-    ranked = formulas.calculate_optimized_line_efficiency([a, b, c], stats, is_offensive=True)
+    ranked = formulas.calculate_optimized_line_efficiency([a, b, c], stats, is_offensive=True, min_points=1)
     assert ranked == [(b, 0.75), (a, 0.5)]
+    # One point at 100% isn't the best O-line player: too few points to rank
+    stats[3] = {'o_line_points_played': 1, 'o_line_points_scored': 1}
+    assert formulas.calculate_optimized_line_efficiency([a, b, c], stats, is_offensive=True, min_points=4) == [(b, 0.75), (a, 0.5)]
 
 
 # --- pages ------------------------------------------------------------------
@@ -222,10 +225,50 @@ def test_per_matches_between_dashboard_api_and_game_csv(app, season):
     assert compared
 
 
-def test_player_radar_conversion_rates_are_not_zero(app, season):
-    client = season['client']
-    page = client.get(f"/stats/player/{season['player_ids'][1]}").get_data(as_text=True)
-    assert "'O-Line Conversion': 0.0," not in page or "'D-Line Conversion': 0.0," not in page
+def test_percentile_counts_ties_half_and_can_be_inverted():
+    from app.stats.profile import percentile
+    assert percentile(5, [1, 5, 9]) == pytest.approx(50)
+    assert percentile(9, [1, 5, 9]) == pytest.approx(100 * 2.5 / 3)
+    # Fewer turnovers ranks higher
+    assert percentile(1, [1, 5, 9], lower_better=True) == pytest.approx(100 * 2.5 / 3)
+
+
+def test_radar_profile_ranks_against_teammates(app, season):
+    from flask_login import login_user
+    from app.models.game import Game
+    from app.models.player import Player
+    from app.models.user import User
+    from app.stats import turnovers
+    from app.stats.formulas import apply_ratings
+    from app.stats.players import get_players_base_stats
+    from app.stats.profile import RADAR_AXES, radar_profile, rating_comparison
+    with app.test_request_context():
+        login_user(User.query.filter_by(username='admin').first())
+        games = Game.query.all()
+        players = Player.query.filter(Player.id.in_(season['player_ids'])).all()
+        stats = get_players_base_stats(players, games)
+        for s in stats.values():
+            apply_ratings(s, {})
+        pid = season['player_ids'][0]
+        profile = radar_profile(pid, stats, turnovers.ThrowingData(games), {g.id for g in games})
+        ratings = rating_comparison(pid, stats)
+    for side, axes in RADAR_AXES.items():
+        assert [a['key'] for a in profile[side]] == [a['key'] for a in axes]
+        for row in profile[side]:
+            assert row['percentile'] is None or 0 <= row['percentile'] <= 100
+    # Somebody on a recorded season has a ranked completion rate
+    assert profile['offence'][0]['team_median'] is not None
+    assert {r['key'] for r in ratings['rows']} >= {'per', 'epm', 'eff'}
+
+
+def test_player_page_shows_the_profile_radars(app, season):
+    page = season['client'].get(f"/stats/player/{season['player_ids'][0]}").get_data(as_text=True)
+    assert 'Offensive Profile' in page and 'Defensive Profile' in page
+    assert 'const RADAR_PROFILE = {' in page
+    assert 'Median teammate' in page
+    # The old fixed "elite" scales and the team-total comparison are gone
+    assert 'Elite benchmarks' not in page and 'Team Average' not in page
+    assert 'Profile vs Teammates' in page    # in the printable report too
 
 
 def test_recording_a_point_clears_the_stats_cache(app, season):

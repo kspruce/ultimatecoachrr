@@ -13,6 +13,26 @@ from app.stats.loaders import analysed_point_ids, preload_game_points, game_poin
 
 
 
+def players_in_games(games=None):
+    """Everyone who was on a line in these games (every game: None): the
+    group that team averages, medians and percentiles are measured over,
+    on every stats page."""
+    query = LineUp.query.with_entities(LineUp.player_id).filter(
+        LineUp.team_organization_id == get_current_team_id())
+    if games is not None:
+        games = games if isinstance(games, list) else [games]
+        preload_game_points(games)
+        point_ids = [p.id for g in games for p in game_points(g)]
+        if not point_ids:
+            return []
+        query = query.filter(LineUp.point_id.in_(point_ids))
+    ids = {pid for (pid,) in query.distinct()}
+    if not ids:
+        return []
+    return Player.query.filter(Player.id.in_(ids),
+                               Player.team_organization_id == get_current_team_id()).order_by(Player.name).all()
+
+
 def get_players_base_stats(players, games=None):
     """Get stats for multiple players in a single batch of queries"""
     current_app.logger.debug(f"Batch loading stats for {len(players)} players")
@@ -248,6 +268,20 @@ def process_player_stats(player, lineups, throws_by_player, throws_to_player, ev
         'd_line_points_scored': 0,
         'o_line_conversion_rate': 0,
         'd_line_conversion_rate': 0,
+        'hucks': 0,
+        # Blocks and takeaways (blocks, forced turnovers, Callahans) made on
+        # D-line points with full stats: what the per-D-point rates divide
+        'd_line_blocks': 0,
+        'd_line_takeaways': 0,
+
+        # Per-point rates (points with full stats)
+        'goals_per_point': 0,
+        'assists_per_point': 0,
+        'hockey_assists_per_point': 0,
+        'throws_per_point': 0,
+        'hucks_per_point': 0,
+        'blocks_per_d_point': 0,
+        'takeaways_per_d_point': 0,
         
         # Clip statistics
         'clips': 0,
@@ -451,7 +485,29 @@ def process_player_stats(player, lineups, throws_by_player, throws_to_player, ev
     # Calculate break throw percentage
     if stats['throws'] > 0:
         stats['break_throw_percentage'] = (stats['break_throws'] / stats['throws']) * 100
-    
+
+    # Per-point rates: every rate divides by the points with full stats, and
+    # the defensive ones only count what happened on those D-line points
+    # (a block on an O-line point, after a turn, isn't a D-point block).
+    analysed_d_ids = {l.point_id for l in analysed_lineups if l.point.our_line_type == 'D-line'}
+    for event in events:
+        if event.point_id not in analysed_d_ids or getattr(event, 'is_opponent', False):
+            continue
+        if event.event_type == 'block':
+            stats['d_line_blocks'] += 1
+        if event.event_type in ('block', 'forced_turnover', 'callahan'):
+            stats['d_line_takeaways'] += 1
+    if stats['analysed_points']:
+        n = stats['analysed_points']
+        stats['goals_per_point'] = stats['goals'] / n
+        stats['assists_per_point'] = stats['assists'] / n
+        stats['hockey_assists_per_point'] = stats['hockey_assists'] / n
+        stats['throws_per_point'] = stats['throws'] / n
+        stats['hucks_per_point'] = stats['hucks'] / n
+    if stats['analysed_d_line_points']:
+        stats['blocks_per_d_point'] = stats['d_line_blocks'] / stats['analysed_d_line_points']
+        stats['takeaways_per_d_point'] = stats['d_line_takeaways'] / stats['analysed_d_line_points']
+
     return stats
 
 
