@@ -1,0 +1,108 @@
+/* Styles for templates/how_to_use.html */
+/* ─── Hero ─────────────────────────────────────────────── */
+.htu-hero {
+  background: var(--club);
+  border-radius: var(--uc-radius); padding: 2rem 2.5rem 2.25rem;
+  color: var(--on-club); margin-bottom: 1.5rem; position: relative; overflow: hidden;
+}
+.htu-hero::before {
+  content:''; position:absolute; top:-70px; right:-50px; width:280px; height:280px;
+  background:rgba(255,255,255,.06); border-radius:50%; pointer-events:none;
+}
+.htu-hero-inner { position:relative; z-index:1; max-width:760px; }
+.htu-kicker { font-size:.72rem; font-weight:700; letter-spacing:.09em; text-transform:uppercase; opacity:.65; margin-bottom:.3rem; }
+.htu-hero h1 { font-size:1.75rem; font-weight:700; letter-spacing:-.02em; margin-bottom:.4rem; color:var(--on-club); }
+.htu-hero p { opacity:.85; margin:0; font-size:.95rem; }
+.htu-search { margin-top:1.1rem; position:relative; max-width:460px; }
+.htu-search i { position:absolute; left:.85rem; top:50%; transform:translateY(-50%); color:var(--uc-gray-400); }
+.htu-search input {
+  width:100%; border:0; border-radius:50px; padding:.6rem 1rem .6rem 2.4rem;
+  font-size:.9rem; background:var(--card); color:var(--ink);
+}
+
+/* ─── Outcome tiles ────────────────────────────────────── */
+.htu-tiles { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:.75rem; margin-bottom:1.75rem; }
+.htu-tile {
+  background:var(--uc-card-bg); border:1px solid var(--uc-card-border); border-radius:var(--uc-radius);
+  padding:1rem 1.1rem; text-decoration:none; color:inherit; display:flex; flex-direction:column; gap:.3rem;
+  transition:box-shadow .2s,transform .2s;
+}
+.htu-tile:hover { box-shadow:var(--uc-shadow-md); transform:translateY(-2px); text-decoration:none; color:inherit; }
+.htu-tile i { font-size:1.2rem; color:var(--club-ink); }
+.htu-tile b { font-size:.92rem; color:var(--ink); }
+.htu-tile span { font-size:.8rem; color:var(--ink-2); line-height:1.45; }
+.htu-tile small { font-size:.72rem; color:var(--ink-3); margin-top:auto; padding-top:.3rem; }
+
+/* ─── Section dividers (matching index.html) ───────────── */
+.uc-section      { display:flex; align-items:center; gap:.75rem; margin:2rem 0 .35rem; }
+.uc-section-text { font-size:.68rem; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--uc-gray-400); white-space:nowrap; }
+.uc-section-line { flex:1; height:1px; background:var(--uc-gray-200); }
+.htu-pitch { font-size:.88rem; color:var(--ink-2); margin:0 0 1rem; }
+section[id], .htu-feat[id] { scroll-margin-top:90px; }
+
+/* ─── Feature cards ────────────────────────────────────── */
+.htu-feat-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); gap:.875rem; }
+.htu-feat {
+  background:var(--uc-card-bg); border:1px solid var(--uc-card-border); border-radius:var(--uc-radius);
+  padding:1.25rem; color:inherit; display:flex; flex-direction:column; gap:.5rem;
+}
+.htu-feat:target { border-color:var(--club-ink); box-shadow:0 0 0 3px var(--club-soft); }
+.htu-feat.off { background:transparent; border-style:dashed; }
+.htu-feat.off .htu-feat-icon, .htu-feat.off .htu-feat-steps { opacity:.55; }
+.htu-feat-head { display:flex; align-items:center; gap:.65rem; }
+.htu-feat-icon { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1.1rem; flex-shrink:0; background:var(--club-soft); color:var(--club-ink); }
+.htu-feat-name { font-weight:700; font-size:.92rem; color:var(--uc-gray-800); }
+.htu-feat-desc { font-size:.82rem; color:var(--ink-2); line-height:1.45; }
+.htu-feat-steps { padding-left:1.1rem; margin:0; }
+.htu-feat-steps li { font-size:.8rem; color:var(--uc-gray-600); margin-bottom:.25rem; }
+.htu-feat-steps li.coach::marker { color:var(--uc-green); }
+.htu-sub { font-size:.68rem; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--ink-3); margin-top:.25rem; }
+.htu-badge { font-size:.66rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; border-radius:50px; padding:.12rem .5rem; }
+.htu-badge.coach { background:var(--ok-soft); color:var(--uc-green); }
+.htu-badge.off { background:var(--uc-gray-100); color:var(--ink-3); }
+.htu-feat .btn { border-radius:7px; font-size:.79rem; width:fit-content; margin-top:auto; }
+
+/* ─── Info cards ───────────────────────────────────────── */
+.htu-card {
+  background:var(--uc-card-bg); border:1px solid var(--uc-card-border); border-radius:var(--uc-radius);
+  padding:1.5rem; box-shadow:var(--uc-shadow-sm); margin-bottom:1.25rem;
+}
+.htu-card h2 { font-size:1.05rem; font-weight:700; margin:0 0 .35rem; }
+.htu-card > p { font-size:.85rem; color:var(--ink-2); }
+.htu-start { display:grid; grid-template-columns:1.3fr 1fr; gap:1.5rem; align-items:start; }
+.htu-can { list-style:none; padding:0; margin:.5rem 0 0; }
+.htu-can li { padding:.3rem 0; color:var(--ink-2); font-size:.86rem; display:flex; gap:.5rem; }
+.htu-can li i { color:var(--club-ink); }
+.ob-bar { height:6px; border-radius:99px; background:var(--rule); overflow:hidden; margin:.35rem 0 .9rem; }
+.ob-bar > i { display:block; height:100%; background:var(--club-ink); border-radius:99px; }
+.htu-roles { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:.75rem; margin-top:.75rem; }
+.htu-role-card { border:1px solid var(--rule); border-radius:10px; padding:.8rem .95rem; }
+.htu-role-card b { font-size:.86rem; color:var(--ink); }
+.htu-role-card.me { border-color:var(--club-ink); background:var(--club-soft); }
+.htu-role-card ul { padding-left:1rem; margin:.3rem 0 0; }
+.htu-role-card li { font-size:.78rem; color:var(--ink-2); }
+details.htu-details summary { cursor:pointer; font-weight:700; font-size:.9rem; color:var(--ink); }
+.htu-tip {
+  border-radius:9px; padding:.875rem 1.125rem; font-size:.83rem; line-height:1.55;
+  display:flex; gap:.75rem; align-items:flex-start; background:var(--club-soft); color:var(--ink); margin-top:.75rem;
+}
+.htu-tip-icon { font-size:1.1rem; flex-shrink:0; margin-top:.1rem; }
+
+/* ─── Make it yours ────────────────────────────────────── */
+.htu-mine { display:grid; grid-template-columns:1fr 1fr; gap:1.25rem; }
+.htu-mine-list { list-style:none; padding:0; margin:.5rem 0 0; }
+.htu-mine-item { display:grid; grid-template-columns:34px 1fr auto; gap:.75rem; align-items:center; padding:.7rem 0; border-top:1px solid var(--rule); }
+.htu-mine-item:first-child { border-top:0; }
+.htu-mine-item > i { width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:var(--club-soft); color:var(--club-ink); }
+.htu-mine-item b { display:block; font-size:.88rem; color:var(--ink); }
+.htu-mine-item span { font-size:.8rem; color:var(--ink-2); line-height:1.4; }
+.htu-mine-item a, .htu-mine-item button { font-size:.8rem; font-weight:700; white-space:nowrap; }
+
+.htu-empty { display:none; text-align:center; color:var(--ink-3); padding:2rem 0; }
+
+/* ─── Responsive ───────────────────────────────────────── */
+@media(max-width:860px) { .htu-start, .htu-mine { grid-template-columns:1fr; } }
+@media(max-width:640px) {
+  .htu-hero { padding:1.5rem 1.25rem; }
+  .htu-feat-grid { grid-template-columns:1fr; }
+}

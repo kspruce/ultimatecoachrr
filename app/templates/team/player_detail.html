@@ -18,36 +18,7 @@
 {% block styles %}
 {{ fb.styles() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/theory.css') }}">
-<style>
-  .pp-head { display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem; }
-  .pp-avatar { width: 64px; height: 64px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
-               background: var(--club-ink); color: var(--card); font-weight: 800; font-size: 1.4rem; }
-  .pp-name { font-family: var(--font-serif); font-size: 1.6rem; line-height: 1.15; margin: 0; overflow-wrap: anywhere; }
-  .pp-sub { color: var(--ink-2); font-size: .92rem; margin-top: .2rem; display: flex; flex-wrap: wrap; gap: .3rem .6rem; align-items: center; }
-  .pp-stats { display: flex; gap: .5rem; overflow-x: auto; margin: 0 -12px 1rem; padding: 0 12px .25rem; scrollbar-width: none; }
-  .pp-stats::-webkit-scrollbar { display: none; }
-  .pp-stat { flex: 1 0 84px; background: var(--card); border: 1px solid var(--rule); border-radius: 12px; padding: .6rem .5rem; text-align: center; }
-  .pp-stat b { display: block; font-size: 1.35rem; line-height: 1.1; }
-  .pp-stat span { font-size: .75rem; color: var(--ink-3); text-transform: uppercase; letter-spacing: .04em; font-weight: 700; }
-  .pp-tabs { position: sticky; top: var(--uc-nav-h, 56px); z-index: 1010; background: var(--paper); padding-top: .4rem;
-             border-bottom: 1px solid var(--rule); margin-bottom: 1rem; }
-  .pp-tabs .th-chips { padding-bottom: .5rem; }
-  .pp-section { margin-bottom: 1.25rem; }
-  .pp-kv { display: grid; grid-template-columns: minmax(7rem, auto) 1fr; gap: .45rem 1rem; margin: 0; }
-  .pp-kv dt { color: var(--ink-3); font-weight: 600; font-size: .9rem; }
-  .pp-kv dd { margin: 0; overflow-wrap: anywhere; }
-  .tab-pane > .card, #roles { border-radius: var(--radius); }
-  /* Roles card */
-  .pr-roles { display: flex; flex-wrap: wrap; gap: .4rem; }
-  .pr-role { border: 1px solid var(--rule); border-radius: 99px; padding: .3rem .75rem; font-weight: 600; font-size: .92rem; background: var(--card); }
-  .pr-role.main { border-color: var(--club-ink); background: var(--club-soft); }
-  .pr-role small { font-weight: 400; color: var(--ink-3); margin-left: .2rem; }
-  .pr-role .bi { color: var(--club-ink); }
-  .pr-pick { display: flex; align-items: center; gap: .75rem; padding: .35rem 0; border-bottom: 1px solid var(--rule); min-height: 44px; }
-  #roles details > summary, details.pp-edit > summary { list-style: none; }
-  #roles details > summary::-webkit-details-marker, details.pp-edit > summary::-webkit-details-marker { display: none; }
-  #roles .card-header h5 { font-family: var(--font-sans); font-size: 1rem; font-weight: 700 !important; }
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/team__player_detail.css') }}?v=1">
 {% endblock %}
 
 {% macro empty(text) %}<div class="th-list th-empty py-3">{{ text }}</div>{% endmacro %}

@@ -1,0 +1,10 @@
+/* Styles for templates/privacy.html */
+.pp { max-width: 760px; margin: 0 auto 3rem; line-height: 1.6; }
+.pp h1 { margin-bottom: .25rem; }
+.pp .pp-updated { color: var(--ink-3); font-size: .9rem; margin-bottom: 2rem; }
+.pp h2 { font-size: 1.25rem; margin: 2.2rem 0 .6rem; }
+.pp table { width: 100%; border-collapse: collapse; font-size: .92rem; margin: .5rem 0 1rem; }
+.pp th, .pp td { text-align: left; vertical-align: top; padding: .5rem .6rem; border-top: 1px solid var(--rule); }
+.pp th { font-weight: 700; }
+.pp .pp-summary { border: 1px solid var(--rule); border-radius: var(--radius); padding: 1rem 1.25rem; background: var(--card); }
+.pp .pp-summary ul { margin: 0; padding-left: 1.1rem; }

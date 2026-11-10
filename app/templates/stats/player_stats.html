@@ -11,164 +11,7 @@
 <script src="https://cdn.jsdelivr.net/npm/heatmap.js@2.0.5/build/heatmap.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 
-<style>
-    .per-gauge {
-        width: 200px;
-        height: 200px;
-        margin: 0 auto;
-    }
-
-    .nav-tabs .nav-link {
-        color: var(--uc-gray-600);
-    }
-    .nav-tabs .nav-link.active {
-        color: var(--uc-blue);
-        font-weight: 700;
-    }
-    
-    #perValue {
-        transition: color 0.3s ease;
-        line-height: 1;
-        margin-bottom: 0.2em;
-    }
-
-    
-
-    /* Cutting Skills Styles */
-    .field-container {
-        position: relative;
-        width: 100%;
-        height: 400px;
-        background-color: #4CAF50;
-        border: 2px solid #333;
-        margin-bottom: 20px;
-        overflow: hidden;
-    }
-    
-    .endzone {
-        position: absolute;
-        height: 100%;
-        width: 18%;
-        background-color: #388E3C;
-        z-index: 1;
-    }
-    
-    .endzone-left { left: 0; }
-    .endzone-right { right: 0; }
-    
-    .cutting-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        grid-template-rows: 1fr 1fr;
-        gap: 10px;
-        height: 300px;
-        margin-bottom: 20px;
-    }
-    
-    .cutting-quadrant {
-        border: 1px solid var(--rule);
-        border-radius: 4px;
-        padding: 10px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        text-align: center;
-        background-color: rgba(255, 255, 255, 0.8);
-    }
-    
-    .cutting-quadrant h4 {
-        margin-bottom: 10px;
-        font-size: 1rem;
-    }
-    
-    .cutting-quadrant .success-rate {
-        font-size: 1.8rem;
-        font-weight: bold;
-        margin-bottom: 5px;
-    }
-    
-    .cutting-quadrant .attempts {
-        font-size: 0.9rem;
-        color: var(--uc-gray-400);
-    }
-    
-    .cutting-stat-value {
-        font-size: 1.8rem;
-        font-weight: bold;
-        margin-bottom: 0;
-    }
-    
-    .cutting-stat-label {
-        font-size: 0.82rem;
-        color: var(--uc-gray-400);
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: .04em;
-    }
-
-    .cutting-filter-btn.active {
-        background-color: var(--uc-blue);
-        color: white;
-    }
-    
-   
-    /* Mobile Responsiveness Improvements */
-    @media (max-width: 768px) {
-        .radar-container {
-            height: 250px;  /* Smaller height on mobile */
-        }
-        
-        .stat-card {
-            margin-bottom: 15px;
-        }
-        
-        #perValue {
-            font-size: 2.5rem;  /* Smaller font on mobile */
-        }
-        
-        .cutting-grid {
-            grid-template-columns: 1fr;  /* Stack in single column on mobile */
-            grid-template-rows: repeat(4, 1fr);
-        }
-        
-        .table-responsive {
-            font-size: 0.85rem;  /* Slightly smaller font for tables */
-        }
-        
-        /* Adjust tab navigation for mobile */
-        .nav-tabs .nav-link {
-            padding: 0.5rem 0.75rem;
-            font-size: 0.9rem;
-        }
-        
-        /* Better spacing for mobile forms */
-        form .row > div {
-            margin-bottom: 10px;
-        }
-    }
-    
-    /* Improve Sankey diagram responsiveness */
-    #sankey-diagram {
-        overflow-x: auto;
-        min-height: 400px;
-    }
-
-    /* Performance trend chart */
-    .trend-chart-container {
-        position: relative;
-        height: 280px;
-    }
-    @media (max-width: 576px) {
-        .trend-chart-container { height: 200px; }
-    }
-
-    /* Trend toggle buttons — dim when inactive */
-    .trend-toggle:not(.active) {
-        opacity: 0.45;
-    }
-
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/stats__player_stats.css') }}?v=1">
 {% endblock %}
 
 {% block content %}
@@ -181,12 +24,12 @@
             <p>{% if player.jersey_number %}#{{ player.jersey_number }} · {% endif %}{{ player.position|capitalize if player.position else 'No position set' }}</p>
         </div>
         <div class="d-flex gap-2 flex-wrap">
-            <a href="{{ url_for('team.player_detail', player_id=player.id) }}" class="btn btn-outline-secondary">Player Profile</a>
-            <a href="{{ url_for('stats_dashboard.index') }}" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left me-1"></i>Back to Stats
+            <a href="{{ url_for('stats_dashboard.index') }}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>Stats
             </a>
-            <button id="printReportBtn" class="btn btn-primary">
-                <i class="bi bi-printer me-1"></i>Print Report
+            <a href="{{ url_for('team.player_detail', player_id=player.id) }}" class="btn btn-sm btn-outline-secondary">Profile</a>
+            <button id="printReportBtn" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-printer me-1"></i>Print report
             </button>
         </div>
     </div>
@@ -201,51 +44,40 @@
     </div>
     {% endif %}
 
-    <!-- Filters -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5>Filter Stats</h5>
-                </div>
-                <div class="card-body">
-                    <form method="get" action="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}">
-                        <div class="row">
-                            <div class="col-md-5">
-                                <label for="tournament_id" class="form-label">Tournament</label>
-                                <select name="tournament_id" id="tournament_id" class="form-select">
-                                    <option value="">All Tournaments</option>
-                                    {% for tournament in tournaments %}
-                                    <option value="{{ tournament.id }}" {% if selected_tournament == tournament.id %}selected{% endif %}>
-                                        {{ tournament.name }}
-                                    </option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="col-md-5">
-                                <label for="game_id" class="form-label">Game</label>
-                                <select name="game_id" id="game_id" class="form-select">
-                                    <option value="">All Games</option>
-                                    {% for game_data in player_games %}
-                                    <option value="{{ game_data.game.id }}" {% if selected_game == game_data.game.id %}selected{% endif %}>
-                                        vs {{ game_data.game.opponent }} ({{ game_data.game.date.strftime('%Y-%m-%d') if game_data.game.date }})
-                                    </option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label"> </label>
-                                <button type="submit" class="btn btn-primary w-100">Filter</button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
+    <!-- Headline numbers first, then the filters on one row (they apply as soon as one is picked) -->
+    <div class="ps-headline" id="playerHeadline">
+        <div><b>{{ stats.games_played }}</b><span>Games</span></div>
+        <div><b>{{ stats.points_played }}</b><span>Points</span></div>
+        <div><b>{{ stats.goals }}</b><span>Goals</span></div>
+        <div><b>{{ stats.assists }}</b><span>Assists</span></div>
+        <div><b>{{ stats.blocks }}</b><span>Blocks</span></div>
+        <div><b>{{ stats.turnovers }}</b><span>Turnovers</span></div>
     </div>
+    <form method="get" action="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}" class="ps-filters" id="playerFilters">
+        <select name="tournament_id" id="tournament_id" class="form-select form-select-sm" aria-label="Tournament">
+            <option value="">All tournaments</option>
+            {% for tournament in tournaments %}
+            <option value="{{ tournament.id }}" {% if selected_tournament == tournament.id %}selected{% endif %}>
+                {{ tournament.name }}
+            </option>
+            {% endfor %}
+        </select>
+        <select name="game_id" id="game_id" class="form-select form-select-sm" aria-label="Game">
+            <option value="">All games</option>
+            {% for game_data in player_games %}
+            <option value="{{ game_data.game.id }}" {% if selected_game == game_data.game.id %}selected{% endif %}>
+                vs {{ game_data.game.opponent }}{% if game_data.game.date %} ({{ game_data.game.date.day }} {{ game_data.game.date.strftime('%b') }}){% endif %}
+            </option>
+            {% endfor %}
+        </select>
+        {% if selected_tournament or selected_game %}
+        <a class="ps-clear" href="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}">Clear</a>
+        {% endif %}
+        <noscript><button type="submit" class="btn btn-sm btn-primary">Filter</button></noscript>
+    </form>
 
     <!-- Main Tabs Navigation -->
-    <ul class="nav nav-tabs mb-4" id="playerStatsTabs" role="tablist">
+    <ul class="nav nav-tabs mb-4 ps-tabs" id="playerStatsTabs" role="tablist">
         <li class="nav-item" role="presentation">
             <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" 
                     data-bs-target="#overview" type="button" role="tab" 
@@ -2340,81 +2172,7 @@ function generatePrintableReport() {
             <title>Player Report - ${playerName}</title>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <style>
-                body {
-                    font-family: Arial, sans-serif;
-                    line-height: 1.6;
-                    color: #333;
-                    max-width: 800px;
-                    margin: 0 auto;
-                    padding: 20px;
-                }
-                .header {
-                    text-align: center;
-                    margin-bottom: 20px;
-                    padding-bottom: 10px;
-                    border-bottom: 2px solid #007bff;
-                }
-                .player-info {
-                    display: flex;
-                    justify-content: space-between;
-                    margin-bottom: 20px;
-                }
-                .stats-section {
-                    margin-bottom: 30px;
-                }
-                .stats-grid {
-                    display: grid;
-                    grid-template-columns: repeat(3, 1fr);
-                    gap: 15px;
-                }
-                .stat-box {
-                    border: 1px solid #ddd;
-                    padding: 10px;
-                    text-align: center;
-                }
-                .stat-value {
-                    font-size: 24px;
-                    font-weight: bold;
-                    color: #007bff;
-                }
-                .stat-label {
-                    font-size: 14px;
-                    color: #666;
-                }
-                h2 {
-                    color: #007bff;
-                    border-bottom: 1px solid #eee;
-                    padding-bottom: 5px;
-                }
-                table {
-                    width: 100%;
-                    border-collapse: collapse;
-                    margin-bottom: 20px;
-                }
-                table, th, td {
-                    border: 1px solid #ddd;
-                }
-                th, td {
-                    padding: 8px;
-                    text-align: left;
-                }
-                th {
-                    background-color: #f2f2f2;
-                }
-                .footer {
-                    margin-top: 30px;
-                    text-align: center;
-                    font-size: 12px;
-                    color: #666;
-                }
-                @media print {
-                    body {
-                        print-color-adjust: exact;
-                        -webkit-print-color-adjust: exact;
-                    }
-                }
-            </style>
+            <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/stats__player_stats_2.css') }}?v=1">
         </head>
         <body>
             <div class="header">
@@ -2562,6 +2320,11 @@ function generatePrintableReport() {
 // This runs after the DOM is fully loaded.
 // =================================================================================
 document.addEventListener('DOMContentLoaded', function() {
+    // The filters apply as soon as one is picked
+    document.querySelectorAll('#playerFilters select').forEach(function (select) {
+        select.addEventListener('change', function () { select.form.submit(); });
+    });
+
     console.log('DOM loaded. Initializing page features.');
 
     // Initialize basic visualizations (PER gauge color)

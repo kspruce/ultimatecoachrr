@@ -1,0 +1,26 @@
+/* Styles for templates/roles/index.html */
+.rl-wrap { max-width: 980px; }
+.rl-line { margin: 1.5rem 0 .6rem; font-size: .78rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
+.rl-grid { display: grid; gap: .9rem; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
+.rl-card { background: var(--card); border: 1px solid var(--rule); border-radius: var(--radius, 14px); padding: .9rem 1rem; display: grid; gap: .55rem; align-content: start; scroll-margin-top: 80px; }
+.rl-card:target { border-color: var(--club-ink); box-shadow: 0 0 0 2px var(--club-soft); }
+.rl-head { display: flex; align-items: baseline; justify-content: space-between; gap: .5rem; }
+.rl-head h3 { font-size: 1.05rem; font-weight: 700; margin: 0; }
+.rl-desc { color: var(--ink-2); font-size: .88rem; margin: 0; }
+.rl-warn { font-size: .72rem; font-weight: 700; border-radius: 99px; padding: .12rem .55rem; background: var(--warn-soft); color: var(--ink); white-space: nowrap; }
+.rl-holders { list-style: none; margin: 0; padding: 0; display: grid; gap: .3rem; }
+.rl-holder { display: flex; align-items: center; gap: .45rem; padding: .3rem .4rem; border-radius: 9px; background: var(--sunken); min-height: 44px; }
+.rl-depth { width: 1.6rem; height: 1.6rem; border-radius: 50%; display: inline-grid; place-items: center; font-size: .78rem; font-weight: 700; background: var(--card); flex: none; }
+.rl-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); text-decoration: none; }
+.rl-name small { color: var(--ink-3); }
+.rl-holder form { margin: 0; }
+.rl-icon { border: 0; background: none; color: var(--ink-2); width: 34px; height: 34px; border-radius: 8px; display: inline-grid; place-items: center; }
+.rl-icon:hover { background: var(--card); color: var(--ink); }
+.rl-icon.on { color: var(--accent-ink, #b8860b); }
+.rl-add { display: flex; gap: .4rem; }
+.rl-add select { flex: 1; min-width: 0; }
+.rl-wants { font-size: .82rem; color: var(--ink-2); }
+.rl-chips { display: flex; flex-wrap: wrap; gap: .35rem; }
+.rl-chip { border: 1px solid var(--rule); border-radius: 99px; padding: .2rem .65rem; font-size: .85rem; color: var(--ink); text-decoration: none; background: var(--card); }
+.rl-card details summary { font-size: .82rem; color: var(--ink-2); cursor: pointer; }
+.rl-panel { background: var(--card); border: 1px solid var(--rule); border-radius: var(--radius, 14px); padding: .9rem 1rem; }

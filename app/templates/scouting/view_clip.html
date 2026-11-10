@@ -3,11 +3,7 @@
 
 {% block content %}
 {{ m.styles() }}
-<style>
-.moment-btn { font-size:.78rem; font-weight:600; padding:.3rem .65rem; border-radius:6px; border:1px solid var(--uc-gray-200);
-  background:var(--card); color:var(--uc-gray-600); font-variant-numeric:tabular-nums }
-.moment-btn.active, .moment-btn:hover { border-color:var(--uc-gray-800); color:var(--uc-gray-800) }
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/scouting__view_clip.css') }}?v=1">
 <div class="container py-4 scouting-page">
   <div class="uc-page-header mb-3">
     <div>

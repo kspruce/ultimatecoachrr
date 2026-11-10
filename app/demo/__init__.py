@@ -141,6 +141,7 @@ def build(app, today=None, record_games=True):
     if record_games:
         _record_games(app, team_id, owner_id, players, tournaments, today)
     _scouting_and_feedback(team_id, owner_id, players, tournaments, today)
+    _clips(app, team_id, owner_id, players, tournaments)
     db.session.commit()
     return demo_team()
 
@@ -603,3 +604,67 @@ def _scouting_and_feedback(team_id, owner_id, players, tournaments, today):
                      (6, 'Make the O-line by the Summer Cup')):
         db.session.add(PlayerGoal(team_organization_id=team_id, player_id=players[i].id, title=title,
                                   horizon='short', created_by=owner_id))
+
+
+# ── Clips ───────────────────────────────────────────────────────
+
+# (title, start, length in seconds, tags, players by index, what to watch for)
+DEMO_CLIPS = [
+    ('Ho stack: under, swing, deep', 30, 22, ('Offence', 'Ho stack'), (0, 1, 4),
+     'The first under opens the swing; watch the far-side cutter time the deep cut.'),
+    ('Clean hold off the pull', 95, 18, ('Offence', 'Pull play'), (1, 2, 6),
+     'Three throws, no hesitation: the centre handler takes the open side straight away.'),
+    ('Cup zone forces the high stall', 160, 25, ('Defence', 'Zone'), (3, 5, 8),
+     'The cup stays tight and the wings take away the crossfield throw.'),
+    ('Layout block on the under', 240, 12, ('Defence', 'Highlight'), (2,),
+     'Good position first: a step ahead of the cutter on the open side.'),
+    ('Endzone split', 310, 20, ('Offence', 'Endzone'), (0, 4, 7),
+     'The front of the stack clears hard, the back fills. One fake, one throw.'),
+    ('Break-side huck', 400, 16, ('Offence', 'Highlight'), (0, 9),
+     'Around the mark to the break side, then the deep shot before the defence resets.'),
+]
+DEMO_TAG_COLOURS = {'Offence': '#1F6F8B', 'Defence': '#B4532A', 'Ho stack': '#3F51B5', 'Pull play': '#3F51B5',
+                    'Zone': '#6D4C41', 'Endzone': '#3F51B5', 'Highlight': '#C9962B'}
+
+
+def _clips(app, team_id, owner_id, players, tournaments):
+    """A small clip library and a film-session playlist, cut from one video.
+
+    The video is DEMO_CLIP_VIDEO_URL (see config.py); set to nothing, the
+    demo has no clips. Returns how many were made."""
+    from app.models.annotation import ClipAnnotation
+    from app.models.clip import Clip, ClipTag
+    from app.models.clip_playlist import ClipPlaylist, ClipPlaylistItem
+    from app.models.game import Game
+
+    video = (app.config.get('DEMO_CLIP_VIDEO_URL') or '').strip()
+    if not video:
+        return 0
+    game = (Game.query.filter_by(team_organization_id=team_id, tournament_id=tournaments[1].id)
+            .order_by(Game.id).first()) if len(tournaments) > 1 else None
+    tags = {}
+    for name, colour in DEMO_TAG_COLOURS.items():
+        tags[name] = ClipTag(name=name, color=colour, team_organization_id=team_id,
+                             category='Highlights' if name == 'Highlight' else 'Tactics')
+    db.session.add_all(tags.values())
+    playlist = ClipPlaylist(title='Film session: Regionals review', created_by_id=owner_id,
+                            description='Six clips to watch before the Summer Cup.',
+                            team_organization_id=team_id)
+    db.session.add(playlist)
+    db.session.flush()
+    for position, (title, start, length, tag_names, who, note) in enumerate(DEMO_CLIPS):
+        clip = Clip(title=title, start_time=start, end_time=start + length, youtube_link=video,
+                    video_source='youtube', description=note, team_organization_id=team_id,
+                    created_by_id=owner_id, game_id=game.id if game else None,
+                    is_featured='Highlight' in tag_names)
+        clip.tags = [tags[name] for name in tag_names]
+        clip.players = [players[i] for i in who if i < len(players)]
+        db.session.add(clip)
+        db.session.flush()
+        db.session.add(ClipAnnotation(clip_id=clip.id, user_id=owner_id, timestamp=start + length // 2,
+                                      title='Watch for', notes=note, visibility='team',
+                                      team_organization_id=team_id,
+                                      is_key_moment='Highlight' in tag_names))
+        db.session.add(ClipPlaylistItem(playlist_id=playlist.id, clip_id=clip.id, position=position,
+                                        note=note, team_organization_id=team_id))
+    return len(DEMO_CLIPS)

@@ -5,40 +5,7 @@
 {% block styles %}
 {{ tm.styles() }}
 {{ pm.radar_styles() }}
-<style>
-    .stat-card {
-        text-align: center;
-        padding: 15px;
-    }
-    
-    .stat-value {
-        font-size: 2rem;
-        font-weight: 700;
-        color: var(--uc-gray-800);
-    }
-
-    .stat-label {
-        font-size: 0.82rem;
-        color: var(--uc-gray-400);
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: .04em;
-    }
-    .chart-container {
-        height: 400px;  /* Increase height to accommodate rotated labels */
-        position: relative;
-        margin-bottom: 20px;
-    }
-    
-    /* Add this to your existing styles */
-    @media (max-width: 768px) {
-        .chart-container {
-            height: 500px;  /* Even more height on mobile */
-        }
-    }
-
-   
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/stats__team_stats.css') }}?v=1">
 {% endblock %}
 
 {% block content %}
@@ -101,6 +68,8 @@
             </div>
         </div>
     </div>
+
+    <nav class="uc-section-nav" data-section-nav aria-label="On this page"></nav>
 
     <div class="row mb-4">
         <div class="col-md-3">

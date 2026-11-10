@@ -1,0 +1,6 @@
+/* Styles for templates/discord/settings.html */
+.dc-step { display:flex; gap:1rem; align-items:flex-start; }
+.dc-num { flex:0 0 2rem; height:2rem; border-radius:50%; display:grid; place-items:center; font-weight:700; background:var(--sunken); }
+.dc-num.done { background:var(--ok); color:#fff; }
+.fs-row { display:flex; gap:1rem; justify-content:space-between; align-items:center; padding:.7rem 0; border-top:1px solid var(--rule); }
+.fs-row:first-of-type { border-top:0; }

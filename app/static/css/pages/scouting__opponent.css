@@ -1,0 +1,6 @@
+/* Styles for templates/scouting/opponent.html */
+.record-big { font-size:2rem; font-weight:800; letter-spacing:-.02em; line-height:1 }
+.info-row { display:flex; justify-content:space-between; gap:1rem; padding:.45rem 0; border-bottom:1px solid var(--uc-gray-100); font-size:.875rem }
+.info-row:last-child { border-bottom:none }
+.result-w { color:var(--uc-green); font-weight:700 }
+.result-l { color:var(--uc-red); font-weight:700 }

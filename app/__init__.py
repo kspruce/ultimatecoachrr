@@ -269,6 +269,9 @@ def create_app(config_class=Config):
     from app.routes.theory import bp as theory_bp
     app.register_blueprint(theory_bp)
 
+    from app.routes.search import bp as search_bp
+    app.register_blueprint(search_bp)
+
     from app.routes.data_management_routes import bp as data_management_bp
     app.register_blueprint(data_management_bp)
 

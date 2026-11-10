@@ -6,17 +6,7 @@
 {% block styles %}
 {{ super() }}
 {{ fb.styles() }}
-<style>
-.session-group-header {
-    background: var(--uc-gray-100);
-    border-radius: 6px;
-    padding: 0.45rem 0.75rem;
-    margin: 1rem 0 0.5rem;
-    font-weight: 700;
-    font-size: 0.85rem;
-    color: var(--uc-gray-600);
-}
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/feedback__player_feedback.css') }}?v=1">
 {% endblock %}
 
 {% block content %}

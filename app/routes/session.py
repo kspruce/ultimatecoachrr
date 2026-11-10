@@ -135,13 +135,33 @@ def index():
         ).all()
         user_rsvped_sessions = {r.session_id for r in existing_rsvps}
 
+    # Who's said what for each upcoming session, and this player's own answer
+    from app.models.session import SessionRSVP
+    upcoming_ids = [s.id for s in upcoming_sessions]
+    rsvp_counts = {sid: {'attending': 0, 'maybe': 0, 'not_attending': 0} for sid in upcoming_ids}
+    my_answers = {}
+    if upcoming_ids:
+        my_player_id = current_user.player.id if current_user.player else None
+        for r in SessionRSVP.query.filter(SessionRSVP.session_id.in_(upcoming_ids)).all():
+            if r.status in rsvp_counts[r.session_id]:
+                rsvp_counts[r.session_id][r.status] += 1
+            if r.player_id == my_player_id:
+                my_answers[r.session_id] = r.status
+
+    filters_on = sum(1 for v in (focus_area, session_type, season, phase, block, squad) if v) \
+        + (1 if date_range != 'all' else 0)
+
     return render_template(
         'session/index.html',
         sessions=sessions,
         upcoming_sessions=upcoming_sessions,
         form=form,
         session_type_numbers=session_type_numbers,
-        user_rsvped_sessions=user_rsvped_sessions
+        user_rsvped_sessions=user_rsvped_sessions,
+        rsvp_counts=rsvp_counts,
+        my_answers=my_answers,
+        filters_on=filters_on,
+        today=datetime.now().date(),
     )
 
 @bp.route('/add', methods=['GET', 'POST'])

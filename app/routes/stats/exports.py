@@ -111,7 +111,7 @@ def export_player_history_csv(player_id):
         rows.append({
             'date':     g.date.strftime('%Y-%m-%d') if g.date else '',
             'opponent': g.opponent,
-            'result':   'W' if g.is_win else ('L' if g.is_loss else 'D'),
+            'result':   'W' if g.is_win else ('L' if g.is_loss else ('D' if g.is_tie else '')),
             **_stat_columns(s),
         })
 

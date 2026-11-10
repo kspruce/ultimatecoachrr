@@ -248,3 +248,74 @@ document.addEventListener('submit', function (e) {
                                .map(function (k) { return caches.delete(k); }));
     }).catch(function () {}).then(function () { form.submit(); });
 });
+
+// "On this page" strip for long pages: put <nav class="uc-section-nav"
+// data-section-nav></nav> where it should sit and it lists every card
+// heading below it, sticks under the navbar and marks the one in view.
+document.addEventListener('DOMContentLoaded', function () {
+  var nav = document.querySelector('[data-section-nav]');
+  if (!nav) return;
+  var skip = (nav.dataset.skip || '').split('|').filter(Boolean);
+  var sections = [];
+  document.querySelectorAll('.card > .card-header h5').forEach(function (heading) {
+    if (!(nav.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING)) return;
+    if (heading.closest('.modal, .tab-pane:not(.active)')) return;
+    // The heading's own words, without tooltips' icons or small print
+    var label = '';
+    heading.childNodes.forEach(function (node) {
+      if (node.nodeType === Node.TEXT_NODE) label += node.textContent;
+    });
+    label = label.replace(/\s+/g, ' ').trim();
+    if (!label || skip.indexOf(label) !== -1) return;
+    var card = heading.closest('.card');
+    if (!card.id) card.id = 'section-' + label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    sections.push({card: card, label: label});
+  });
+  if (sections.length < 3) { nav.hidden = true; return; }
+
+  var links = sections.map(function (section) {
+    var a = document.createElement('a');
+    a.href = '#' + section.card.id;
+    a.textContent = section.label;
+    nav.appendChild(a);
+    return a;
+  });
+  if (!('IntersectionObserver' in window)) return;
+  var observer = new IntersectionObserver(function (entries) {
+    entries.forEach(function (entry) {
+      if (!entry.isIntersecting) return;
+      links.forEach(function (a, i) {
+        var on = sections[i].card === entry.target;
+        a.classList.toggle('on', on);
+        if (on && nav.scrollWidth > nav.clientWidth) {
+          nav.scrollTo({left: a.offsetLeft - nav.clientWidth / 2 + a.offsetWidth / 2, behavior: 'smooth'});
+        }
+      });
+    });
+  }, {rootMargin: '-25% 0px -65% 0px'});
+  sections.forEach(function (section) { observer.observe(section.card); });
+});
+
+// The phone tab bar's "More" opens the full menu (the navbar is sticky, so it's on screen)
+document.addEventListener('DOMContentLoaded', function () {
+  var more = document.getElementById('ucTabbarMore');
+  var menu = document.getElementById('navbarNav');
+  if (!more || !menu || !window.bootstrap) return;
+  more.addEventListener('click', function () {
+    var collapse = bootstrap.Collapse.getOrCreateInstance(menu, {toggle: false});
+    collapse.toggle();
+  });
+  menu.addEventListener('shown.bs.collapse', function () { more.setAttribute('aria-expanded', 'true'); });
+  menu.addEventListener('hidden.bs.collapse', function () { more.setAttribute('aria-expanded', 'false'); });
+});
+
+// "/" opens Search, unless you're typing somewhere
+document.addEventListener('keydown', function (event) {
+  if (event.key !== '/' || event.ctrlKey || event.metaKey || event.altKey) return;
+  var el = event.target;
+  if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
+  var link = document.getElementById('ucSearchLink');
+  if (!link) return;
+  event.preventDefault();
+  window.location.href = link.href;
+});

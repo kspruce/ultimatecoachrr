@@ -1,13 +1,7 @@
 {% extends "season_plan/_layout.html" %}
 
 {% block sp_styles %}
-<style>
-  .sp-access-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .7rem 0; border-top: 1px solid var(--rule); }
-  .sp-access-row:first-of-type { border-top: 0; }
-  .sp-access-row b { display: block; font-weight: 700; }
-  .sp-access-row span { color: var(--ink-3); font-size: .85rem; }
-  .sp-access-row .form-check-input { width: 2.6em; height: 1.4em; margin: 0; cursor: pointer; }
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/season_plan__access.css') }}?v=1">
 {% endblock %}
 
 {% block sp_content %}

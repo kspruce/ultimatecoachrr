@@ -1,0 +1,338 @@
+/* Styles for templates/stats/record.html */
+/* Hide the default footer when on the record page */
+.footer {
+    display: none;
+}
+
+/* Remove the default container margin */
+.container {
+    margin-top: 0 !important;
+}
+
+/* Full-height container */
+.record-container {
+    height: auto;
+    min-height: calc(100vh - 56px); /* Subtract navbar height */
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    position: relative;
+    overflow-y: auto; /* Allow vertical scrolling */
+}
+
+/* Header styles */
+.record-header {
+    padding: 1rem;
+    background: var(--uc-gray-50);
+    border-bottom: 1px solid var(--uc-gray-200);
+    z-index: 1030;
+}
+
+/* Field container */
+.field-container {
+    position: relative;
+    width: 100%;
+    height: 0;
+    padding-bottom: 37%; /* This creates the 100:37 aspect ratio */
+    background-color: #4CAF50;
+    border: 2px solid #333;
+    overflow: hidden;
+    margin-bottom: 20px; /* Add some space below the field */
+}
+
+/* Field markings */
+.endzone {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    width: 18%;
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.endzone-left {
+    left: 0;
+}
+
+.endzone-right {
+    right: 0;
+}
+
+/* Which way we're attacking: shown in the endzones */
+.endzone-label {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-90deg);
+    white-space: nowrap;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.85);
+    pointer-events: none;
+}
+.endzone.attacking {
+    background-color: rgba(255, 255, 255, 0.35);
+}
+
+.center-line {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    height: 100%;
+    width: 2px;
+    background-color: var(--card);
+}
+
+/* Event markers */
+.event-marker {
+    position: absolute;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background-color: red;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+}
+
+.cutting-marker {
+    position: absolute;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background-color: purple; /* Different color for cutting skills */
+    transform: translate(-50%, -50%);
+    z-index: 10;
+}
+
+/* Selection overlays */
+.player-select, .action-select, .cutting-select, .outcome-select {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: var(--card);
+    border: 2px solid #333;
+    border-radius: 10px;
+    padding: 20px;
+    z-index: 1050;
+    display: none;
+    max-width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+/* Grid layouts for buttons */
+.player-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.action-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.cutting-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.outcome-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+}
+
+/* Button styles */
+.player-card, .action-button, .cutting-button, .outcome-button {
+    padding: 10px;
+    border: 1px solid var(--uc-gray-200);
+    border-radius: 8px;
+    background-color: var(--uc-gray-50);
+    cursor: pointer;
+    text-align: center;
+    transition: background-color 0.2s;
+}
+
+.player-card:hover, .action-button:hover, .cutting-button:hover, .outcome-button:hover {
+    background-color: var(--uc-gray-100);
+}
+
+/* Tables container */
+.tables-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+/* Undo button */
+.action-button-cut { border-style: dashed; }
+
+.looked-off-strip {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+    margin: 8px auto 0; padding: 6px 8px; max-width: 1200px;
+    border: 1px dashed var(--rule-strong); border-radius: 8px;
+}
+.looked-off-label { font-size: .85rem; font-weight: 600; color: var(--ink-2); margin-right: 4px; }
+.looked-off-chip { display: inline-flex; }
+.looked-off-chip button {
+    border: 1px solid var(--rule-strong); background: var(--paper, transparent); color: var(--ink);
+    padding: 6px 10px; font-size: .9rem; min-height: 40px;
+}
+.looked-off-add { border-radius: 20px; }
+.looked-off-chip.has-count .looked-off-add { border-radius: 20px 0 0 20px; border-color: var(--warn); }
+.looked-off-remove { border-radius: 0 20px 20px 0; border-left: 0 !important; border-color: var(--warn) !important; }
+.looked-off-count {
+    display: inline-block; min-width: 1.4em; margin-left: 4px; padding: 0 4px; border-radius: 10px;
+    background: var(--rule); font-weight: 700; font-size: .8rem;
+}
+.looked-off-chip.has-count .looked-off-count { background: var(--warn); color: #fff; }
+.looked-off-chip.flash .looked-off-add { background: var(--warn-soft); }
+
+.undo-button {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 10px 20px;
+    border-radius: 8px;
+    background: var(--uc-red);
+    color: white;
+    border: none;
+    cursor: pointer;
+    display: none;
+    z-index: 1060;
+}
+
+/* Loading spinner overlay */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    display: none;
+}
+
+.spinner-container {
+    background-color: var(--card);
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+}
+
+.spinner-border {
+    width: 3rem;
+    height: 3rem;
+}
+
+/* Custom button style for cutting mode */
+.btn-purple {
+    background-color: var(--uc-purple);
+    color: white;
+}
+
+.btn-purple:hover {
+    background-color: var(--uc-purple);
+    color: white;
+}
+
+.record-actions .btn { margin-left: .35rem; }
+.label-short { display: none; }
+.picker-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.picker-head h5 { margin: 0; }
+.picker-cancel {
+    border: 1px solid var(--rule-strong); background: transparent; color: var(--ink-2);
+    border-radius: 6px; padding: 4px 10px; font-size: .85rem;
+}
+/* Where the stat-taker just tapped, while they pick who and what */
+.pending-marker {
+    position: absolute; width: 22px; height: 22px; border-radius: 50%;
+    border: 3px solid #fff; box-shadow: 0 0 0 2px #222; background: rgba(255, 255, 255, .35);
+    transform: translate(-50%, -50%); z-index: 11; pointer-events: none;
+}
+
+/* Phones held upright: the field stands up (attacking up the screen)
+   with the "Open, not thrown to" chips in a column beside it. Bigger
+   taps, and the whole field, chips and header fit on one screen. */
+.field-container.field-vertical {
+    width: min(calc(100vw - 32px - 150px - 8px), calc(74vh * 0.37), calc(74svh * 0.37));
+    height: auto;
+    padding-bottom: 0;
+    aspect-ratio: 37 / 100;
+    margin: 0;
+    flex: none;
+}
+.field-vertical .endzone { width: 100%; height: 18%; left: 0; }
+.field-vertical .endzone-left { top: auto; bottom: 0; }
+.field-vertical .endzone-right { top: 0; }
+.field-vertical .endzone-label { transform: translate(-50%, -50%); }
+.field-vertical .center-line { top: 50%; left: 0; width: 100%; height: 2px; }
+
+@media (max-width: 576px), (max-height: 500px) {
+    .record-header { padding: .5rem .75rem; }
+    .record-header h4 { font-size: 1.05rem; margin-bottom: 0; }
+    .record-header p { font-size: .85rem; }
+    .record-detail, #help-button, .label-long { display: none; }
+    .label-short { display: inline; }
+    .record-actions .btn { padding: .3rem .6rem; font-size: .85rem; margin-left: .25rem; }
+    .record-header .row { flex-wrap: nowrap; }
+
+    /* Pickers become a bottom sheet with two columns */
+    .player-select, .action-select, .cutting-select, .outcome-select {
+        top: auto; bottom: 0; left: 0; right: 0; transform: none;
+        max-width: none; max-height: 62vh; border-radius: 14px 14px 0 0; z-index: 1065;
+        border-width: 2px 0 0 0; padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
+    }
+    .player-grid, .action-grid, .cutting-grid, .outcome-grid {
+        grid-template-columns: 1fr 1fr !important; gap: 8px;
+    }
+    .player-card, .action-button, .cutting-button, .outcome-button {
+        padding: 12px 6px; font-size: .95rem; min-height: 48px;
+    }
+    .undo-button { bottom: calc(12px + env(safe-area-inset-bottom)); right: 12px; }
+}
+@media (max-width: 576px) and (orientation: portrait) {
+    .field-area { display: flex; gap: 8px; align-items: flex-start; padding: 8px 16px 0; }
+    .field-area .looked-off-strip {
+        flex: 1; min-width: 0; flex-direction: column; flex-wrap: nowrap; align-items: stretch;
+        margin: 0; padding: 6px; max-height: calc(74svh); overflow-y: auto;
+    }
+    .field-area .looked-off-label { margin: 0 0 2px; font-size: .78rem; }
+    .field-area .looked-off-chip { width: 100%; }
+    .field-area .looked-off-add { flex: 1; text-align: left; }
+}
+/* Phones on their side: keep the whole field on screen */
+@media (max-height: 500px) and (orientation: landscape) {
+    .player-grid, .action-grid, .cutting-grid, .outcome-grid {
+        grid-template-columns: repeat(4, 1fr) !important;
+    }
+    .player-select, .action-select, .cutting-select, .outcome-select { max-height: 80vh; }
+    .field-container {
+        width: min(100%, calc((100vh - 110px) / 0.37), calc((100svh - 110px) / 0.37));
+        height: auto; padding-bottom: 0; aspect-ratio: 100 / 37; margin: 0 auto 8px;
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .tables-container {
+        grid-template-columns: 1fr;
+    }
+
+    .player-grid, .action-grid, .cutting-grid, .outcome-grid {
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    }
+}

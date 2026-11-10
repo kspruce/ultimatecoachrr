@@ -1,0 +1,42 @@
+/* Styles for templates/gameday/stats.html */
+.sortable th {
+  cursor: pointer;
+  position: relative;
+  padding-right: 20px;
+  user-select: none;
+}
+
+.sortable th::after {
+  content: "↕";
+  position: absolute;
+  right: 8px;
+  opacity: 0.4;
+}
+
+.sortable th.asc::after {
+  content: "↑";
+  opacity: 1;
+  color: var(--uc-blue);
+}
+
+.sortable th.desc::after {
+  content: "↓";
+  opacity: 1;
+  color: var(--uc-blue);
+}
+
+/* Fix white-on-white for table-success/danger rows in dark mode */
+[data-theme="dark"] .table-success > td {
+  background-color: color-mix(in srgb, var(--ok) 12%, transparent) !important;
+  color: var(--uc-page-text) !important;
+}
+[data-theme="dark"] .table-danger > td {
+  background-color: color-mix(in srgb, var(--bad) 12%, transparent) !important;
+  color: var(--uc-page-text) !important;
+}
+
+.gd-header h5 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}

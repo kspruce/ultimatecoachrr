@@ -1,0 +1,92 @@
+/* Styles for templates/point/point_form.html */
+/* ===============================
+   Modern Point Form Styling
+================================ */
+
+.section-card {
+    border: 0;
+    border-radius: 18px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+}
+
+.division-badge {
+    font-size: 0.8rem;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.badge-open { background:#1f2937; color:white; }
+.badge-womens { background:#be185d; color:white; }
+.badge-mixed { background:var(--uc-purple); color:white; }
+
+.player-grid {
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap:12px;
+}
+
+.player-card {
+    border-radius:14px;
+    padding:14px 8px;
+    text-align:center;
+    background:var(--uc-card-bg);
+    border:2px solid var(--uc-card-border);
+    cursor:pointer;
+    transition: all 0.2s ease;
+}
+
+.player-card:hover {
+    transform:translateY(-2px);
+    box-shadow:0 6px 12px rgba(0,0,0,0.08);
+}
+
+.player-card.selected {
+    border-color:var(--uc-blue);
+    background:var(--club-soft);
+}
+
+.jersey {
+    font-weight:700;
+    font-size:1.2rem;
+}
+
+.player-name {
+    font-size:0.85rem;
+    margin-top:4px;
+}
+
+.gender-dot {
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    margin:6px auto 0;
+}
+
+.gender-male { background:var(--uc-blue); }
+.gender-female { background:#ec4899; }
+
+.selection-bar {
+    font-weight:600;
+    margin-bottom:12px;
+}
+
+.sticky-submit {
+    position:sticky;
+    bottom:0;
+    background:var(--uc-card-bg);
+    padding:15px;
+    box-shadow:0 -6px 18px rgba(0,0,0,0.08);
+    border-top:1px solid var(--rule);
+}
+
+@media (min-width:768px){
+    .sticky-submit {
+        position:static;
+        box-shadow:none;
+        border-top:0;
+        padding:0;
+        margin-top:20px;
+    }
+}

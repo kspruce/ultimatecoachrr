@@ -1,4 +1,6 @@
 {% extends "base.html" %}
+{# A full-screen working page: no phone tab bar over the controls #}
+{% block bottom_nav %}{% endblock %}
 
 {% block title %}Game Day - {{ game.opponent }}{% endblock %}
 
@@ -80,7 +82,7 @@
           {% if call_plays or other_plays %}
           <!-- Play called (the playbook): saved with the point -->
           <span class="section-label">Play called <span class="text-muted fw-normal">(optional)</span></span>
-          <style>.gd-calls { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; } .gd-calls .btn { min-height: 38px; }</style>
+          <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/gameday__dashboard.css') }}?v=1">
           <div class="gd-calls mb-3" id="play-called" role="radiogroup" aria-label="Play called">
             <input type="radio" class="btn-check" name="called_play" id="call-none" value="" checked>
             <label class="btn btn-outline-secondary btn-sm" for="call-none">None</label>

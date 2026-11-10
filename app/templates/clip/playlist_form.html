@@ -1,9 +1,7 @@
 {% extends "base.html" %}
 
 {% block styles %}
-<style>
-  .playlist-item-buttons .btn { min-width: 40px; min-height: 34px; }
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/clip__playlist_form.css') }}?v=1">
 {% endblock %}
 
 {% block content %}

@@ -1,0 +1,2 @@
+/* Styles for templates/gameday/dashboard.html */
+.gd-calls { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; } .gd-calls .btn { min-height: 38px; }

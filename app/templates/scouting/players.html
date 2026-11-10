@@ -3,43 +3,7 @@
 
 {% block content %}
 {{ m.styles() }}
-<style>
-.opp-card { background:var(--uc-card-bg); border:1px solid var(--uc-card-border); border-radius:var(--uc-radius);
-  overflow:hidden; transition:box-shadow .15s; height:100% }
-.opp-card:hover { box-shadow:var(--uc-shadow-md) }
-.opp-card.key { border-color:var(--accent) }
-.opp-card-header { padding:.9rem 1.1rem .6rem; border-bottom:1px solid var(--uc-gray-100) }
-.opp-jersey { display:inline-block; min-width:32px; height:32px; border-radius:8px; background:var(--uc-gray-800);
-  color:#fff; font-size:.75rem; font-weight:700; text-align:center; line-height:32px; padding:0 .3rem; flex-shrink:0 }
-.opp-name { font-weight:700; font-size:.95rem; color:var(--uc-gray-800) }
-.opp-meta { font-size:.75rem; color:var(--uc-gray-400) }
-.skill-row { display:flex; align-items:center; gap:.5rem; margin-bottom:.45rem }
-.skill-label { font-size:.72rem; color:var(--uc-gray-600); width:64px; flex-shrink:0; font-weight:600 }
-.skill-track { flex:1; height:7px; background:var(--uc-gray-100); border-radius:4px; overflow:hidden }
-.skill-fill { height:100%; border-radius:4px }
-.skill-val { font-size:.72rem; font-weight:700; width:20px; text-align:right; color:var(--uc-gray-600) }
-.pos-badge { display:inline-block; padding:.15rem .5rem; border-radius:20px; font-size:.68rem; font-weight:600; text-transform:capitalize }
-.pos-handler { background:color-mix(in srgb, var(--club-ink) 10%, transparent); color:var(--uc-blue) }
-.pos-cutter { background:color-mix(in srgb, var(--bad) 10%, transparent); color:var(--uc-red) }
-.pos-hybrid { background:color-mix(in srgb, var(--ok) 10%, transparent); color:var(--uc-green) }
-.role-chip { font-size:.68rem; font-weight:600; padding:.1rem .45rem; border-radius:6px;
-  background:color-mix(in srgb, var(--bad) 10%, transparent); color:var(--uc-red); white-space:nowrap }
-.opp-marker { font-size:.75rem; color:var(--uc-gray-600); margin-top:.3rem }
-/* Phone: one compact row per player; tap to see ratings, notes and actions */
-@media (max-width: 767.98px) {
-  .opp-card { height:auto }
-  .opp-card-header { cursor:pointer; border-bottom:none; padding:.7rem .9rem }
-  .opp-body { display:none; border-top:1px solid var(--uc-gray-100) }
-  .opp-card.open .opp-body { display:block }
-  .opp-card.open .opp-chevron { transform:rotate(180deg) }
-  .opp-chevron { color:var(--uc-gray-400); transition:transform .15s; margin-top:.2rem }
-  #playerGrid { --bs-gutter-y:.5rem }
-}
-.filter-pill { padding:.3rem .75rem; border-radius:20px; font-size:.8rem; font-weight:600; border:1.5px solid var(--uc-card-border);
-  background:var(--uc-card-bg); cursor:pointer; transition:all .15s; color:var(--uc-gray-800) }
-.filter-pill.active, .filter-pill:hover { border-color:var(--uc-blue); color:var(--uc-blue);
-  background:color-mix(in srgb, var(--club-ink) 6%, transparent) }
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/scouting__players.css') }}?v=1">
 
 <div class="container py-4 scouting-page">
   <div class="uc-page-header mb-3">

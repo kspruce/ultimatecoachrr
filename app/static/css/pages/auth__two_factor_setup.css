@@ -1,0 +1,6 @@
+/* Styles for templates/auth/two_factor_setup.html */
+.tf-qr { display:block; margin:0 auto 1rem; width:200px; height:200px; image-rendering:pixelated;
+         background:#fff; border-radius:10px; padding:6px; }
+.tf-key { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.85rem; word-break:break-all;
+          text-align:center; background:var(--uc-gray-100, #f3f4f6); border-radius:8px; padding:.5rem .75rem; }
+.tf-steps { color:var(--uc-gray-600); font-size:.9rem; padding-left:1.1rem; }

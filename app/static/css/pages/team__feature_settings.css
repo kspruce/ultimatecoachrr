@@ -1,0 +1,16 @@
+/* Styles for templates/team/feature_settings.html */
+.fs-card { background: var(--card); border: 1px solid var(--rule); border-radius: var(--radius); padding: 1.3rem 1.5rem; margin-bottom: 1.25rem; }
+.fs-card h3 { font-size: 1.2rem; margin: 0 0 .5rem; }
+.fs-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .75rem .5rem; margin: 0 -.5rem; border-top: 1px solid var(--rule); border-radius: 8px; scroll-margin-top: 90px; }
+.fs-row:first-of-type { border-top: 0; }
+.fs-row:target { background: var(--club-soft); }
+.fs-row b { display: block; font-weight: 700; }
+.fs-row span { color: var(--ink-3); font-size: .85rem; }
+.fs-row .fs-meta { display: block; margin-top: .15rem; font-size: .78rem; }
+.fs-row .fs-meta a { font-weight: 700; }
+.fs-row .form-check-input { width: 2.6em; height: 1.4em; margin: 0; cursor: pointer; }
+.fs-presets { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .5rem; }
+.fs-preset { border: 1px solid var(--rule); background: var(--card); border-radius: 10px; padding: .5rem .8rem; text-align: left; color: var(--ink); }
+.fs-preset:hover { border-color: var(--club-ink); }
+.fs-preset b { display: block; font-size: .86rem; }
+.fs-preset small { color: var(--ink-3); font-size: .76rem; }

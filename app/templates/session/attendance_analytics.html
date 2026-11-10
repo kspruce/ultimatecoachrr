@@ -2,43 +2,7 @@
 
 {% block styles %}
 <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
-<style>
-    .attendance-rate-high {
-        color: var(--uc-green);
-    }
-    
-    .attendance-rate-medium {
-        color: var(--uc-amber);
-    }
-    
-    .attendance-rate-low {
-        color: var(--uc-red);
-    }
-    
-    .attendance-chart {
-        height: 400px;
-    }
-    
-    .player-filter-container {
-        width: 250px;
-    }
-    
-    .status-present {
-        background-color: color-mix(in srgb, var(--ok) 10%, transparent);
-    }
-    
-    .status-late {
-        background-color: color-mix(in srgb, var(--warn) 10%, transparent);
-    }
-    
-    .status-absent {
-        background-color: color-mix(in srgb, var(--bad) 10%, transparent);
-    }
-    
-    .status-excused {
-        background-color: color-mix(in srgb, var(--info) 10%, transparent);
-    }
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/session__attendance_analytics.css') }}?v=1">
 {% endblock %}
 
 {% block content %}

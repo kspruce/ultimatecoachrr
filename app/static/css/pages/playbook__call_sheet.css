@@ -1,0 +1,14 @@
+/* Styles for templates/playbook/call_sheet.html */
+.cs-row { display: grid; grid-template-columns: 1fr auto; gap: .5rem; align-items: center; padding: .7rem 1rem;
+          border-bottom: 1px solid var(--rule); }
+.cs-row:last-child { border-bottom: 0; }
+.cs-name { font-weight: 800; font-size: 1.05rem; }
+.cs-call { font-size: .9rem; color: var(--ink-2); }
+.cs-stat { text-align: right; font-size: .85rem; color: var(--ink-2); white-space: nowrap; }
+.cs-stat b { font-size: 1.05rem; color: var(--ink); }
+.cs-edit .cs-row { grid-template-columns: 1fr auto; }
+.cs-edit input.form-control { min-height: 40px; font-size: .9rem; }
+@media print {
+  .uc-navbar, .footer, .th-crumbs, .cs-noprint { display: none !important; }
+  .cs-row { padding: .35rem 0; }
+}

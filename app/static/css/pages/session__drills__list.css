@@ -1,0 +1,36 @@
+/* Styles for templates/session/drills/list.html */
+.drill-video-container {
+    position: relative;
+    padding-bottom: 56.25%;  /* 16:9 aspect ratio */
+    height: 0;
+    overflow: hidden;
+    background-color: var(--sunken);
+    border-radius: 4px;
+}
+
+.drill-video-container iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+
+.drill-placeholder {
+    height: 200px;
+    background-color: var(--sunken);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+}
+
+.card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transition: box-shadow 0.3s ease;
+}
+
+.badge {
+    margin-right: 0.5rem;
+}

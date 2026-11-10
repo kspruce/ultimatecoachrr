@@ -1,6 +1,6 @@
-from flask import Blueprint, render_template, redirect, request, url_for
+from flask import Blueprint, abort, render_template, redirect, request, url_for
 from app.utils.team_filter import get_current_team_id
-from flask_login import current_user
+from flask_login import current_user, login_required
 from app import csrf, db, limiter, onboarding
 import logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -108,6 +108,71 @@ def how_to_use():
                            guide=help_guide.guide_for(current_user, settings, _guide_nav()),
                            team=team, settings=settings, checklist=checklist, role=role,
                            roles=onboarding.ROLES)
+
+@bp.route('/manifest.webmanifest')
+def manifest():
+    """Lets phones add the site to the home screen and open it like an app."""
+    from flask import jsonify
+    icon = lambda name: url_for('static', filename=f'icons/{name}')  # noqa: E731
+    response = jsonify({
+        'name': 'Ultimate Coach',
+        'short_name': 'Ultimate Coach',
+        'description': 'Sessions, stats, scouting and selection for ultimate frisbee teams.',
+        'start_url': '/',
+        'scope': '/',
+        'display': 'standalone',
+        'background_color': '#FBF8F2',
+        'theme_color': '#6E1F2F',
+        'icons': [
+            {'src': icon('icon-192.png'), 'sizes': '192x192', 'type': 'image/png'},
+            {'src': icon('icon-512.png'), 'sizes': '512x512', 'type': 'image/png'},
+            {'src': icon('icon-512.png'), 'sizes': '512x512', 'type': 'image/png', 'purpose': 'maskable'},
+        ],
+        'shortcuts': [
+            {'name': 'Record stats', 'url': url_for('gameday.index')},
+            {'name': 'Calendar', 'url': url_for('calendar.index')},
+            {'name': 'Stats', 'url': url_for('stats_dashboard.index')},
+        ],
+    })
+    response.mimetype = 'application/manifest+json'
+    response.headers['Cache-Control'] = 'public, max-age=3600'
+    return response
+
+
+@bp.route('/demo/tour/<stop>')
+@login_required
+def demo_tour(stop):
+    """The "start here" links in the demo banner: each goes to the best
+    example of one feature on the team being looked round."""
+    from app.models.game import Game
+    from app.models.player import Player
+    from app.models.playbook import Play
+    from app.models.session import SessionPlan
+    from app.utils.team_filter import get_current_team_id
+    from datetime import date
+    team_id = get_current_team_id()
+    target = None
+    if stop == 'game':
+        game = (Game.query.filter_by(team_organization_id=team_id)
+                .filter(Game.our_score + Game.their_score > 0)
+                .order_by(Game.date.desc(), Game.id.desc()).first())
+        target = url_for('stats_dashboard.game_stats', game_id=game.id) if game else url_for('stats_dashboard.index')
+    elif stop == 'player':
+        player = Player.query.filter_by(team_organization_id=team_id).order_by(Player.id).first()
+        target = (url_for('stats_dashboard.player_stats', player_id=player.id) if player
+                  else url_for('stats_dashboard.index'))
+    elif stop == 'session':
+        plan = (SessionPlan.query.filter(SessionPlan.team_organization_id == team_id,
+                                         SessionPlan.date >= date.today())
+                .order_by(SessionPlan.date).first())
+        target = url_for('session.detail', session_id=plan.id) if plan else url_for('session.index')
+    elif stop == 'play':
+        play = Play.query.filter_by(team_organization_id=team_id).order_by(Play.id).first()
+        target = url_for('playbook.view_play', play_id=play.id) if play else url_for('playbook.index')
+    if target is None:
+        abort(404)
+    return redirect(target)
+
 
 @bp.route('/admin/data-management')
 def data_management():

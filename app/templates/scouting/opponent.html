@@ -3,13 +3,7 @@
 
 {% block content %}
 {{ m.styles() }}
-<style>
-.record-big { font-size:2rem; font-weight:800; letter-spacing:-.02em; line-height:1 }
-.info-row { display:flex; justify-content:space-between; gap:1rem; padding:.45rem 0; border-bottom:1px solid var(--uc-gray-100); font-size:.875rem }
-.info-row:last-child { border-bottom:none }
-.result-w { color:var(--uc-green); font-weight:700 }
-.result-l { color:var(--uc-red); font-weight:700 }
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/scouting__opponent.css') }}?v=1">
 <div class="container py-4 scouting-page">
   <div class="uc-page-header mb-4">
     <div>

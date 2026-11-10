@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="uc-search-page">
+  <h1>Search</h1>
+  <form method="get" action="{{ url_for('search.index') }}" role="search" class="uc-search-form">
+    <i class="bi bi-search" aria-hidden="true"></i>
+    <input type="search" name="q" value="{{ q }}" class="form-control form-control-lg" autofocus
+           placeholder="Players, games, drills, plays, theory, clips" aria-label="Search the team's pages"
+           maxlength="80" autocomplete="off">
+    <button type="submit" class="btn btn-primary btn-lg">Search</button>
+  </form>
+
+  {% if too_short %}
+  <p class="uc-search-note">Type at least two letters.</p>
+  {% elif q and not groups %}
+  <p class="uc-search-note">Nothing found for "{{ q }}". Try a shorter word or a name.</p>
+  {% elif groups %}
+  <p class="uc-search-note">{{ total }} result{{ '' if total == 1 else 's' }} for "{{ q }}"</p>
+  {% for group in groups %}
+  <section class="uc-search-group">
+    <h2><i class="bi {{ group.icon }}" aria-hidden="true"></i> {{ group.title }}</h2>
+    <div class="uc-search-list">
+      {% for item in group['items'] %}
+      <a href="{{ item.url }}"><b>{{ item.label }}</b>{% if item.detail %}<span>{{ item.detail }}</span>{% endif %}</a>
+      {% endfor %}
+    </div>
+  </section>
+  {% endfor %}
+  {% else %}
+  <p class="uc-search-note">Looks through the roster, games, tournaments, sessions, drills, the playbook, theory and clips.</p>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,192 +1,88 @@
 {% extends "base.html" %}
 
 {% block styles %}
-<style>
-.record-mode-card {
-  border: 2px solid var(--uc-card-border);
-  border-radius: var(--uc-radius);
-  background: var(--uc-card-bg);
-  transition: border-color .15s, box-shadow .15s;
-}
-.record-mode-card:hover {
-  border-color: var(--uc-blue);
-  box-shadow: var(--uc-shadow-md);
-}
-.mode-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: .4rem;
-  font-size: .72rem;
-  font-weight: 700;
-  letter-spacing: .06em;
-  text-transform: uppercase;
-  border-radius: 50px;
-  padding: .22rem .65rem;
-}
-.mode-pill.gameday  { background: color-mix(in srgb, var(--ok) 12%, transparent); color: var(--uc-green); }
-.mode-pill.analysis { background: color-mix(in srgb, var(--club-ink) 12%, transparent);  color: var(--uc-purple); }
-[data-theme="dark"] .mode-pill.gameday  { background: color-mix(in srgb, var(--ok) 20%, transparent); color: var(--ok); }
-[data-theme="dark"] .mode-pill.analysis { background: color-mix(in srgb, var(--club-ink) 20%, transparent); color: var(--club-ink); }
-
-.game-row {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: .9rem 1.1rem;
-  border-radius: 10px;
-  border: 1px solid var(--uc-card-border);
-  background: var(--uc-card-bg);
-  margin-bottom: .6rem;
-  transition: border-color .15s, box-shadow .15s;
-}
-.game-row:hover {
-  border-color: color-mix(in srgb, var(--club-ink) 35%, transparent);
-  box-shadow: var(--uc-shadow-sm);
-}
-.game-score {
-  font-size: .92rem;
-  font-weight: 700;
-  color: var(--uc-page-text);
-}
-.game-meta {
-  font-size: .78rem;
-  color: var(--uc-gray-400);
-  margin-top: .1rem;
-}
-.game-actions {
-  margin-left: auto;
-  display: flex;
-  gap: .5rem;
-  flex-shrink: 0;
-}
-.btn-mode {
-  display: inline-flex;
-  align-items: center;
-  gap: .4rem;
-  font-size: .8rem;
-  font-weight: 600;
-  border-radius: 8px;
-  padding: .38rem .8rem;
-  border: 1.5px solid;
-  text-decoration: none;
-  white-space: nowrap;
-  transition: background .15s, color .15s;
-}
-.btn-mode.gameday {
-  border-color: var(--uc-green);
-  color: var(--uc-green);
-  background: color-mix(in srgb, var(--ok) 8%, transparent);
-}
-.btn-mode.gameday:hover {
-  background: var(--uc-green);
-  color: white;
-}
-.btn-mode.analysis {
-  border-color: var(--uc-purple);
-  color: var(--uc-purple);
-  background: color-mix(in srgb, var(--club-ink) 8%, transparent);
-}
-.btn-mode.analysis:hover {
-  background: var(--uc-purple);
-  color: white;
-}
-[data-theme="dark"] .btn-mode.gameday  { color: var(--ok); border-color: var(--ok); background: rgba(52,211,153,.08); }
-[data-theme="dark"] .btn-mode.gameday:hover  { background: var(--uc-green); color: white; }
-[data-theme="dark"] .btn-mode.analysis { color: var(--club-ink); border-color: var(--club-ink); background: rgba(165,180,252,.08); }
-[data-theme="dark"] .btn-mode.analysis:hover { background: var(--uc-purple); color: white; }
-
-.section-label {
-  font-size: .7rem;
-  font-weight: 700;
-  letter-spacing: .09em;
-  text-transform: uppercase;
-  color: var(--uc-gray-400);
-  margin: 1.5rem 0 .6rem;
-}
-.result-bar {
-  width: 5px;
-  border-radius: 3px;
-  flex-shrink: 0;
-  align-self: stretch;
-  min-height: 36px;
-}
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/gameday__index.css') }}?v=1">
 {% endblock %}
 
 {% block content %}
 
 {# ── Page header ───────────────────────────────────────────── #}
-<div class="d-flex align-items-start justify-content-between flex-wrap gap-3 mb-4">
+<div class="d-flex align-items-start justify-content-between flex-wrap gap-3 mb-3">
   <div>
-    <h1 style="font-size:1.6rem;font-weight:800;margin-bottom:.25rem">Record Stats</h1>
-    <p style="color:var(--uc-gray-400);margin:0;font-size:.9rem">
-      Select a game, then choose how you want to record.
-    </p>
+    <h1 class="rec-h1">Record Stats</h1>
+    <p class="rec-sub">Pick a game, then choose how you want to record.</p>
   </div>
-  <a href="{{ url_for('game.add') }}" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-2">
-    <i class="bi bi-plus-lg"></i> New Game
+  <a href="{{ url_for('game.add') }}" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-2">
+    <i class="bi bi-plus-lg" aria-hidden="true"></i> New game
   </a>
 </div>
 
-{# ── Mode explanation cards ─────────────────────────────────── #}
-<div class="row g-3 mb-4">
-  <div class="col-md-6">
-    <div class="record-mode-card p-3 h-100">
-      <div class="d-flex align-items-center gap-2 mb-2">
-        <div style="width:36px;height:36px;border-radius:10px;background:color-mix(in srgb, var(--ok) 12%, transparent);display:flex;align-items:center;justify-content:center;font-size:1.05rem;color:var(--uc-green);flex-shrink:0">
-          <i class="bi bi-lightning-charge-fill"></i>
+{# ── The game to record now ─────────────────────────────────── #}
+{% if next_game %}
+{% set days = (next_game.date - today).days %}
+<section class="rec-next">
+  <div class="uc-eyebrow">{% if days == 0 %}Today{% elif days == 1 %}Tomorrow{% else %}{{ next_game.date.strftime('%a') }} {{ next_game.date.day }} {{ next_game.date.strftime('%b') }}{% endif %}{% if next_game.start_time %} · {{ next_game.start_time.strftime('%H:%M') }}{% endif %}{% if next_game.tournament %} · {{ next_game.tournament.name }}{% endif %}{% if next_game.field %} · {{ next_game.field }}{% endif %}</div>
+  <h2>vs {{ next_game.opponent }}{% if next_game.is_played %} <small>{{ next_game.our_score }}–{{ next_game.their_score }}</small>{% endif %}</h2>
+  <div class="rec-next-actions">
+    <a href="{{ url_for('gameday.game_dashboard', game_id=next_game.id) }}" class="btn btn-primary btn-lg">
+      <i class="bi bi-lightning-charge-fill me-1" aria-hidden="true"></i>{{ 'Carry on recording' if next_game.is_played else 'Start recording' }}
+    </a>
+    <a href="{{ url_for('point.game_points', game_id=next_game.id) }}" class="btn btn-outline-secondary btn-lg">
+      <i class="bi bi-camera-video-fill me-1" aria-hidden="true"></i>From footage
+    </a>
+  </div>
+</section>
+{% endif %}
+
+{# ── The two ways of recording: spelled out for new teams, one tap away after that ── #}
+<details class="rec-modes"{% if first_time %} open{% endif %}>
+  <summary><i class="bi bi-question-circle me-1" aria-hidden="true"></i>Game Day or Positional Analysis: which one?</summary>
+  <div class="row g-3 mt-0">
+    <div class="col-md-6">
+      <div class="record-mode-card p-3 h-100">
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <div class="rec-mode-icon gameday"><i class="bi bi-lightning-charge-fill" aria-hidden="true"></i></div>
+          <span class="mode-pill gameday"><i class="bi bi-controller" aria-hidden="true"></i> Game Day Mode</span>
         </div>
-        <span class="mode-pill gameday"><i class="bi bi-controller"></i> Game Day Mode</span>
+        <p class="rec-mode-text">
+          Fast, tap-to-record for live sideline use. Capture lines, scores, goals, assists and blocks point-by-point in real time.
+        </p>
       </div>
-      <p style="font-size:.83rem;color:var(--uc-gray-400);margin:0">
-        Fast, tap-to-record for live sideline use. Capture lines, scores, goals, assists and blocks point-by-point in real time.
-      </p>
+    </div>
+    <div class="col-md-6">
+      <div class="record-mode-card p-3 h-100">
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <div class="rec-mode-icon analysis"><i class="bi bi-camera-video-fill" aria-hidden="true"></i></div>
+          <span class="mode-pill analysis"><i class="bi bi-map" aria-hidden="true"></i> Positional Analysis</span>
+        </div>
+        <p class="rec-mode-text">
+          Detailed event-by-event entry from footage. Record field positions, throw types, hockey assists and granular movement data.
+        </p>
+      </div>
     </div>
   </div>
-  <div class="col-md-6">
-    <div class="record-mode-card p-3 h-100">
-      <div class="d-flex align-items-center gap-2 mb-2">
-        <div style="width:36px;height:36px;border-radius:10px;background:color-mix(in srgb, var(--club-ink) 12%, transparent);display:flex;align-items:center;justify-content:center;font-size:1.05rem;color:var(--uc-purple);flex-shrink:0">
-          <i class="bi bi-camera-video-fill"></i>
-        </div>
-        <span class="mode-pill analysis"><i class="bi bi-map"></i> Positional Analysis</span>
-      </div>
-      <p style="font-size:.83rem;color:var(--uc-gray-400);margin:0">
-        Detailed event-by-event entry from footage. Record field positions, throw types, hockey assists and granular movement data.
-      </p>
-    </div>
-  </div>
-</div>
+</details>
 
 {# ── Game list ─────────────────────────────────────────────── #}
 {% if games %}
 
-<p class="section-label"><i class="bi bi-clock-history me-1"></i>Recent Games</p>
+<p class="section-label"><i class="bi bi-clock-history me-1" aria-hidden="true"></i>All games</p>
 
 {% for game in games %}
 <div class="game-row">
 
-  {# Win / loss / neutral bar #}
-  {% if game.our_score is not none and game.their_score is not none %}
-    {% if game.our_score > game.their_score %}
-      <div class="result-bar" style="background:var(--uc-green)" title="Win"></div>
-    {% elif game.our_score < game.their_score %}
-      <div class="result-bar" style="background:var(--uc-red)" title="Loss"></div>
-    {% else %}
-      <div class="result-bar" style="background:#9CA3AF" title="Draw"></div>
-    {% endif %}
-  {% else %}
-    <div class="result-bar" style="background:var(--uc-gray-200)"></div>
-  {% endif %}
+  {# Win / loss / draw bar; neutral until the game has a score #}
+  <div class="result-bar {{ 'win' if game.is_win else 'loss' if game.is_loss else 'draw' if game.is_tie else '' }}"
+       {% if game.is_played %}title="{{ 'Win' if game.is_win else 'Loss' if game.is_loss else 'Draw' }}"{% endif %}></div>
 
   {# Game details #}
   <div style="min-width:0;flex:1">
     <div class="game-score">
       vs {{ game.opponent }}
-      {% if game.our_score is not none and game.their_score is not none %}
-      <span style="font-weight:500;color:var(--uc-gray-400);font-size:.82rem">
-        &nbsp;{{ game.our_score }}–{{ game.their_score }}
-      </span>
+      {% if game.is_played %}
+      <span class="rec-score">&nbsp;{{ game.our_score }}–{{ game.their_score }}</span>
+      {% elif game.date and game.date >= today %}
+      <span class="rec-upcoming">Not played yet</span>
       {% endif %}
     </div>
     <div class="game-meta">

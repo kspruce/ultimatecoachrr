@@ -1,35 +1,7 @@
 {% extends "base.html" %}
 
 {% block styles %}
-<style>
-  .shared-hero {
-    border-bottom: 1px solid var(--rule);
-    margin-bottom: 1rem;
-    padding-bottom: 0.5rem;
-  }
-  .anno-item {
-    border-left: 3px solid var(--uc-blue);
-    background: var(--sunken);
-    padding: 0.75rem 1rem;
-    border-radius: 0.25rem;
-    margin-bottom: 0.75rem;
-  }
-  .anno-meta {
-    color: var(--ink-2);
-    font-size: 0.9rem;
-  }
-  .badge-tag {
-    background: #6c757d;
-  }
-  @media print {
-    .no-print {
-      display: none !important;
-    }
-    .anno-item {
-      break-inside: avoid;
-    }
-  }
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/clip__shared_clip.css') }}?v=1">
 {% endblock %}
 
 {% block content %}

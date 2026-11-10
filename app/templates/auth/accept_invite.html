@@ -1,35 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<style>
-  .invite-wrap { max-width:440px; margin:3rem auto; }
-  .invite-card {
-    background:var(--uc-card-bg); border:1px solid var(--uc-card-border);
-    border-radius:var(--uc-radius); padding:2.25rem 2rem;
-    box-shadow:var(--uc-shadow-md);
-  }
-  .invite-avatar {
-    width:56px; height:56px; border-radius:14px;
-    background:var(--club);
-    display:flex; align-items:center; justify-content:center;
-    font-size:1.5rem; color:var(--on-club); margin:0 auto 1.25rem;
-  }
-  .invite-label {
-    font-size:.75rem; font-weight:700; letter-spacing:.07em;
-    text-transform:uppercase; color:var(--uc-gray-400); margin-bottom:.35rem;
-  }
-  .invite-input {
-    width:100%; border:1px solid var(--uc-gray-200); border-radius:9px;
-    padding:.65rem .875rem; font-size:.9rem; color:var(--uc-gray-800);
-    outline:none; transition:border-color .15s;
-  }
-  .invite-input:focus { border-color:var(--uc-blue); box-shadow:0 0 0 3px color-mix(in srgb, var(--club-ink) 12%, transparent); }
-  .invite-submit {
-    width:100%; padding:.7rem; border-radius:9px; font-weight:600;
-    font-size:.9rem; background:var(--uc-blue); color:white; border:none;
-    cursor:pointer; transition:opacity .15s;
-  }
-  .invite-submit:hover { opacity:.9; }
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/auth__accept_invite.css') }}?v=1">
 
 <div class="invite-wrap">
   <div class="invite-card">

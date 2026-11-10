@@ -47,24 +47,5 @@
 {% endblock %}
 
 {% block styles %}
-<style>
-    .card {
-        border-radius: 10px;
-    }
-    
-    .alert-danger {
-        background-color: color-mix(in srgb, var(--bad) 10%, transparent);
-        border: none;
-        color: var(--uc-red);
-        border-radius: 8px;
-    }
-    
-    pre {
-        background-color: var(--sunken);
-        padding: 15px;
-        border-radius: 5px;
-        max-height: 300px;
-        overflow-y: auto;
-    }
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/admin__error.css') }}?v=1">
 {% endblock %}

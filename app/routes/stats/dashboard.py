@@ -53,13 +53,13 @@ def index():
     if not sees_all:
         table['rows'] = [r for r in table['rows'] if r['player'].id == current_user.player.id]
 
-    recent = games[:8]
+    recent = [g for g in games if g.is_played][:8]
     prev_label = "the season before" if prev_games else None
     return render_template(
         'stats/index.html',
         has_games=True,
         season=season,
-        games_count=len(games),
+        games_count=sum(1 for g in games if g.is_played),
         headline=dash.headline(throwing, games, prev_games, prev_label),
         coverage=dash.coverage(throwing, games),
         incomplete=len(find_incomplete_points(games)),
