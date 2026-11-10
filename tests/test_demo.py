@@ -61,6 +61,13 @@ def test_demo_team_has_a_season_of_everything(app, demo):
     played = [g for g in games if g.our_score + g.their_score]
     assert len(played) == 6 and all(max(g.our_score, g.their_score) == 13 for g in played)
     assert len(games) == 9  # and the next tournament's schedule
+    # A clip library and a film session, every clip cut from the demo video
+    from app.models.clip import Clip
+    from app.models.clip_playlist import ClipPlaylist
+    clips = Clip.query.filter_by(team_organization_id=demo).all()
+    assert len(clips) == 6 and all('1x5QW8DQFaE' in c.embed_url and c.tags and c.players for c in clips)
+    playlist = ClipPlaylist.query.filter_by(team_organization_id=demo).one()
+    assert len(playlist.items) == 6
     user = demo_user()
     assert user.username == DEMO_USERNAME and user.check_password(DEMO_PASSWORD)
     assert user.is_demo and user.is_guest and user.team_ids == [demo]

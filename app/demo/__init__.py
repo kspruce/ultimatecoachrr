@@ -630,9 +630,8 @@ DEMO_TAG_COLOURS = {'Offence': '#1F6F8B', 'Defence': '#B4532A', 'Ho stack': '#3F
 def _clips(app, team_id, owner_id, players, tournaments):
     """A small clip library and a film-session playlist, cut from one video.
 
-    The video is the site owner's choice (DEMO_CLIP_VIDEO_URL, a YouTube
-    link to footage they're happy to show); with none set the demo has no
-    clips. Returns how many were made."""
+    The video is DEMO_CLIP_VIDEO_URL (see config.py); set to nothing, the
+    demo has no clips. Returns how many were made."""
     from app.models.annotation import ClipAnnotation
     from app.models.clip import Clip, ClipTag
     from app.models.clip_playlist import ClipPlaylist, ClipPlaylistItem

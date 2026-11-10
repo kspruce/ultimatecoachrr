@@ -56,9 +56,9 @@ class Config:
     DISCORD_BOT_TOKEN = os.environ.get('DISCORD_BOT_TOKEN')
     DISCORD_PUBLIC_KEY = os.environ.get('DISCORD_PUBLIC_KEY')
 
-    # The demo team's clip library is cut from this YouTube video (footage
-    # you're happy to show visitors); with none set the demo has no clips
-    DEMO_CLIP_VIDEO_URL = os.environ.get('DEMO_CLIP_VIDEO_URL')
+    # The demo team's clip library is cut from this YouTube video. Set
+    # DEMO_CLIP_VIDEO_URL to use another one, or to nothing for no clips.
+    DEMO_CLIP_VIDEO_URL = os.environ.get('DEMO_CLIP_VIDEO_URL', 'https://youtu.be/1x5QW8DQFaE')
 
     # Reminders, training dates and weekly posts run in the web process
     # (app/scheduler.py); set to 0 to run `flask training-jobs` from cron instead
