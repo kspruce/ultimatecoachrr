@@ -430,7 +430,7 @@ def calculate_possession_based_team_metrics(games):
 def calculate_team_summary(games):
     """Calculate team summary statistics"""
     summary = {
-        'games_played': len(games),
+        'games_played': sum(1 for g in games if g.is_played),
         'wins': sum(1 for g in games if g.is_win),
         'losses': sum(1 for g in games if g.is_loss),
         'ties': sum(1 for g in games if g.is_tie),

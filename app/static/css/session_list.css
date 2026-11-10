@@ -1,0 +1,53 @@
+/* The sessions list (/sessions/) */
+.sl-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: .75rem 1rem; margin-bottom: 1.5rem; }
+.sl-head h1 { margin: 0 0 .15rem; }
+.sl-actions { display: flex; flex-wrap: wrap; gap: .4rem; }
+.sl-title { font-size: 1.2rem; margin: 0 0 .75rem; }
+.sl-empty { color: var(--ink-3); background: var(--card); border: 1px dashed var(--rule-strong); border-radius: 14px; padding: 1.25rem; text-align: center; }
+
+/* Coming up */
+.sl-upcoming { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: .9rem; margin-bottom: 2.25rem; }
+.sl-card { background: var(--card); border: 1px solid var(--rule); border-radius: 16px; padding: 1.1rem 1.2rem; display: flex; flex-direction: column; box-shadow: var(--shadow-sm, none); }
+.sl-card h3 { font-size: 1.25rem; line-height: 1.2; margin: .4rem 0 .5rem; }
+.sl-card h3 a { color: var(--ink); text-decoration: none; }
+.sl-card h3 a:hover { color: var(--club-ink); }
+.sl-meta { display: flex; flex-wrap: wrap; gap: .3rem .8rem; align-items: center; color: var(--ink-2); font-size: .84rem; }
+.sl-rsvp { display: flex; gap: 1rem; margin: .9rem 0; font-size: .74rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); }
+.sl-rsvp b { display: block; font-family: var(--font-serif); font-weight: 400; font-size: 1.5rem; line-height: 1.1; letter-spacing: 0; color: var(--ink); }
+.sl-rsvp .yes b { color: var(--ok); }
+.sl-card-foot { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: auto; }
+
+.sl-type { font-size: .68rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; border-radius: 999px; padding: .12rem .55rem; background: var(--sunken); color: var(--ink-2); white-space: nowrap; }
+.sl-type-primary { background: var(--club-soft); color: var(--club-ink); }
+.sl-type-success { background: var(--ok-soft); color: var(--ok); }
+.sl-squad { font-weight: 700; color: var(--ink); }
+
+/* Filters: one row of small selects, no Apply button */
+.sl-list-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: .6rem; }
+.sl-clear { font-size: .84rem; font-weight: 700; text-decoration: none; white-space: nowrap; }
+.sl-filters { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .9rem; }
+.sl-filters .form-select { width: auto; flex: 1 1 150px; max-width: 220px; border-radius: 999px; }
+
+/* Every session, one row each */
+.sl-list { background: var(--card); border: 1px solid var(--rule); border-radius: 16px; overflow: hidden; }
+.sl-row { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto auto; gap: .9rem; align-items: center; padding: .7rem 1rem; }
+.sl-row + .sl-row { border-top: 1px solid var(--rule); }
+.sl-row:hover { background: var(--club-soft); }
+.sl-date { text-align: center; line-height: 1.05; border: 1px solid var(--rule); border-radius: 10px; padding: .3rem 0; background: var(--paper); }
+.sl-date b { display: block; font-family: var(--font-serif); font-weight: 400; font-size: 1.2rem; color: var(--ink); }
+.sl-date span { display: block; font-size: .66rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); }
+.sl-row.is-past .sl-date { background: transparent; }
+.sl-name { font-weight: 700; color: var(--ink); text-decoration: none; }
+.sl-name:hover { color: var(--club-ink); }
+.sl-sub { display: flex; flex-wrap: wrap; gap: .15rem .7rem; align-items: center; font-size: .8rem; color: var(--ink-2); margin-top: .15rem; }
+.sl-nums { display: flex; gap: .8rem; font-size: .82rem; color: var(--ink-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.sl-row-actions { display: flex; gap: .3rem; }
+
+@media (max-width: 640px) {
+  .sl-actions { width: 100%; }
+  .sl-actions .btn { flex: 1 1 auto; }
+  .sl-filters .form-select { flex: 1 1 calc(50% - .4rem); max-width: none; }
+  .sl-row { grid-template-columns: 46px minmax(0, 1fr); row-gap: .45rem; padding: .7rem .8rem; }
+  .sl-nums, .sl-row-actions { grid-column: 2; }
+  .sl-row-actions:empty { display: none; }
+}

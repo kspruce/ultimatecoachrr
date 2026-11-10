@@ -44,6 +44,11 @@ class Game(db.Model):
         return f'<Game vs {self.opponent}>'
     
     @property
+    def is_played(self):
+        """A game with no score yet (0-0) hasn't been played."""
+        return bool((self.our_score or 0) or (self.their_score or 0))
+
+    @property
     def is_win(self):
         """Return True if we won this game."""
         return self.our_score > self.their_score
@@ -55,8 +60,8 @@ class Game(db.Model):
     
     @property
     def is_tie(self):
-        """Return True if the game was a tie."""
-        return self.our_score == self.their_score
+        """Return True if the game was a tie (0-0 is a game not yet played)."""
+        return self.is_played and self.our_score == self.their_score
     
     @property
     def result_string(self):
@@ -65,8 +70,9 @@ class Game(db.Model):
             return f'W {self.our_score}-{self.their_score}'
         elif self.is_loss:
             return f'L {self.our_score}-{self.their_score}'
-        else:
+        elif self.is_tie:
             return f'T {self.our_score}-{self.their_score}'
+        return 'Not played'
     
     @property
     def point_count(self):

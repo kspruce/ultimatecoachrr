@@ -31,7 +31,15 @@ def index():
         .limit(30)
         .all()
     )
-    return render_template('gameday/index.html', games=games, today=date.today())
+    today = date.today()
+    # The game to record now: today's first unfinished one, else the next one coming up
+    dated = [g for g in games if g.date and g.date >= today]
+    dated.sort(key=lambda g: (g.date, g.is_played, g.start_time is None, str(g.start_time or ''), g.id))
+    next_game = dated[0] if dated else None
+    # The two ways of recording are explained in full until the team has used one
+    first_time = not any(g.is_played for g in games)
+    return render_template('gameday/index.html', games=games, today=today,
+                           next_game=next_game, first_time=first_time)
 
 
 @bp.route('/game/<int:game_id>')

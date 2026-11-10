@@ -163,6 +163,25 @@
         .trend-chart-container { height: 200px; }
     }
 
+    /* Headline tiles and the one-row filters under the name */
+    .ps-headline { display: grid; grid-template-columns: repeat(6, 1fr); gap: .5rem; margin-bottom: .9rem; }
+    .ps-headline div { background: var(--card); border: 1px solid var(--rule); border-radius: 12px; padding: .6rem .5rem; text-align: center; }
+    .ps-headline b { display: block; font-family: var(--font-serif); font-weight: 400; font-size: 1.6rem; line-height: 1.1; color: var(--ink); }
+    .ps-headline span { font-size: .66rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+    .ps-filters { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; margin-bottom: 1.25rem; }
+    .ps-filters .form-select { width: auto; flex: 1 1 160px; max-width: 280px; border-radius: 999px; }
+    .ps-clear { font-size: .84rem; font-weight: 700; text-decoration: none; }
+    /* The tab strip scrolls sideways on a phone instead of wrapping to three rows */
+    .ps-tabs { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+    .ps-tabs::-webkit-scrollbar { display: none; }
+    .ps-tabs .nav-link { white-space: nowrap; }
+    @media (max-width: 576px) {
+        .ps-headline { grid-template-columns: repeat(3, 1fr); }
+        .ps-headline b { font-size: 1.35rem; }
+        .ps-filters .form-select { flex: 1 1 calc(50% - .4rem); max-width: none; }
+    }
+    @media print { .ps-filters { display: none; } }
+
     /* Trend toggle buttons — dim when inactive */
     .trend-toggle:not(.active) {
         opacity: 0.45;
@@ -181,12 +200,12 @@
             <p>{% if player.jersey_number %}#{{ player.jersey_number }} · {% endif %}{{ player.position|capitalize if player.position else 'No position set' }}</p>
         </div>
         <div class="d-flex gap-2 flex-wrap">
-            <a href="{{ url_for('team.player_detail', player_id=player.id) }}" class="btn btn-outline-secondary">Player Profile</a>
-            <a href="{{ url_for('stats_dashboard.index') }}" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left me-1"></i>Back to Stats
+            <a href="{{ url_for('stats_dashboard.index') }}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>Stats
             </a>
-            <button id="printReportBtn" class="btn btn-primary">
-                <i class="bi bi-printer me-1"></i>Print Report
+            <a href="{{ url_for('team.player_detail', player_id=player.id) }}" class="btn btn-sm btn-outline-secondary">Profile</a>
+            <button id="printReportBtn" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-printer me-1"></i>Print report
             </button>
         </div>
     </div>
@@ -201,51 +220,40 @@
     </div>
     {% endif %}
 
-    <!-- Filters -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5>Filter Stats</h5>
-                </div>
-                <div class="card-body">
-                    <form method="get" action="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}">
-                        <div class="row">
-                            <div class="col-md-5">
-                                <label for="tournament_id" class="form-label">Tournament</label>
-                                <select name="tournament_id" id="tournament_id" class="form-select">
-                                    <option value="">All Tournaments</option>
-                                    {% for tournament in tournaments %}
-                                    <option value="{{ tournament.id }}" {% if selected_tournament == tournament.id %}selected{% endif %}>
-                                        {{ tournament.name }}
-                                    </option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="col-md-5">
-                                <label for="game_id" class="form-label">Game</label>
-                                <select name="game_id" id="game_id" class="form-select">
-                                    <option value="">All Games</option>
-                                    {% for game_data in player_games %}
-                                    <option value="{{ game_data.game.id }}" {% if selected_game == game_data.game.id %}selected{% endif %}>
-                                        vs {{ game_data.game.opponent }} ({{ game_data.game.date.strftime('%Y-%m-%d') if game_data.game.date }})
-                                    </option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label"> </label>
-                                <button type="submit" class="btn btn-primary w-100">Filter</button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
+    <!-- Headline numbers first, then the filters on one row (they apply as soon as one is picked) -->
+    <div class="ps-headline" id="playerHeadline">
+        <div><b>{{ stats.games_played }}</b><span>Games</span></div>
+        <div><b>{{ stats.points_played }}</b><span>Points</span></div>
+        <div><b>{{ stats.goals }}</b><span>Goals</span></div>
+        <div><b>{{ stats.assists }}</b><span>Assists</span></div>
+        <div><b>{{ stats.blocks }}</b><span>Blocks</span></div>
+        <div><b>{{ stats.turnovers }}</b><span>Turnovers</span></div>
     </div>
+    <form method="get" action="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}" class="ps-filters" id="playerFilters">
+        <select name="tournament_id" id="tournament_id" class="form-select form-select-sm" aria-label="Tournament">
+            <option value="">All tournaments</option>
+            {% for tournament in tournaments %}
+            <option value="{{ tournament.id }}" {% if selected_tournament == tournament.id %}selected{% endif %}>
+                {{ tournament.name }}
+            </option>
+            {% endfor %}
+        </select>
+        <select name="game_id" id="game_id" class="form-select form-select-sm" aria-label="Game">
+            <option value="">All games</option>
+            {% for game_data in player_games %}
+            <option value="{{ game_data.game.id }}" {% if selected_game == game_data.game.id %}selected{% endif %}>
+                vs {{ game_data.game.opponent }}{% if game_data.game.date %} ({{ game_data.game.date.day }} {{ game_data.game.date.strftime('%b') }}){% endif %}
+            </option>
+            {% endfor %}
+        </select>
+        {% if selected_tournament or selected_game %}
+        <a class="ps-clear" href="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}">Clear</a>
+        {% endif %}
+        <noscript><button type="submit" class="btn btn-sm btn-primary">Filter</button></noscript>
+    </form>
 
     <!-- Main Tabs Navigation -->
-    <ul class="nav nav-tabs mb-4" id="playerStatsTabs" role="tablist">
+    <ul class="nav nav-tabs mb-4 ps-tabs" id="playerStatsTabs" role="tablist">
         <li class="nav-item" role="presentation">
             <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" 
                     data-bs-target="#overview" type="button" role="tab" 
@@ -2562,6 +2570,11 @@ function generatePrintableReport() {
 // This runs after the DOM is fully loaded.
 // =================================================================================
 document.addEventListener('DOMContentLoaded', function() {
+    // The filters apply as soon as one is picked
+    document.querySelectorAll('#playerFilters select').forEach(function (select) {
+        select.addEventListener('change', function () { select.form.submit(); });
+    });
+
     console.log('DOM loaded. Initializing page features.');
 
     // Initialize basic visualizations (PER gauge color)

@@ -48,6 +48,10 @@ The demo login only belongs to the demo team, so it can't see any other team.
   pages are full, and one tournament coming up with its schedule and replies
 - A scouting report on the next opponent
 - Theory articles with the plays embedded
+- A clip library (6 tagged clips with notes) and a film-session playlist,
+  **only if `DEMO_CLIP_VIDEO_URL` is set**: a YouTube link to footage you're
+  happy to show visitors. Every clip is cut from that one video, so pick one
+  at least 8 minutes long. Without it the demo's Clip Library is empty.
 
 The content is in `app/demo/__init__.py`. Plays and drill diagrams are drawn
 from `app/demo/diagram_specs.js` and saved in `app/demo/diagrams.json`. To

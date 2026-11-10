@@ -23,7 +23,7 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Young+Serif&display=swap">
     {# Team colours (Team settings -> Colours & crest); theme.css builds everything else from them #}
     <style>{{ team_theme_css | default('') | safe }}</style>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}?v=5">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}?v=6">
 
     {% block styles %}{% endblock %}
 </head>
@@ -94,6 +94,25 @@
         </a>
       </li>
       {% endif %}
+
+      {# Visitors who aren't signed in get the pages that explain the site,
+         not the app's own menus (which would only send them to the login page) #}
+      {% if not current_user.is_authenticated %}
+      <li class="nav-item {% if ep == 'main.about' %}uc-active{% endif %}">
+        <a class="nav-link" href="{{ url_for('main.about') }}"><i class="bi bi-grid-fill"></i> What it does</a>
+      </li>
+      <li class="nav-item {% if ep == 'main.how_to_use' %}uc-active{% endif %}">
+        <a class="nav-link" href="{{ url_for('main.how_to_use') }}"><i class="bi bi-book-fill"></i> How to use</a>
+      </li>
+      {% if demo_available() %}
+      <li class="nav-item">
+        <form method="post" action="{{ url_for('auth.demo_login') }}" class="m-0">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="nav-link uc-nav-button"><i class="bi bi-play-circle-fill"></i> Try the demo</button>
+        </form>
+      </li>
+      {% endif %}
+      {% else %}
 
       {# Club #}
       <li class="nav-item dropdown {% if in_club %}uc-active{% endif %}">
@@ -240,6 +259,8 @@
         </a>
       </li>
       {% endif %}
+
+      {% endif %}{# signed in #}
 
     </ul>
 
@@ -436,6 +457,15 @@
     <strong>Demo team</strong> — You're looking round a made-up team as its coach.
     Open anything you like; nothing you change is saved.
     <a href="{{ url_for('auth.register') }}" class="fw-semibold">Set up your own team</a>
+    {% if ep == 'main.index' %}
+    <span class="uc-demo-tour">
+      <b>Start here:</b>
+      <a href="{{ url_for('main.demo_tour', stop='game') }}">a game's stats</a>
+      <a href="{{ url_for('main.demo_tour', stop='player') }}">a player's report</a>
+      <a href="{{ url_for('main.demo_tour', stop='session') }}">the next session plan</a>
+      <a href="{{ url_for('main.demo_tour', stop='play') }}">an animated play</a>
+    </span>
+    {% endif %}
     {% else %}
     <strong>Guest / Demo Mode</strong> — You are viewing a read-only demonstration account.
     Browsing all sections is allowed, but no changes can be saved.

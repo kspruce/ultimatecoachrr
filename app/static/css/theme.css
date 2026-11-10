@@ -315,10 +315,16 @@ small, .small { color: inherit; }
   text-decoration: none; white-space: nowrap; border: 0;
 }
 .uc-nav-cta:hover { filter: brightness(1.06); text-decoration: none; }
+/* Also used on <button>s (Try the demo), which would otherwise keep the
+   browser's own grey background behind the light text */
 .uc-nav-ghost {
+  background: transparent; cursor: pointer;
   color: var(--on) !important; border: 1px solid color-mix(in srgb, var(--on) 30%, transparent);
   border-radius: 999px; padding: .35rem .9rem; font-size: .84rem; font-weight: 600; text-decoration: none;
 }
+
+.uc-nav-ghost:hover { background: color-mix(in srgb, var(--on) 12%, transparent); text-decoration: none; }
+.uc-nav-button { background: none; border: 0; width: 100%; text-align: left; }
 
 @media (max-width: 1199.98px) {
   /* The navbar is sticky, so an open menu taller than the screen can't be
@@ -678,3 +684,28 @@ pre { background: var(--sunken); color: var(--ink); border-radius: var(--radius-
   .uc-settings-nav .uc-eyebrow { display: none; }
   .uc-settings-nav a { white-space: nowrap; }
 }
+
+/* ─── "On this page" strip on long pages (filled in by main.js) ─── */
+.uc-section-nav {
+  position: sticky; top: 62px; z-index: 1020;
+  display: flex; gap: .35rem; overflow-x: auto; scrollbar-width: none;
+  margin: 0 -.25rem 1.25rem; padding: .5rem .25rem;
+  background: color-mix(in srgb, var(--paper) 92%, transparent); backdrop-filter: blur(6px);
+}
+.uc-section-nav::-webkit-scrollbar { display: none; }
+.uc-section-nav a {
+  flex-shrink: 0; white-space: nowrap; text-decoration: none;
+  font-size: .8rem; font-weight: 700; color: var(--ink-2);
+  background: var(--card); border: 1px solid var(--rule); border-radius: 999px; padding: .3rem .8rem;
+}
+.uc-section-nav a:hover { border-color: var(--club-ink); color: var(--club-ink); }
+.uc-section-nav a.on { background: var(--club); border-color: var(--club); color: var(--on-club); }
+.uc-navbar.uc-has-stripe ~ .container .uc-section-nav { top: 72px; }
+/* Anchors land below the sticky navbar and strip */
+.card[id] { scroll-margin-top: 130px; }
+@media print { .uc-section-nav { display: none; } }
+
+/* "Start here" links in the demo banner on the home page */
+.uc-demo-tour { display: flex; flex-wrap: wrap; gap: .35rem .5rem; align-items: center; margin-top: .45rem; font-size: .86rem; }
+.uc-demo-tour a { background: var(--card); border: 1px solid var(--rule-strong); border-radius: 999px; padding: .15rem .7rem; font-weight: 700; text-decoration: none; }
+.uc-demo-tour a:hover { border-color: var(--club-ink); }
