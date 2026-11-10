@@ -295,3 +295,27 @@ document.addEventListener('DOMContentLoaded', function () {
   }, {rootMargin: '-25% 0px -65% 0px'});
   sections.forEach(function (section) { observer.observe(section.card); });
 });
+
+// The phone tab bar's "More" opens the full menu (the navbar is sticky, so it's on screen)
+document.addEventListener('DOMContentLoaded', function () {
+  var more = document.getElementById('ucTabbarMore');
+  var menu = document.getElementById('navbarNav');
+  if (!more || !menu || !window.bootstrap) return;
+  more.addEventListener('click', function () {
+    var collapse = bootstrap.Collapse.getOrCreateInstance(menu, {toggle: false});
+    collapse.toggle();
+  });
+  menu.addEventListener('shown.bs.collapse', function () { more.setAttribute('aria-expanded', 'true'); });
+  menu.addEventListener('hidden.bs.collapse', function () { more.setAttribute('aria-expanded', 'false'); });
+});
+
+// "/" opens Search, unless you're typing somewhere
+document.addEventListener('keydown', function (event) {
+  if (event.key !== '/' || event.ctrlKey || event.metaKey || event.altKey) return;
+  var el = event.target;
+  if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
+  var link = document.getElementById('ucSearchLink');
+  if (!link) return;
+  event.preventDefault();
+  window.location.href = link.href;
+});

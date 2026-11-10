@@ -15,6 +15,8 @@ class Game(db.Model):
     field = db.Column(db.String(50), nullable=True)
     youtube_link = db.Column(db.String(200), nullable=True)
     notes = db.Column(db.Text, nullable=True)
+    # Set while the result card can be opened with a link, without signing in
+    share_token = db.Column(db.String(64), nullable=True, unique=True, index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     

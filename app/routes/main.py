@@ -109,6 +109,36 @@ def how_to_use():
                            team=team, settings=settings, checklist=checklist, role=role,
                            roles=onboarding.ROLES)
 
+@bp.route('/manifest.webmanifest')
+def manifest():
+    """Lets phones add the site to the home screen and open it like an app."""
+    from flask import jsonify
+    icon = lambda name: url_for('static', filename=f'icons/{name}')  # noqa: E731
+    response = jsonify({
+        'name': 'Ultimate Coach',
+        'short_name': 'Ultimate Coach',
+        'description': 'Sessions, stats, scouting and selection for ultimate frisbee teams.',
+        'start_url': '/',
+        'scope': '/',
+        'display': 'standalone',
+        'background_color': '#FBF8F2',
+        'theme_color': '#6E1F2F',
+        'icons': [
+            {'src': icon('icon-192.png'), 'sizes': '192x192', 'type': 'image/png'},
+            {'src': icon('icon-512.png'), 'sizes': '512x512', 'type': 'image/png'},
+            {'src': icon('icon-512.png'), 'sizes': '512x512', 'type': 'image/png', 'purpose': 'maskable'},
+        ],
+        'shortcuts': [
+            {'name': 'Record stats', 'url': url_for('gameday.index')},
+            {'name': 'Calendar', 'url': url_for('calendar.index')},
+            {'name': 'Stats', 'url': url_for('stats_dashboard.index')},
+        ],
+    })
+    response.mimetype = 'application/manifest+json'
+    response.headers['Cache-Control'] = 'public, max-age=3600'
+    return response
+
+
 @bp.route('/demo/tour/<stop>')
 @login_required
 def demo_tour(stop):

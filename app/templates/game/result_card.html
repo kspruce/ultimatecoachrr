@@ -1,0 +1,57 @@
+{# templates/game/result_card.html: a game's result, opened from a share link (no sign-in) #}
+{% extends "base.html" %}
+
+{% block styles %}
+{{ super() }}
+<meta name="robots" content="noindex">
+<meta property="og:title" content="{{ team.name if team else 'Result' }} {{ game.our_score }}–{{ game.their_score }} {{ game.opponent }}">
+<meta property="og:description" content="{% if game.tournament %}{{ game.tournament.name }} · {% endif %}{% if game.date %}{{ game.date.day }} {{ game.date.strftime('%B %Y') }}{% endif %}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/result_card.css') }}?v=1">
+{% endblock %}
+
+{% block bottom_nav %}{% endblock %}
+
+{% block content %}
+<article class="rc">
+  <header class="rc-top">
+    <div class="rc-kicker">{% if game.tournament %}{{ game.tournament.name }}{% else %}Result{% endif %}{% if game.date %} · {{ game.date.strftime('%a') }} {{ game.date.day }} {{ game.date.strftime('%b %Y') }}{% endif %}</div>
+    <div class="rc-score">
+      <div class="rc-side">
+        <span class="rc-name">{{ team.name if team else 'Us' }}</span>
+        <b>{{ game.our_score }}</b>
+      </div>
+      <span class="rc-dash" aria-hidden="true">–</span>
+      <div class="rc-side">
+        <b>{{ game.their_score }}</b>
+        <span class="rc-name">{{ game.opponent }}</span>
+      </div>
+    </div>
+    <div class="rc-result {{ 'win' if game.is_win else 'loss' if game.is_loss else '' }}">{{ 'Win' if game.is_win else 'Loss' if game.is_loss else 'Draw' if game.is_tie else 'Not played yet' }}</div>
+  </header>
+
+  {% if team_stats.o_line_points or team_stats.d_line_points %}
+  <div class="rc-nums">
+    {% if team_stats.o_line_points %}
+    <div><b>{{ '%.0f'|format(team_stats.o_line_conversion_rate) }}%</b><span>Holds</span><small>{{ team_stats.o_line_points }} O-line points</small></div>
+    {% endif %}
+    {% if team_stats.d_line_points %}
+    <div><b>{{ '%.0f'|format(team_stats.d_line_conversion_rate) }}%</b><span>Breaks</span><small>{{ team_stats.d_line_points }} D-line points</small></div>
+    {% endif %}
+    <div><b>{{ team_stats.points_played }}</b><span>Points</span><small>played</small></div>
+  </div>
+  {% endif %}
+
+  {% if leaders %}
+  <div class="rc-leaders">
+    {% for label, rows in leaders %}
+    <div>
+      <h2>{{ label }}</h2>
+      <ol>{% for row in rows %}<li><span>{{ row.name }}</span><b>{{ row.value }}</b></li>{% endfor %}</ol>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <footer class="rc-foot">Recorded with <a href="{{ url_for('main.index') }}">Ultimate Coach</a></footer>
+</article>
+{% endblock %}

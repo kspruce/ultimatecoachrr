@@ -485,3 +485,75 @@ def add_multiple():
         return redirect(url_for('game.index'))
     
     return render_template('game/add_multiple.html', tournament=tournament)
+
+
+# ── Result card: a game's summary, readable without signing in ────
+
+@bp.route('/<int:game_id>/share', methods=['POST'])
+@login_required
+@coach_required
+def share(game_id):
+    """Make (or stop) the link to this game's result card."""
+    import secrets
+    game = Game.query.filter_by(id=game_id, team_organization_id=get_current_team_id()).first_or_404()
+    if request.form.get('stop'):
+        game.share_token = None
+        flash('The result card link no longer works.', 'success')
+    else:
+        game.share_token = secrets.token_urlsafe(24)
+        flash('Result card link made: anyone with it can see the score and headline stats, '
+              'without signing in.', 'success')
+    db.session.commit()
+    return redirect(url_for('game.detail', game_id=game.id) + '#share')
+
+
+def _public_name(name):
+    """First name and last initial: the card can be seen by anyone with the link."""
+    parts = (name or '').split()
+    if len(parts) < 2:
+        return name or ''
+    return f'{parts[0]} {parts[-1][0]}.'
+
+
+@bp.route('/result/<token>')
+def result_card(token):
+    """The shared result card: score, holds and breaks, and who scored."""
+    from collections import Counter
+    from app.models.team_organization import TeamOrganization
+    from app.stats.team import calculate_game_stats
+    from app.utils.theme import team_palette, theme_css
+
+    game = Game.query.filter_by(share_token=token).first() if len(token) >= 20 else None
+    if game is None:
+        return render_template('error.html', error_message='This share link is not valid any more.'), 404
+    team = TeamOrganization.query.get(game.team_organization_id)
+    team_stats = calculate_game_stats(game)
+
+    # Goals, assists and blocks per player, counted here rather than with the
+    # stats pages' helpers (which work on the signed-in user's team): from the
+    # recorded events, or the Game Day tallies where those are higher.
+    counts = {'goal': Counter(), 'assist': Counter(), 'block': Counter()}
+    point_ids = [pid for (pid,) in Point.query.with_entities(Point.id).filter_by(game_id=game.id)]
+    if point_ids:
+        for kind, player_id in (Event.query.with_entities(Event.event_type, Event.player_id)
+                                .filter(Event.point_id.in_(point_ids), Event.event_type.in_(list(counts)),
+                                        Event.player_id.isnot(None), Event.is_opponent.isnot(True))):
+            counts[kind][player_id] += 1
+    for row in GameDayPlayerStats.query.filter_by(game_id=game.id):
+        for kind, value in (('goal', row.goals), ('assist', row.assists), ('block', row.blocks)):
+            counts[kind][row.player_id] = max(counts[kind][row.player_id], value or 0)
+    player_ids = {pid for c in counts.values() for pid in c}
+    names = {p.id: _public_name(p.name) for p in Player.query.filter(
+        Player.id.in_(player_ids), Player.team_organization_id == game.team_organization_id)} if player_ids else {}
+
+    def leaders(kind):
+        rows = [(n, names[pid]) for pid, n in counts[kind].items() if n and pid in names]
+        return [{'name': name, 'value': n} for n, name in sorted(rows, key=lambda r: (-r[0], r[1]))[:3]]
+
+    board = [(label, leaders(kind)) for label, kind in (('Goals', 'goal'), ('Assists', 'assist'), ('Blocks', 'block'))]
+    palette = team_palette(team.settings if team else None)
+    return render_template(
+        'game/result_card.html', title=f'{team.name if team else "Result"} vs {game.opponent}',
+        game=game, team=team, team_stats=team_stats,
+        leaders=[(label, rows) for label, rows in board if rows],
+        team_palette=palette, team_theme_css=theme_css(palette))
