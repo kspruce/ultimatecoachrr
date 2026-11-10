@@ -6,8 +6,8 @@
 .sl-empty { color: var(--ink-3); background: var(--card); border: 1px dashed var(--rule-strong); border-radius: 14px; padding: 1.25rem; text-align: center; }
 
 /* Coming up */
-.sl-upcoming { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: .9rem; margin-bottom: 2.25rem; }
-.sl-card { background: var(--card); border: 1px solid var(--rule); border-radius: 16px; padding: 1.1rem 1.2rem; display: flex; flex-direction: column; box-shadow: var(--shadow-sm, none); }
+.sl-upcoming { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); gap: .9rem; margin-bottom: 2.25rem; }
+.sl-card { min-width: 0; overflow-wrap: anywhere; background: var(--card); border: 1px solid var(--rule); border-radius: 16px; padding: 1.1rem 1.2rem; display: flex; flex-direction: column; box-shadow: var(--shadow-sm, none); }
 .sl-card h3 { font-size: 1.25rem; line-height: 1.2; margin: .4rem 0 .5rem; }
 .sl-card h3 a { color: var(--ink); text-decoration: none; }
 .sl-card h3 a:hover { color: var(--club-ink); }
@@ -26,7 +26,7 @@
 .sl-list-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: .6rem; }
 .sl-clear { font-size: .84rem; font-weight: 700; text-decoration: none; white-space: nowrap; }
 .sl-filters { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .9rem; }
-.sl-filters .form-select { width: auto; flex: 1 1 150px; max-width: 220px; border-radius: 999px; }
+.sl-filters .form-select { width: auto; flex: 1 1 150px; min-width: 0; max-width: 220px; border-radius: 999px; text-overflow: ellipsis; }
 
 /* Every session, one row each */
 .sl-list { background: var(--card); border: 1px solid var(--rule); border-radius: 16px; overflow: hidden; }
@@ -46,7 +46,7 @@
 @media (max-width: 640px) {
   .sl-actions { width: 100%; }
   .sl-actions .btn { flex: 1 1 auto; }
-  .sl-filters .form-select { flex: 1 1 calc(50% - .4rem); max-width: none; }
+  .sl-filters .form-select { flex: 1 1 calc(50% - .4rem); max-width: 100%; }
   .sl-row { grid-template-columns: 46px minmax(0, 1fr); row-gap: .45rem; padding: .7rem .8rem; }
   .sl-nums, .sl-row-actions { grid-column: 2; }
   .sl-row-actions:empty { display: none; }
