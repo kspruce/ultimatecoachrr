@@ -1,0 +1,18 @@
+/* Styles for templates/clip/tags.html */
+.tag-category-section {
+    margin-bottom: 2rem;
+}
+.tag-card {
+    border-left: 4px solid;
+    transition: all 0.2s;
+}
+.tag-card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+}
+.tag-color-preview {
+    width: 40px;
+    height: 40px;
+    border-radius: 0.25rem;
+    border: 2px solid var(--rule);
+}

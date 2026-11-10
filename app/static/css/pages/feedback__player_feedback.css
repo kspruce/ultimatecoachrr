@@ -1,0 +1,10 @@
+/* Styles for templates/feedback/player_feedback.html */
+.session-group-header {
+    background: var(--uc-gray-100);
+    border-radius: 6px;
+    padding: 0.45rem 0.75rem;
+    margin: 1rem 0 0.5rem;
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--uc-gray-600);
+}

@@ -108,7 +108,10 @@ def test_player_page_shows_the_improvement_sections(app, season):
                  'Cuts thrown to', 'vs your earlier games']:
         assert text in page, text
     # The page's own styles and scripts are in the base template's block
-    assert 'heatmap.min.js' in page and '.cutting-grid' in page
+    assert 'heatmap.min.js' in page and 'css/pages/stats__player_stats.css' in page
+    import os
+    with open(os.path.join(app.static_folder, 'css', 'pages', 'stats__player_stats.css')) as f:
+        assert '.cutting-grid' in f.read()
 
 
 def test_team_page_shows_the_turnover_sections(app, season):

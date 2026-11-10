@@ -1,0 +1,8 @@
+/* Styles for templates/clip/tag_form.html */
+.color-picker-preview {
+    width: 50px;
+    height: 50px;
+    border-radius: 0.25rem;
+    border: 2px solid var(--rule);
+    cursor: pointer;
+}

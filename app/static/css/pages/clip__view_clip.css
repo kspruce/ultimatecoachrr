@@ -1,0 +1,250 @@
+/* Styles for templates/clip/view_clip.html */
+/* ── Page layout ────────────────────────────────────────── */
+.clip-view-wrap { max-width: 1400px; margin: 0 auto; }
+
+/* ── Sticky sidebar ─────────────────────────────────────── */
+@media (min-width: 992px) {
+  .clip-sidebar-sticky {
+    position: sticky;
+    top: 1rem;
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+    /* hide scrollbar visually but keep it functional */
+    scrollbar-width: thin;
+    scrollbar-color: var(--uc-gray-300) transparent;
+  }
+}
+
+/* ── Video card ─────────────────────────────────────────── */
+.video-card {
+  background: #0f172a;
+  border-radius: var(--uc-radius);
+  overflow: hidden;
+  box-shadow: var(--uc-shadow-md);
+  margin-bottom: 1rem;
+}
+.video-ratio {
+  position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden;
+}
+.video-ratio iframe {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+}
+.video-ratio .no-video {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  color: rgba(255,255,255,.4); gap: .5rem; font-size: .9rem;
+}
+.video-ratio .no-video i { font-size: 2.5rem; }
+
+/* ── Clip header bar ────────────────────────────────────── */
+.clip-header-bar {
+  background: var(--card);
+  border: 1px solid var(--uc-gray-200);
+  border-radius: var(--uc-radius);
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+}
+.clip-main-title {
+  font-size: 1.15rem; font-weight: 800; color: var(--uc-gray-900);
+  margin: 0 0 .35rem;
+}
+.clip-header-meta {
+  display: flex; flex-wrap: wrap; gap: .5rem .9rem;
+  font-size: .78rem; color: var(--uc-gray-500); align-items: center;
+}
+.clip-header-meta i { font-size: .72rem; }
+
+.clip-tag-pill {
+  display: inline-flex; align-items: center; gap: .3rem;
+  font-size: .72rem; font-weight: 600;
+  padding: .15rem .5rem; border-radius: 20px;
+  background: var(--uc-gray-50); border: 1px solid var(--uc-gray-200);
+  color: var(--uc-gray-700);
+}
+.clip-tag-pill::before {
+  content:''; width:7px; height:7px; border-radius:50%;
+  background: var(--tag-color, var(--uc-gray-400)); display:inline-block;
+}
+
+.player-chip {
+  display: inline-flex; align-items: center; gap: .3rem;
+  font-size: .73rem; font-weight: 600;
+  background: var(--uc-gray-100); color: var(--uc-gray-700);
+  padding: .2rem .6rem; border-radius: 20px;
+}
+
+/* ── Action buttons bar ─────────────────────────────────── */
+.clip-actions { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+.annotate-buttons { display: flex; gap: .5rem; flex-wrap: wrap; }
+
+/* ── Phones and small tablets ───────────────────────────── */
+@media (max-width: 991.98px) {
+  /* Keep the video in view while scrolling notes, so tapping a timestamp shows the moment */
+  /* The left column's cards join the page row directly, so the pinned video can
+     stay up while the annotation list (in the other column) scrolls past */
+  .clip-main-col { display: contents !important; }  /* beats .d-flex */
+  .clip-main-col > * { width: calc(100% - var(--bs-gutter-x)); margin-left: calc(var(--bs-gutter-x) * .5);
+                       margin-right: calc(var(--bs-gutter-x) * .5); }
+  .video-card { position: sticky; top: var(--uc-nav-h, 0px); z-index: 5; }  /* under menus (1000+) */
+  .ann-card-actions .btn { min-width: 40px; min-height: 36px; font-size: .85rem !important; }
+  /* One page scroll instead of a scrolling box inside the page */
+  .side-panel-body { max-height: none !important; }
+  .clip-header-bar { padding: .85rem 1rem; }
+  .clip-actions { margin-top: .75rem; width: 100%; }
+  .clip-actions .btn { min-height: 40px; }
+  .annotate-buttons { display: grid; grid-template-columns: 1fr 1fr; }
+  .annotate-buttons .annotate-main { grid-column: 1 / -1; }
+  .annotate-buttons .btn { min-height: 44px; }
+  .dropdown-menu .dropdown-item { padding-top: .6rem; padding-bottom: .6rem; }
+}
+@media (max-width: 991.98px) and (orientation: landscape) {
+  .video-card { position: static; }
+}
+
+/* ── Add annotation card ────────────────────────────────── */
+.annotation-actions-card {
+  background: var(--card);
+  border: 1px solid var(--uc-gray-200);
+  border-radius: var(--uc-radius);
+  padding: .85rem 1rem;
+  margin-bottom: 1rem;
+}
+.annotation-actions-card h6 {
+  font-size: .78rem; font-weight: 700; color: var(--uc-gray-600);
+  text-transform: uppercase; letter-spacing: .05em;
+  margin-bottom: .6rem;
+}
+
+/* ── Sidebar panels ─────────────────────────────────────── */
+.side-panel {
+  background: var(--card);
+  border: 1px solid var(--uc-gray-200);
+  border-radius: var(--uc-radius);
+  overflow: hidden;
+  margin-bottom: .85rem;
+}
+.side-panel-header {
+  padding: .6rem .9rem;
+  border-bottom: 1px solid var(--uc-gray-100);
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: .78rem; font-weight: 700; color: var(--uc-gray-700);
+}
+.side-panel-body {
+  padding: .65rem .9rem;
+  max-height: 340px; overflow-y: auto;
+}
+
+/* ── Annotation cards ───────────────────────────────────── */
+.ann-card {
+  padding: .65rem .75rem;
+  border-radius: 10px;
+  border: 1px solid var(--uc-gray-200);
+  margin-bottom: .55rem;
+  transition: box-shadow .12s;
+  background: var(--card);
+}
+.ann-card:hover { box-shadow: var(--uc-shadow-sm); }
+.ann-card.key-moment {
+  border-color: var(--uc-amber);
+  background: color-mix(in srgb, var(--warn) 4%, transparent);
+}
+
+.ann-timestamp {
+  display: inline-flex; align-items: center; gap: .3rem;
+  font-size: .75rem; font-weight: 700; color: var(--uc-blue);
+  cursor: pointer; padding: .12rem .4rem;
+  border-radius: 6px; background: color-mix(in srgb, var(--club-ink) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--club-ink) 20%, transparent);
+  transition: background .12s;
+  text-decoration: none;
+}
+.ann-timestamp:hover { background: color-mix(in srgb, var(--club-ink) 15%, transparent); color: var(--uc-blue); }
+
+.ann-title { font-size: .82rem; font-weight: 700; color: var(--uc-gray-800); margin: .3rem 0 .2rem; }
+.ann-notes { font-size: .78rem; color: var(--uc-gray-600); margin-bottom: .35rem; line-height: 1.45; }
+
+.ann-badge {
+  display: inline-block; font-size: .65rem; font-weight: 700;
+  padding: .12rem .45rem; border-radius: 20px;
+  text-transform: capitalize; margin-right: .2rem;
+}
+.ann-meta-row {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: .3rem;
+}
+.ann-creator { font-size: .68rem; color: var(--uc-gray-400); }
+
+/* ── Annotation filter bar ──────────────────────────────── */
+.ann-filter-bar {
+  background: var(--uc-gray-50);
+  border-bottom: 1px solid var(--uc-gray-100);
+  padding: .55rem .9rem;
+}
+.ann-filter-bar .form-select { font-size: .75rem; padding: .2rem .5rem; }
+
+/* ── Segment list ───────────────────────────────────────── */
+.seg-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .45rem .6rem; border-radius: 8px; margin-bottom: .3rem;
+  background: var(--uc-gray-50); border: 1px solid var(--uc-gray-200);
+  font-size: .78rem;
+}
+.seg-item strong { color: var(--uc-gray-800); }
+.seg-time { color: var(--uc-gray-500); font-size: .72rem; }
+
+/* ── Visibility badges ──────────────────────────────────── */
+.ann-private-badge {
+  display: inline-flex; align-items: center; gap: .25rem;
+  font-size: .63rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+  padding: .1rem .4rem; border-radius: 20px;
+}
+.ann-private-badge.coaches {
+  background: color-mix(in srgb, var(--accent) 10%, transparent); color: var(--uc-purple);
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+}
+.ann-private-badge.specific {
+  background: color-mix(in srgb, var(--ok) 10%, transparent); color: var(--uc-green);
+  border: 1px solid color-mix(in srgb, var(--ok) 30%, transparent);
+}
+.ann-private-badge.private {
+  background: rgba(15,23,42,.07); color: var(--uc-gray-600);
+  border: 1px solid var(--uc-gray-300);
+}
+
+/* ── Empty annotation state ─────────────────────────────── */
+.ann-empty { text-align: center; padding: 1.5rem; color: var(--uc-gray-400); }
+.ann-empty i { font-size: 2rem; display: block; margin-bottom: .4rem; }
+.ann-empty p { font-size: .8rem; margin: 0; }
+
+/* ── Annotation notes HTML rendering ───────────────────── */
+.ann-notes p { margin: 0 0 .25rem; }
+.ann-notes p:last-child { margin-bottom: 0; }
+.ann-notes ul, .ann-notes ol { margin: .2rem 0 .2rem 1.2rem; padding: 0; font-size: .78rem; }
+.ann-notes strong { font-weight: 700; }
+.ann-notes em { font-style: italic; }
+
+/* ── Annotation offcanvas ───────────────────────────────── */
+#annotationOffcanvas { width: min(520px, 100vw); }
+.ann-offcanvas-video {
+  background: #0f172a;
+  position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden;
+}
+.ann-offcanvas-video iframe {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+}
+.ann-offcanvas-body { padding: 1rem; overflow-y: auto; }
+
+/* ── mm:ss timestamp input ──────────────────────────────── */
+.ts-group { display: flex; align-items: center; gap: .4rem; }
+.ts-group input[type=number] {
+  width: 64px; text-align: center; font-weight: 700;
+  -moz-appearance: textfield;
+}
+.ts-group input[type=number]::-webkit-inner-spin-button,
+.ts-group input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.ts-colon { font-size: 1.15rem; font-weight: 700; color: var(--uc-gray-600); }
+
+/* ── Quill overrides ────────────────────────────────────── */
+.ql-container { font-size: .85rem; border-radius: 0 0 6px 6px !important; }
+.ql-toolbar { border-radius: 6px 6px 0 0 !important; background: var(--uc-gray-50); }
+.ql-editor { min-height: 100px; }

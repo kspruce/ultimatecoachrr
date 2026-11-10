@@ -417,7 +417,7 @@ def available_players(point_id):
         return jsonify(result)
     except Exception as e:
         import traceback
-        current_app.logger.error("Error in available_players:", str(e))
+        current_app.logger.exception("Error in available_players")
         current_app.logger.error(traceback.format_exc())
         return jsonify({'error': str(e), 'available_players': []}), 500
 
@@ -503,7 +503,7 @@ def substitute_player(point_id):
         })
     except Exception as e:
         import traceback
-        current_app.logger.error("Error in substitute_player:", str(e))
+        current_app.logger.exception("Error in substitute_player")
         current_app.logger.error(traceback.format_exc())
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -615,7 +615,7 @@ def get_cutting_skills(point_id):
         
     except Exception as e:
         import traceback
-        current_app.logger.error("Error in get_cutting_skills:", str(e))
+        current_app.logger.exception("Error in get_cutting_skills")
         current_app.logger.error(traceback.format_exc())
         return jsonify({'success': False, 'error': str(e)}), 500
 
@@ -668,7 +668,7 @@ def get_events(point_id):
         
     except Exception as e:
         import traceback
-        current_app.logger.error("Error in get_events:", str(e))
+        current_app.logger.exception("Error in get_events")
         current_app.logger.error(traceback.format_exc())
         return jsonify({'success': False, 'error': str(e)}), 500
 
@@ -734,7 +734,7 @@ def get_throws(point_id):
         
     except Exception as e:
         import traceback
-        current_app.logger.error("Error in get_throws:", str(e))
+        current_app.logger.exception("Error in get_throws")
         current_app.logger.error(traceback.format_exc())
         return jsonify({'success': False, 'error': str(e)}), 500
 

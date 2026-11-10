@@ -5,48 +5,7 @@
 {% block styles %}
 {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/gameday.css') }}">
-<style>
-  .sortable th {
-    cursor: pointer;
-    position: relative;
-    padding-right: 20px;
-    user-select: none;
-  }
-  .sortable th::after {
-    content: "↕";
-    position: absolute;
-    right: 8px;
-    opacity: 0.4;
-  }
-  .sortable th.asc::after  { content: "↑"; opacity: 1; color: var(--uc-blue); }
-  .sortable th.desc::after { content: "↓"; opacity: 1; color: var(--uc-blue); }
-
-  .gd-header h5 { margin: 0; font-size: 0.95rem; font-weight: 600; }
-
-  .stat-card {
-    text-align: center;
-    padding: 1rem 0.75rem;
-    border-radius: 10px;
-    margin-bottom: 1rem;
-    background: var(--uc-card-bg);
-    border: 1px solid var(--uc-card-border);
-  }
-  .stat-card .stat-value {
-    font-size: 1.8rem;
-    font-weight: 800;
-    letter-spacing: -0.02em;
-    line-height: 1.1;
-  }
-  .stat-card .stat-label {
-    font-size: 0.72rem;
-    opacity: 0.55;
-    text-transform: uppercase;
-    letter-spacing: .05em;
-    margin-top: 0.2rem;
-  }
-  .nav-tabs .nav-link { color: var(--uc-page-text); }
-  .nav-tabs .nav-link.active { font-weight: 600; }
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/gameday__team_stats.css') }}?v=1">
 {% endblock %}
 
 {% block content %}

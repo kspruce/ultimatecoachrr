@@ -1,11 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 {% include "auth/_styles.html" %}
-<style>
-  .rc-list { display:grid; grid-template-columns:1fr 1fr; gap:.4rem .75rem; list-style:none; padding:0; margin:0 0 1.25rem;
-             font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:1rem; text-align:center; }
-  .rc-list li { background:var(--uc-gray-100, #f3f4f6); border-radius:8px; padding:.4rem; }
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/auth__recovery_codes.css') }}?v=1">
 
 <div class="ac-wrap">
   <div class="ac-card">

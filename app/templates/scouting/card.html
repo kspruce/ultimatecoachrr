@@ -9,55 +9,7 @@
 
 {% block content %}
 {{ m.styles() }}
-<style>
-.game-card { max-width:760px; margin:0 auto; background:var(--uc-card-bg); border:1px solid var(--uc-card-border);
-  border-radius:var(--uc-radius); padding:1.25rem 1.4rem }
-.gc-head { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; border-bottom:2px solid var(--uc-gray-800);
-  padding-bottom:.6rem; margin-bottom:.9rem }
-.gc-head h2 { margin:0; font-size:1.5rem; font-weight:800 }
-.gc-sub { font-size:.8rem; color:var(--uc-gray-600) }
-.gc-section { margin-bottom:1rem }
-.gc-section h6, .gc-section > summary { font-size:.7rem; font-weight:800; text-transform:uppercase; letter-spacing:.08em;
-  margin:0 0 .35rem; color:var(--uc-gray-600) }
-details.card-fold > summary { min-height:auto }
-.gc-tools { display:flex; gap:.5rem; justify-content:center; align-items:center; flex-wrap:wrap }
-.gc-fresh { font-size:.75rem; color:var(--uc-gray-400) }
-.gc-fresh.stale { color:var(--warn-ink, #92400e); font-weight:600 }
-[data-wake-lock].active { background:var(--ok-soft); border-color:var(--ok); color:var(--ink) }
-.gc-plan { font-size:1rem; font-weight:600; line-height:1.45 }
-.gc-list { margin:0; padding-left:1.1rem; font-size:.9rem }
-.gc-list li { margin-bottom:.15rem }
-.gc-player { display:flex; flex-wrap:wrap; column-gap:.5rem; align-items:baseline; font-size:.9rem; padding:.2rem 0; border-bottom:1px dashed var(--uc-gray-200) }
-.gc-player:last-child { border-bottom:none }
-.gc-num { font-weight:800; min-width:2.2rem }
-.gc-note { color:var(--uc-gray-600); font-size:.8rem }
-.gc-arrow { color:var(--uc-gray-400) }
-.gc-mu { padding:.35rem 0; border-bottom:1px dashed var(--uc-gray-200) }
-.gc-mu:last-of-type { border-bottom:none }
-.gc-mu-them { display:flex; flex-wrap:wrap; align-items:baseline; gap:.4rem; font-size:.95rem }
-.gc-mu-note { font-size:.9rem; color:var(--uc-gray-800) }
-.gc-mu-ours { font-size:.9rem; color:var(--uc-green) }
-.gc-mu-ours .gc-note { color:var(--uc-gray-600) }
-.gc-ours { font-weight:700; color:var(--uc-green) }
-@media (max-width: 575.98px) {
-  .gc-player .gc-detail { flex-basis:100%; margin-left:2.7rem !important; text-align:left !important }
-  /* Read at arm's length between points */
-  .game-card { padding:1rem; border-radius:12px }
-  .gc-head h2 { font-size:1.6rem }
-  .gc-plan { font-size:1.2rem }
-  .gc-list, .gc-player, .gc-lines, .gc-mu-them, .gc-mu-note, .gc-mu-ours { font-size:1.05rem }
-  .gc-note { font-size:.9rem }
-  .gc-section > summary { font-size:.78rem; min-height:40px }
-}
-@media print {
-  .uc-navbar, .footer, .no-print, .alert { display:none !important }
-  body { background:#fff !important }
-  .container { max-width:none !important; padding:0 !important }
-  .game-card { border:none; padding:0; max-width:none; color:#000 }
-  .gc-head { border-color:#000 }
-  .threat-badge, .look-chip { border:1px solid #000 !important; background:none !important; color:#000 !important }
-}
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/scouting__card.css') }}?v=1">
 
 <div class="container py-3 scouting-page" data-offline-card>
   <div class="gc-tools mb-2 no-print">

@@ -1,0 +1,29 @@
+/* Styles for templates/playbook/cards.html */
+.gd-wrap { max-width: 680px; margin: 0 auto; }
+.gd-filters { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: .4rem; margin-bottom: 1rem; scrollbar-width: none; }
+.gd-filters a { flex-shrink: 0; white-space: nowrap; }
+.gd-filters a { border: 1px solid var(--rule); border-radius: 99px; padding: .35rem .9rem; font-size: .88rem;
+                text-decoration: none; color: var(--ink); min-height: 36px; display: inline-flex; align-items: center; }
+.gd-filters a.active { background: var(--club, var(--uc-blue)); border-color: transparent; color: #fff; }
+.gd-card { background: var(--card, var(--uc-card-bg)); border: 1px solid var(--rule); border-radius: 16px;
+           margin-bottom: 1.25rem; overflow: hidden; scroll-margin-top: 70px; }
+.gd-head { display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding: .85rem 1rem .6rem; }
+.gd-head h2 { font-size: 1.15rem; margin: 0; }
+.gd-stages { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: .5rem; padding: 0 1rem .5rem;
+             -webkit-overflow-scrolling: touch; }
+.gd-stage { flex: 0 0 100%; scroll-snap-align: center; margin: 0; }
+.gd-stages.many .gd-stage { flex-basis: 88%; }
+.gd-stage img { width: 100%; border-radius: 10px; border: 1px solid var(--rule); background: #fff; }
+.gd-stage figcaption { font-size: .8rem; color: var(--ink-2, #6c757d); margin-top: .25rem; }
+.gd-body { padding: .25rem 1rem 1rem; font-size: .92rem; }
+.gd-body .md p { margin-bottom: .4rem; }
+.gd-body details { margin-top: .5rem; }
+.gd-body summary { font-weight: 600; cursor: pointer; min-height: 32px; }
+.gd-roles dt { font-weight: 600; font-size: .85rem; }
+.gd-roles dd { margin: 0 0 .4rem; }
+.gd-body table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; margin: .4rem 0; font-size: .85rem; }
+.gd-body th, .gd-body td { border: 1px solid var(--rule); padding: .3rem .5rem; }
+.gd-call { font-size: .95rem; margin-bottom: .4rem; }
+.gd-mine { background: var(--club-soft); border-left: 3px solid var(--club-ink); border-radius: 8px; padding: .5rem .7rem; margin-bottom: .5rem; }
+.gd-mine .md p { display: inline; }
+.gd-foot { display: flex; justify-content: space-between; align-items: center; padding: 0 1rem 1rem; }

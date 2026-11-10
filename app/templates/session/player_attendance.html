@@ -1,43 +1,7 @@
 {% extends "base.html" %}
 
 {% block styles %}
-<style>
-    .attendance-rate-high {
-        color: var(--uc-green);
-    }
-    
-    .attendance-rate-medium {
-        color: var(--uc-amber);
-    }
-    
-    .attendance-rate-low {
-        color: var(--uc-red);
-    }
-    
-    .attendance-chart {
-        height: 300px;
-    }
-    
-    .status-present {
-        background-color: color-mix(in srgb, var(--ok) 20%, transparent);
-    }
-    
-    .status-late {
-        background-color: color-mix(in srgb, var(--warn) 20%, transparent);
-    }
-    
-    .status-absent {
-        background-color: color-mix(in srgb, var(--bad) 20%, transparent);
-    }
-    
-    .status-excused {
-        background-color: color-mix(in srgb, var(--info) 20%, transparent);
-    }
-    
-    .status-unknown {
-        background-color: rgba(108, 117, 125, 0.2);
-    }
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/session__player_attendance.css') }}?v=1">
 {% endblock %}
 
 {% block content %}

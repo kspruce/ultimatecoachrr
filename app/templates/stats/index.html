@@ -43,51 +43,7 @@
 {% endmacro %}
 
 {% block styles %}
-<style>
-    .kpi { border: 1px solid var(--rule); border-radius: var(--radius); padding: .75rem 1rem; background: var(--card); height: 100%; }
-    .kpi .kpi-label { font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-3); font-weight: 600; }
-    .kpi .kpi-value { font-size: 1.75rem; font-weight: 700; color: var(--ink); line-height: 1.2; }
-    .kpi .kpi-change { font-size: .8rem; color: var(--ink-3); }
-    .kpi .kpi-change.better { color: var(--ok); }
-    .kpi .kpi-change.worse { color: var(--bad); }
-
-    .leader-card h6 { font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-3); }
-    .leader-card ol { padding-left: 1.1rem; margin: 0; }
-    .leader-card li { display: flex; justify-content: space-between; gap: .5rem; font-size: .9rem; }
-    .leader-card li::marker { color: var(--ink-3); }
-
-    .dash-table-wrap { overflow-x: auto; }
-    .dash-table { font-size: .85rem; white-space: nowrap; margin-bottom: 0; }
-    .dash-table th, .dash-table td { text-align: right; padding: .35rem .5rem; }
-    .dash-table th:first-child, .dash-table td:first-child {
-        text-align: left; position: sticky; left: 0; z-index: 1; background: var(--card);
-    }
-    .dash-table thead th { cursor: pointer; user-select: none; }
-    .dash-table thead th[aria-sort="ascending"]::after { content: ' ▲'; font-size: .7em; }
-    .dash-table thead th[aria-sort="descending"]::after { content: ' ▼'; font-size: .7em; }
-    .dash-table .group-row th { cursor: default; text-align: center; font-size: .7rem; text-transform: uppercase;
-                                letter-spacing: .05em; color: var(--ink-3); border-bottom: 0; }
-    .dash-table tr.low td { opacity: .5; }
-    .dash-table tfoot td { font-weight: 600; color: var(--ink-2); border-top: 2px solid var(--rule-strong); }
-    .mode-tot .rate, .mode-rate .tot { display: none; }
-    .mode-tot td[data-tshade] { background: color-mix(in srgb, var(--tc) var(--ts), transparent); }
-    .mode-rate td[data-rshade] { background: color-mix(in srgb, var(--rc) var(--rs), transparent); }
-    .hide-usage .g-usage, .hide-offence .g-offence, .hide-defence .g-defence, .hide-ratings .g-ratings { display: none; }
-    .hide-low tr.low { display: none; }
-    .g-usage + .g-offence, .g-offence + .g-defence, .g-defence + .g-ratings { border-left: 2px solid var(--rule-strong); }
-
-    .dash-field { width: 100%; height: auto; max-height: 360px; display: block; }
-    .side-bar { display: flex; height: 18px; border-radius: 3px; overflow: hidden; background: var(--sunken); min-width: 120px; }
-    .side-bar .open { background: var(--uc-blue); }
-    .side-bar .break { background: var(--warn); }
-    @media (max-width: 575.98px) {
-        .card-body { padding-left: .75rem; padding-right: .75rem; }
-        .card-body .table-sm > :not(caption) > * > * { padding: .3rem .3rem; }
-        .card-body .table-sm th { letter-spacing: 0; }
-        #recentGames .game-date { display: none; }
-    }
-    .legend-swatch { display: inline-block; width: 12px; height: 12px; border-radius: 2px; vertical-align: -1px; margin-right: 3px; }
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/stats__index.css') }}?v=1">
 {% endblock %}
 
 {% block content %}

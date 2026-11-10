@@ -1,26 +1,7 @@
 {% extends "base.html" %}
 
 {% block styles %}
-<style>
-  .ab-hero { background: var(--club); color: var(--on-club); border-radius: var(--uc-radius); padding: 2.25rem 2.5rem; margin-bottom: 1.75rem; }
-  .ab-hero .kicker { font-size: .72rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; opacity: .7; }
-  .ab-hero h1 { color: var(--on-club); font-size: clamp(1.7rem, 3.6vw, 2.4rem); margin: .4rem 0 .5rem; letter-spacing: -.02em; }
-  .ab-hero p { margin: 0 0 1.1rem; max-width: 680px; opacity: .9; }
-  .ab-hero .btn { border-radius: 8px; }
-  .ab-section { margin: 2rem 0 .75rem; }
-  .ab-section h2 { font-size: 1.25rem; margin: 0 0 .2rem; display: flex; align-items: center; gap: .5rem; }
-  .ab-section h2 i { color: var(--club-ink); }
-  .ab-section p { color: var(--ink-2); margin: 0; font-size: .92rem; }
-  .ab-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: .75rem; }
-  .ab-feat { background: var(--card); border: 1px solid var(--rule); border-radius: 12px; padding: 1rem 1.1rem; text-decoration: none; color: inherit; }
-  .ab-feat:hover { border-color: var(--club-ink); text-decoration: none; color: inherit; }
-  .ab-feat b { display: flex; align-items: center; gap: .45rem; font-size: .92rem; color: var(--ink); }
-  .ab-feat b i { color: var(--club-ink); }
-  .ab-feat span { display: block; font-size: .82rem; color: var(--ink-2); margin-top: .25rem; line-height: 1.45; }
-  .ab-tag { font-size: .64rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; border-radius: 50px; padding: .1rem .45rem; background: var(--ok-soft); color: var(--uc-green); }
-  .ab-cta { background: var(--card); border: 1px solid var(--rule); border-radius: var(--uc-radius); padding: 1.5rem; margin-top: 2rem; text-align: center; }
-  @media (max-width: 640px) { .ab-hero { padding: 1.5rem 1.25rem; } }
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/about.css') }}?v=1">
 {% endblock %}
 
 {% block content %}

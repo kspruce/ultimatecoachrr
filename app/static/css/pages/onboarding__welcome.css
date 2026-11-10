@@ -1,0 +1,12 @@
+/* Styles for templates/onboarding/welcome.html */
+.wl-hero { background: var(--club); color: var(--on-club); border-radius: 20px; padding: 2rem 2.25rem; margin-bottom: 1.5rem; }
+.wl-hero .kicker { font-size: .72rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; opacity: .75; }
+.wl-hero h1 { color: var(--on-club); font-size: clamp(1.7rem, 3.6vw, 2.4rem); margin: .4rem 0 .5rem; }
+.wl-hero p { margin: 0; max-width: 640px; opacity: .9; }
+.wl-grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 1.5rem; align-items: start; }
+.wl-panel { background: var(--card); border: 1px solid var(--rule); border-radius: 18px; padding: 1.35rem 1.5rem; }
+.wl-panel h2 { font-size: 1.2rem; margin: 0 0 .25rem; }
+.wl-can { list-style: none; padding: 0; margin: .5rem 0 0; }
+.wl-can li { padding: .4rem 0; color: var(--ink-2); font-size: .9rem; display: flex; gap: .55rem; }
+.wl-can li i { color: var(--club-ink); }
+@media (max-width: 860px) { .wl-grid { grid-template-columns: 1fr; } .wl-hero { padding: 1.5rem 1.25rem; } }

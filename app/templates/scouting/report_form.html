@@ -23,17 +23,7 @@
 
 {% block content %}
 {{ m.styles() }}
-<style>
-.tag-boxes { display:flex; flex-wrap:wrap; gap:.35rem }
-.tag-boxes .btn { font-size:.78rem; padding:.2rem .6rem }
-.form-fold > .fold-body { padding-bottom:.5rem }
-.form-section { font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em;
-  color:var(--uc-gray-400); margin:1.5rem 0 .75rem; padding-bottom:.35rem; border-bottom:1px solid var(--uc-gray-100) }
-  .play-picks { display:flex; flex-wrap:wrap; gap:.4rem; }
-  .play-pick { display:inline-flex; align-items:center; gap:.4rem; border:1px solid var(--rule); border-radius:99px;
-               padding:.3rem .7rem; font-size:.88rem; cursor:pointer; min-height:36px; }
-  .play-pick input { margin:0; }
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/scouting__report_form.css') }}?v=1">
 
 <div class="container py-4 scouting-page">
   <div class="uc-page-header mb-3">

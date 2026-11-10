@@ -1,0 +1,8 @@
+/* Styles for templates/season_plan/sessions.html */
+.sp-session-settings { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.sp-session-settings h3 { font-size: 1rem; margin-bottom: .5rem; }
+.sp-status { font-size: .75rem; font-weight: 700; padding: .15rem .5rem; border-radius: 999px; white-space: nowrap; }
+.sp-status-created { background: var(--club-tint); color: var(--club); }
+.sp-status-updated { background: #fff3cd; color: #7a5a00; }
+.sp-status-unchanged { color: var(--ink-3); }
+.sp-table-wrap { overflow-x: auto; }

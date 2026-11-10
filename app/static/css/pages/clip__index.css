@@ -1,0 +1,309 @@
+/* Styles for templates/clip/index.html */
+/* ── Layout ─────────────────────────────────────────────── */
+.clips-sidebar {
+  position: sticky;
+  top: 1rem;
+}
+@media (max-width: 767px) {
+  .clips-sidebar { position: static; }
+}
+
+/* ── Search bar ─────────────────────────────────────────── */
+.clip-search-wrap {
+  position: relative;
+}
+.clip-search-wrap .bi-search {
+  position: absolute; left: .85rem; top: 50%; transform: translateY(-50%);
+  color: var(--uc-gray-400); pointer-events: none; font-size: .9rem;
+}
+.clip-search-input {
+  padding-left: 2.2rem;
+  border-radius: 10px;
+  border: 1.5px solid var(--uc-gray-200);
+  background: var(--card);
+  font-size: .875rem;
+  height: 38px;
+}
+.clip-search-input:focus {
+  border-color: var(--uc-blue);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--club-ink) 12%, transparent);
+}
+
+/* ── Clip cards ─────────────────────────────────────────── */
+.clip-card {
+  background: var(--card);
+  border: 1px solid var(--uc-gray-200);
+  border-radius: var(--uc-radius);
+  overflow: hidden;
+  transition: box-shadow .15s, transform .15s;
+  cursor: pointer;
+}
+.clip-card:hover {
+  box-shadow: var(--uc-shadow-md);
+  transform: translateY(-2px);
+}
+.clip-card.featured {
+  border-color: var(--uc-amber);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--warn) 30%, transparent);
+}
+
+/* ── Thumbnail ──────────────────────────────────────────── */
+.clip-thumb {
+  position: relative;
+  aspect-ratio: 16/9;
+  background: var(--uc-gray-800);
+  overflow: hidden;
+}
+.clip-thumb img {
+  width: 100%; height: 100%; object-fit: cover;
+  transition: opacity .2s;
+}
+.clip-card:hover .clip-thumb img { opacity: .85; }
+
+.clip-play-overlay {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity .2s;
+  background: rgba(0,0,0,.35);
+}
+.clip-card:hover .clip-play-overlay { opacity: 1; }
+.clip-play-btn {
+  width: 48px; height: 48px; border-radius: 50%;
+  background: rgba(255,255,255,.92);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem; color: var(--uc-gray-800);
+  box-shadow: 0 2px 8px rgba(0,0,0,.3);
+}
+
+.clip-featured-badge {
+  position: absolute; top: 8px; left: 8px;
+  background: var(--uc-amber); color: var(--ink);
+  font-size: .62rem; font-weight: 700; letter-spacing: .04em;
+  padding: .18rem .5rem; border-radius: 20px;
+  text-transform: uppercase;
+}
+.clip-hidden-badge {
+  position: absolute; top: 8px; right: 8px;
+  background: rgba(217,119,6,.9); color: #fff;
+  font-size: .62rem; font-weight: 700; letter-spacing: .04em;
+  padding: .18rem .5rem; border-radius: 20px;
+  text-transform: uppercase;
+}
+.clip-share-badge {
+  position: absolute; top: 34px; right: 8px;
+  background: rgba(22,163,74,.9); color: #fff;
+  font-size: .62rem; font-weight: 700; letter-spacing: .04em;
+  padding: .18rem .5rem; border-radius: 20px;
+  text-transform: uppercase;
+}
+.clip-card.is-hidden {
+  opacity: .65;
+  border-style: dashed;
+}
+
+/* ── Group dividers (admin sort view) ───────────────────── */
+.clip-group-divider {
+  width: 100%;
+  display: flex; align-items: center; gap: .6rem;
+  margin: .25rem 0 .25rem;
+  font-size: .73rem; font-weight: 700; letter-spacing: .05em;
+  text-transform: uppercase; color: var(--uc-gray-500);
+}
+.clip-group-divider:not(:first-child) { margin-top: 1.1rem; }
+.clip-group-divider::after {
+  content: ''; flex: 1; height: 1px; background: var(--uc-gray-200);
+}
+.clip-group-divider.group-flagged { color: var(--uc-green); }
+.clip-group-divider.group-flagged::after { background: rgba(22,163,74,.25); }
+.clip-group-divider.group-hidden  { color: var(--uc-amber); }
+.clip-group-divider.group-hidden::after  { background: rgba(217,119,6,.25); }
+.clip-views {
+  position: absolute; bottom: 6px; right: 8px;
+  font-size: .68rem; color: rgba(255,255,255,.85);
+  background: rgba(0,0,0,.5); padding: .1rem .45rem;
+  border-radius: 20px; font-weight: 600;
+}
+
+/* ── Thumb fallback (no YouTube URL) ───────────────────── */
+.clip-thumb-fallback {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--uc-gray-500); font-size: 2rem;
+}
+
+/* ── Card body ──────────────────────────────────────────── */
+.clip-card-body { padding: .7rem .85rem .75rem; }
+.clip-title {
+  font-weight: 700; font-size: .88rem; color: var(--uc-gray-800);
+  margin-bottom: .25rem; line-height: 1.3;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.clip-meta {
+  font-size: .73rem; color: var(--uc-gray-500);
+  display: flex; align-items: center; gap: .5rem; flex-wrap: wrap;
+  margin-bottom: .4rem;
+}
+.clip-meta i { font-size: .7rem; }
+
+.clip-tags { display: flex; gap: .3rem; flex-wrap: wrap; margin-top: .3rem; }
+.clip-tag-dot {
+  display: inline-flex; align-items: center; gap: .28rem;
+  font-size: .68rem; font-weight: 600; color: var(--uc-gray-600);
+  background: var(--uc-gray-50); border: 1px solid var(--uc-gray-200);
+  padding: .12rem .45rem; border-radius: 20px;
+}
+.clip-tag-dot::before {
+  content: ''; display: inline-block;
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--tag-color, var(--uc-gray-400));
+}
+
+.clip-card-footer {
+  padding: .5rem .85rem;
+  border-top: 1px solid var(--uc-gray-100);
+  display: flex; gap: .4rem; align-items: center;
+}
+
+/* ── Sidebar sections ───────────────────────────────────── */
+.sidebar-card {
+  background: var(--card); border: 1px solid var(--uc-gray-200);
+  border-radius: var(--uc-radius); overflow: hidden;
+  margin-bottom: .85rem;
+}
+.sidebar-card-header {
+  padding: .6rem .9rem;
+  border-bottom: 1px solid var(--uc-gray-100);
+  font-size: .78rem; font-weight: 700; color: var(--uc-gray-700);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.sidebar-card-body { padding: .6rem .9rem; }
+
+/* ── Tag rows in sidebar ────────────────────────────────── */
+.tag-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .35rem .45rem; border-radius: 8px; cursor: pointer;
+  transition: background .12s; margin-bottom: .15rem;
+}
+.tag-row:hover { background: var(--uc-gray-50); }
+.tag-row .tag-pill {
+  display: inline-flex; align-items: center; gap: .28rem;
+  font-size: .75rem; font-weight: 600; color: var(--uc-gray-700);
+}
+.tag-row .tag-pill::before {
+  content: ''; display: inline-block;
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--tag-color, var(--uc-gray-400));
+}
+.tag-count {
+  font-size: .68rem; font-weight: 700; color: var(--uc-gray-500);
+  background: var(--uc-gray-100); padding: .1rem .45rem;
+  border-radius: 20px;
+}
+
+.category-label {
+  font-size: .68rem; font-weight: 700; color: var(--uc-gray-400);
+  text-transform: uppercase; letter-spacing: .06em;
+  padding: .55rem .45rem .2rem;
+}
+
+/* ── Active filter chips ────────────────────────────────── */
+.active-chip {
+  display: inline-flex; align-items: center; gap: .3rem;
+  font-size: .73rem; font-weight: 600;
+  background: color-mix(in srgb, var(--club-ink) 8%, transparent); border: 1px solid color-mix(in srgb, var(--club-ink) 25%, transparent);
+  color: var(--uc-blue); padding: .2rem .6rem; border-radius: 20px;
+  margin: .15rem;
+}
+.active-chip button {
+  background: none; border: none; padding: 0; cursor: pointer;
+  color: var(--uc-blue); line-height: 1; font-size: .85rem;
+  opacity: .7;
+}
+.active-chip button:hover { opacity: 1; }
+
+/* ── Filter form inside sidebar ─────────────────────────── */
+.sidebar-label { font-size: .73rem; font-weight: 600; color: var(--uc-gray-600); margin-bottom: .3rem; display: block; }
+
+/* ── Sort strip ─────────────────────────────────────────── */
+.sort-strip {
+  display: flex; align-items: center; gap: .5rem;
+  margin-bottom: 1rem; flex-wrap: wrap;
+}
+.sort-btn {
+  padding: .25rem .7rem; border-radius: 20px; font-size: .78rem;
+  font-weight: 600; border: 1.5px solid var(--uc-gray-200);
+  background: var(--card); cursor: pointer; text-decoration: none;
+  color: var(--uc-gray-700); transition: all .12s;
+}
+.sort-btn.active, .sort-btn:hover {
+  border-color: var(--uc-blue); color: var(--uc-blue);
+  background: color-mix(in srgb, var(--club-ink) 6%, transparent);
+}
+
+/* ── Empty state ────────────────────────────────────────── */
+.clips-empty {
+  text-align: center; padding: 3rem 1rem;
+  color: var(--uc-gray-400);
+}
+.clips-empty i { font-size: 3rem; display: block; margin-bottom: .75rem; }
+.clips-empty p { font-size: .9rem; }
+
+/* ── Result count ───────────────────────────────────────── */
+#clipCount { font-size: .8rem; color: var(--uc-gray-500); font-weight: 600; }
+
+/* ── Phones: clips as compact rows (thumbnail left, details right) ── */
+@media (max-width: 575.98px) {
+  .clip-card { display: grid; grid-template-columns: 136px 1fr; grid-template-rows: 1fr auto; }
+  .clip-card:hover { transform: none; }
+  .clip-thumb { grid-row: 1 / span 2; aspect-ratio: auto; min-height: 84px; }
+  .clip-card-body { padding: .5rem .65rem .25rem; min-width: 0; }
+  .clip-title { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .clip-card-footer { border-top: 0; padding: 0 .65rem .5rem; }
+  .clip-card-footer .clip-watch-btn { display: none; }
+  .clip-card-footer .btn { min-width: 40px; min-height: 34px; }
+  .clip-play-overlay, .clip-views { display: none; }
+  .clip-featured-badge, .clip-hidden-badge, .clip-share-badge { font-size: .55rem; padding: .1rem .35rem; }
+  .clip-tags { display: none; }
+}
+
+/* ── Tag browser scroll ─────────────────────────────────── */
+.tag-browser-scroll { max-height: 380px; overflow-y: auto; }
+
+/* ── Dark mode overrides ─────────────────────────────────── */
+[data-theme="dark"] .clip-search-input {
+  background: var(--uc-input-bg);
+  border-color: var(--uc-card-border);
+  color: var(--uc-page-text);
+}
+[data-theme="dark"] .clip-card {
+  background: var(--uc-card-bg);
+}
+[data-theme="dark"] .clip-card-footer {
+  border-top-color: var(--uc-card-border);
+}
+[data-theme="dark"] .sidebar-card {
+  background: var(--uc-card-bg);
+  border-color: var(--uc-card-border);
+}
+[data-theme="dark"] .sidebar-card-header {
+  border-bottom-color: var(--uc-card-border);
+  color: var(--uc-page-text);
+}
+[data-theme="dark"] .sort-btn {
+  background: var(--uc-card-bg);
+  border-color: var(--uc-card-border);
+  color: var(--uc-gray-600);
+}
+[data-theme="dark"] .sort-btn.active,
+[data-theme="dark"] .sort-btn:hover {
+  border-color: var(--uc-blue);
+  color: var(--uc-blue);
+  background: color-mix(in srgb, var(--club-ink) 12%, transparent);
+}
+[data-theme="dark"] .tag-row:hover { background: var(--uc-gray-100); }
+[data-theme="dark"] .tag-row .tag-pill { color: var(--uc-gray-600); }
+/* Group divider labels — dark green/amber are near-invisible on dark bg */
+[data-theme="dark"] .clip-group-divider.group-flagged { color: var(--ok); }
+[data-theme="dark"] .clip-group-divider.group-flagged::after { background: rgba(52,211,153,.25); }
+[data-theme="dark"] .clip-group-divider.group-hidden { color: var(--warn); }
+[data-theme="dark"] .clip-group-divider.group-hidden::after { background: rgba(252,211,77,.2); }

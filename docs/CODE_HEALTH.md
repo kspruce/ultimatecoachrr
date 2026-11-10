@@ -15,9 +15,7 @@ SQLite and Postgres in GitHub Actions on every pull request.
 **Code**
 3. 25 unused variables, 6 `raise` without `from`, and ~240 broad
    `except Exception` blocks; `process_player_stats` (app/stats/players.py)
-   is still one 250-line function. Several log calls pass the error as a
-   second argument with no `%s` (`logger.error("...:", str(e))`), so the
-   message is lost.
+   is still one 250-line function.
 
 ## Done
 

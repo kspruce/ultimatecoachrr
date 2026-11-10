@@ -1,0 +1,69 @@
+/* Styles for templates/scouting/detail.html */
+.strategy-block { border-radius:var(--uc-radius); padding:1rem 1.25rem; margin-bottom:.75rem }
+.strategy-block h6 { font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; margin-bottom:.5rem }
+.sw-chip-wrap { display:flex; flex-direction:column; gap:.5rem }
+.sw-chip { display:flex; align-items:flex-start; gap:.6rem; padding:.55rem .75rem; border-radius:8px;
+  font-size:.84rem; line-height:1.4 }
+.sw-chip i { font-size:.9rem; margin-top:.1rem; flex-shrink:0 }
+.sw-bad { background:color-mix(in srgb, var(--bad) 6%, transparent); border:1px solid color-mix(in srgb, var(--bad) 15%, transparent) }
+.sw-bad i { color:var(--uc-red) }
+.sw-good { background:color-mix(in srgb, var(--ok) 6%, transparent); border:1px solid color-mix(in srgb, var(--ok) 20%, transparent) }
+.sw-good i { color:var(--uc-green) }
+.plan-block { border-left:3px solid var(--uc-green); padding:.25rem 0 .25rem 1rem; margin-bottom:1rem }
+.plan-block:last-child { margin-bottom:0 }
+.mini-player { background:var(--uc-card-bg); border:1px solid var(--uc-card-border); border-radius:10px;
+  padding:.65rem .9rem; height:100% }
+.mini-skill-bar { height:5px; border-radius:3px; overflow:hidden; background:var(--uc-gray-100); margin-top:.3rem }
+.mini-skill-fill { height:100%; border-radius:3px; background:var(--club-ink) }
+.clip-thumb { background:var(--uc-gray-800); border-radius:8px; overflow:hidden; position:relative; aspect-ratio:16/9; display:block }
+.clip-thumb img { width:100%; height:100%; object-fit:cover; opacity:.85 }
+.clip-type-badge { position:absolute; top:.4rem; left:.4rem; font-size:.65rem; font-weight:700; padding:.15rem .5rem;
+  border-radius:20px; text-transform:capitalize; color:#fff; background:rgba(0,0,0,.6) }
+.qa-list-btn { display:flex; align-items:center; gap:.65rem; padding:.6rem .8rem; border-radius:8px; font-size:.875rem;
+  font-weight:600; color:var(--uc-gray-800); text-decoration:none; border:1px solid var(--uc-card-border);
+  background:var(--uc-card-bg); transition:all .15s; width:100%; text-align:left }
+.qa-list-btn:hover { border-color:var(--uc-blue); color:var(--uc-blue); background:color-mix(in srgb, var(--club-ink) 4%, transparent) }
+.qa-list-btn i { font-size:1rem; flex-shrink:0 }
+.info-row { display:flex; justify-content:space-between; gap:1rem; padding:.3rem 0; border-bottom:1px solid var(--uc-gray-100) }
+.info-row:last-child { border-bottom:none }
+.info-row > span:first-child { color:var(--uc-gray-400) }
+.result-w { color:var(--uc-green); font-weight:700 }
+.result-l { color:var(--uc-red); font-weight:700 }
+.kp-line { padding:.6rem 0; border-bottom:1px solid var(--uc-gray-100) }
+.kp-line:last-child { border-bottom:none }
+.kp-them { display:flex; flex-wrap:wrap; align-items:center; gap:.3rem; font-size:.95rem }
+.kp-type { font-size:.7rem; font-weight:600; padding:.1rem .45rem; border-radius:6px;
+  background:color-mix(in srgb, var(--bad) 10%, transparent); color:var(--uc-red) }
+.kp-note { font-size:.85rem; color:var(--uc-gray-600); margin-top:.2rem }
+.kp-ours { font-size:.85rem; margin-top:.25rem; color:var(--uc-gray-800) }
+.kp-ours .bi-arrow-return-right { color:var(--uc-green) }
+.kp-why { font-size:.72rem; color:var(--uc-green); margin-left:.35rem }
+.mu-line { padding:.45rem 0; border-bottom:1px solid var(--uc-gray-100) }
+.mu-line:last-of-type { border-bottom:none }
+.mu-pair { display:flex; flex-wrap:wrap; align-items:center; gap:.4rem; font-size:.9rem }
+.mu-why { display:flex; flex-wrap:wrap; gap:.25rem; margin-top:.25rem }
+.mu-why span { font-size:.72rem; color:var(--uc-green); background:color-mix(in srgb, var(--ok) 10%, transparent);
+  border-radius:6px; padding:.1rem .45rem }
+.record-line { font-size:.85rem; color:var(--uc-gray-600); margin:.15rem 0 .35rem }
+.section-bar { position:sticky; top:var(--nav-h, 60px); z-index:1020; display:flex; margin:0 calc(var(--bs-gutter-x, 1.5rem) * -.5) 1rem;
+  background:var(--bg, var(--uc-gray-50)); border-bottom:1px solid var(--uc-card-border) }
+.section-bar { overflow-x:auto; scrollbar-width:none }
+.section-bar::-webkit-scrollbar { display:none }
+.section-bar a { flex:1 0 auto; text-align:center; padding:.7rem .6rem; font-size:.85rem; font-weight:600; white-space:nowrap;
+  color:var(--uc-gray-600); text-decoration:none; border-bottom:2px solid transparent }
+.section-bar a.active { color:var(--uc-gray-800); border-bottom-color:var(--club-ink) }
+.section-bar a span { font-size:.7rem; color:var(--uc-gray-400) }
+.offcanvas.quick-note { --bs-offcanvas-height:auto; height:auto; max-height:85vh; border-radius:16px 16px 0 0 }
+.btn.look-toggle { border:1px solid transparent; --bs-btn-color:currentColor; --bs-btn-hover-color:currentColor;
+  --bs-btn-active-color:currentColor }
+.btn.look-o { --bs-btn-bg:color-mix(in srgb, var(--club-ink) 10%, transparent); --bs-btn-hover-bg:var(--bs-btn-bg);
+  --bs-btn-active-bg:var(--bs-btn-bg); color:var(--uc-blue) }
+.btn.look-d { --bs-btn-bg:color-mix(in srgb, var(--bad) 10%, transparent); --bs-btn-hover-bg:var(--bs-btn-bg);
+  --bs-btn-active-bg:var(--bs-btn-bg); color:var(--uc-red) }
+.look-toggle.on { border-color:currentColor; font-weight:700 }
+.look-toggle.on::before { content:'\F26E'; font-family:'bootstrap-icons'; margin-right:.25rem }
+@media print {
+  .uc-navbar, .footer, .no-print, .btn, form { display:none !important }
+  .card { break-inside:avoid; border:1px solid #ccc !important; box-shadow:none !important }
+  .col-lg-8, .col-lg-4 { width:100% !important }
+}
