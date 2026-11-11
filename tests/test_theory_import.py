@@ -176,16 +176,16 @@ def test_herd_cards_file(app, teams):
     with open(HERD_CARDS, encoding='utf-8') as f:
         sections = parse_cards(f.read())['sections']
     numbers = {s['name']: [t['number'] for t in s['topics'] if t['number']] for s in sections}
-    assert numbers == {'Start here': [1, 2, 3], 'Throw and catch': [4, 5, 6, 7, 8, 41, 42, 9],
-                       'Get open': [10, 11, 12, 13, 14, 43], 'Handle and reset': list(range(15, 20)),
-                       'Defend': [20, 44, 21, 22, 23, 24, 25, 26], 'Herd systems': list(range(27, 35)),
-                       'Compete': list(range(35, 41))}
+    assert numbers == {'Start here': [1, 2, 3], 'Throw and catch': list(range(4, 14)),
+                       'Get open': list(range(14, 21)), 'Handle and reset': list(range(21, 27)),
+                       'Defend': list(range(27, 35)), 'Herd systems': list(range(35, 44)),
+                       'Compete': list(range(44, 50))}
     # The GRUT technique cards carry their videos, and the line isn't left in the text
     by_number = {t['number']: t for s in sections for t in s['topics']}
-    assert by_number[43]['videos'] == [
+    assert by_number[20]['videos'] == [
         ('Deep box-out (GRUT)', 'https://www.youtube.com/watch?v=2mc9OVdpwMs'),
         ('Find the body (GRUT)', 'https://www.youtube.com/watch?v=GAXfWzZi7c8')]
-    assert '**Videos:**' not in by_number[43]['content'] and by_number[8]['videos'] == []
+    assert '**Videos:**' not in by_number[20]['content'] and by_number[9]['videos'] == []
     cards = [t for s in sections for t in s['topics'] if t['number']]
     assert cards[0]['name'] == 'The Herd Way: five habits, three jobs, one language'
     assert all('**Why it matters.**' in t['content'] and '**Source:**' in t['content'] for t in cards)
@@ -254,13 +254,13 @@ def test_command(app, teams):
     runner = app.test_cli_runner()
     result = runner.invoke(args=['import-theory', HERD_CARDS, '--team', 'herd-2028', '--dry-run'])
     assert result.exit_code == 0, result.output
-    assert 'new cards (drafts): 45' in result.output and layout(teams['team']) == {}
+    assert 'new cards (drafts): 52' in result.output and layout(teams['team']) == {}
     result = runner.invoke(args=['import-theory', HERD_CARDS, '--team', 'herd-2028'])
     assert result.exit_code == 0, result.output
     sections = layout(teams['team'])
-    assert len(sections) == 7 and sum(map(len, sections.values())) == 45 and layout(teams['other']) == {}
+    assert len(sections) == 7 and sum(map(len, sections.values())) == 52 and layout(teams['other']) == {}
     result = runner.invoke(args=['import-theory', HERD_CARDS, '--team', 'herd-2028'])
-    assert 'new cards (drafts): 0' in result.output and 'left as edited: 45' in result.output
+    assert 'new cards (drafts): 0' in result.output and 'left as edited: 52' in result.output
 
 
 def test_herd_first_upload_then_sectioned_file(app, teams):
@@ -278,7 +278,7 @@ def test_herd_first_upload_then_sectioned_file(app, teams):
     sections = layout(teams['team'])
     assert list(sections) == ['Start here', 'Throw and catch', 'Get open', 'Handle and reset', 'Defend',
                               'Herd systems', 'Compete']
-    assert len(report.moved) == 45 and report.created == [] and report.sections_removed == ['Herd Theory Cards']
+    assert len(report.moved) == 52 and report.created == [] and report.sections_removed == ['Herd Theory Cards']
     assert sections['Start here'][0] == 'How to use these cards'
     assert sections['Compete'][-1] == 'Scouting and game plans'
 

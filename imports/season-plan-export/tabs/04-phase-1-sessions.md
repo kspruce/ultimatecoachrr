@@ -304,7 +304,7 @@ Each week lists three learning points, a timed joint session and both split sess
 
 - "Throw to space" is the root of retention: a receiver running into space is easier to hit than a static one (DK 9.12).
 - Hucks: give one cue at a time and count discs landing in the box (UAP Backhand hucks, box hucking drill).
-- Homework: publish theory Cards 41 and 42 (backhand and forehand huck, with GRUT's videos) for players to watch before week 28.
+- Huck homework comes over the Christmas break: theory Cards 10 and 11 (backhand and forehand huck, with GRUT's videos) go out in weeks 12 and 13, for players to watch before week 28.
 - Vert from the back is the 2s' default offence this year; keep it simple: one cutter, one clear.
 
 **From the Herd notebook**
@@ -390,7 +390,7 @@ Each week lists three learning points, a timed joint session and both split sess
 | Time | Activity | How it runs | Source |
 | --- | --- | --- | --- |
 | 0:00 | Warm-up | Fast feet and replacement hops added to the usual warm-up | UAP Marking (Wiseman) |
-| 0:20 | Marking with intensity | 3-person drill (thrower, mark, receiver): the thrower names their favourite throw and the mark takes it away, one side at a time; the thrower rates the mark's intensity 1-3 (theory Card 44) | GRUT; Flik |
+| 0:20 | Marking with intensity | 3-person drill (thrower, mark, receiver): the thrower names their favourite throw and the mark takes it away, one side at a time; the thrower rates the mark's intensity 1-3 (theory Card 27) | GRUT; Flik |
 | 0:40 | Tag Prestall | Game where the mark must tag the thrower's shoulder before stalling | IF |
 | 1:00 | Base hold, hop into base, 5 m side shuffle with pause and reach; marker movement with hands clasped, ten touches then swap (Herd's own version: HN Practice Sessions 3, Forcing the disc) | Progression from static to moving | UAP Marking wk 1; Flik L4 Lesson 7 |
 | 1:15 | Four-person break force, then break force elimination | Marks lose a life for each break given up | DK 8.22, 9.20 |

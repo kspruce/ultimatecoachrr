@@ -85,7 +85,7 @@ The playbook is built through test events, with an event loop: light event weeks
 | --- | --- |
 | IF | Blocks Only with a zone, Asymmetric defence (25); long- and short-throw bonus points (28); mixed team games at Herdlodge (29); Break-Throw Bonus Point (32); Help the Helper (33); Shot Clock, minimum time, Target Number of Passes (34) |
 | Flik | Arrowhead walk-through and zone reps by wind call (25); bucket swings, endzone offence (27); controller mini 3v3, pop passes, 3v2, bucket and swing against a 2-3-2 (27); ho deep shots, back of the stack goes deep from vert (28); line-trap game, arrowhead, pulls in wind, safe vert in wind (30); pulling and pull chase (31); disruptive poaching (32); El Rondo (27, 33); hammer criteria, deep cutters drag the deeps, upfield dump, offset lateral cuts (34) |
-| GRUT | Read-the-defender hucking (1s) (28); Breakside flow refresher (32). Theory Cards 41-43 back up weeks 25 and 28 |
+| GRUT | Read-the-defender hucking (1s) (28); Breakside flow refresher (32). Theory Cards 10, 11 and 20 back up weeks 25 and 28 |
 | HN | Updog, boxing out, Bull zone refresh, CRUMBLE transitions (25); box hucking, dishy huck, deep-cut timing, vert deep-cut pull play (28); values workshop, season goals, spirit session (29); throwing in all directions of wind, upwind-downwind 7v7 (30); box give-and-go, 3v3 possession, pull play into the dominator (32); 7v6 against a stronger offence (33); game-plan scrimmage, "what if" scrimmage (35-36) |
 | BFD | Plans A and B (31, 36); 4v4 continuous (most weeks) |
 | DK | Throwing in wind, low upwind throws (30) |
@@ -135,7 +135,7 @@ Nine short drills from GRUT, the Amsterdam women's team that won silver at WUCC 
 | Leading pass drill (GRUT) | Continuous dish and upline; calling "in front" or "behind" | 16 (2s) |
 | Read-the-defender hucking (GRUT) | Choosing the huck from the deep defender's position | 28 (1s) |
 
-Four more GRUT videos are technique and habits rather than drills, so they are theory cards with the video under Watch: Card 41 (backhand huck) and Card 42 (forehand huck) for week 28, Card 43 (winning the deep ball: box out, find the body) for week 25, and Card 44 (marking habits) for weeks 7 and 39.
+Four more GRUT videos are technique and habits rather than drills, so they sit on theory cards with the video under Watch: Card 10 (backhand huck) and Card 11 (forehand huck) for week 28, Card 20 (winning the deep ball: box out, find the body) for week 25, and Card 27 (our marks, which includes GRUT's three marking habits) for weeks 7 and 39.
 
 The drills also appear in the Phase 3 fix menu (drops, breaks, hucks). The drills are in `imports/drills/grut-drills.json`; import them with `flask import-season` before re-importing the plan, so the sessions link to them.
 
