@@ -36,12 +36,18 @@ def run_jobs(app, daily=True):
         # Not in the middle of the night; each tournament is reminded once
         return send_due_reminders()[1] if datetime.now().hour >= 9 else 0
 
+    def coach_summaries():
+        # In the daytime; each coach gets at most one a day
+        from app.utils.coach_summary import send_due
+        return send_due() if 8 <= datetime.now().hour < 20 else 0
+
     out = {}
     with app.app_context():
         for name, job in (('dates', extend_all if daily else None), ('reminded', send_all),
                           ('week posts', lambda: len(due_week_posts())),
                           ('tournament reminders', tournament_reminders),
-                          ('getting-started emails', send_nudges if daily else None)):
+                          ('getting-started emails', send_nudges if daily else None),
+                          ('coach summaries', coach_summaries)):
             if job is None:
                 continue
             try:

@@ -65,6 +65,9 @@ class User(UserMixin, db.Model):
     calendar_token = db.Column(db.String(64), nullable=True, unique=True)
     # Emails about tournaments: reply reminders, selection, game schedules
     email_event_updates = db.Column(db.Boolean, nullable=False, default=True, server_default=db.true())
+    # Coaches: an email when something new is waiting on them
+    # (app/utils/coach_summary.py). Off unless they turn it on.
+    email_coach_summary = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
 
     # Home team: where they land after logging in. Every team they belong
     # to, this one included, has a TeamMembership row.

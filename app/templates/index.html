@@ -3,7 +3,7 @@
 {% set uc_full_hero = true %}
 
 {% block styles %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/index.css') }}?v=1">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/index.css') }}?v=2">
 {% endblock %}
 
 {# ─── Values used across the page ─────────────────────────── #}
@@ -369,6 +369,21 @@
   </div>
 </div>
 
+{# ══════════ QUICK ADD (coaches) ══════════ #}
+{% if coach_view and not current_user.is_guest %}
+<div class="dropup quick-add">
+  <button type="button" class="quick-add-btn" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Add something new">
+    <i class="bi bi-plus-lg" aria-hidden="true"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    {% if sessions_on %}<li><a class="dropdown-item" href="{{ url_for('session.add_session') }}"><i class="bi bi-clipboard-plus" aria-hidden="true"></i> Session</a></li>{% endif %}
+    <li><a class="dropdown-item" href="{{ url_for('game.add') }}"><i class="bi bi-trophy" aria-hidden="true"></i> Game</a></li>
+    <li><a class="dropdown-item" href="{{ url_for('tournament.add') }}"><i class="bi bi-flag" aria-hidden="true"></i> Tournament</a></li>
+    <li><a class="dropdown-item" href="{{ url_for('team.add_player') }}"><i class="bi bi-person-plus" aria-hidden="true"></i> Player</a></li>
+    <li><a class="dropdown-item" href="{{ url_for('feedback.hub') }}"><i class="bi bi-chat-square-text" aria-hidden="true"></i> Feedback note</a></li>
+  </ul>
+</div>
+{% endif %}
 {% else %}
 {# ══════════ LOGGED OUT ══════════ #}
 <section class="welcome">
