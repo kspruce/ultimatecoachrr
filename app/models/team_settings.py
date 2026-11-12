@@ -58,6 +58,10 @@ class TeamSettings(db.Model):
     # leaders only, switched on per team
     leadership_handbook_enabled = db.Column(db.Boolean, default=False, server_default=sa.false(), nullable=False)
 
+    # Off by default: training attendance, games played and rating beside
+    # each name on a tournament's squad table (app/utils/selection.py)
+    selection_stats_enabled = db.Column(db.Boolean, default=False, server_default=sa.false(), nullable=False)
+
     # Team colours (#RRGGBB); empty means the default Ultimate Coach colours
     primary_color = db.Column(db.String(7))
     accent_color = db.Column(db.String(7))

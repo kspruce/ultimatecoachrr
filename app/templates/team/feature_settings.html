@@ -45,6 +45,17 @@
         {% endfor %}
       </div>
       {% endfor %}
+      <div class="fs-card" id="selection">
+        <h3>Picking squads</h3>
+        <label class="fs-row" for="selection_stats_enabled">
+          <div><b>Numbers on the squad table</b><span>Show each player's training attendance, games played and rating
+            beside their name when you pick a tournament squad. Off unless you turn it on.</span>
+            <span class="fs-meta">Coaches only · players never see this table</span></div>
+          <div class="form-check form-switch m-0">
+            <input class="form-check-input" type="checkbox" id="selection_stats_enabled" name="selection_stats_enabled" {% if team.settings.selection_stats_enabled %}checked{% endif %}>
+          </div>
+        </label>
+      </div>
       <div class="d-flex justify-content-end">
         <button type="submit" class="btn btn-primary">Save changes</button>
       </div>

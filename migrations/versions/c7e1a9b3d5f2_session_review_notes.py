@@ -1,6 +1,6 @@
 """Coaches' "how it went" note on a session
 
-Revision ID: a1c3e5f7b9d2
+Revision ID: c7e1a9b3d5f2
 Revises: f7a2c9d1e4b6
 Create Date: 2026-11-12
 
@@ -9,7 +9,7 @@ from alembic import op
 import sqlalchemy as sa
 
 
-revision = 'a1c3e5f7b9d2'
+revision = 'c7e1a9b3d5f2'
 down_revision = 'f7a2c9d1e4b6'
 branch_labels = None
 depends_on = None
