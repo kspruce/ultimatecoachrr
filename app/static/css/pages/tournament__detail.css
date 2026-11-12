@@ -33,3 +33,19 @@
   .squad-table .hide-sm { display:none; }
   .squad-table .pick-group .btn { padding:.35rem .5rem; }
 }
+
+/* The opt-in numbers on the squad table */
+.squad-table .num { text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums; }
+.squad-table .num small { color:var(--ink-3); }
+.squad-table .js-sort { border:0; background:transparent; padding:0; font:inherit; font-weight:inherit; color:inherit; text-decoration:underline dotted; text-underline-offset:3px; }
+.squad-table .js-sort.on { color:var(--club-ink); text-decoration:underline; }
+.squad-table .js-sort.on::after { content:' ↓'; }
+.squad-table .show-sm { display:none; }
+@media (max-width: 767.98px) { .squad-table .show-sm { display:block; } }
+/* In / Res / Out stay side by side on a phone (session_styles.css stacks button groups) */
+@media (max-width: 768px) {
+  .squad-table .pick-group { flex-direction:row; flex-wrap:nowrap; width:auto; }
+  .squad-table .pick-group .btn { margin:0; width:auto; border-radius:0 !important; }
+  .squad-table .pick-group .btn:first-of-type { border-top-left-radius:999px !important; border-bottom-left-radius:999px !important; }
+  .squad-table .pick-group .btn:last-of-type { border-top-right-radius:999px !important; border-bottom-right-radius:999px !important; }
+}

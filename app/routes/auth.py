@@ -742,6 +742,8 @@ def account():
         action = request.form.get('action')
         if action == 'notifications':  # not sensitive: no password needed
             current_user.email_event_updates = bool(request.form.get('email_event_updates'))
+            if current_user.is_coach:
+                current_user.email_coach_summary = bool(request.form.get('email_coach_summary'))
             db.session.commit()
             flash('Email preferences saved.', 'success')
             return redirect(url_for('auth.account'))

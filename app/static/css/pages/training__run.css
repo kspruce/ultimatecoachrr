@@ -1,0 +1,29 @@
+/* Run mode: one block of the session at a time, on a phone on the pitch */
+.run { max-width: 720px; }
+.run-top { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-bottom: .75rem; }
+.run-where { text-align: center; min-width: 0; line-height: 1.25; }
+.run-where b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.run-where span { color: var(--ink-3); font-size: .85rem; }
+.run-progress { height: 6px; background: var(--sunken); border-radius: 999px; overflow: hidden; margin-bottom: .75rem; }
+.run-progress i { display: block; height: 100%; background: var(--club); transition: width .2s; }
+.run-now { text-align: center; }
+.run-now h1 { font-size: clamp(1.5rem, 6vw, 2.2rem); margin: .2rem 0 .4rem; overflow-wrap: anywhere; }
+.run-clock { font-size: clamp(3.5rem, 20vw, 6rem); font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; color: var(--ink); }
+.run-clock.over { color: var(--bad); }
+.run-clock-note { color: var(--ink-3); font-size: .9rem; margin: .25rem 0 1rem; min-height: 1.3em; }
+.run-buttons { display: flex; justify-content: center; gap: .5rem; margin-bottom: 1rem; }
+.run-buttons .btn { min-height: 3rem; min-width: 3rem; font-size: 1.1rem; }
+.run-buttons .run-go { flex: 1 1 auto; max-width: 14rem; font-weight: 700; }
+.run-cue { text-align: left; background: var(--club-soft); color: var(--club-ink); border-radius: var(--radius); padding: .75rem .9rem; margin-bottom: .75rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.run-cue b { display: block; font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; margin-bottom: .2rem; }
+.run-text { text-align: left; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 1.02rem; margin-bottom: .5rem; }
+.run-notes { color: var(--ink-2); font-size: .92rem; }
+.run-list { list-style: none; margin: 0 0 .5rem; padding: 0; counter-reset: block; }
+.run-list li { border-top: 1px solid var(--rule); counter-increment: block; }
+.run-list li:first-child { border-top: 0; }
+.run-list button { display: flex; justify-content: space-between; align-items: center; gap: .75rem; width: 100%; border: 0; background: transparent; color: var(--ink); padding: .65rem .25rem; text-align: left; min-height: 2.75rem; }
+.run-list button span::before { content: counter(block) '. '; color: var(--ink-3); }
+.run-list small { color: var(--ink-3); white-space: nowrap; }
+.run-list li.on button { font-weight: 700; color: var(--club-ink); }
+.run-list li.done button span { text-decoration: line-through; color: var(--ink-3); }
+.run-list button:focus-visible { outline: 2px solid var(--club); outline-offset: -2px; }

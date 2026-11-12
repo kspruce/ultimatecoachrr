@@ -30,6 +30,8 @@ from app.utils.team_filter import get_current_team_id, team_player_ids, team_row
 from app.utils.season import (current_season, get_or_create_season, label_year, scope_tournaments, season_for_date,
                               team_seasons, team_squads, viewing_season, viewing_squad)
 
+from app.models.team_settings import TeamSettings  # noqa: E402
+
 bp = Blueprint('tournament', __name__, url_prefix='/tournaments')
 logger = logging.getLogger(__name__)
 
@@ -131,6 +133,18 @@ def _hub_context(tournament):
     if current_user.is_coach:
         ctx['rows'] = rows
         ctx['picked'] = rsvps.picked_players(tournament)
+        ctx['numbers'] = None
+        settings = TeamSettings.query.filter_by(team_id=tournament.team_organization_id).first()
+        if settings is not None and settings.selection_stats_enabled:
+            from app.utils import selection
+            ctx['show_rating'] = settings.stats_enabled is not False
+            try:
+                ctx['numbers'] = selection.numbers(tournament, [r['player'] for r in rows],
+                                                   with_ratings=ctx['show_rating'])
+            except Exception:
+                # The squad table still has to work if a stats sum goes wrong
+                logger.exception('Could not work out the selection numbers')
+                db.session.rollback()
         game_ids = [g.id for g in games]
         assigned = {}
         for gp in (GamePlayer.query.filter(GamePlayer.game_id.in_(game_ids)).all() if game_ids else []):

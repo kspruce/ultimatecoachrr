@@ -2,7 +2,7 @@
 
 {% block styles %}
 {{ super() }}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/tournament__detail.css') }}?v=1">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/tournament__detail.css') }}?v=2">
 {% endblock %}
 
 {% block content %}
@@ -201,17 +201,28 @@
   <div class="th-card p-0">
     <div class="table-responsive">
       <table class="table squad-table mb-0">
-        <thead><tr><th>Player</th><th>Answer</th><th class="hide-sm">Note</th><th>Pick</th></tr></thead>
+        <thead><tr>
+          <th>Player</th><th>Answer</th>
+          {% if numbers %}
+          <th class="hide-sm num"><button type="button" class="js-sort" data-sort="attendance" title="Sessions attended this season, of those with a register taken">Trained</button></th>
+          <th class="hide-sm num"><button type="button" class="js-sort" data-sort="games" title="Games played this season">Games</button></th>
+          {% if show_rating %}<th class="hide-sm num"><button type="button" class="js-sort" data-sort="per" title="Player Efficiency Rating this season (players with enough recorded points)">PER</button></th>{% endif %}
+          {% endif %}
+          <th class="hide-sm">Note</th><th>Pick</th>
+        </tr></thead>
         <tbody>
           {% for row in rows %}
           {% set r = row.rsvp %}{% set p = row.player %}
           {% set answer = r.status if r and r.status else 'no_reply' %}
           {% set sel = r.selection if r else none %}
           <tr class="squad-row {% if sel == 'picked' %}is-picked{% elif sel == 'reserve' %}is-reserve{% endif %}"
-              data-answer="{{ answer }}" data-selection="{{ sel or '' }}" data-player-id="{{ p.id }}" data-name="{{ p.name }}">
+              data-answer="{{ answer }}" data-selection="{{ sel or '' }}" data-player-id="{{ p.id }}" data-name="{{ p.name }}"
+              {% set n = numbers[p.id] if numbers else none %}
+              {% if n %}data-attendance="{{ n.attendance if n.attendance is not none else -1 }}" data-games="{{ n.games }}" data-per="{{ n.per if n.per is not none else -999 }}"{% endif %}>
             <td>
               <a href="{{ url_for('team.player_detail', player_id=p.id) }}" class="fw-semibold text-decoration-none">{{ p.name }}</a>
               <div class="small text-muted">{{ (p.position or '')|capitalize }}{% if p.gender_match %} · {{ p.gender_match|capitalize }}{% endif %}{% if not p.user_account %} · <span title="No account: can't reply themselves">no account</span>{% endif %}</div>
+            {% if n %}<div class="small text-muted show-sm">{% if n.attendance is not none %}Trained {{ n.attendance }}% · {% endif %}{{ n.games }} game{{ 's' if n.games != 1 }}{% if show_rating and n.per is not none %} · PER {{ '%.1f'|format(n.per) }}{% endif %}</div>{% endif %}
             </td>
             <td>
               {% if r and r.status %}
@@ -219,6 +230,11 @@
               {% if r.is_late %}<span class="badge bg-light text-danger border" title="Replied after the reply-by date">late</span>{% endif %}
               {% else %}<span class="badge bg-light text-muted border">No reply</span>{% endif %}
             </td>
+            {% if n %}
+            <td class="hide-sm num">{% if n.attendance is not none %}{{ n.attendance }}%<small> of {{ n.sessions }}</small>{% else %}–{% endif %}</td>
+            <td class="hide-sm num">{{ n.games }}</td>
+            {% if show_rating %}<td class="hide-sm num">{{ '%.1f'|format(n.per) if n.per is not none else '–' }}</td>{% endif %}
+            {% endif %}
             <td class="hide-sm small">{{ r.notes if r and r.notes else '' }}</td>
             <td>
               <div class="btn-group pick-group" role="group" aria-label="Pick {{ p.name }}">
@@ -230,12 +246,17 @@
             </td>
           </tr>
           {% else %}
-          <tr><td colspan="4" class="text-center text-muted py-4">Nobody on the roster for this tournament's season{% if tournament.squad %} and squad{% endif %} yet.</td></tr>
+          <tr><td colspan="7" class="text-center text-muted py-4">Nobody on the roster for this tournament's season{% if tournament.squad %} and squad{% endif %} yet.</td></tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
   </div>
+  {% if numbers %}
+  <p class="small text-muted">Trained, games{% if show_rating %} and PER{% endif %} are for this tournament's season, up to its first day. Tap a heading to sort. <a href="{{ url_for('team.feature_settings', _anchor='selection') }}">Hide these numbers</a></p>
+  {% else %}
+  <p class="small text-muted">Want training attendance and games played beside each name? <a href="{{ url_for('team.feature_settings', _anchor='selection') }}">Turn it on in team settings</a>.</p>
+  {% endif %}
   <div class="alert alert-warning d-none" id="squad-warning" role="alert"></div>
   <noscript><p class="text-danger">Picking needs JavaScript turned on.</p></noscript>
   {% endif %}
@@ -368,6 +389,19 @@
     filter = chip.dataset.filter;
     chips.forEach(c => { c.classList.toggle('btn-primary', c === chip); c.classList.toggle('btn-outline-primary', c !== chip); });
     applyFilter();
+  }));
+  // Sort by a number column: best first, then back to the usual order
+  const body = document.querySelector('.squad-table tbody');
+  const usual = body ? Array.from(body.querySelectorAll('.squad-row')) : [];
+  let sortedBy = null;
+  document.querySelectorAll('.js-sort').forEach(button => button.addEventListener('click', () => {
+    sortedBy = sortedBy === button.dataset.sort ? null : button.dataset.sort;
+    const rows = sortedBy ? usual.slice().sort((a, b) => Number(b.dataset[sortedBy]) - Number(a.dataset[sortedBy])) : usual;
+    rows.forEach(row => body.appendChild(row));
+    document.querySelectorAll('.js-sort').forEach(b => {
+      b.classList.toggle('on', b.dataset.sort === sortedBy);
+      b.closest('th').setAttribute('aria-sort', b.dataset.sort === sortedBy ? 'descending' : 'none');
+    });
   }));
   document.querySelectorAll('.js-pick').forEach(radio => radio.addEventListener('change', function () {
     const row = radio.closest('tr');

@@ -23,6 +23,18 @@
     </div>
   </div>
   {% if session.is_cancelled %}<div class="alert alert-danger">This session is cancelled.</div>{% endif %}
+  {% if last_game %}
+  <div class="tr-card" style="border-left:4px solid var(--accent)">
+    <div class="uc-eyebrow">To train, from the debrief · <a href="{{ url_for('game.detail', game_id=last_game.id, _anchor='debrief') }}">vs {{ last_game.opponent }}, {{ last_game.date.strftime('%-d %b') }}</a></div>
+    <div style="white-space:pre-wrap;overflow-wrap:anywhere">{{ last_game.debrief_train }}</div>
+  </div>
+  {% endif %}
+  {% if previous and previous.review_notes %}
+  <div class="tr-card" style="border-left:4px solid var(--club)">
+    <div class="uc-eyebrow">How it went last time · <a href="{{ url_for('session.detail', session_id=previous.id) }}">{{ previous.title }}{% if previous.date %}, {{ previous.date.strftime('%-d %b') }}{% endif %}</a></div>
+    <div style="white-space:pre-wrap;overflow-wrap:anywhere">{{ previous.review_notes }}</div>
+  </div>
+  {% endif %}
 
   <div class="pb">
     <div>

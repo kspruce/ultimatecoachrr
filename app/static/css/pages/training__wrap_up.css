@@ -1,0 +1,10 @@
+/* After a session: the register, notes and "how it went" on one page */
+.wrap-h { font-size: 1.15rem; display: flex; align-items: center; gap: .5rem; margin: 1.5rem 0 .6rem; }
+.wrap-h span { display: inline-grid; place-items: center; width: 1.7rem; height: 1.7rem; border-radius: 50%; background: var(--club); color: var(--on-club, #fff); font-size: .9rem; font-weight: 700; }
+.wrap-controls { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+.wrap-note { flex-basis: 100%; }
+.wrap-save { position: sticky; bottom: 0; padding: .75rem 0; background: linear-gradient(transparent, var(--paper, var(--card)) 30%); text-align: right; z-index: 2; }
+@media (max-width: 767.98px) {
+  .wrap-save { bottom: 4.25rem; }  /* clear of the phone tab bar */
+  .wrap-save .btn { width: 100%; }
+}

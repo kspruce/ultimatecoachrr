@@ -633,6 +633,21 @@ def _previous(session):
     return query.order_by(SessionPlan.date.desc().nullslast(), SessionPlan.id.desc()).first()
 
 
+DEBRIEF_WEEKS = 3
+
+
+def _last_debrief(session):
+    """The most recent game before this session whose debrief says what to
+    train (within a few weeks, so it's still worth acting on)."""
+    from app.models.game import Game
+    day = session.date or date.today()
+    return (Game.query.filter(Game.team_organization_id == session.team_organization_id,
+                              Game.date.isnot(None), Game.date <= day,
+                              Game.date >= day - timedelta(weeks=DEBRIEF_WEEKS),
+                              Game.debrief_train.isnot(None))
+            .order_by(Game.date.desc(), Game.id.desc()).first())
+
+
 @bp.route('/<int:session_id>/plan', methods=['GET', 'POST'])
 @login_required
 @coach_required
@@ -683,6 +698,7 @@ def plan(session_id):
         key = (p.position or 'other').lower()
         positions[key] = positions.get(key, 0) + 1
     return render_template('training/plan.html', session=session, blocks=blocks, drills=drills,
+                           last_game=_last_debrief(session),
                            templates=templates, recent=recent, previous=_previous(session), coming=coming,
                            positions=positions, week=_season_week(session),
                            component_types=SessionComponent.COMPONENT_TYPE_CHOICES)
@@ -746,3 +762,118 @@ def delete_template(template_id):
         return jsonify({'ok': True})
     flash('Template deleted.', 'success')
     return redirect(request.referrer or url_for('session.index'))
+
+
+# ── Repeat a session, run it from a phone, and wrap it up afterwards ───────
+
+@bp.route('/<int:session_id>/repeat', methods=['POST'])
+@login_required
+@coach_required
+def repeat(session_id):
+    """A copy of the session a week later (or on the date given): the same
+    details, squads and blocks, unpublished until the coach has looked it over."""
+    source = _session_or_404(session_id)
+    try:
+        when = date.fromisoformat(request.form.get('date', ''))
+    except ValueError:
+        when = (source.date + timedelta(days=7)) if source.date else None
+    copy = SessionPlan(team_organization_id=source.team_organization_id, date=when, is_published=False,
+                       schedule_id=None, status=SessionPlan.STATUS_SCHEDULED)
+    for field in ('title', 'start_time', 'end_time', 'location', 'focus_area', 'notes', 'session_type',
+                  'squad', 'aim', 'learning_points', 'key_terms', 'run_by', 'kit'):
+        setattr(copy, field, getattr(source, field))
+    copy.squads = list(source.squads)
+    db.session.add(copy)
+    db.session.flush()
+    blocks = [_block(c) for c in source.components.order_by(SessionComponent.order)]
+    for b in blocks:
+        b['id'] = None
+    save_blocks(copy, blocks)
+    db.session.flush()
+    # The plays each block works on come too
+    from app.models.playbook import Play
+    assoc = Play.play_session_component
+    new = copy.components.order_by(SessionComponent.order).all()
+    for old, fresh in zip(source.components.order_by(SessionComponent.order), new):
+        for (play_id,) in db.session.execute(db.select(assoc.c.play_id).where(assoc.c.component_id == old.id)):
+            db.session.execute(assoc.insert().values(play_id=play_id, component_id=fresh.id))
+    db.session.commit()
+    flash(f'Copied to {when.strftime("%A %-d %B") if when else "a new session"}. '
+          'Change what you need, then publish it.', 'success')
+    return redirect(url_for('training.plan', session_id=copy.id))
+
+
+@bp.route('/<int:session_id>/run')
+@login_required
+@coach_required
+def run(session_id):
+    """The plan one block at a time with a countdown, for a phone on the pitch."""
+    session = _session_or_404(session_id)
+    components = session.components.order_by(SessionComponent.order).all()
+    blocks = []
+    for c in components:
+        block = _block(c)
+        block['type_label'] = dict(SessionComponent.COMPONENT_TYPE_CHOICES).get(c.component_type, 'Block')
+        if c.saved_drill and not block['description']:
+            block['description'] = c.saved_drill.description or ''
+        block['drill_url'] = url_for('session.drill_detail', drill_id=c.drill_id) if c.drill_id else None
+        blocks.append(block)
+    return render_template('training/run.html', session=session, blocks=blocks)
+
+
+WRAP_STATUSES = ('present', 'late', 'excused', 'absent')
+
+
+@bp.route('/<int:session_id>/wrap-up', methods=['GET', 'POST'])
+@login_required
+@coach_required
+def wrap_up(session_id):
+    """After the session, on one page: who came, a note on anyone worth
+    one, and how it went."""
+    from app.models.feedback import PlayerFeedback
+    from app.models.session import Attendance
+
+    session = _session_or_404(session_id)
+    team_id = session.team_organization_id
+    records = {a.player_id: a for a in Attendance.query.filter_by(session_id=session.id)}
+    answers = rsvp.answers([session])
+    answered = {pid for (_, pid) in answers}
+    players = rsvp.expected_players(session, answered=answered | set(records))
+    others = [p for p in Player.query.filter_by(team_organization_id=team_id, active=True).order_by(Player.name)
+              if p not in players]
+
+    if request.method == 'POST':
+        notes = 0
+        for player in players + others:
+            key = f'p{player.id}'
+            status = request.form.get(key, '')
+            record = records.get(player.id)
+            if status in WRAP_STATUSES:
+                if record is None:
+                    record = Attendance(session_id=session.id, player_id=player.id, team_organization_id=team_id)
+                    db.session.add(record)
+                record.status = status
+            elif record is not None and key in request.form:
+                db.session.delete(record)
+            note = (request.form.get(f'note{player.id}') or '').strip()
+            if note:
+                db.session.add(PlayerFeedback(player_id=player.id, coach_id=current_user.id, session_id=session.id,
+                                              content=note[:5000], context_tag='General',
+                                              shared=bool(request.form.get(f'share{player.id}'))))
+                notes += 1
+        session.review_notes = (request.form.get('review_notes') or '').strip()[:10000] or None
+        db.session.commit()
+        flash('Session wrapped up' + (f': {notes} note{"s" if notes != 1 else ""} saved.' if notes else '.'),
+              'success')
+        return redirect(url_for('session.detail', session_id=session.id))
+
+    rows = []
+    for player in players:
+        answer = answers.get((session.id, player.id))
+        record = records.get(player.id)
+        status = record.status if record else ('present' if answer and answer.status == rsvp.ATTENDING else '')
+        rows.append({'player': player, 'answer': answer, 'status': status})
+    noted = dict(db.session.query(PlayerFeedback.player_id, db.func.count(PlayerFeedback.id))
+                 .filter(PlayerFeedback.session_id == session.id).group_by(PlayerFeedback.player_id).all())
+    return render_template('training/wrap_up.html', session=session, rows=rows, others=others,
+                           prefilled=not records, statuses=WRAP_STATUSES, noted=noted)

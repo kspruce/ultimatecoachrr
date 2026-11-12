@@ -15,6 +15,11 @@ class Game(db.Model):
     field = db.Column(db.String(50), nullable=True)
     youtube_link = db.Column(db.String(200), nullable=True)
     notes = db.Column(db.Text, nullable=True)
+    # The coaches' debrief afterwards (players never see it). What to train
+    # is shown again when the next session is planned.
+    debrief_worked = db.Column(db.Text, nullable=True)
+    debrief_improve = db.Column(db.Text, nullable=True)
+    debrief_train = db.Column(db.Text, nullable=True)
     # Set while the result card can be opened with a link, without signing in
     share_token = db.Column(db.String(64), nullable=True, unique=True, index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -49,6 +54,10 @@ class Game(db.Model):
     def is_played(self):
         """A game with no score yet (0-0) hasn't been played."""
         return bool((self.our_score or 0) or (self.their_score or 0))
+
+    @property
+    def has_debrief(self):
+        return bool(self.debrief_worked or self.debrief_improve or self.debrief_train)
 
     @property
     def is_win(self):

@@ -614,6 +614,7 @@ def feature_settings():
         from app.help_guide import FLAGS
         for flag in FLAGS:
             setattr(settings, flag, bool(request.form.get(flag)))
+        settings.selection_stats_enabled = bool(request.form.get('selection_stats_enabled'))
 
         db.session.commit()
         flash('Feature visibility updated.', 'success')

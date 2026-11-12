@@ -15,6 +15,10 @@ class TeamMembership(db.Model):
     team_organization_id = db.Column(db.Integer, db.ForeignKey("team_organization.id"), nullable=False)
     role = db.Column(db.String(20), default="player", nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    # The last coach summary email for this team and what it listed, so the
+    # same things aren't sent again (app/utils/coach_summary.py)
+    summary_sent_at = db.Column(db.DateTime, nullable=True)
+    summary_keys = db.Column(db.JSON, nullable=True)
 
     user = db.relationship("User", back_populates="memberships")
     team_organization = db.relationship("TeamOrganization")

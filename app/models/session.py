@@ -22,6 +22,8 @@ class SessionPlan(db.Model):
     location = db.Column(db.String(100), nullable=True)
     focus_area = db.Column(db.String(100), nullable=True)
     notes = db.Column(db.Text, nullable=True)
+    # How it went, written by the coaches afterwards (players never see it)
+    review_notes = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     share_token = db.Column(db.String(64), nullable=True, unique=True, index=True)
