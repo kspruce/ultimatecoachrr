@@ -211,3 +211,52 @@ def test_other_squads_open_sessions_are_offered_not_asked(club):
     assert '2s open training' in page and f'data-type="session" data-id="{open_session.id}"' in page
     assert f'class="ev needs" data-row="session-{open_session.id}"' not in page
     assert '1 thing needs you' in page  # just the tournament
+
+
+def test_coach_is_reminded_what_is_left_after_the_event(club):
+    from app.models.feedback import FeedbackReply, PlayerFeedback
+    from app.models.leadership import LeadershipPost
+    from app.models.session import SessionComponent
+    from app.models.team_settings import TeamSettings
+    team, coach = club['team'], User.query.filter_by(username='coach').first()
+    asker = User.query.filter_by(username='sam').first()
+    # A team that takes attendance and writes plans
+    old = SessionPlan(title='Last month', date=TODAY - timedelta(days=30), team_organization_id=team)
+    missed = SessionPlan(title='Tuesday throwing', date=TODAY - timedelta(days=2), team_organization_id=team)
+    called_off = SessionPlan(title='Rained off', date=TODAY - timedelta(days=3), status='cancelled',
+                             team_organization_id=team)
+    db.session.add_all([old, missed, called_off])
+    db.session.flush()
+    db.session.add(Attendance(session_id=old.id, player_id=club['players'][0], status='present',
+                              team_organization_id=team))
+    db.session.add(SessionComponent(session_id=old.id, title='Warm-up', order=1, component_type='warm_up'))
+    db.session.add(Game(opponent='Chevron', date=TODAY - timedelta(days=1), our_score=0, their_score=0,
+                        team_organization_id=team))
+    note = PlayerFeedback(player_id=club['players'][0], coach_id=coach.id, content='Nice marks', shared=True)
+    db.session.add(note)
+    db.session.flush()
+    db.session.add(FeedbackReply(feedback_id=note.id, user_id=asker.id, from_player=True, content='Thanks'))
+    settings = TeamSettings.query.filter_by(team_id=team).first() or TeamSettings(team_id=team)
+    settings.leadership_handbook_enabled = True
+    db.session.add(settings)
+    db.session.add(LeadershipPost(team_organization_id=team, author_id=asker.id, kind='question',
+                                  title='Where do I stand in a zone?', from_player=True))
+    db.session.commit()
+
+    page = _page(club['coach'])
+    assert 'No score yet for vs Chevron' in page
+    assert 'Attendance not taken for Tuesday throwing' in page
+    assert 'Rained off' not in page and 'Attendance not taken for Last month' not in page
+    assert 'No plan yet for Zone offence' in page
+    assert '1 reply from players to read' in page
+    assert 'sam asked: Where do I stand in a zone?' in page
+    # Players never see the coaches' list
+    assert 'No score yet' not in _page(club['player'])
+
+
+def test_teams_that_skip_attendance_and_plans_are_not_nagged(club):
+    db.session.add(SessionPlan(title='Tuesday throwing', date=TODAY - timedelta(days=2),
+                               team_organization_id=club['team']))
+    db.session.commit()
+    page = _page(club['coach'])
+    assert 'Attendance not taken' not in page and 'No plan yet' not in page

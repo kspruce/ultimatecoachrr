@@ -22,6 +22,11 @@ from app.utils.season import viewing_season, viewing_squad
 SESSION_DAYS = 14
 GAME_DAYS = 30
 COMING_UP_ROWS = 6
+# How far back the coach is reminded about a score or attendance, and how
+# close a session is before its empty plan is worth a mention
+SCORE_DAYS = 14
+ATTENDANCE_DAYS = 7
+PLAN_DAYS = 7
 
 
 def _unplayed(query):
@@ -369,6 +374,8 @@ def needs_attention(team_id, today, coming, settings=None, roster_signup=None):
                               'action_label': 'Nudge'})
             break
 
+    items += after_the_event(team_id, today, coming, settings)
+
     if roster_signup and roster_signup.get('waiting'):
         waiting = roster_signup['waiting']
         names = ', '.join(p.name for p in waiting[:4]) + (f' and {len(waiting) - 4} more' if len(waiting) > 4 else '')
@@ -377,6 +384,84 @@ def needs_attention(team_id, today, coming, settings=None, roster_signup=None):
                       'url': url_for('auth.users', _anchor='signup'),
                       'title': f'{len(waiting)} of {roster_signup["active"]} players {verb} joined yet',
                       'detail': names, 'action': None, 'action_label': None})
+    return items
+
+
+def _plain(url, title, detail, icon):
+    return {'icon': icon, 'url': url, 'title': title, 'detail': detail, 'action': None, 'action_label': None}
+
+
+def after_the_event(team_id, today, coming, settings=None):
+    """What's left over once something has happened (or is about to with
+    nothing planned): scores and attendance to fill in, the next session's
+    plan, and players waiting to hear back. The attendance and plan checks
+    only apply to teams that use those, so nobody is nagged about a part of
+    the site they've chosen not to use."""
+    from app.models.leadership import LeadershipPost
+    from app.models.session import SessionComponent
+    from app.utils import feedback as fbu
+
+    items = []
+    plural = lambda n, one, many: one if n == 1 else many  # noqa: E731
+
+    # Games that have been played but still read 0–0
+    unscored = (_unplayed(Game.query.filter(Game.team_organization_id == team_id, Game.date.isnot(None),
+                                            Game.date < today, Game.date >= today - timedelta(days=SCORE_DAYS)))
+                .order_by(Game.date.desc(), Game.id.desc()).all())
+    if len(unscored) == 1:
+        g = unscored[0]
+        items.append(_plain(url_for('game.detail', game_id=g.id), f'No score yet for vs {g.opponent}',
+                            f'Played {g.date.strftime("%a %-d %b")} · add the result so the season record is right',
+                            'bi-trophy'))
+    elif unscored:
+        names = ', '.join(f'vs {g.opponent}' for g in unscored[:3]) + ('…' if len(unscored) > 3 else '')
+        items.append(_plain(url_for('game.index'), f'{len(unscored)} played games have no score', names, 'bi-trophy'))
+
+    if _enabled(settings, 'sessions_enabled'):
+        ours = SessionPlan.team_organization_id == team_id
+        # Sessions in the last week with no attendance taken
+        if db.session.query(Attendance.id).join(SessionPlan, SessionPlan.id == Attendance.session_id) \
+                .filter(ours).first():
+            untaken = (SessionPlan.query.filter(ours, SessionPlan.date.isnot(None), SessionPlan.date < today,
+                                                SessionPlan.date >= today - timedelta(days=ATTENDANCE_DAYS),
+                                                SessionPlan.status != SessionPlan.STATUS_CANCELLED,
+                                                ~SessionPlan.attendances.any())
+                       .order_by(SessionPlan.date.desc()).all())
+            for s in untaken[:2]:
+                items.append(_plain(url_for('session.attendance', session_id=s.id),
+                                    f'Attendance not taken for {s.title}',
+                                    f'{s.date.strftime("%a %-d %b")} · tick off who came', 'bi-person-check'))
+
+        # The next session, if it's this week and has nothing in it
+        nxt = next((r for r in coming if r['type'] == 'session'), None)
+        if nxt and (nxt['day'] - today).days <= PLAN_DAYS \
+                and db.session.query(SessionComponent.id).join(SessionPlan, SessionPlan.id == SessionComponent.session_id) \
+                .filter(ours).first() \
+                and not SessionComponent.query.filter_by(session_id=nxt['id']).first():
+            items.append(_plain(url_for('training.plan', session_id=nxt['id']), f'No plan yet for {nxt["title"]}',
+                                f'{nxt["day"].strftime("%a %-d %b")} · add the drills and timings',
+                                'bi-clipboard'))
+
+    # Players who have written back about their feedback
+    replies = sum(fbu.unread_replies(team_id).values())
+    if replies:
+        items.append(_plain(url_for('feedback.focus_board'),
+                            f'{replies} {plural(replies, "reply", "replies")} from players to read',
+                            'About the feedback you shared with them', 'bi-chat-left-text'))
+
+    # Questions from players nobody has answered
+    if _enabled(settings, 'leadership_handbook_enabled') and settings is not None:
+        waiting = [p for p in LeadershipPost.query.filter_by(team_organization_id=team_id, from_player=True,
+                                                             status='open')
+                   .order_by(LeadershipPost.created_at).all() if not p.answered()]
+        if len(waiting) == 1:
+            p = waiting[0]
+            items.append(_plain(url_for('leadership.view', post_id=p.id), f'{p.author_name} asked: {p.title}',
+                                'Nobody has answered yet', 'bi-question-circle'))
+        elif waiting:
+            items.append(_plain(url_for('leadership.index', who='players'),
+                                f'{len(waiting)} questions from players are waiting',
+                                ', '.join(p.author_name for p in waiting[:4]), 'bi-question-circle'))
     return items
 
 
