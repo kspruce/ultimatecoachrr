@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Wrap up – {{ session.title }}{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/training.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/training__wrap_up.css') }}?v=1">
+{% endblock %}
+
+{% macro player_row(p, status, answer=none) %}
+{% set labels = {'present': 'Present', 'late': 'Late', 'excused': 'Excused', 'absent': 'Absent'} %}
+<div class="reg-row wrap-row">
+  <div>
+    <b>{{ p.name }}</b>
+    {% if answer %}<span class="pill pill-{{ answer.status }}">Said {{ answer.label }}{% if answer.usual %}*{% endif %}</span>{% endif %}
+    {% if noted.get(p.id) %}<span class="pill pill-none">{{ noted[p.id] }} note{{ 's' if noted[p.id] != 1 }} already</span>{% endif %}
+  </div>
+  <div class="wrap-controls">
+    <div class="reg-opts" role="radiogroup" aria-label="{{ p.name }}">
+      {% for s in statuses %}
+      <label><input type="radio" name="p{{ p.id }}" value="{{ s }}" {% if status == s %}checked{% endif %}><span class="{{ s }}">{{ labels[s] }}</span></label>
+      {% endfor %}
+      <label><input type="radio" name="p{{ p.id }}" value="" {% if not status %}checked{% endif %}><span>–</span></label>
+    </div>
+    <button type="button" class="btn btn-sm btn-outline-secondary wrap-note-btn" aria-expanded="false" aria-controls="note-{{ p.id }}"><i class="bi bi-chat-square-text" aria-hidden="true"></i> Note</button>
+  </div>
+  <div class="wrap-note" id="note-{{ p.id }}" hidden>
+    <textarea name="note{{ p.id }}" class="form-control" rows="2" maxlength="5000" placeholder="What did you see from {{ p.name.split(' ')[0] }}?" aria-label="Note about {{ p.name }}"></textarea>
+    <label class="form-check mt-1"><input type="checkbox" class="form-check-input" name="share{{ p.id }}" value="1"> <span class="form-check-label">Share it with {{ p.name.split(' ')[0] }}</span></label>
+  </div>
+</div>
+{% endmacro %}
+
+{% block content %}
+<div class="container" style="max-width:820px">
+  <div class="uc-page-header">
+    <div>
+      <div class="uc-eyebrow">Wrap up</div>
+      <h1>{{ session.title }}</h1>
+      <p>{{ session.formatted_date }}{% if session.squads %} · {{ session.squad_names }}{% endif %}</p>
+    </div>
+    <a href="{{ url_for('session.detail', session_id=session.id) }}" class="btn btn-outline-secondary">Back to session</a>
+  </div>
+
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <h2 class="wrap-h"><span>1</span> Who came?</h2>
+    {% if prefilled and rows %}
+    <p class="tr-muted">Nothing recorded yet, so everyone who said Yes starts as present. Change anyone who didn't make it.</p>
+    {% endif %}
+    <div class="tr-card">
+      {% for row in rows %}
+      {{ player_row(row.player, row.status, row.answer) }}
+      {% else %}
+      <p class="tr-muted mb-0">Nobody is on this session's squads yet.</p>
+      {% endfor %}
+    </div>
+    {% if others %}
+    <details class="tr-card">
+      <summary><b>Someone else turned up?</b> <span class="tr-muted">({{ others|length }} more players)</span></summary>
+      {% for p in others %}{{ player_row(p, '') }}{% endfor %}
+    </details>
+    {% endif %}
+    <p class="tr-muted">Tap <b>Note</b> next to anyone worth a word. Notes stay between the coaches unless you tick share.</p>
+
+    <h2 class="wrap-h"><span>2</span> How did it go?</h2>
+    <div class="tr-card">
+      <label class="form-label" for="review_notes">For the coaches: what worked, what didn't, what to come back to</label>
+      <textarea id="review_notes" name="review_notes" class="form-control" rows="4" maxlength="10000">{{ session.review_notes or '' }}</textarea>
+      <div class="tr-muted mt-1">Players never see this. It shows on the session page and when you plan the next one.</div>
+    </div>
+
+    <div class="wrap-save">
+      <button class="btn btn-primary btn-lg">Save and finish</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.querySelectorAll('.wrap-note-btn').forEach(function (button) {
+  button.addEventListener('click', function () {
+    const box = document.getElementById(button.getAttribute('aria-controls'));
+    box.hidden = !box.hidden;
+    button.setAttribute('aria-expanded', box.hidden ? 'false' : 'true');
+    if (!box.hidden) box.querySelector('textarea').focus();
+  });
+});
+</script>
+{% endblock %}

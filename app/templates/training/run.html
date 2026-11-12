@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Run – {{ session.title }}{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/training.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/training__run.css') }}?v=1">
+{% endblock %}
+
+{% block content %}
+<div class="container run" id="run" data-blocks='{{ blocks|tojson|forceescape }}'>
+  <div class="run-top">
+    <a href="{{ url_for('session.detail', session_id=session.id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left" aria-hidden="true"></i> Session</a>
+    <div class="run-where"><b>{{ session.title }}</b><span id="run-count"></span></div>
+    <a href="{{ url_for('training.wrap_up', session_id=session.id) }}" class="btn btn-sm btn-outline-primary">Wrap up</a>
+  </div>
+
+  {% if blocks %}
+  <div class="run-progress" aria-hidden="true"><i id="run-bar"></i></div>
+
+  <section class="tr-card run-now" aria-live="polite">
+    <div class="uc-eyebrow" id="run-type"></div>
+    <h1 id="run-title"></h1>
+    <div class="run-clock" id="run-clock" role="timer">–</div>
+    <div class="run-clock-note" id="run-clock-note"></div>
+    <div class="run-buttons">
+      <button type="button" class="btn btn-outline-secondary" id="run-prev" aria-label="Previous block"><i class="bi bi-chevron-left" aria-hidden="true"></i></button>
+      <button type="button" class="btn btn-primary run-go" id="run-go">Start</button>
+      <button type="button" class="btn btn-outline-secondary" id="run-reset" aria-label="Restart this block's clock"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i></button>
+      <button type="button" class="btn btn-outline-secondary" id="run-next" aria-label="Next block"><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+    </div>
+    <div class="run-cue" id="run-cue" hidden><b>Say and watch for</b><div></div></div>
+    <div class="run-text" id="run-desc" hidden></div>
+    <div class="run-text run-notes" id="run-notes" hidden></div>
+    <a class="btn btn-sm btn-outline-secondary mt-2" id="run-drill" hidden target="_blank" rel="noopener"><i class="bi bi-diagram-3" aria-hidden="true"></i> Open the drill</a>
+  </section>
+
+  <section class="tr-card">
+    <h2>The whole session</h2>
+    <ol class="run-list" id="run-list"></ol>
+    <div class="tr-muted" id="run-total"></div>
+  </section>
+  <p class="tr-muted" id="run-awake" hidden><i class="bi bi-sun" aria-hidden="true"></i> Your screen stays on while this page is open.</p>
+  {% else %}
+  <div class="tr-card text-center">
+    <p class="mb-2">This session has no plan yet.</p>
+    <a class="btn btn-primary" href="{{ url_for('training.plan', session_id=session.id) }}">Plan this session</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if blocks %}
+<script src="{{ url_for('static', filename='js/session_run.js') }}?v=1"></script>
+{% endif %}
+{% endblock %}

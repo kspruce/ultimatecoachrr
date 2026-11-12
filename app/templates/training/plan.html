@@ -23,6 +23,12 @@
     </div>
   </div>
   {% if session.is_cancelled %}<div class="alert alert-danger">This session is cancelled.</div>{% endif %}
+  {% if previous and previous.review_notes %}
+  <div class="tr-card" style="border-left:4px solid var(--club)">
+    <div class="uc-eyebrow">How it went last time · <a href="{{ url_for('session.detail', session_id=previous.id) }}">{{ previous.title }}{% if previous.date %}, {{ previous.date.strftime('%-d %b') }}{% endif %}</a></div>
+    <div style="white-space:pre-wrap;overflow-wrap:anywhere">{{ previous.review_notes }}</div>
+  </div>
+  {% endif %}
 
   <div class="pb">
     <div>

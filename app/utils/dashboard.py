@@ -428,7 +428,7 @@ def after_the_event(team_id, today, coming, settings=None):
                                                 ~SessionPlan.attendances.any())
                        .order_by(SessionPlan.date.desc()).all())
             for s in untaken[:2]:
-                items.append(_plain(url_for('session.attendance', session_id=s.id),
+                items.append(_plain(url_for('training.wrap_up', session_id=s.id),
                                     f'Attendance not taken for {s.title}',
                                     f'{s.date.strftime("%a %-d %b")} · tick off who came', 'bi-person-check'))
 
