@@ -155,7 +155,24 @@ def detail(game_id):
                          gameday_stats=gameday_stats,
                          has_positional_stats=has_positional_stats,
                          progress=analysis_progress(game),
+                         today=datetime.now().date(),
                          **game_feedback(game, game_players or all_players))
+
+DEBRIEF_FIELDS = ('debrief_worked', 'debrief_improve', 'debrief_train')
+
+
+@bp.route('/<int:game_id>/debrief', methods=['POST'])
+@login_required
+@coach_required
+def debrief(game_id):
+    """The coaches' three short answers after a game."""
+    game = Game.query.filter_by(id=game_id, team_organization_id=get_current_team_id()).first_or_404()
+    for field in DEBRIEF_FIELDS:
+        setattr(game, field, (request.form.get(field) or '').strip()[:5000] or None)
+    db.session.commit()
+    flash('Debrief saved.', 'success')
+    return redirect(url_for('game.detail', game_id=game.id, _anchor='debrief'))
+
 
 def game_feedback(game, players):
     """Coaches' notes from this game, for its page."""

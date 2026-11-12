@@ -260,3 +260,41 @@ def test_teams_that_skip_attendance_and_plans_are_not_nagged(club):
     db.session.commit()
     page = _page(club['coach'])
     assert 'Attendance not taken' not in page and 'No plan yet' not in page
+
+
+def test_game_debrief_is_saved_and_comes_back_when_planning(club):
+    from app.models.session import SessionComponent
+    team = club['team']
+    played = Game(opponent='Chevron', date=TODAY - timedelta(days=2), our_score=13, their_score=15,
+                  team_organization_id=team)
+    earlier = Game(opponent='Clapham', date=TODAY - timedelta(days=3), our_score=15, their_score=9,
+                   team_organization_id=team)
+    upcoming = Game(opponent='Hucks', date=TODAY + timedelta(days=3), our_score=0, their_score=0,
+                    team_organization_id=team)
+    db.session.add_all([played, earlier, upcoming])
+    db.session.commit()
+    played_id, upcoming_id = played.id, upcoming.id
+
+    # A team that has never written one isn't chased for it
+    assert 'No debrief yet' not in _page(club['coach'])
+    page = club['coach'].get(f'/games/{played_id}').get_data(as_text=True)
+    assert 'id="debrief"' in page and 'id="prepare"' not in page
+    assert 'id="debrief"' not in club['player'].get(f'/games/{played_id}').get_data(as_text=True)
+    # Before a game the coach gets the checklist instead
+    page = club['coach'].get(f'/games/{upcoming_id}').get_data(as_text=True)
+    assert 'id="prepare"' in page and 'Nobody is down to play yet' in page and 'id="debrief"' not in page
+
+    r = club['coach'].post(f'/games/{played_id}/debrief', data={
+        'debrief_worked': 'Zone D', 'debrief_improve': 'Red zone', 'debrief_train': 'End-zone sets'})
+    assert r.status_code == 302
+    db.session.expire_all()
+    assert db.session.get(Game, played_id).debrief_train == 'End-zone sets'
+    assert club['player'].post(f'/games/{played_id}/debrief', data={'debrief_worked': 'x'}).status_code == 302
+    db.session.expire_all()
+    assert db.session.get(Game, played_id).debrief_worked == 'Zone D'
+
+    assert 'End-zone sets' in club['coach'].get(f'/sessions/{club["session"]}/plan').get_data(as_text=True)
+    home = _page(club['coach'])
+    assert 'No debrief yet for vs Clapham' in home
+    # A game outside a tournament shows in Coming up
+    assert 'vs Hucks' in home

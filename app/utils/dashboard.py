@@ -26,6 +26,7 @@ COMING_UP_ROWS = 6
 # close a session is before its empty plan is worth a mention
 SCORE_DAYS = 14
 ATTENDANCE_DAYS = 7
+DEBRIEF_DAYS = 7
 PLAN_DAYS = 7
 
 
@@ -188,7 +189,7 @@ def coming_up(team_id, today, player=None, is_coach=False, settings=None):
         rows.append({
             'type': 'game', 'id': g.id, 'title': f'vs {g.opponent}', 'day': g.date, 'time': g.start_time,
             'url': url_for('game.detail', game_id=g.id),
-            'meta': ' · '.join(x for x in ['Game', g.field, g.location] if x),
+            'meta': ' · '.join(x for x in ['Game', g.field] if x),
             'status': None, 'usual': False, 'can_reply': False,
         })
 
@@ -416,6 +417,26 @@ def after_the_event(team_id, today, coming, settings=None):
     elif unscored:
         names = ', '.join(f'vs {g.opponent}' for g in unscored[:3]) + ('…' if len(unscored) > 3 else '')
         items.append(_plain(url_for('game.index'), f'{len(unscored)} played games have no score', names, 'bi-trophy'))
+
+    # A recent game with no debrief, for teams that write them
+    team_games = Game.query.filter(Game.team_organization_id == team_id)
+    debriefed = db.or_(Game.debrief_worked.isnot(None), Game.debrief_improve.isnot(None),
+                       Game.debrief_train.isnot(None))
+    if db.session.query(team_games.filter(debriefed).exists()).scalar():
+        waiting = (team_games.filter(Game.date.isnot(None), Game.date <= today,
+                                     Game.date >= today - timedelta(days=DEBRIEF_DAYS),
+                                     Game.our_score + Game.their_score > 0, ~debriefed)
+                   .order_by(Game.date.desc(), Game.id.desc()).all())
+        if len(waiting) == 1:
+            g = waiting[0]
+            items.append(_plain(url_for('game.detail', game_id=g.id, _anchor='debrief'),
+                                f'No debrief yet for vs {g.opponent}',
+                                f'{g.date.strftime("%a %-d %b")} · what worked, what didn\'t, what to train',
+                                'bi-journal-text'))
+        elif waiting:
+            names = ', '.join(f'vs {g.opponent}' for g in waiting[:3]) + ('…' if len(waiting) > 3 else '')
+            items.append(_plain(url_for('game.detail', game_id=waiting[0].id, _anchor='debrief'),
+                                f'{len(waiting)} games have no debrief yet', names, 'bi-journal-text'))
 
     if _enabled(settings, 'sessions_enabled'):
         ours = SessionPlan.team_organization_id == team_id

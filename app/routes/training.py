@@ -633,6 +633,21 @@ def _previous(session):
     return query.order_by(SessionPlan.date.desc().nullslast(), SessionPlan.id.desc()).first()
 
 
+DEBRIEF_WEEKS = 3
+
+
+def _last_debrief(session):
+    """The most recent game before this session whose debrief says what to
+    train (within a few weeks, so it's still worth acting on)."""
+    from app.models.game import Game
+    day = session.date or date.today()
+    return (Game.query.filter(Game.team_organization_id == session.team_organization_id,
+                              Game.date.isnot(None), Game.date <= day,
+                              Game.date >= day - timedelta(weeks=DEBRIEF_WEEKS),
+                              Game.debrief_train.isnot(None))
+            .order_by(Game.date.desc(), Game.id.desc()).first())
+
+
 @bp.route('/<int:session_id>/plan', methods=['GET', 'POST'])
 @login_required
 @coach_required
@@ -683,6 +698,7 @@ def plan(session_id):
         key = (p.position or 'other').lower()
         positions[key] = positions.get(key, 0) + 1
     return render_template('training/plan.html', session=session, blocks=blocks, drills=drills,
+                           last_game=_last_debrief(session),
                            templates=templates, recent=recent, previous=_previous(session), coming=coming,
                            positions=positions, week=_season_week(session),
                            component_types=SessionComponent.COMPONENT_TYPE_CHOICES)
