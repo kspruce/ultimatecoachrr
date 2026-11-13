@@ -29,7 +29,7 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Young+Serif&display=swap">
     {# Team colours (Team settings -> Colours & crest); theme.css builds everything else from them #}
     <style>{{ team_theme_css | default('') | safe }}</style>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}?v=6">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}?v=7">
 
     {% block styles %}{% endblock %}
 </head>
@@ -40,13 +40,15 @@
 {% set ep = request.endpoint or '' %}
 {% set in_club     = ep.startswith('team.') or ep.startswith('game.') or ep.startswith('tournament.') or ep.startswith('calendar.') or ep.startswith('roles.') %}
 {% set in_training = ep.startswith('session.') or ep.startswith('fitness.') or ep.startswith('training.') %}
-{% set in_strategy = ep.startswith('playbook.') or ep.startswith('scouting.') %}
-{% set in_theory   = ep.startswith('theory.') %}
+{% set in_strategy = ep.startswith('playbook.') or ep.startswith('scouting.') or ep.startswith('theory.') %}
 {% set in_stats    = ep.startswith('stats_dashboard.') or ep in ('gameday.team_stats', 'gameday.game_stats', 'gameday.tournament_stats') %}
 {% set in_clips    = ep.startswith('clip.') %}
 {% set in_record   = ep.startswith('gameday.') or ep == 'point.game_points' %}
 {# Shortcut for feature settings #}
 {% set ts = current_team.settings if (current_team and current_team.settings) else none %}
+{# Unread things addressed to you: badges in the account menu, a dot on the avatar and hamburger #}
+{% set my_feedback_new = unseen_feedback_count() if current_user.is_authenticated and current_user.player else 0 %}
+{% set my_answers_new = unseen_answers() if current_user.is_authenticated and my_questions_nav() else 0 %}
 
 <nav class="uc-navbar navbar navbar-expand-xl{% if team_palette is defined and team_palette.show_stripe and not uc_full_hero %} uc-has-stripe{% endif %}">
 <div class="container d-flex align-items-center gap-2">
@@ -76,6 +78,7 @@
     <button class="uc-toggler navbar-toggler" type="button"
             data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-label="Toggle navigation">
       <i class="bi bi-list" style="font-size:1.25rem"></i>
+      {% if my_feedback_new or my_answers_new %}<span class="uc-user-dot"><span class="visually-hidden">New for you</span></span>{% endif %}
     </button>
   </div>
 
@@ -85,8 +88,8 @@
     {# Main nav items #}
     <ul class="navbar-nav me-auto uc-nav-links">
 
-      {# Home #}
-      <li class="nav-item {% if ep == 'main.index' %}uc-active{% endif %}">
+      {# Home (and Record) are on the phone tab bar, so the menu leaves them out there #}
+      <li class="nav-item {% if current_user.is_authenticated and current_team %}uc-on-tabbar {% endif %}{% if ep == 'main.index' %}uc-active{% endif %}">
         <a class="nav-link" href="{{ url_for('main.index') }}">
           <i class="bi bi-house-fill"></i> Home
         </a>
@@ -94,7 +97,7 @@
 
       {# Record Stats #}
       {% if current_user.is_authenticated %}
-      <li class="nav-item {% if in_record %}uc-active{% endif %}">
+      <li class="nav-item {% if current_team and current_user.is_stat_taker and (not ts or ts.gameday_enabled) %}uc-on-tabbar {% endif %}{% if in_record %}uc-active{% endif %}">
         <a class="nav-link" href="{{ url_for('gameday.index') }}">
           <i class="bi bi-record-circle-fill"></i> Record
         </a>
@@ -141,56 +144,55 @@
         </ul>
       </li>
 
-      {# Training #}
+      {# Training: grouped into Plan / Sessions / Squad so a long menu still scans.
+         Availability goes to the player's own answers or, for coaches, the squad grid. #}
       {% set show_season_plan = ts and ts.season_plan_enabled and season_plan_nav() %}
       {% set show_handbook = ts and ts.leadership_handbook_enabled and handbook_nav() %}
-      {% if not ts or ts.sessions_enabled or ts.fitness_enabled or show_season_plan or show_handbook or programmes_nav() %}
-      {% set in_training = in_training or ep.startswith('feedback.') or ep.startswith('season_plan.') or ep.startswith('programmes.') or ep.startswith('handbook.') or ep.startswith('leadership.') or ep.startswith('questions.') %}
+      {% set sessions_on = not ts or ts.sessions_enabled %}
+      {% set fitness_on = not ts or ts.fitness_enabled %}
+      {% set is_coach = current_user.is_coach %}
+      {% set show_programmes = programmes_nav() %}
+      {% set show_plan = show_season_plan or show_programmes or (sessions_on and is_coach) %}
+      {% set show_availability = sessions_on and (is_coach or current_user.player) %}
+      {% set show_squad = show_availability or is_coach or fitness_on %}
+      {% if sessions_on or fitness_on or show_season_plan or show_handbook or show_programmes %}
+      {% set in_training = in_training or ep.startswith('feedback.') or ep.startswith('season_plan.') or ep.startswith('programmes.') or ep.startswith('handbook.') or ep.startswith('leadership.') %}
       <li class="nav-item dropdown {% if in_training %}uc-active{% endif %}">
         <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
           <i class="bi bi-lightning-charge-fill"></i> Training
         </a>
         <ul class="dropdown-menu">
+          {% if show_plan %}
+          <li><span class="dropdown-header">Plan</span></li>
           {% if show_season_plan %}
           <li><a class="dropdown-item" href="{{ url_for('season_plan.index') }}">
             <i class="bi bi-calendar-range-fill"></i> Season Plan</a></li>
           {% endif %}
-          {% if programmes_nav() %}
+          {% if show_programmes %}
           <li><a class="dropdown-item" href="{{ url_for('programmes.index') }}">
             <i class="bi bi-journal-check"></i> Programmes</a></li>
           {% endif %}
-          {% if my_questions_nav() %}
-          {% set answers = unseen_answers() %}
-          <li><a class="dropdown-item" href="{{ url_for('questions.index') }}">
-            <i class="bi bi-person-raised-hand"></i> My Questions
-            {% if answers %}<span class="badge rounded-pill bg-success ms-1">{{ answers }}</span>{% endif %}</a></li>
+          {% if sessions_on and is_coach %}
+          <li><a class="dropdown-item" href="{{ url_for('training.schedules_page') }}">
+            <i class="bi bi-calendar-week"></i> Schedule</a></li>
           {% endif %}
-          {% if current_user.is_authenticated and current_user.player %}
-          {% set unseen = unseen_feedback_count() %}
-          <li><a class="dropdown-item" href="{{ url_for('feedback.mine') }}">
-            <i class="bi bi-chat-square-heart-fill"></i> My Feedback
-            {% if unseen %}<span class="badge rounded-pill bg-success ms-1">{{ unseen }}</span>{% endif %}</a></li>
           {% endif %}
-          {% if not ts or ts.sessions_enabled %}
-          {% if current_user.is_authenticated and current_user.player %}
-          <li><a class="dropdown-item" href="{{ url_for('training.availability') }}">
-            <i class="bi bi-hand-thumbs-up-fill"></i> My Availability</a></li>
-          {% endif %}
+          {% if sessions_on %}
+          <li><span class="dropdown-header">Sessions</span></li>
           <li><a class="dropdown-item" href="{{ url_for('session.index') }}">
             <i class="bi bi-calendar-check-fill"></i> Session Plans</a></li>
-          {% if current_user.is_authenticated and current_user.is_coach %}
-          <li><a class="dropdown-item" href="{{ url_for('training.grid') }}">
-            <i class="bi bi-grid-3x3"></i> Who's Coming</a></li>
-          <li><a class="dropdown-item" href="{{ url_for('training.schedules_page') }}">
-            <i class="bi bi-calendar-week"></i> Training Schedule</a></li>
-          {% endif %}
           <li><a class="dropdown-item" href="{{ url_for('session.drills') }}">
             <i class="bi bi-clipboard2-check"></i> Drill Library</a></li>
           {% endif %}
-          {% if current_user.is_authenticated and current_user.is_coach %}
-          <li><hr class="dropdown-divider"></li>
+          {% if show_squad %}
+          <li><span class="dropdown-header">Squad</span></li>
+          {% if show_availability %}
+          <li><a class="dropdown-item" href="{{ url_for('training.grid') if is_coach else url_for('training.availability') }}">
+            <i class="bi bi-hand-thumbs-up-fill"></i> Availability</a></li>
+          {% endif %}
+          {% if is_coach %}
           <li><a class="dropdown-item" href="{{ url_for('feedback.hub') }}">
-            <i class="bi bi-chat-square-text-fill"></i> Player Feedback</a></li>
+            <i class="bi bi-chat-square-text-fill"></i> Feedback</a></li>
           {% if show_handbook %}
           {% set hub_unread = leadership_unread() %}
           <li><a class="dropdown-item" href="{{ url_for('leadership.index') }}">
@@ -198,46 +200,44 @@
             {% if hub_unread %}<span class="badge rounded-pill bg-success ms-1">{{ hub_unread }}</span>{% endif %}</a></li>
           {% endif %}
           {% endif %}
-          {% if not ts or ts.fitness_enabled %}
-          <li><hr class="dropdown-divider"></li>
+          {% if fitness_on %}
           <li><a class="dropdown-item" href="{{ url_for('fitness.index') }}">
             <i class="bi bi-heart-pulse"></i> Fitness</a></li>
           {% endif %}
+          {% endif %}
         </ul>
       </li>
       {% endif %}
 
-      {# Strategy #}
-      {% if not ts or ts.playbook_enabled or ts.scouting_enabled %}
+      {# Playbook: plays, scouting and theory together (a plain link when only one is on) #}
+      {% set playbook_items = [] %}
+      {% if not ts or ts.playbook_enabled %}{% set _ = playbook_items.append(('playbook.index', 'bi-book-fill', 'Playbook')) %}{% endif %}
+      {% if not ts or ts.scouting_enabled %}{% set _ = playbook_items.append(('scouting.index', 'bi-binoculars-fill', 'Scouting')) %}{% endif %}
+      {% if not ts or ts.theory_enabled %}{% set _ = playbook_items.append(('theory.index', 'bi-mortarboard-fill', 'Theory')) %}{% endif %}
+      {% if playbook_items|length == 1 %}
+      {% set only = playbook_items[0] %}
+      <li class="nav-item {% if in_strategy %}uc-active{% endif %}">
+        <a class="nav-link" href="{{ url_for(only[0]) }}"><i class="bi {{ only[1] }}"></i> {{ only[2] }}</a>
+      </li>
+      {% elif playbook_items %}
       <li class="nav-item dropdown {% if in_strategy %}uc-active{% endif %}">
         <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
-          <i class="bi bi-lightbulb-fill"></i> Strategy
+          <i class="bi bi-lightbulb-fill"></i> Playbook
         </a>
         <ul class="dropdown-menu">
-          {% if not ts or ts.playbook_enabled %}
-          <li><a class="dropdown-item" href="{{ url_for('playbook.index') }}">
-            <i class="bi bi-book-fill"></i> Playbook</a></li>
-          {% endif %}
-          {% if not ts or ts.scouting_enabled %}
-          <li><a class="dropdown-item" href="{{ url_for('scouting.index') }}">
-            <i class="bi bi-binoculars-fill"></i> Scouting</a></li>
-          {% endif %}
+          {% for endpoint, icon, label in playbook_items %}
+          <li><a class="dropdown-item" href="{{ url_for(endpoint) }}">
+            <i class="bi {{ icon }}"></i> {{ label }}</a></li>
+          {% endfor %}
         </ul>
       </li>
       {% endif %}
 
-      {# Theory #}
-      {% if not ts or ts.theory_enabled %}
-      <li class="nav-item {% if in_theory %}uc-active{% endif %}">
-        <a class="nav-link" href="{{ url_for('theory.index') }}">
-          <i class="bi bi-mortarboard-fill"></i> Theory
-        </a>
-      </li>
-      {% endif %}
-
-      {# Stats #}
-      {% if not ts or ts.stats_enabled %}
-      <li class="nav-item dropdown {% if in_stats %}uc-active{% endif %}">
+      {# Stats & film (games themselves live under Club) #}
+      {% set stats_on = not ts or ts.stats_enabled %}
+      {% set clips_on = not ts or ts.clip_enabled %}
+      {% if stats_on %}
+      <li class="nav-item dropdown {% if in_stats or in_clips %}uc-active{% endif %}">
         <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
           <i class="bi bi-graph-up"></i> Stats
         </a>
@@ -246,19 +246,18 @@
             <i class="bi bi-speedometer2"></i> Dashboard</a></li>
           <li><a class="dropdown-item" href="{{ url_for('stats_dashboard.team_stats') }}">
             <i class="bi bi-people"></i> Team Stats</a></li>
-          <li><a class="dropdown-item" href="{{ url_for('game.index') }}">
-            <i class="bi bi-controller"></i> Game Stats</a></li>
-          {% if current_user.is_authenticated and current_user.is_stat_taker %}
-          <li><hr class="dropdown-divider"></li>
+          {% if current_user.is_stat_taker %}
           <li><a class="dropdown-item" href="{{ url_for('gameday.team_stats') }}">
             <i class="bi bi-lightning-charge-fill"></i> Game Day summary</a></li>
           {% endif %}
+          {% if clips_on %}
+          <li><hr class="dropdown-divider"></li>
+          <li><a class="dropdown-item" href="{{ url_for('clip.index') }}">
+            <i class="bi bi-camera-video-fill"></i> Clips</a></li>
+          {% endif %}
         </ul>
       </li>
-      {% endif %}
-
-      {# Clips #}
-      {% if not ts or ts.clip_enabled %}
+      {% elif clips_on %}
       <li class="nav-item {% if in_clips %}uc-active{% endif %}">
         <a class="nav-link" href="{{ url_for('clip.index') }}">
           <i class="bi bi-camera-video-fill"></i> Clips
@@ -346,6 +345,7 @@
         <a class="uc-user-btn dropdown-toggle" href="#" data-bs-toggle="dropdown" role="button"
            aria-expanded="false" aria-label="Account menu for {{ current_user.username }}">
           <div class="uc-user-avatar">{{ current_user.username[0].upper() }}</div>
+          {% if my_feedback_new or my_answers_new %}<span class="uc-user-dot" title="Something new for you"><span class="visually-hidden">New for you</span></span>{% endif %}
           <span class="uc-user-name d-none d-md-inline">
             {{ current_user.username }}
           </span>
@@ -353,6 +353,26 @@
         </a>
 
         <ul class="dropdown-menu dropdown-menu-end uc-nav-links uc-user-menu" style="min-width:230px">
+
+          {# Things addressed to you, with their unread counts #}
+          {% if current_user.player or my_questions_nav() %}
+          <li><span class="dropdown-header">For you</span></li>
+          {% if current_user.player %}
+          <li><a class="dropdown-item" href="{{ url_for('feedback.mine') }}">
+            <i class="bi bi-chat-square-heart-fill"></i> My Feedback
+            {% if my_feedback_new %}<span class="badge rounded-pill bg-success ms-1">{{ my_feedback_new }}</span>{% endif %}</a></li>
+          {% if (not ts or ts.sessions_enabled) and current_user.is_coach %}
+          <li><a class="dropdown-item" href="{{ url_for('training.availability') }}">
+            <i class="bi bi-hand-thumbs-up-fill"></i> My Availability</a></li>
+          {% endif %}
+          {% endif %}
+          {% if my_questions_nav() %}
+          <li><a class="dropdown-item" href="{{ url_for('questions.index') }}">
+            <i class="bi bi-person-raised-hand"></i> My Questions
+            {% if my_answers_new %}<span class="badge rounded-pill bg-success ms-1">{{ my_answers_new }}</span>{% endif %}</a></li>
+          {% endif %}
+          <li><hr class="dropdown-divider"></li>
+          {% endif %}
 
           <li><a class="dropdown-item" href="{{ url_for('auth.profile') }}">
             <i class="bi bi-person-circle"></i> Profile</a></li>

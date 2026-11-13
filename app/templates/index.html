@@ -307,6 +307,14 @@
       <span class="pill">New</span>
     </div>
     {% endif %}
+    {% set new_answers = unseen_answers() if my_questions_nav() else 0 %}
+    {% if new_answers %}
+    <div class="item" id="new-answers">
+      <div class="item-ic"><i class="bi bi-person-raised-hand" aria-hidden="true"></i></div>
+      <a class="item-x" href="{{ url_for('questions.index') }}"><b>{{ new_answers }} new answer{{ 's' if new_answers != 1 }} to your questions</b><small>My Questions</small></a>
+      <span class="pill">New</span>
+    </div>
+    {% endif %}
     {% for item in learn|default([]) %}
     <div class="item">
       <div class="item-ic"><i class="bi {{ {'theory': 'bi-mortarboard', 'play': 'bi-journal-richtext'}.get(item.kind, 'bi-collection-play') }}" aria-hidden="true"></i></div>
@@ -314,7 +322,7 @@
       {% if item.pill %}<span class="pill">{{ item.pill }}</span>{% elif item.when and today and (today - item.when.date()).days <= 14 %}<span class="pill">New</span>{% else %}<span class="go" aria-hidden="true">→</span>{% endif %}
     </div>
     {% else %}
-    {% if not unseen %}<div class="empty">Nothing new from your coaches yet. Theory topics and clip playlists show up here.</div>{% endif %}
+    {% if not unseen and not new_answers %}<div class="empty">Nothing new from your coaches yet. Theory topics and clip playlists show up here.</div>{% endif %}
     {% endfor %}
   </section>
   {% endif %}

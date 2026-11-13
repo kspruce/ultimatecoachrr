@@ -135,10 +135,10 @@ FEATURES = [
     Feature('sessions', 'Session Plans', 'bi-calendar-check', "Regular training dates, who's "
             'coming, plans and attendance.', 'session.index', 'Session Plans', 'training',
             flag='sessions_enabled',
-            steps=_m('Answer under Training → My Availability, for one date or as your usual',
+            steps=_m('Answer under Training → Availability, for one date or as your usual',
                      'Published plans show what the session covers before you arrive'),
             coach_steps=_m('Set up a Training Schedule (e.g. Saturdays for everyone, Wednesdays for the 1s) and the dates appear',
-                           "Who's Coming shows everyone's answers at once; Maybes get one reminder",
+                           "Training → Availability shows everyone's answers at once; Maybes get one reminder",
                            'Build the plan from the library\'s drills, then take the register from the answers'),
             pages=('session.', 'training.')),
     Feature('drills', 'Drill Library', 'bi-clipboard2-check', 'Store and reuse drills across '
@@ -161,7 +161,7 @@ FEATURES = [
     Feature('feedback', 'Player Feedback', 'bi-chat-square-heart', "Coaches' notes on each "
             'player. They stay with the coaches until a coach shares them.', 'feedback.mine',
             'My Feedback', 'training',
-            steps=_m('Read shared notes under Training → My Feedback; new ones show on the home page',),
+            steps=_m('Read shared notes under My Feedback in your account menu; new ones show on the home page',),
             coach_endpoint='feedback.hub', coach_link_label='Player Feedback',
             coach_steps=_m('Write notes from a session (Quick Feedback), a game, a clip\'s Feedback tab or the player\'s page',
                            'Tick <em>Share with the player</em> for the ones they should read'),

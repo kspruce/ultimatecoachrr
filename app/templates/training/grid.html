@@ -13,6 +13,7 @@
       <p>Click a cell to change it: blank → Yes → Maybe → No. Faded italics are players' usual answers.</p>
     </div>
     <div class="tr-actions">
+      {% if current_user.player %}<a class="btn btn-outline-primary" href="{{ url_for('training.availability') }}"><i class="bi bi-hand-thumbs-up"></i> My availability</a>{% endif %}
       <a class="btn btn-outline-secondary" href="{{ url_for('training.grid_csv', start=start.isoformat(), weeks=weeks, squad=squad.id if squad else None) }}"><i class="bi bi-download"></i> CSV</a>
       <a class="btn btn-outline-secondary" href="{{ url_for('training.import_page') }}"><i class="bi bi-upload"></i> Import</a>
       <a class="btn btn-outline-primary" href="{{ url_for('training.schedules_page') }}"><i class="bi bi-calendar-week"></i> Schedule</a>

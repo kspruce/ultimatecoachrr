@@ -301,6 +301,13 @@ small, .small { color: inherit; }
 .uc-nav-right { display: flex; align-items: center; gap: .5rem; flex-shrink: 0; }
 .uc-user-name { max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .uc-user-chevron { font-size: .65rem; opacity: .6; margin-left: .1rem; }
+/* Something new for you (feedback, answers): a dot on the avatar and the hamburger */
+.uc-toggler, .uc-user-btn { position: relative; }
+.uc-user-dot {
+  position: absolute; top: -3px; right: -3px; width: 11px; height: 11px; border-radius: 50%;
+  background: var(--accent); border: 2px solid var(--header-bg); pointer-events: none;
+}
+.uc-user-btn .uc-user-dot { top: 0; left: 24px; right: auto; }
 /* Between 1200px and 1400px the full menu only just fits: drop the icons,
    the username next to the avatar and some padding so nothing is pushed off */
 @media (min-width: 1200px) and (max-width: 1399.98px) {
@@ -355,6 +362,17 @@ small, .small { color: inherit; }
   #navbarNav .dropdown-header { color: color-mix(in srgb, var(--on-club) 55%, transparent); }
   #navbarNav .dropdown-divider { border-color: color-mix(in srgb, var(--on-club) 14%, transparent); }
   .uc-nav-right .dropdown-menu { min-width: 0 !important; }
+  /* Sub-items sit a step below the section names, so the open menu doesn't read as one flat list */
+  #navbarNav .uc-nav-links > .nav-item > .nav-link { font-size: 1rem; }
+  #navbarNav .uc-nav-links .dropdown-item { font-size: .84rem; padding: .38rem .7rem; }
+  #navbarNav .uc-nav-links .dropdown-header { padding: .5rem .7rem .15rem; }
+}
+/* Phones: Home and Record are on the tab bar, and the open menu stops above it */
+@media (max-width: 767.98px) {
+  body:has(.uc-tabbar) #navbarNav .uc-on-tabbar { display: none; }
+  body:has(.uc-tabbar) #navbarNav.show, body:has(.uc-tabbar) #navbarNav.collapsing {
+    max-height: calc(100dvh - 64px - 60px - env(safe-area-inset-bottom, 0px));
+  }
 }
 
 /* ─── Page header ───────────────────────────────────────────────── */
