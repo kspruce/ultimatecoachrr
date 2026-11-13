@@ -1,0 +1,39 @@
+{% extends "season_plan/_layout.html" %}
+{% from "season_plan/_edit_nav.html" import edit_nav %}
+{% block sp_content %}
+<div class="uc-page-header">
+  <div>
+    <div class="sp-label">{{ plan.season }}</div>
+    <h1>Milestones</h1>
+    <p>Tests, trials, reviews and deadlines. The overview shows the next one coming up.</p>
+  </div>
+</div>
+{{ edit_nav('season_plan.milestones') }}
+
+{% macro week_select(name, value, label, blank) %}
+<select class="form-select form-select-sm" name="{{ name }}" aria-label="{{ label }}">
+  <option value="">{{ blank }}</option>
+  {% for w in plan.weeks %}<option value="{{ w.week_number }}" {{ 'selected' if value == w.week_number }}>{{ w.week_number }}{% if w.week_commencing %} · {{ w.week_commencing.strftime('%-d %b') }}{% endif %}</option>{% endfor %}
+</select>
+{% endmacro %}
+
+<form method="post" style="max-width:960px">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="sp-card sp-milestones">
+    <div class="sp-ms-row sp-ms-head sp-label d-none d-md-grid"><span>What</span><span>Week</span><span>To week</span><span>When (optional)</span><span></span></div>
+    {% set rows = plan.milestones|list %}
+    {% for i in range(rows|length + 3) %}
+    {% set m = rows[i] if i < rows|length else none %}
+    <div class="sp-ms-row">
+      <input class="form-control form-control-sm" name="what" aria-label="What" placeholder="{{ 'Add a milestone' if not m }}" value="{{ m.what if m else '' }}">
+      {{ week_select('start_week', m.start_week if m else none, 'Week', 'Week…') }}
+      {{ week_select('end_week', m.end_week if m and m.end_week != m.start_week else none, 'To week', 'To week…') }}
+      <input class="form-control form-control-sm" name="when" aria-label="When, in words" placeholder="From the weeks" value="{{ m.when_label if m and m.when_label not in ['Week ' ~ m.start_week, 'Weeks ' ~ m.start_week ~ '-' ~ m.end_week] else '' }}">
+      <div class="form-check m-0">{% if m %}<input class="form-check-input" type="checkbox" name="remove" value="{{ i }}" id="remove_{{ i }}"><label class="form-check-label small" for="remove_{{ i }}">Remove</label>{% endif %}</div>
+    </div>
+    {% endfor %}
+    <p class="form-text mb-0">Leave "When" blank to show the week numbers. Save to get more empty rows.</p>
+  </div>
+  <div class="d-flex justify-content-end mb-4"><button class="btn btn-primary" type="submit">Save milestones</button></div>
+</form>
+{% endblock %}

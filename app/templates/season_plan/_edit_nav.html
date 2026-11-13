@@ -1,0 +1,14 @@
+{# Tabs across the plan's edit pages (coaches). #}
+{% macro edit_nav(active) %}
+<nav class="sp-edit-nav" aria-label="Edit the plan">
+  {% for endpoint, label, icon in [
+      ('season_plan.settings', 'Settings', 'gear'),
+      ('season_plan.phases', 'Phases', 'bar-chart-steps'),
+      ('season_plan.milestones', 'Milestones', 'flag'),
+      ('season_plan.page_list', 'Pages', 'file-earmark-text'),
+      ('season_plan.access', 'Player access', 'eye'),
+      ('season_plan.import_sheet', 'Import / export', 'file-earmark-spreadsheet')] %}
+  <a href="{{ url_for(endpoint) }}" class="{{ 'active' if active == endpoint }}"><i class="bi bi-{{ icon }}"></i> {{ label }}</a>
+  {% endfor %}
+</nav>
+{% endmacro %}

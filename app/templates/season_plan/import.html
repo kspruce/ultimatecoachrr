@@ -1,0 +1,107 @@
+{% extends "season_plan/_layout.html" %}
+{% from "season_plan/_edit_nav.html" import edit_nav %}
+{% block sp_content %}
+<div class="uc-page-header">
+  <div>
+    <h1>Import a season plan</h1>
+    <p>Bring a plan in from a spreadsheet: one row per week, plus optional sheets for the phases and milestones. Nothing is saved until you have checked the preview.</p>
+  </div>
+</div>
+{% if plan %}{{ edit_nav('season_plan.import_sheet') }}{% endif %}
+
+<div class="sp-card" style="max-width:960px">
+  <h3>The format</h3>
+  <p class="mb-2">Sheets <b>weeks</b> (one row per week: week, week_commencing, phase, block, event, break, theme, then a column per squad with its own theme, classroom, off_pitch, session_title, session_notes), <b>phases</b> and <b>milestones</b>. Only the week column is required.</p>
+  <a class="btn btn-sm btn-primary" href="{{ url_for('season_plan.import_template_xlsx') }}"><i class="bi bi-file-earmark-excel"></i> Excel template (.xlsx)</a>
+  <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('season_plan.import_template_csv') }}"><i class="bi bi-download"></i> Weeks only (CSV)</a>
+  {% if plan %}<a class="btn btn-sm btn-outline-secondary" href="{{ url_for('season_plan.export_xlsx') }}"><i class="bi bi-box-arrow-down"></i> Export this plan (.xlsx)</a>{% endif %}
+  <p class="small sp-muted mt-2 mb-0">Exporting, editing in a spreadsheet and importing again is a quick way to change a lot of weeks at once. Importing for a season that already has a plan updates it: weeks and phases are matched on their numbers; coaches' notes, linked sessions, pages and classroom sessions are kept.</p>
+</div>
+
+{% if not parsed %}
+<form method="post" enctype="multipart/form-data" class="sp-card" style="max-width:960px">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <h3>1. Upload</h3>
+  <div class="row g-3">
+    <div class="col-md-6">
+      <label class="form-label" for="file">Spreadsheet (.xlsx), or the weeks as .csv</label>
+      <input type="file" class="form-control" id="file" name="file" accept=".csv,.xlsx" required>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label" for="season">Season</label>
+      <input class="form-control" id="season" name="season" maxlength="20" required value="{{ form.get('season', '') }}">
+    </div>
+    <div class="col-md-3">
+      <label class="form-label" for="start_date">First week</label>
+      <input class="form-control" type="date" id="start_date" name="start_date" value="{{ form.get('start_date', '') }}">
+      <div class="form-text">For weeks with no week_commencing date.</div>
+    </div>
+  </div>
+  <button class="btn btn-primary mt-3">Check it</button>
+</form>
+{% else %}
+<div class="sp-card" style="max-width:960px">
+  <h3>2. Check</h3>
+  {% if existing %}
+  <p><span class="sp-badge sp-badge-event">Updates</span> This updates <b>{{ existing.title }}</b> ({{ existing.season }}). Weeks and phases not in the spreadsheet are removed.</p>
+  {% else %}
+  <p><span class="sp-badge sp-badge-now">New</span> This creates a new plan for {{ form.get('season') or 'the season' }}{% if plan %} and shows it instead of {{ plan.title }}{% endif %}.</p>
+  {% endif %}
+  {% if parsed.errors %}
+  <p class="fw-semibold mb-1">{{ parsed.errors|length }} problem{{ 's' if parsed.errors|length != 1 }} to fix (row numbers are spreadsheet rows; the header is row 1):</p>
+  <ul>{% for e in parsed.errors %}<li>{{ e }}</li>{% endfor %}</ul>
+  {% else %}
+  <p>{{ parsed.weeks|length }} weeks{% if parsed.weeks %} ({{ parsed.weeks[0].week_commencing.strftime('%-d %b %Y') }} – {{ (parsed.weeks[-1].week_commencing).strftime('%-d %b %Y') }}){% endif %}, {{ parsed.phases|length }} phase{{ 's' if parsed.phases|length != 1 }}, {{ parsed.milestones|length }} milestone{{ 's' if parsed.milestones|length != 1 }}{% if parsed.plan.squad_names %}; squads with their own themes: {{ parsed.plan.squad_names|join(', ') }}{% endif %}.</p>
+  {% endif %}
+  {% if parsed.warnings %}<ul class="sp-muted">{% for w in parsed.warnings %}<li>{{ w }}</li>{% endfor %}</ul>{% endif %}
+
+  {% if parsed.phases %}
+  <div class="sp-label mt-3 mb-1">Phases</div>
+  <ul class="mb-2">{% for p in parsed.phases %}<li>{{ p.number }}. {{ p.name }}{% if p.start_week %} · weeks {{ p.start_week }}–{{ p.end_week }}{% endif %}</li>{% endfor %}</ul>
+  {% endif %}
+  {% if parsed.weeks %}
+  <details {{ 'open' if parsed.weeks|length <= 12 }}><summary class="sp-label">Weeks</summary>
+    <div class="table-responsive"><table class="table table-sm sp-table mt-2">
+      <thead><tr><th>Wk</th><th>w/c</th><th>Ph</th><th>Block</th><th>Theme</th>{% for q in parsed.plan.squad_names or [] %}<th>{{ q }}</th>{% endfor %}</tr></thead>
+      <tbody>{% for w in parsed.weeks %}<tr>
+        <td>{{ w.week_number }}</td><td class="text-nowrap">{{ w.week_commencing.strftime('%-d %b') if w.week_commencing }}</td><td>{{ w.phase_number or '' }}</td>
+        <td>{{ w.block or '' }}{% if w.is_event %} <span class="sp-badge sp-badge-event">Event</span>{% endif %}{% if w.is_break %} <span class="sp-badge sp-badge-break">Break</span>{% endif %}</td>
+        <td>{{ w.joint_theme or '' }}</td>{% for q in parsed.plan.squad_names or [] %}<td>{{ (w.squad_themes or {}).get(q, '') }}</td>{% endfor %}
+      </tr>{% endfor %}</tbody>
+    </table></div>
+  </details>
+  {% endif %}
+</div>
+
+<form method="post" class="sp-card" style="max-width:960px">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="filename" value="{{ form.get('filename', '') }}">
+  <h3>3. {{ 'Fix and check again' if parsed.errors else 'Import' }}</h3>
+  <div class="row g-3 mb-3">
+    <div class="col-md-6"><label class="form-label" for="title">Title</label><input class="form-control" id="title" name="title" maxlength="200" value="{{ form.get('title', '') }}"></div>
+    <div class="col-md-3"><label class="form-label" for="season">Season</label><input class="form-control" id="season" name="season" maxlength="20" value="{{ form.get('season', '') }}"></div>
+    <div class="col-md-3"><label class="form-label" for="start_date">First week</label><input class="form-control" type="date" id="start_date" name="start_date" value="{{ form.get('start_date', '') }}"></div>
+  </div>
+  <details class="mb-3" {{ 'open' if parsed.errors }}><summary>Correct the rows here</summary>
+    <p class="small sp-muted mt-2">Or fix your spreadsheet and <a href="{{ url_for('season_plan.import_sheet') }}">upload it again</a>.</p>
+    <div class="row g-3">
+      <div class="col-12"><label class="form-label small" for="weeks_csv">Weeks (CSV)</label><textarea class="form-control font-monospace small" id="weeks_csv" name="weeks_csv" rows="8">{{ form.get('weeks_csv', '') }}</textarea></div>
+      <div class="col-md-6"><label class="form-label small" for="phases_csv">Phases (CSV)</label><textarea class="form-control font-monospace small" id="phases_csv" name="phases_csv" rows="5">{{ form.get('phases_csv', '') }}</textarea></div>
+      <div class="col-md-6"><label class="form-label small" for="milestones_csv">Milestones (CSV)</label><textarea class="form-control font-monospace small" id="milestones_csv" name="milestones_csv" rows="5">{{ form.get('milestones_csv', '') }}</textarea></div>
+    </div>
+  </details>
+  {% if not parsed.errors %}
+  {% if not existing %}
+  <div class="form-check form-switch mb-3">
+    <input class="form-check-input" type="checkbox" role="switch" id="players_see" name="players_see" checked>
+    <label class="form-check-label" for="players_see">Players can see the overview, the weeks and the phases</label>
+  </div>
+  {% endif %}
+  <button class="btn btn-outline-secondary" name="recheck" value="1">Check again</button>
+  <button class="btn btn-primary" name="confirm" value="1">{{ 'Update the plan' if existing else 'Create the plan' }}</button>
+  {% else %}
+  <button class="btn btn-primary" name="recheck" value="1">Check again</button>
+  {% endif %}
+</form>
+{% endif %}
+{% endblock %}

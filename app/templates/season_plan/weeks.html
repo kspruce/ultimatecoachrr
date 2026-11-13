@@ -24,8 +24,9 @@
     <label class="form-label sp-label" for="squad">Squad</label>
     <select class="form-select form-select-sm" id="squad" name="squad" onchange="this.form.submit()">
       <option value="all" {{ 'selected' if squad == 'all' }}>All</option>
-      <option value="1s" {{ 'selected' if squad == '1s' }}>1s</option>
-      <option value="2s" {{ 'selected' if squad == '2s' }}>2s</option>
+      {% for q in plan.squads %}
+      <option value="{{ q }}" {{ 'selected' if squad == q }}>{{ q }}</option>
+      {% endfor %}
     </select>
   </div>
   {% if request.args.get('on') %}<input type="hidden" name="on" value="{{ request.args.get('on') }}">{% endif %}
@@ -45,9 +46,8 @@
   <table class="table sp-table">
     <thead>
       <tr>
-        <th>Wk</th><th>w/c</th><th>Block or event</th><th>Joint</th>
-        {% if squad in ('all', '1s') %}<th>1s</th>{% endif %}
-        {% if squad in ('all', '2s') %}<th>2s</th>{% endif %}
+        <th>Wk</th><th>w/c</th><th>Block or event</th>
+        {% for key, label in columns %}<th>{{ 'Joint' if key == 'joint' and plan.squads else label }}</th>{% endfor %}
         <th>Classroom</th><th>Off-pitch</th>
       </tr>
     </thead>
@@ -61,9 +61,7 @@
           <a href="{{ url_for('season_plan.week', number=w.week_number) }}">{{ w.block or '' }}</a>
           <div>{{ badges(w, current) }}</div>
         </td>
-        <td>{{ w.joint_theme or '' }}</td>
-        {% if squad in ('all', '1s') %}<td>{{ w.firsts_theme or '' }}</td>{% endif %}
-        {% if squad in ('all', '2s') %}<td>{{ w.seconds_theme or '' }}</td>{% endif %}
+        {% for key, _ in columns %}<td>{{ w.theme_for(key) or '' }}</td>{% endfor %}
         <td>
           {% if link_classroom and w.classroom_sessions %}
             {% for cs in w.classroom_sessions %}<a href="{{ url_for('season_plan.classroom', code=cs.code) }}">{{ w.classroom if loop.length == 1 and w.classroom else cs.code ~ ' ' ~ cs.title }}</a>{% if not loop.last %}<br>{% endif %}{% endfor %}
@@ -88,9 +86,7 @@
     </div>
     {% if w.block %}<div class="sp-muted" style="font-size:.9rem">{{ w.block }}</div>{% endif %}
     <dl>
-      {% if w.joint_theme %}<dt>Joint</dt><dd>{{ w.joint_theme }}</dd>{% endif %}
-      {% if squad in ('all', '1s') and w.firsts_theme %}<dt>1s</dt><dd>{{ w.firsts_theme }}</dd>{% endif %}
-      {% if squad in ('all', '2s') and w.seconds_theme %}<dt>2s</dt><dd>{{ w.seconds_theme }}</dd>{% endif %}
+      {% for key, label in columns %}{% set text = w.theme_for(key) %}{% if text %}<dt>{{ 'Joint' if key == 'joint' and plan.squads else label }}</dt><dd>{{ text }}</dd>{% endif %}{% endfor %}
       {% if w.classroom %}<dt>Class</dt><dd>{{ w.classroom }}</dd>{% endif %}
       {% if w.off_pitch %}<dt>Off-pitch</dt><dd>{{ w.off_pitch }}</dd>{% endif %}
     </dl>

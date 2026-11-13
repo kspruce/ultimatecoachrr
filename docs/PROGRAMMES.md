@@ -135,6 +135,19 @@ club without sprint tests or recovery tracking simply doesn't see them.
 
 To change a running programme: **Start a new draft**, edit, publish.
 
+## Starter templates
+
+Training > Programmes > **Starter templates** lists ready-made programmes
+(`app/utils/programme_starters.py`): a 10-week off-season fitness plan that
+needs no equipment (speed and agility, bodyweight strength, conditioning; a
+lighter week 5; 10 m sprint, 5-10-5 and broad jump tests in weeks 1 and 10)
+and a 6-week in-season maintenance block. They're written in the import
+format and built through the same import, so **Add** makes a draft
+programme from the chosen start date to check, change and publish.
+
+A programme can be linked to a phase of the season plan (see
+`docs/SEASON_PLAN.md`), so each week of the phase shows that week's sessions.
+
 ## Thundering Herd 2025/26
 
 `imports/programmes/thundering-herd-2025-26/` holds the plan from the

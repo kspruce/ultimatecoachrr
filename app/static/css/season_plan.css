@@ -162,3 +162,78 @@
 .sp-res-row:first-child { border-top: 0; }
 .sp-res-row .sp-res-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sp-res-row form { margin: 0; }
+
+/* Rows with a label on the left and actions on the right (also on Player access) */
+.sp-access-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .7rem 0; border-top: 1px solid var(--rule); }
+.sp-access-row:first-of-type { border-top: 0; }
+.sp-access-row b { display: block; font-weight: 700; }
+.sp-access-row span { color: var(--ink-3); font-size: .85rem; }
+
+/* Creating and editing a plan */
+.sp-edit-nav { display: flex; gap: .25rem; flex-wrap: wrap; margin: -.5rem 0 1.25rem; border-bottom: 1px solid var(--rule); }
+.sp-edit-nav a {
+  padding: .45rem .75rem; color: var(--ink-2); font-size: .88rem; font-weight: 600; text-decoration: none;
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.sp-edit-nav a:hover { color: var(--ink); }
+.sp-edit-nav a.active { color: var(--club); border-bottom-color: var(--club); }
+
+.sp-start { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.sp-start-card { display: flex; flex-direction: column; color: inherit; text-decoration: none; margin: 0; }
+.sp-start-card:hover { border-color: var(--rule-strong); color: inherit; }
+.sp-start-card > i { font-size: 1.6rem; color: var(--club); }
+.sp-start-card h3 { margin-top: .5rem; }
+.sp-start-card p { color: var(--ink-2); font-size: .92rem; flex: 1; }
+.sp-start-card .btn { align-self: flex-start; }
+.sp-start-main { border-color: var(--club); }
+
+.sp-choice { display: grid; gap: .5rem; }
+.sp-choice-item {
+  display: flex; gap: .7rem; align-items: flex-start; padding: .7rem .85rem; cursor: pointer;
+  border: 1px solid var(--rule); border-radius: var(--radius-sm);
+}
+.sp-choice-item:has(input:checked) { border-color: var(--club); background: var(--sunken); }
+.sp-choice-item .form-check-input { margin-top: .25rem; flex: none; }
+.sp-choice-item b { display: block; }
+.sp-choice-item small { color: var(--ink-3); }
+
+.sp-phase-row { display: flex; gap: .5rem; align-items: center; margin-bottom: .5rem; }
+.sp-phase-row input[name="phase_name"], .sp-phase-row input[name^="squad_"], .sp-phase-row input[name="new_squad"] { flex: 1; max-width: 26rem; }
+.sp-phase-row input[type="number"] { width: 5.5rem; flex: none; }
+
+.sp-session-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+.sp-session-grid fieldset { min-width: 0; }
+
+.sp-ms-row { display: grid; gap: .5rem; grid-template-columns: 1fr 1fr; align-items: center; padding: .6rem 0; border-top: 1px solid var(--rule); }
+.sp-ms-row > input { grid-column: 1 / -1; }
+.sp-ms-row > .form-check { grid-column: 1 / -1; }
+.sp-ms-row.sp-ms-head { border-top: 0; padding-top: 0; }
+@media (min-width: 768px) {
+  .sp-ms-row { grid-template-columns: minmax(0, 3fr) 7.5rem 7.5rem minmax(0, 1.5fr) 5.5rem; }
+}
+.sp-danger summary { color: var(--bs-danger, #b02a37); cursor: pointer; font-weight: 600; }
+
+/* The year */
+.sp-year { position: relative; }
+.sp-year-row { display: grid; grid-template-columns: 9rem minmax(0, 1fr); gap: .75rem; align-items: center; margin-bottom: .6rem; }
+.sp-year-row > b { font-size: .85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-year-lane { position: relative; height: 2.1rem; background: var(--sunken); border-radius: var(--radius-sm); }
+.sp-year-bar {
+  position: absolute; top: 0; bottom: 0; display: flex; align-items: center; padding: 0 .5rem; overflow: hidden;
+  background: var(--phase, var(--club)); color: #fff; font-size: .78rem; font-weight: 600; white-space: nowrap;
+  text-decoration: none; border-right: 2px solid var(--card); border-radius: 3px;
+}
+.sp-year-bar:hover { color: #fff; filter: brightness(1.08); }
+.sp-year-bar.sp-year-programme { background: var(--ink-2); }
+.sp-year-months { display: grid; grid-template-columns: 9rem minmax(0, 1fr); gap: .75rem; }
+.sp-year-months > div { position: relative; height: 1.2rem; font-size: .72rem; color: var(--ink-3); }
+.sp-year-months > div > span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.sp-year-months > div > span:first-child { transform: none; }
+.sp-year-today { position: absolute; top: -.3rem; bottom: -.3rem; width: 2px; background: var(--ink); pointer-events: none; }
+.sp-year-scroll { overflow-x: auto; }
+.sp-year-scroll > div { min-width: 640px; }
+.sp-programme-week { border-top: 1px solid var(--rule); padding-top: .6rem; margin-top: .6rem; }
+.sp-programme-week ul { margin: .25rem 0 0; padding-left: 1.1rem; }
+@media (min-width: 768px) {
+  .sp-ms-row > input, .sp-ms-row > .form-check { grid-column: auto; }
+}

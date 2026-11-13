@@ -9,6 +9,8 @@
 {% block content %}
 {% set sp_ep = request.endpoint or '' %}
 {% set sees_all = season_plan_sees_all() %}
+{% set EDIT_ENDPOINTS = ['season_plan.settings', 'season_plan.phases', 'season_plan.edit_phase', 'season_plan.milestones',
+                         'season_plan.page_list', 'season_plan.edit_page', 'season_plan.access', 'season_plan.import_sheet'] %}
 {% if plan %}
 <nav class="sp-subnav" aria-label="Season plan">
   {% if sees_all or plan.players_see_overview %}
@@ -28,8 +30,9 @@
   <a href="{{ url_for('season_plan.classroom_list') }}" class="{{ 'active' if sp_ep.startswith('season_plan.') and 'classroom' in sp_ep }}"><i class="bi bi-easel"></i> Classroom</a>
   {% endif %}
   {% if current_user.is_coach %}
+  <a href="{{ url_for('season_plan.year') }}" class="{{ 'active' if sp_ep == 'season_plan.year' }}"><i class="bi bi-calendar3-range"></i> The year</a>
   <a href="{{ url_for('season_plan.sessions') }}" class="{{ 'active' if sp_ep == 'season_plan.sessions' }}"><i class="bi bi-hammer"></i> Sessions</a>
-  <a href="{{ url_for('season_plan.access') }}" class="{{ 'active' if sp_ep == 'season_plan.access' }}"><i class="bi bi-eye"></i> Player access</a>
+  <a href="{{ url_for('season_plan.settings') }}" class="{{ 'active' if sp_ep in EDIT_ENDPOINTS }}"><i class="bi bi-pencil-square"></i> Edit plan</a>
   {% endif %}
 </nav>
 {% endif %}

@@ -6,7 +6,9 @@ markdown file per tab. The structured data comes from pipe tables found by
 their header row, wherever they are:
 
   Phase | Dates | Weeks | Aim | ...           -> SeasonPhase
-  Wk | w/c | Ph | Block ... | Joint ... | ...  -> SeasonWeek
+  Wk | w/c | Ph | Block ... | Joint ... | ...  -> SeasonWeek (each other
+                                                  column, e.g. "1s split", is
+                                                  a squad's theme)
   When | What                                 -> SeasonMilestone
   Area | Phase 1 | Phase 2 | ...               -> SeasonPhase.progression
 
@@ -57,7 +59,7 @@ CLASSROOM_HEADING_RE = re.compile(r'^###\s+(C(\d+))\b\s*(.*)$')
 
 LIMITS = {
     'plan.title': 200, 'plan.season': 20, 'plan.source': 200,
-    'phase.name': 100, 'phase.classroom_refs': 200,
+    'phase.name': 100, 'phase.classroom_refs': 200, 'phase.colour': 7,
     'week.block': 200, 'week.classroom': 200, 'week.session_title': 200,
     'page.slug': 100, 'page.title': 200, 'milestone.when_label': 100,
     'classroom.code': 10, 'classroom.title': 200, 'classroom.format': 100,
@@ -81,6 +83,7 @@ class ImportReport:
     removed: list = field(default_factory=list)
     warnings: list = field(default_factory=list)
     sessions: object = None  # season_sessions.BuildReport when sessions were built
+    plan_id: int = None
 
     def text(self):
         out = ['DRY RUN: nothing was written' if self.dry_run else 'Import complete']
@@ -124,19 +127,21 @@ def _split_row(line):
 
 
 def parse_tables(markdown):
-    """Every pipe table in the text: [{'header': [...], 'rows': [[...], ...],
-    'start': first line index, 'end': index after the last row}].
-    Header cells are lower-cased; body cells are raw (see clean_cell)."""
+    """Every pipe table in the text: [{'header': [...], 'raw_header': [...],
+    'rows': [[...], ...], 'start': first line index, 'end': index after the
+    last row}]. Header cells are lower-cased (raw_header keeps their case);
+    body cells are raw (see clean_cell)."""
     tables, lines, i = [], markdown.splitlines(), 0
     while i < len(lines) - 1:
         if (lines[i].lstrip().startswith('|')
                 and re.match(r'^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?\s*$', lines[i + 1])):
-            header = [(clean_cell(c) or '').lower() for c in _split_row(lines[i])]
+            raw = [clean_cell(c) or '' for c in _split_row(lines[i])]
+            header = [c.lower() for c in raw]
             start, rows, i = i, [], i + 2
             while i < len(lines) and lines[i].lstrip().startswith('|'):
                 rows.append(_split_row(lines[i]))
                 i += 1
-            tables.append({'header': header, 'rows': rows, 'start': start, 'end': i})
+            tables.append({'header': header, 'raw_header': raw, 'rows': rows, 'start': start, 'end': i})
         else:
             i += 1
     return tables
@@ -165,6 +170,32 @@ def _col(rowd, *prefixes):
         if any(key.startswith(p) for p in prefixes):
             return value
     return None
+
+
+# Week table columns that aren't a squad's theme
+WEEK_KNOWN_COLUMNS = {'wk', 'week', 'w/c', 'ph', 'phase', '#'}
+WEEK_KNOWN_PREFIXES = ('week commencing', 'date', 'block', 'event', 'joint', 'classroom',
+                       'off-pitch', 'off pitch', 'notes')
+SQUAD_NAME_LIMIT = 50  # Squad.name
+SQUAD_SUFFIX_RE = re.compile(r'\s*\b(split|group|session|theme|squad)s?\b.*$', re.I)
+
+
+def squad_name(header):
+    """'1s split' / '2s group: tactic' / 'Women' -> '1s' / '2s' / 'Women'."""
+    name = (header or '').split(':', 1)[0].strip()
+    name = re.sub(r'\(.*?\)', '', name).strip()
+    return SQUAD_SUFFIX_RE.sub('', name).strip() or name
+
+
+def week_squad_columns(table):
+    """[(header key, squad name)] for a week table's squad columns."""
+    out = []
+    for key, raw in zip(table['header'], table.get('raw_header') or table['header']):
+        if key and key not in WEEK_KNOWN_COLUMNS and not key.startswith(WEEK_KNOWN_PREFIXES):
+            name = squad_name(raw)
+            if name and name.lower() != 'joint' and all(n.lower() != name.lower() for _, n in out):
+                out.append((key, name))
+    return out
 
 
 def split_week_sections(markdown):
@@ -431,6 +462,7 @@ def parse_export(manifest, tabs, season=None):
     # ---- weeks ------------------------------------------------------------
     _, week_table = table(*WEEK_COLUMNS)
     weeks, cursor = [], season_start
+    squad_columns = week_squad_columns(week_table) if week_table else []
     if not week_table:
         errors.append('No week table found (columns: Wk | w/c | Ph | ... | Joint ...)')
     elif cursor is None:
@@ -446,8 +478,7 @@ def parse_export(manifest, tabs, season=None):
             fields = {
                 'block': _col(r, 'block'),
                 'joint_theme': _col(r, 'joint'),
-                'firsts_theme': _col(r, '1s'),
-                'seconds_theme': _col(r, '2s'),
+                'squad_themes': {name: r[key] for key, name in squad_columns if r.get(key)} or None,
                 'classroom': _col(r, 'classroom'),
                 'off_pitch': _col(r, 'off-pitch', 'off pitch'),
             }
@@ -533,6 +564,7 @@ def parse_export(manifest, tabs, season=None):
         'end_date': max([p['end_date'] for p in phases if p['end_date']]
                         + [w['week_commencing'] + timedelta(days=6) for w in weeks], default=None),
         'source': clean_cell(manifest.get('source')),
+        'squad_names': [name for _, name in squad_columns] or None,
     }
 
     _check_lengths(errors, plan, phases, weeks, pages, milestones, classroom)
@@ -598,8 +630,11 @@ def _parse_classroom(tabs, table, week_numbers, skipped, warnings):
 
 
 def _check_lengths(errors, plan, phases, weeks, pages, milestones, classroom=()):
-    groups = {'plan': [plan], 'phase': phases, 'week': weeks, 'page': pages,
-              'milestone': milestones, 'classroom': list(classroom)}
+    for name in plan.get('squad_names') or []:
+        if len(name) > SQUAD_NAME_LIMIT:
+            errors.append(f'squad name is longer than {SQUAD_NAME_LIMIT} characters: {name[:40]!r}...')
+    groups = {'plan': [plan], 'phase': phases, 'week': weeks, 'page': pages or [],
+              'milestone': milestones, 'classroom': list(classroom or [])}
     for key, limit in LIMITS.items():
         kind, attr = key.split('.')
         for item in groups[kind]:
@@ -620,6 +655,9 @@ def _apply(obj, values):
 # Kept across --replace, so sessions built from the plan stay in step
 SESSION_SETTINGS = ['joint_weekday', 'joint_start', 'joint_end', 'split_weekday', 'split_start',
                     'split_end', 'session_location', 'sessions_built_at']
+# ... and what players can see
+KEPT_ON_REPLACE = ['players_see_overview', 'players_see_weeks', 'players_see_session_notes',
+                   'players_see_phases', 'players_see_classroom']
 
 
 def import_season_plan(folder, team, season=None, dry_run=False, replace=False, now=None,
@@ -627,9 +665,18 @@ def import_season_plan(folder, team, season=None, dry_run=False, replace=False, 
     """Import the export in `folder` into `team` (a TeamOrganization).
     build_sessions: True builds the plan's sessions, False leaves them, and
     None (the default) updates them only if they were built before."""
-    from app.utils import season_sessions
     manifest, tabs = load_export(folder)
     data = parse_export(manifest, tabs, season=season)
+    return write_plan(data, team, dry_run=dry_run, replace=replace, now=now,
+                      build_sessions=build_sessions)
+
+
+def write_plan(data, team, dry_run=False, replace=False, now=None, build_sessions=None):
+    """Write parsed plan data (see parse_export) into `team`'s plan for its
+    season: an upsert, or a fresh plan with replace=True. data['pages'] or
+    data['classroom'] set to None leaves the plan's pages or classroom
+    sessions as they are (a spreadsheet import has neither)."""
+    from app.utils import season_sessions
     report = ImportReport(dry_run=dry_run, skipped=data['skipped'], warnings=data['warnings'])
     team_id = team.id
 
@@ -638,7 +685,7 @@ def import_season_plan(folder, team, season=None, dry_run=False, replace=False, 
                                           season=data['plan']['season']).first()
         kept = {}
         if plan and replace:
-            kept = {name: getattr(plan, name) for name in SESSION_SETTINGS}
+            kept = {name: getattr(plan, name) for name in SESSION_SETTINGS + KEPT_ON_REPLACE}
             db.session.delete(plan)
             db.session.flush()
             plan, report.replaced = None, True
@@ -650,7 +697,7 @@ def import_season_plan(folder, team, season=None, dry_run=False, replace=False, 
         plan.imported_at = now or datetime.utcnow()
         db.session.flush()
 
-        # Phases
+        # Phases: keep the linked programme, which isn't in an import
         existing = {p.number: p for p in plan.phases}
         phase_objs = {}
         for values in data['phases']:
@@ -682,16 +729,17 @@ def import_season_plan(folder, team, season=None, dry_run=False, replace=False, 
             plan.phases.remove(phase)
 
         # Pages: keep players_can_view
-        existing_pages = {p.slug: p for p in plan.pages}
-        for values in data['pages']:
-            page = existing_pages.pop(values['slug'], None)
-            if page is None:
-                page = SeasonPage(team_organization_id=team_id)
-                plan.pages.append(page)
-            _apply(page, values)
-        for page in existing_pages.values():
-            report.removed.append(f'page {page.slug}')
-            plan.pages.remove(page)
+        if data.get('pages') is not None:
+            existing_pages = {p.slug: p for p in plan.pages}
+            for values in data['pages']:
+                page = existing_pages.pop(values['slug'], None)
+                if page is None:
+                    page = SeasonPage(team_organization_id=team_id)
+                    plan.pages.append(page)
+                _apply(page, values)
+            for page in existing_pages.values():
+                report.removed.append(f'page {page.slug}')
+                plan.pages.remove(page)
 
         # Milestones have no stable key, so they're rebuilt
         plan.milestones.clear()
@@ -699,16 +747,18 @@ def import_season_plan(folder, team, season=None, dry_run=False, replace=False, 
         for values in data['milestones']:
             plan.milestones.append(SeasonMilestone(team_organization_id=team_id, **values))
 
-        _sync_classroom(plan, data['classroom'], team_id, report)
+        if data.get('classroom') is not None:
+            _sync_classroom(plan, data['classroom'], team_id, report)
 
         db.session.flush()
         db.session.expire(plan, ['weeks'])  # in week order for the session build
         if build_sessions or (build_sessions is None and plan.sessions_built_at):
             report.sessions = season_sessions.build_sessions(plan, commit=False)
         report.counts = {'phases': len(data['phases']), 'weeks': len(data['weeks']),
-                         'session notes': data['notes_count'], 'pages': len(data['pages']),
+                         'session notes': data.get('notes_count', 0), 'pages': len(data.get('pages') or []),
                          'milestones': len(data['milestones']),
-                         'classroom sessions': len(data['classroom'])}
+                         'classroom sessions': len(data.get('classroom') or [])}
+        report.plan_id = plan.id
         if dry_run:
             db.session.rollback()
         else:

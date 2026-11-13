@@ -1,7 +1,9 @@
 # app/models/season_plan.py
 """A team's season plan: phases, a week-by-week calendar, milestones and
-long-form pages. Filled by `flask import-season-plan`; shown under
-/season-plan when the team has the Season plan feature switched on."""
+long-form pages. Coaches create one on the website (Season plan > Create),
+import a spreadsheet, or a site admin imports a markdown export with
+`flask import-season-plan`. Shown under /season-plan when the team has the
+Season plan feature switched on."""
 from datetime import datetime, timedelta
 
 from app import db
@@ -19,6 +21,9 @@ class SeasonPlan(db.Model):
     end_date = db.Column(db.Date)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     source = db.Column(db.String(200))
+    # The squads with their own theme each week ("1s", "2s", "Women"...).
+    # Empty: one theme a week for the whole club.
+    squad_names = db.Column(db.JSON)
     imported_at = db.Column(db.DateTime)
 
     # What players (below captain) may see; captains and up see everything.
@@ -60,6 +65,17 @@ class SeasonPlan(db.Model):
         db.UniqueConstraint('team_organization_id', 'season', name='uq_season_plan_team_season'),
     )
 
+    @property
+    def squads(self):
+        return [n for n in (self.squad_names or []) if n]
+
+    @property
+    def theme_columns(self):
+        """[(key, label)] for each theme a week has: 'joint' first, then a
+        column per squad."""
+        squads = self.squads
+        return [('joint', 'Joint session' if squads else 'Theme')] + [(n, n) for n in squads]
+
     def week_for(self, day):
         """The week whose Monday-to-Sunday span contains `day`, if any."""
         for week in self.weeks:
@@ -89,11 +105,16 @@ class SeasonPhase(db.Model):
     classroom_refs = db.Column(db.String(200))
     strategic_anchor = db.Column(db.Text)
     colour = db.Column(db.String(7))  # #RRGGBB
+    # A training programme players follow during this phase (e.g. the
+    # off-season fitness plan); its sessions show on the phase's weeks.
+    programme_id = db.Column(db.Integer, db.ForeignKey('programme.id', ondelete='SET NULL',
+                                                       name='fk_season_phase_programme'), nullable=True)
     # What each squad can do by the end of the phase: {"1s offence": "...", ...}
     progression = db.Column(db.JSON)
 
     plan = db.relationship('SeasonPlan', back_populates='phases')
     weeks = db.relationship('SeasonWeek', back_populates='phase', order_by='SeasonWeek.week_number')
+    programme = db.relationship('Programme')
 
     __table_args__ = (
         db.UniqueConstraint('plan_id', 'number', name='uq_season_phase_plan_number'),
@@ -120,8 +141,8 @@ class SeasonWeek(db.Model):
     week_commencing = db.Column(db.Date)
     block = db.Column(db.String(200))
     joint_theme = db.Column(db.Text)
-    firsts_theme = db.Column(db.Text)
-    seconds_theme = db.Column(db.Text)
+    # {squad name: theme} for the plan's squads (SeasonPlan.squad_names)
+    squad_themes = db.Column(db.JSON)
     classroom = db.Column(db.String(200))
     off_pitch = db.Column(db.Text)
     notes = db.Column(db.Text)  # coaches' own notes; never overwritten by an import
@@ -141,6 +162,40 @@ class SeasonWeek(db.Model):
     __table_args__ = (
         db.UniqueConstraint('plan_id', 'week_number', name='uq_season_week_plan_number'),
     )
+
+    def theme_for(self, key):
+        """The theme for 'joint' or a squad name (any case)."""
+        if key == 'joint':
+            return self.joint_theme
+        themes = self.squad_themes or {}
+        if key in themes:
+            return themes[key]
+        lower = (key or '').strip().lower()
+        return next((v for k, v in themes.items() if k.strip().lower() == lower), None)
+
+    def themes(self, plan=None, squad='all'):
+        """[(label, theme)] for the themes this week has, in the plan's
+        order; `squad` limits the squad themes to one squad."""
+        plan = plan or self.plan
+        out = []
+        for key, label in plan.theme_columns:
+            if key != 'joint' and squad not in ('all', key):
+                continue
+            text = self.theme_for(key)
+            if text:
+                out.append((label, text))
+        return out
+
+    def set_theme(self, key, text):
+        if key == 'joint':
+            self.joint_theme = text
+            return
+        themes = dict(self.squad_themes or {})
+        if text:
+            themes[key] = text
+        else:
+            themes.pop(key, None)
+        self.squad_themes = themes or None
 
     @property
     def week_ending(self):

@@ -27,13 +27,26 @@
     {% if week.off_pitch %}<div><div class="sp-label">Off-pitch</div><p>{{ week.off_pitch }}</p></div>{% endif %}
     {% if built_sessions %}
     <div><div class="sp-label">Sessions</div><p>
-      {% for s in built_sessions %}<a href="{{ url_for('session.detail', session_id=s.id) }}">{{ {'joint': 'Joint session', '1s': '1s session', '2s': '2s session'}.get(s.squad, s.title) }}{% if s.date %} · {{ s.date.strftime('%a %-d %b') }}{% endif %}</a>{% if not loop.last %}<br>{% endif %}{% endfor %}
+      {% for s in built_sessions %}<a href="{{ url_for('session.detail', session_id=s.id) }}">{% set who = s.squad_names or s.squad %}{{ 'Joint session' if s.squad == 'joint' else (who ~ ' session' if who else s.title) }}{% if s.date %} · {{ s.date.strftime('%a %-d %b') }}{% endif %}</a>{% if not loop.last %}<br>{% endif %}{% endfor %}
     </p></div>
     {% elif week.session_plan %}
     <div><div class="sp-label">Session plan</div><p><a href="{{ url_for('session.detail', session_id=week.session_plan.id) }}">{{ week.session_plan.title }}</a></p></div>
     {% endif %}
   </div>
   {% for card in classroom %}{{ mini(card) }}{% endfor %}
+  {% if programme_weeks %}
+  <div class="sp-programme-week">
+    <div class="sp-label"><i class="bi bi-journal-check"></i> {{ programme.name }}</div>
+    {% for track, pw in programme_weeks %}
+    <div class="mt-1"><b>{{ track.name }}</b>{% if pw.title %}: {{ pw.title }}{% endif %}
+      {% if pw.is_rest %}<span class="sp-muted"> · rest week</span>{% elif pw.sessions %}
+      <ul>{% for s in pw.sessions %}<li>{{ s.title }}{% if s.requirement != 'required' %} <span class="sp-muted small">({{ s.requirement }})</span>{% endif %}</li>{% endfor %}</ul>
+      {% endif %}
+    </div>
+    {% endfor %}
+    <a class="small" href="{{ url_for('programmes.show', programme_id=programme.id) if current_user.is_coach else url_for('programmes.index') }}">Open the programme</a>
+  </div>
+  {% endif %}
   {% if week.notes %}
   <div class="mt-2"><div class="sp-label">Coaches' notes</div><div class="sp-md">{{ week.notes|markdown }}</div></div>
   {% endif %}
