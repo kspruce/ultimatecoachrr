@@ -8,7 +8,7 @@
             <h1>{{ title }}</h1>
             <p class="lead">{{ session.title }} | {{ session.formatted_date }}</p>
         </div>
-        <div class="col-md-4 text-end">
+        <div class="col-md-4 text-md-end">
             <a href="{{ url_for('session.detail', session_id=session.id) }}" class="btn btn-secondary">
                 <i class="bi bi-arrow-left"></i> Back to Session
             </a>
@@ -147,7 +147,7 @@
                         </div>
 
                         <!-- Submit buttons -->
-                        <div class="d-flex gap-2">
+                        <div class="d-flex flex-wrap gap-2">
                             {{ form.submit(class="btn btn-primary") }}
                             <button type="submit" name="add_another" value="1" class="btn btn-outline-primary">
                                 <i class="bi bi-plus-circle"></i> Save &amp; Add Another

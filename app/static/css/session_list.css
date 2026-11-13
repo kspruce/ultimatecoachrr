@@ -50,4 +50,10 @@
   .sl-row { grid-template-columns: 46px minmax(0, 1fr); row-gap: .45rem; padding: .7rem .8rem; }
   .sl-nums, .sl-row-actions { grid-column: 2; }
   .sl-row-actions:empty { display: none; }
+  /* Coming up: a row to swipe through, so the full list isn't pushed a few screens down */
+  .sl-upcoming { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: .7rem;
+                 margin: 0 -12px 1.75rem; padding: 0 12px .4rem; scroll-padding: 0 12px; -webkit-overflow-scrolling: touch; }
+  .sl-upcoming > * { flex: 0 0 82%; scroll-snap-align: start; }
+  .sl-card { padding: .9rem 1rem; }
+  .sl-rsvp { margin: .6rem 0; }
 }

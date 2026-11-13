@@ -7,8 +7,12 @@
         <div class="col-md-8">
             <h1>{{ title }}</h1>
         </div>
-        <div class="col-md-4 text-end">
-            <a href="{{ url_for('session.index') }}" class="btn btn-secondary">Back to Sessions</a>
+        <div class="col-md-4 text-md-end">
+            {% if session is defined and session and session.id %}
+            <a href="{{ url_for('session.detail', session_id=session.id) }}" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Back to session</a>
+            {% else %}
+            <a href="{{ url_for('session.index') }}" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Back to Sessions</a>
+            {% endif %}
         </div>
     </div>
 
