@@ -1,31 +1,47 @@
-# Thundering Herd 2027/28: a programme for each phase
+# Thundering Herd 2027/28: programmes for the season plan
 
-One calendar programme per phase of the 2027/28 season plan, taken from the plan's
-*Fitness without a track or gym*, *Skills curriculum* and *Measuring improvement*
-sections and the week-by-week themes. Fitness mostly happens at training; these
-programmes cover the work players do on their own between sessions.
+| Phase | Programme |
+| --- | --- |
+| 1. Foundations | A copy of the off-season programme (`../thundering-herd-2025-26`), see below |
+| 2. Pressure and trials | The same off-season copy (it runs to Trial 1) |
+| 3. Early season | `phase-3-early-season`: In-season 2028: Early season |
+| 4. Regionals | `phase-4-regionals`: In-season 2028: Regionals |
+| 5. Nationals | `phase-5-nationals`: In-season 2028: Nationals peak and taper (1s) |
 
-| Folder | Name | Start (Monday) | Weeks | Tracks | Benchmarks |
-| --- | --- | --- | --- | --- | --- |
-| `phase-1-foundations` | Phase 1 Foundations: home programme | 2027-10-04 | 13 (11 + Christmas) | Home strength, Throwing, Movement | Movement weeks 1 and 10 |
-| `phase-2-pressure-and-trials` | Phase 2 Pressure and trials: strength, plyometrics and sprints | 2028-01-03 | 11 | Strength & plyometrics, Repeated sprints, Throwing under pressure | Week 5 (Trial 1) |
-| `phase-3-early-season` | Phase 3 Early season: in-season maintenance | 2028-03-20 | 13 | Strength & power, Game speed, Throwing (optional) | Week 11 (optional check) |
-| `phase-4-regionals` | Phase 4 Regionals: speed and mental skills | 2028-06-19 | 6 | Speed & power, Mental skills | — |
-| `phase-5-nationals` | Phase 5 Nationals: rebuild, peak and taper (1s) | 2028-07-31 | 8 | Fitness, Mental skills | Week 8 (final) |
+## Off-season (Phases 1 and 2)
 
-Each programme follows the same rules:
+The off-season programme is 16 weeks long. Copy it (rather than changing the 2025/26 one, which
+holds last season's logs), then in the copy's Settings:
 
-- Event, trial and Easter weeks are lighter (deload); sessions there are optional.
-- Weeks covered by a tournament or trial have no conditioning (rest).
-- Hard leg sessions should not fall on consecutive days.
-- Plyometrics build from about 40 contacts in Phase 2 to 80-100 at the Phase 5 peak.
-- The four benchmarks are hucking alley, Get 10, 5-10-5 and catching under pressure.
+- Schedule: **calendar**, start **4 Oct 2027**.
+- Pause: **2 weeks from 20 Dec 2027** (the Christmas break).
 
-Import each from Training > Programmes > Import spreadsheet (upload `programme.csv` and
+It then runs from plan week 1 to plan week 18 (Trial 1). Sprint retests fall in week 10, the
+week the plan re-runs benchmarks. Link the copy to both Phase 1 and Phase 2. Phase 2 weeks 19-24
+(Trials 2-3 to squads announced) have no programme sessions.
+
+## In-season (Phases 3-5)
+
+Calendar programmes that start on the phase's first Monday:
+
+| Folder | Start | Weeks | Tracks | Benchmarks |
+| --- | --- | --- | --- | --- |
+| `phase-3-early-season` | 2028-03-20 | 13 | Strength & power, Game speed, Throwing (optional) | Week 11 (optional check) |
+| `phase-4-regionals` | 2028-06-19 | 6 | Speed & power, Mental skills | — |
+| `phase-5-nationals` | 2028-07-31 | 8 | Fitness, Mental skills | Week 8 (final) |
+
+- Each strength session comes **with or without a gym**. They are alternatives, so either one
+  counts. The gym version continues the off-season Gym track's lifts (box squat, kettlebell swings,
+  jumping lunges, bench, chin-ups) at 2-3 sets of 2-3 at RPE ~7-8.
+- Event, Easter and taper weeks are lighter, and their sessions are optional. Game-speed work is
+  replaced by the event itself.
+- Hard leg sessions shouldn't fall on consecutive days, or within three days of a tournament.
+
+Import each folder from Training > Programmes > Import spreadsheet (`programme.csv` and
 `tests.csv`), or from the command line:
 
 ```
-flask import-programme imports/programmes/herd-2027-28/phase-1-foundations --team <slug> --name "Phase 1 Foundations: home programme" --start 2027-10-04
+flask import-programme imports/programmes/herd-2027-28/phase-3-early-season --team <slug> --name "In-season 2028: Early season" --start 2028-03-20
 ```
 
 Then publish it and link it under Season plan > Edit plan > Phases.
