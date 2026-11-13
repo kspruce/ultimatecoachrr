@@ -23,14 +23,27 @@ flask import-season season.json --images-dir images/ --team-org <id>
 
 ## Drill library files
 
-`imports/drills/` holds drill-only files in this format. `grut-drills.json` is
-the 9 GRUT drills the season plan uses (four more GRUT videos are theory cards 41-44). Import it before importing or
-rebuilding the season plan, so the plan's sessions link to the drills (a
-session activity links to the drill whose title it matches exactly):
+`imports/drills/` holds drill-only files in this format. Import them before
+building (or rebuilding) the season plan's sessions, so the sessions link to
+the drills:
+
+- `grut-drills.json`: the 9 GRUT drills the season plan uses (four more GRUT
+  videos are theory cards 41-44).
+- `herd-drills.json`: about 90 drills and games the 2027/28 sessions use (the
+  Ian French games, the club staples such as the 4v3 mini and 4v4 continuous,
+  and the split-session drills), each with what it's for, how it runs,
+  coaching points, set-up, numbers and the weeks it's used. The split-session
+  tables have no "How it runs" column, so this is where most of their
+  activities get their details. Drills the plan only summarises say to check
+  the full version in their source.
 
 ```
 flask import-season imports/drills/grut-drills.json --team-org <id>
+flask import-season imports/drills/herd-drills.json --team-org <id>
 ```
+
+Then rebuild the sessions (**Season plan > Sessions > Build sessions**) so
+existing sessions pick up the links.
 
 Diagrams drawn in the drill editor are kept when the file is re-imported.
 
@@ -79,10 +92,24 @@ Inside each `## Week N · date · title` section:
 
 Activity lengths come from the gap between one row's `Time` and the next.
 Long cells are split at the first `:`, `;` or `. ` into a name and a
-description. Activity types are guessed from the name (warm-up, water,
-scrimmage/free game/7v7, recap/welcome/briefing → discussion, otherwise drill),
-and an activity whose name matches a drill in the team's library is linked to
-it. Weeks with no such table (breaks, tournaments) get no sessions.
+description, and so are short ones written as "Name: how it runs" (a detail
+of 25 characters or more after the colon). In the split table, a 2s cell of
+`Same`, `The same` or `Same drill at stall 7` copies the 1s activity, with any
+change ("2s: at stall 7") added to its description. Activity types are
+guessed from the name (warm-up, water, scrimmage/free game/7v7,
+recap/welcome/briefing → discussion, otherwise drill). Weeks with no such
+table (breaks, tournaments) get no sessions.
+
+An activity (other than a warm-up or water break) is linked to a drill in the
+team's library when their names match, ignoring case, punctuation, bracketed
+parts such as "(GRUT)" and "a"/"the". The match also tries each side of a
+"Round 1: Golden Arm" name, the name without qualifiers such as ", stall 5" or
+"then ...", and a library name that starts the activity name ("Extended mark
+refresher" → Extended mark; the longest wins) or that the activity name starts
+when only one does ("4v4, stall 7" → 4v4 continuous). One-word library names
+and theory cards only match exactly. The session page, print view, PDF and run
+mode show the linked drill's description when the activity has none of its
+own.
 
 ## What the plan owns
 

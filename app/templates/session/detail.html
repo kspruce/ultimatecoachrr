@@ -306,6 +306,12 @@
                                         {% if component.saved_drill.setup_instructions %}
                                         <div class="small text-muted">{{ component.saved_drill.setup_instructions|truncate(200) }}</div>
                                         {% endif %}
+                                        {% if component.saved_drill.description %}
+                                        <details class="drill-more mt-1"{% if not component.description %} open{% endif %}>
+                                            <summary class="small">How it runs</summary>
+                                            <div class="markdown-content small mt-1">{{ component.saved_drill.description|markdown }}</div>
+                                        </details>
+                                        {% endif %}
                                         {% if component.saved_drill.equipment_needed %}
                                         <div class="small mt-1"><i class="bi bi-bag"></i> {{ component.saved_drill.equipment_needed }}</div>
                                         {% endif %}

@@ -235,6 +235,8 @@
             </div>
             {% if component.description %}
             <div>{{ component.description|markdown }}</div>
+            {% elif component.saved_drill and component.saved_drill.description %}
+            <div>{{ component.saved_drill.description|markdown }}</div>
             {% endif %}
             {% if component.coach_cue %}
             <div class="coach-cue"><strong>Coach:</strong> {{ component.coach_cue }}</div>
