@@ -95,6 +95,8 @@
                                 <div class="card-body">
                                     {% if component.description %}
                                     <div class="markdown-content mb-2">{{ component.description|markdown }}</div>
+                                    {% elif component.saved_drill and component.saved_drill.description %}
+                                    <div class="markdown-content mb-2">{{ component.saved_drill.description|markdown }}</div>
                                     {% endif %}
 
                                     {% include 'session/partials/_component_extras.html' %}

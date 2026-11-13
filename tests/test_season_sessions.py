@@ -9,7 +9,8 @@ from app.models.season_plan import SeasonPlan, SeasonWeek
 from app.models.session import Attendance, SessionComponent, SessionPlan
 from app.models.team_organization import TeamOrganization
 from app.utils.season_sessions import (
-    build_sessions, component_type, length_from_label, parse_week_notes, split_name,
+    build_sessions, component_type, drill_key, length_from_label, match_drill, parse_week_notes,
+    split_name,
 )
 from tests import stats_data
 from tests.test_season_plan import client, do_import, enable, herd, needs_export  # noqa: F401
@@ -61,11 +62,47 @@ def test_parse_week_notes():
     assert joint['activities'][1]['notes'] == 'Source: BFD ch. 1'
     # "Same" in the 2s column copies the 1s activity
     assert twos['activities'][0]['title'] == 'Warm-up'
-    assert [a['title'] for a in ones['activities']] == ['Warm-up', 'Shared vocabulary: dump, mac, zip. Walk through, then 2v2', 'Scrimmage']
+    assert [a['title'] for a in ones['activities']] == ['Warm-up', 'Shared vocabulary', 'Scrimmage']
+    # "Name: how it runs" cells are split even when short
+    assert ones['activities'][1]['description'] == 'dump, mac, zip. Walk through, then 2v2'
     # The tables, their labels and the learning points leave the notes
     notes = parsed['notes']
     assert '**What to tell players**' in notes and 'Keep it positive.' in notes
     assert '| Time' not in notes and '**Joint session**' not in notes and 'Learning points' not in notes
+
+
+def test_same_drill_in_the_2s_column():
+    md = ('| Time | 1s group | 2s group (suggested) | Source |\n| --- | --- | --- | --- |\n'
+          '| 0:00 | Look forward once, then dump: handler looks upfield, then resets by stall 5 '
+          '| Same drill at stall 7 | HB 13.2 |\n'
+          '| 0:30 | Scrimmage | The same | Plan |\n'
+          '| 1:00 | Recap | Same-side cutting | Plan |\n')
+    ones, twos = parse_week_notes(md)['sessions']
+    first = twos['activities'][0]
+    assert first['title'] == ones['activities'][0]['title'] == 'Look forward once, then dump'
+    assert first['description'] == 'handler looks upfield, then resets by stall 5\n\n2s: at stall 7'
+    assert twos['activities'][1]['title'] == 'Scrimmage' and twos['activities'][1]['description'] is None
+    assert twos['activities'][2]['title'] == 'Same-side cutting'
+
+
+def test_match_drill():
+    keys = {drill_key(t) for t in ('4v4 continuous', 'Extended mark', 'Golden Arm', 'Dump swing',
+                                   'Dump swing continue', 'Rinkydink (GRUT)', 'Marking', '7v6')}
+    assert match_drill('Golden Arm', keys) == 'golden arm'
+    assert match_drill('Rinkydink (GRUT)', keys) == 'rinkydink'
+    assert match_drill('Round 1: Golden Arm', keys) == 'golden arm'
+    assert match_drill('Extended mark: two discs, stall 4', keys) == 'extended mark'
+    assert match_drill('Extended mark refresher', keys) == 'extended mark'
+    assert match_drill('Small-sided games: 4v4, stall 5', keys) == '4v4 continuous'
+    assert match_drill('7v6 against a stronger offence', keys) == '7v6'
+    # The longest library name wins
+    assert match_drill('Dump Swing Continue: handler, reset and front of stack', keys) == 'dump swing continue'
+    # One-word names only match exactly
+    assert match_drill('Marking', keys) == 'marking'
+    assert match_drill('Marking refresher', keys) is None
+    assert match_drill('Scrimmage', keys) is None
+    # Exact-only keys (standard cards) don't match by prefix
+    assert match_drill('Extended mark refresher', keys, prefixable=set()) is None
 
 
 def test_parse_lengths_and_labels():
@@ -84,6 +121,10 @@ def test_parse_lengths_and_labels():
 
 def test_split_name_and_types():
     assert split_name('Golden Arm') == ('Golden Arm', None)
+    assert split_name('Ho game with 3 lives: each team has three turnovers') == (
+        'Ho game with 3 lives', 'each team has three turnovers')
+    # A short detail after the colon is part of the name
+    assert split_name('Focused throwing: 70-pass') == ('Focused throwing: 70-pass', None)
     long_cell = ('Bull zone refresh: roles, counting attackers, the movement on swings, sideline talk '
                  'and a lot more after that')
     assert split_name(long_cell) == ('Bull zone refresh', 'roles, counting attackers, the movement on swings, '
@@ -299,3 +340,51 @@ def test_grut_drills_link_to_the_real_plan(app, herd):
     assert comps and all(c.saved_drill is not None for c in comps)
     assert {c.saved_drill.external_id for c in comps} == {d.external_id for d in grut}
     assert len(grut) == 9
+
+
+def _import_drill_file(team_id, name):
+    import json
+    import os
+    from app.utils.season_import import import_season
+    path = os.path.join(os.path.dirname(__file__), '..', 'imports', 'drills', name)
+    with open(path) as f:
+        return import_season(json.load(f), None, team_id)
+
+
+@needs_export
+def test_herd_drill_library_fills_in_the_real_plan(app, herd):
+    """The Herd drill library gives split-session activities, which have no
+    "How it runs" column, a linked drill with a description."""
+    _import_drill_file(herd['team'], 'grut-drills.json')
+    _import_drill_file(herd['team'], 'herd-drills.json')
+    build_sessions(_setup(herd['team']))
+
+    library = SavedDrill.query.filter(SavedDrill.team_organization_id == herd['team'],
+                                      SavedDrill.external_id.like('herd-%')).all()
+    assert len(library) > 80 and all(d.description and d.source for d in library)
+    comps = SessionComponent.query.join(SessionPlan).filter(
+        SessionPlan.team_organization_id == herd['team'],
+        SessionPlan.external_id.like('plan-%')).all()
+    # Nearly every library drill is used by the plan
+    used = {c.saved_drill.external_id for c in comps if c.saved_drill}
+    assert len({d.external_id for d in library} - used) <= 2
+
+    def comp(week, squad, title):
+        session = SessionPlan.query.filter_by(external_id=f'plan-2027/28-w{week:02d}-{squad}').one()
+        return session.components.filter_by(title=title).one()
+
+    # Week 2: the 2s cell is only "Three-person break force, stall 7"
+    c = comp(2, '2s', 'Three-person break force, stall 7')
+    assert c.description is None and c.saved_drill.external_id == 'herd-three-person-break-force'
+    assert comp(1, 'joint', 'Asymmetric offence').saved_drill.title == 'Asymmetric offence'
+    assert comp(14, '1s', '4v4 continuous, stall 5').saved_drill.external_id == 'herd-4v4-continuous'
+
+    # Split-session drills now mostly come with details
+    drills = [c for c in comps if c.component_type == 'drill' and c.session.squad in ('1s', '2s')]
+    bare = [c for c in drills if not c.description and not c.saved_drill]
+    assert len(bare) < len(drills) // 4
+
+    # The session page shows the drill's description when the activity has none
+    enable(herd['team'])
+    page = client(app, herd, 'coach').get(f'/sessions/{c.session_id}/detail').get_data(as_text=True)
+    assert 'How it runs' in page and 'Linked Drill: Three-person break force' in page

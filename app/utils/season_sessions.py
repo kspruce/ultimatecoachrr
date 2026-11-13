@@ -47,6 +47,9 @@ NUMBERED_RE = re.compile(r'\(\d+\)\s*')
 CLOCK_RE = re.compile(r'^\s*(\d{1,2})[:.](\d{2})')
 HOURS_RE = re.compile(r'(\d+(?:\.\d+)?)\s*(?:hours?|hrs?)\b', re.I)
 MINUTES_RE = re.compile(r'(\d+)\s*(?:minutes?|mins?)\b', re.I)
+# "Ho game with 3 lives: each team has three turnovers before the point ends"
+SAME_RE = re.compile(r'^(?:the\s+)?same(?![\w-])(?:\s+drill\b)?(.*)$', re.I)
+EXPLAINED_RE = re.compile(r'^([^:]{3,50}):\s+(.{25,})$')
 
 # First match wins; anything else is a drill.
 COMPONENT_TYPES = [
@@ -85,10 +88,14 @@ def component_type(name):
 
 
 def split_name(text):
-    """(name, extra description) for a table cell. Short cells are the name;
-    longer ones are split at the first ':', ';' or '. ', or cut at a word."""
+    """(name, extra description) for a table cell. Short cells are the name,
+    unless they read "Name: how it runs"; longer ones are split at the first
+    ':', ';' or '. ', or cut at a word."""
     text = (text or '').strip()
     if len(text) <= SHORT_NAME:
+        m = EXPLAINED_RE.match(text)
+        if m:
+            return m.group(1).strip(), m.group(2).strip()
         return text, None
     m = re.search(r'(:\s|;\s|\.\s)', text)
     if m and 3 <= m.start() <= SHORT_NAME:
@@ -173,13 +180,19 @@ def parse_week_notes(markdown):
             ones, twos = [], []
             for r in cells:
                 one, two = cell(r, firsts), cell(r, seconds)
-                if two and two.lower().rstrip('.') == 'same':
-                    two = one
                 start, src = _clock(r[0]), cell(r, source)
+                two_how = None
+                same = SAME_RE.match(two or '')
+                if same and one:
+                    # "Same", "The same", "Same drill at stall 7": the 1s
+                    # activity, with what the 2s change in its description
+                    two = one
+                    rest = same.group(1).strip(' .,;:')
+                    two_how = f'2s: {rest}' if rest else None
                 if one:
                     ones.append((start, one, None, src))
                 if two:
-                    twos.append((start, two, None, src))
+                    twos.append((start, two, two_how, src))
             for squad, rows in (('1s', ones), ('2s', twos)):
                 if rows:
                     sessions.append({'squad': squad, 'label': label or 'Split session',
@@ -326,13 +339,80 @@ def week_sessions(plan, week):
     return sorted(rows, key=lambda s: order.get(s.squad, 3))
 
 
-def _drill_lookup(team_id):
-    """Activity name (lower case) -> SavedDrill id, for linking components to
-    the team's drill library."""
-    rows = db.session.query(SavedDrill.id, SavedDrill.title).filter(
-        SavedDrill.team_organization_id == team_id).all()
-    return {title.strip().lower(): drill_id for drill_id, title in rows if title}
+QUALIFIER_RE = re.compile(r'\b(stall \d+|then|with|against|as in|from week|in ho|in vert)\b.*$')
 
+
+def drill_key(text):
+    """A drill or activity name reduced for matching: lower case, no
+    bracketed parts ("(GRUT)"), punctuation as spaces, no "a", "an" or
+    "the"."""
+    text = re.sub(r'\([^)]*\)', ' ', (text or '').lower())
+    text = re.sub(r'[^a-z0-9]+', ' ', text)
+    return ' '.join(w for w in text.split() if w not in ('a', 'an', 'the'))
+
+
+def _prefix_ok(key):
+    """Library names short enough to be mistaken for a word in another name
+    ("Marking", "Zone") only ever match exactly."""
+    return ' ' in key or any(ch.isdigit() for ch in key)
+
+
+def match_drill(title, keys, prefixable=None):
+    """The library key (from `keys`, a set of drill_key()s) that an activity
+    title refers to, or None. Only keys in `prefixable` (default: all) match
+    by prefix. Tries, in order: the whole title; each side of
+    a "Label: name" title; the title without qualifiers such as ", stall 5"
+    or "then ..."; then the longest library name that starts the title
+    ("Keeping margins, then box of death" -> "keeping margins"), or that the
+    title starts if only one does ("4v4, stall 7" -> "4v4 continuous")."""
+    candidates = [title or '']
+    if ':' in candidates[0]:
+        left, right = candidates[0].split(':', 1)
+        candidates += [left, right]
+    tried = []
+    for cand in candidates:
+        key = drill_key(cand)
+        for k in (key, QUALIFIER_RE.sub('', key).strip()):
+            if k and k not in tried:
+                tried.append(k)
+    for k in tried:
+        if k in keys:
+            return k
+    keys = [k for k in keys if prefixable is None or k in prefixable]
+    for k in tried:
+        starts = [lib for lib in keys if _prefix_ok(lib) and (k + ' ').startswith(lib + ' ')]
+        if starts:
+            return max(starts, key=len)
+    for k in tried:
+        if not _prefix_ok(k):
+            continue
+        started = [lib for lib in keys if lib.startswith(k + ' ')]
+        if len(started) == 1:
+            return started[0]
+    return None
+
+
+def _drill_lookup(team_id):
+    """(drill_key(title) -> SavedDrill id, the keys that may also match by
+    prefix), for linking components to the team's drill library. Standard
+    cards only match their exact title. Where two share a name the newest
+    wins."""
+    rows = db.session.query(SavedDrill.id, SavedDrill.title, SavedDrill.is_standard_card).filter(
+        SavedDrill.team_organization_id == team_id).order_by(SavedDrill.id).all()
+    lookup, prefixable = {}, set()
+    for drill_id, title, is_card in rows:
+        key = drill_key(title)
+        if key:
+            lookup[key] = drill_id
+            if not is_card:
+                prefixable.add(key)
+            else:
+                prefixable.discard(key)
+    return lookup, prefixable
+
+
+# Water breaks and warm-ups are never linked to a drill.
+UNLINKED_TYPES = ('water', 'warmup')
 
 WHEN_KEYS = ('date', 'start_time', 'end_time', 'location')
 PLAN_KEYS = ('season', 'phase_number', 'phase_name', 'block', 'week_number', 'week_commencing', 'squad',
@@ -374,7 +454,7 @@ def build_sessions(plan, weeks=None, dry_run=False, commit=True):
     With every week, sessions the plan no longer has are removed too."""
     team_id = plan.team_organization_id
     report = BuildReport(dry_run=dry_run)
-    drills = _drill_lookup(team_id)
+    drills, prefixable = _drill_lookup(team_id)
     whole_plan = weeks is None
     weeks = plan.weeks if whole_plan else weeks
     wanted_ids = set()
@@ -417,7 +497,8 @@ def build_sessions(plan, weeks=None, dry_run=False, commit=True):
                         values = {k: v for k, v in values.items() if k not in WHEN_KEYS}
                     status = 'updated' if _apply(session, values) else 'unchanged'
                 for c in item['components']:
-                    c['drill_external_id'] = c['title'].strip().lower()
+                    c['drill_external_id'] = (match_drill(c['title'], set(drills), prefixable)
+                                              if c['component_type'] not in UNLINKED_TYPES else None)
                 if _sync_components(session, item['components'], drills, team_id) and status == 'unchanged':
                     status = 'updated'
                 if session.squad == 'joint':
