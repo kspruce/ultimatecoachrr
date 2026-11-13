@@ -37,11 +37,14 @@ Calendar programmes that start on the phase's first Monday:
   replaced by the event itself.
 - Hard leg sessions shouldn't fall on consecutive days, or within three days of a tournament.
 
-Import each folder from Training > Programmes > Import spreadsheet (`programme.csv` and
-`tests.csv`), or from the command line:
+The quickest way in is the ready-made workbooks in this folder (`In-season 2028 - *.xlsx`). Upload
+each one on Training > Programmes > Import spreadsheet, with the name and start date below. Or, from a
+shell on the server (team slug `Herd-2028`):
 
 ```
-flask import-programme imports/programmes/herd-2027-28/phase-3-early-season --team <slug> --name "In-season 2028: Early season" --start 2028-03-20
+flask import-programme imports/programmes/herd-2027-28/phase-3-early-season --team Herd-2028 --name "In-season 2028: Early season" --start 2028-03-20
+flask import-programme imports/programmes/herd-2027-28/phase-4-regionals --team Herd-2028 --name "In-season 2028: Regionals" --start 2028-06-19
+flask import-programme imports/programmes/herd-2027-28/phase-5-nationals --team Herd-2028 --name "In-season 2028: Nationals peak and taper (1s)" --start 2028-07-31
 ```
 
 Then publish it and link it under Season plan > Edit plan > Phases.
