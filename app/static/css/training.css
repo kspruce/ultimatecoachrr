@@ -85,7 +85,11 @@
 
 /* The session builder */
 .pb { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 1.25rem; align-items: start; }
-@media (max-width: 991.98px) { .pb { grid-template-columns: 1fr; } }
+@media (max-width: 991.98px) { .pb { grid-template-columns: minmax(0, 1fr); } }
+/* Long option names (templates, earlier sessions) mustn't widen the page */
+.pb, .pb > *, .pb-side { min-width: 0; }
+#pb-start-from { width: auto; max-width: 100%; min-width: 0; text-overflow: ellipsis; }
+.pb-lib-item span, .pb-side, .pb-drill { overflow-wrap: anywhere; }
 .pb-side { position: sticky; top: 90px; }
 @media (max-width: 991.98px) { .pb-side { position: static; } }
 .pb-block { display: grid; grid-template-columns: auto 4.2rem minmax(0, 1fr) auto; gap: .6rem; align-items: start; background: var(--card); border: 1px solid var(--rule); border-left: 4px solid var(--rule-strong); border-radius: var(--radius-sm); padding: .6rem .7rem; margin-bottom: .5rem; }
@@ -138,7 +142,8 @@
   #pb-title { font-size: 1.4rem !important; border-color: var(--rule) !important; padding-left: .5rem !important; }
   .pb-toolbar .pb-add { flex: 1 1 auto; }
   .pb-toolbar .pb-add > .btn:first-child { flex: 1 1 auto; }
-  .pb-toolbar #pb-start-from { flex: 1 1 10rem; width: auto; min-width: 0; }
+  .pb-toolbar #pb-start-from { flex: 1 1 6rem; width: auto; min-width: 0; }
+  .pb-toolbar [data-copy] { flex: 0 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .pb-toolbar .pb-drills-btn { flex: 1 1 auto; }
   .pb-template-label { display: none; }
   /* Save, publish and done stay at the bottom of the screen in place of the tab bar */

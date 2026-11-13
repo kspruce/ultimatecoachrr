@@ -10,6 +10,7 @@ import pytest
 
 from app import db
 from app.models.drill import SavedDrill
+from app.models.schedule import SessionTemplate
 from app.models.session import SessionComponent
 from tests.test_drill_editor_browser import browser, live_server, logged_in_page  # noqa: F401
 from tests.test_theory_browser import in_view, no_sideways_scroll, phone_page
@@ -23,6 +24,9 @@ def planned(club, week):
     team_id = club['team'].id
     for i in range(4):
         db.session.add(SavedDrill(title=f'Drill {i}', recommended_duration=10, team_organization_id=team_id))
+    # A long name in "Start from…" once made the page wider than the phone
+    db.session.add(SessionTemplate(team_organization_id=team_id, blocks=[{'title': 'Warm-up'}],
+                                   name='Standard Saturday warm-up, break throws and scrimmage (long)'))
     session = week['sat'].sessions.first()
     for i, (title, kind) in enumerate([('Warm-up', 'warmup'), ('Break throws', 'drill'), ('Scrimmage', 'scrimmage')]):
         db.session.add(SessionComponent(session_id=session.id, title=title, order=i, component_type=kind,
