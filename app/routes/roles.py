@@ -1,4 +1,4 @@
-"""Team roles (Club → Roles): the team's roles, such as "O-line initiation
+"""Team roles (Team & Games → Roles): the team's roles, such as "O-line initiation
 cutter", and who holds each one this season, first choice first. Coaches
 and captains change them here or on a player's profile; players say which
 roles they'd like on their own profile. The playbook says what each role

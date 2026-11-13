@@ -308,9 +308,9 @@ small, .small { color: inherit; }
   background: var(--accent); border: 2px solid var(--header-bg); pointer-events: none;
 }
 .uc-user-btn .uc-user-dot { top: 0; left: 24px; right: auto; }
-/* Between 1200px and 1400px the full menu only just fits: drop the icons,
+/* Between 1200px and 1600px the full menu only just fits: drop the icons,
    the username next to the avatar and some padding so nothing is pushed off */
-@media (min-width: 1200px) and (max-width: 1399.98px) {
+@media (min-width: 1200px) and (max-width: 1599.98px) {
   .uc-nav-links .nav-link { padding: .45rem .5rem !important; }
   .uc-nav-links > .nav-item > .nav-link > i { display: none; }
   .uc-brand-name { max-width: 170px; }

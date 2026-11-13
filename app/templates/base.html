@@ -29,7 +29,7 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Young+Serif&display=swap">
     {# Team colours (Team settings -> Colours & crest); theme.css builds everything else from them #}
     <style>{{ team_theme_css | default('') | safe }}</style>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}?v=7">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}?v=8">
 
     {% block styles %}{% endblock %}
 </head>
@@ -126,7 +126,7 @@
       {# Club #}
       <li class="nav-item dropdown {% if in_club %}uc-active{% endif %}">
         <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
-          <i class="bi bi-people-fill"></i> Club
+          <i class="bi bi-people-fill"></i> Team &amp; Games
         </a>
         <ul class="dropdown-menu">
           <li><a class="dropdown-item" href="{{ url_for('team.index') }}">
@@ -209,7 +209,7 @@
       </li>
       {% endif %}
 
-      {# Playbook: plays, scouting and theory together (a plain link when only one is on) #}
+      {# Tactics: plays, scouting and theory together (a plain link when only one is on) #}
       {% set playbook_items = [] %}
       {% if not ts or ts.playbook_enabled %}{% set _ = playbook_items.append(('playbook.index', 'bi-book-fill', 'Playbook')) %}{% endif %}
       {% if not ts or ts.scouting_enabled %}{% set _ = playbook_items.append(('scouting.index', 'bi-binoculars-fill', 'Scouting')) %}{% endif %}
@@ -222,7 +222,7 @@
       {% elif playbook_items %}
       <li class="nav-item dropdown {% if in_strategy %}uc-active{% endif %}">
         <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
-          <i class="bi bi-lightbulb-fill"></i> Playbook
+          <i class="bi bi-lightbulb-fill"></i> Tactics
         </a>
         <ul class="dropdown-menu">
           {% for endpoint, icon, label in playbook_items %}
@@ -233,13 +233,13 @@
       </li>
       {% endif %}
 
-      {# Stats & film (games themselves live under Club) #}
+      {# Stats & Clips (games themselves live under Team & Games) #}
       {% set stats_on = not ts or ts.stats_enabled %}
       {% set clips_on = not ts or ts.clip_enabled %}
       {% if stats_on %}
       <li class="nav-item dropdown {% if in_stats or in_clips %}uc-active{% endif %}">
         <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
-          <i class="bi bi-graph-up"></i> Stats
+          <i class="bi bi-graph-up"></i> {{ 'Stats & Clips' if clips_on else 'Stats' }}
         </a>
         <ul class="dropdown-menu">
           <li><a class="dropdown-item" href="{{ url_for('stats_dashboard.index') }}">

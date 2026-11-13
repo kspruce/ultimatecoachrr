@@ -44,8 +44,9 @@ def test_coach_menu_is_grouped(app, club):
                 'Game Stats', '> Strategy'):
         assert old not in menu, old
     # Theory sits in Playbook, Clips in Stats: no single-link top-level items
-    assert re.search(r'Playbook\s*</a>\s*<ul class="dropdown-menu">', menu)
-    assert menu.index('Playbook') < menu.index('href="/theory/"') < menu.index('Stats') < menu.index('href="/clips/"')
+    assert re.search(r'Tactics\s*</a>\s*<ul class="dropdown-menu">', menu)
+    assert '> Team &amp; Games' in menu and '> Tactics' in menu and 'Stats &amp; Clips' in menu
+    assert menu.index('Tactics') < menu.index('href="/theory/"') < menu.index('Stats &amp;') < menu.index('href="/clips/"')
     assert 'uc-on-tabbar' in menu  # Home is hidden from the phone menu
 
 

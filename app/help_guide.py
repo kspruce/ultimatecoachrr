@@ -63,7 +63,7 @@ FEATURES = [
     # ── Set up the team ──────────────────────────────────────
     Feature('roster', 'Team Roster', 'bi-people', 'Every player on the team, with their number, '
             'position and the account they log in with.', 'team.index', 'Open Roster', 'setup',
-            steps=_m('Go to Club → Team Roster',
+            steps=_m('Go to Team &amp; Games → Team Roster',
                      'Add players one at a time, or paste a whole spreadsheet with <strong>Bulk Import</strong>',
                      'Click a player for their profile, stats and roles'),
             coach_steps=_m('Tick <em>Auto-create login accounts</em> on Bulk Import to make logins for everyone with an email',
@@ -80,7 +80,7 @@ FEATURES = [
             pages=('seasons.',)),
     Feature('roles', 'Roles', 'bi-diagram-3', 'Your team\'s roles, like O-line initiation cutter, '
             'and who plays each one this season.', 'roles.index', 'Roles', 'setup', coach_only=True,
-            steps=_m('Start from the suggested roles under Club → Roles, then rename and add your own',
+            steps=_m('Start from the suggested roles under Team &amp; Games → Roles, then rename and add your own',
                      "Add players to each role, first choice first; the star marks each player's main role",
                      'Watch for roles with nobody, only one player, or only one gender',
                      "Players say which roles they'd like on their profile; the playbook says what each role does in each play"),
@@ -220,7 +220,7 @@ FEATURES = [
                      "Visit the Stats dashboard for team-wide numbers, for the season you've picked",
                      'Click any player to see their profile, where they turn it over and what to work on',
                      'See <em>How PER, EPM and Eff work</em> on the dashboard for where the ratings come from'),
-            coach_steps=_m('Stat takers find the quick Game Day tallies under Stats → Game Day summary',),
+            coach_steps=_m('Stat takers find the quick Game Day tallies under Stats &amp; Clips → Game Day summary',),
             pages=('stats_dashboard.', 'stat.')),
     Feature('clips', 'Clip Library', 'bi-camera-video-fill', 'Video clips with notes, for review '
             'and coaching feedback.', 'clip.index', 'Clip Library', 'review', flag='clip_enabled',
