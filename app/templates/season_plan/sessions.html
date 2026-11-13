@@ -9,7 +9,7 @@
   <div>
     <div class="sp-label">{{ plan.season }}</div>
     <h1>Sessions from the plan</h1>
-    <p>Each week's timed tables become sessions: the joint session table makes a joint session, and the split sessions table makes a 1s session and a 2s session. Every row becomes an activity.
+    <p>Each week's timed tables become sessions: the joint session table makes a joint session, and a split sessions table (a column per squad{% if plan.squads %}: {{ plan.squads|join(', ') }}{% endif %}) makes a session for each squad. Every row becomes an activity.
       Once built, editing a week here or re-importing the plan updates its sessions, so the plan is the only place you edit them.</p>
   </div>
 </div>
@@ -46,7 +46,7 @@
         <input class="form-control form-control-sm" id="session_location" name="session_location" maxlength="100" value="{{ form.session_location or '' }}">
       </div>
     </div>
-    <p class="sp-muted small mt-3 mb-0">If a <a href="{{ url_for('training.schedules_page') }}">training schedule</a> has a date that week for the same squads (joint: a session for everyone; 1s / 2s: that squad's own), the plan fills in that date and the schedule's day, time and place are used, so players' answers stay with it. These settings are for weeks no schedule covers.
+    <p class="sp-muted small mt-3 mb-0">If a <a href="{{ url_for('training.schedules_page') }}">training schedule</a> has a date that week for the same squads (joint: a session for everyone; a squad: that squad's own), the plan fills in that date and the schedule's day, time and place are used, so players' answers stay with it. These settings are for weeks no schedule covers.
       The day is counted from each week's w/c date. A session's last activity runs to the end time, unless the table's heading gives a length such as "(about 2 hours)".</p>
   </div>
 

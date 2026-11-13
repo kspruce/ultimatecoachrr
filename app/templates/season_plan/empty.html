@@ -3,13 +3,32 @@
 <div class="uc-page-header">
   <div>
     <h1>Season plan</h1>
-    <p>No season plan has been imported for {{ current_team.name if current_team else 'this team' }} yet.</p>
+    <p>Plan {{ current_team.name if current_team else 'your team' }}'s season week by week: phases, a theme for every week, milestones and session notes, all in one place for coaches and players.</p>
   </div>
 </div>
-<div class="sp-card" style="max-width:720px">
-  <h3>Importing a plan</h3>
-  <p>A season plan is imported from a markdown export (a folder with <code>manifest.json</code> and one file per tab) on the server:</p>
-  <pre class="mb-2"><code>flask import-season-plan path/to/export --team {{ current_team.slug if current_team else '&lt;team-slug&gt;' }} --dry-run</code></pre>
-  <p class="sp-muted mb-0">Run it with <code>--dry-run</code> first to check what it found, then without to import.</p>
+
+<div class="sp-start">
+  <a class="sp-card sp-start-card sp-start-main" href="{{ url_for('season_plan.new_plan') }}">
+    <i class="bi bi-plus-circle"></i>
+    <h3>Start from scratch</h3>
+    <p>Pick the first week, name your phases and how long each lasts, and say which squads have their own themes. The weeks are made for you.</p>
+    <span class="btn btn-primary btn-sm">Create a plan</span>
+  </a>
+  {% for t in templates %}
+  <a class="sp-card sp-start-card" href="{{ url_for('season_plan.new_plan', template=t.key) }}">
+    <i class="bi bi-layout-text-window-reverse"></i>
+    <h3>{{ t.name }}</h3>
+    <p>{{ t.hint }} {{ template_weeks(t) }} weeks, {{ t.phases|length }} phases.</p>
+    <span class="btn btn-outline-primary btn-sm">Use this template</span>
+  </a>
+  {% endfor %}
+  <a class="sp-card sp-start-card" href="{{ url_for('season_plan.import_sheet') }}">
+    <i class="bi bi-file-earmark-spreadsheet"></i>
+    <h3>Import a spreadsheet</h3>
+    <p>Already have a plan in Excel or Google Sheets? Download the template, paste your weeks in, and check a preview before anything is saved.</p>
+    <span class="btn btn-outline-primary btn-sm">Import</span>
+  </a>
 </div>
+
+<p class="sp-muted small mt-2">Everything can be changed after the plan is made. Plans written as a markdown document can also be imported by a site admin (<code>flask import-season-plan</code>; see <code>docs/SEASON_PLAN.md</code>).</p>
 {% endblock %}

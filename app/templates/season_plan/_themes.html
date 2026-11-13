@@ -1,18 +1,11 @@
-{# The joint / 1s / 2s themes of a week. `squad` limits which split is shown. #}
+{# A week's themes: joint (or the one theme) and each squad's. `squad` limits which squad is shown. #}
 {% macro themes(week, squad='all') %}
 <div class="sp-themes">
-  {% if week.joint_theme %}
-  <div class="sp-theme"><div class="sp-label">Joint session</div><p>{{ week.joint_theme }}</p></div>
-  {% endif %}
-  {% if squad in ('all', '1s') and week.firsts_theme %}
-  <div class="sp-theme"><div class="sp-label">1s split</div><p>{{ week.firsts_theme }}</p></div>
-  {% endif %}
-  {% if squad in ('all', '2s') and week.seconds_theme %}
-  <div class="sp-theme"><div class="sp-label">2s split</div><p>{{ week.seconds_theme }}</p></div>
-  {% endif %}
-  {% if not week.joint_theme and not week.firsts_theme and not week.seconds_theme %}
+  {% for label, text in week.themes(squad=squad) %}
+  <div class="sp-theme"><div class="sp-label">{{ label }}</div><p>{{ text }}</p></div>
+  {% else %}
   <div class="sp-theme"><p class="sp-muted m-0">No sessions this week.</p></div>
-  {% endif %}
+  {% endfor %}
 </div>
 {% endmacro %}
 

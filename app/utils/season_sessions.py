@@ -4,7 +4,9 @@ the plan is the one place sessions are written.
 Each "## Week N" section of the plan can hold timed tables:
 
   | Time | Activity | How it runs | Source |          -> one joint session
-  | Time | 1s group | 2s group (suggested) | Source | -> a 1s and a 2s session
+  | Time | 1s group | 2s group (suggested) | Source | -> a session for each of
+                                                         the plan's squads named
+                                                         in the header
 
 The bold line just above a table ("**Joint session**", "**Light joint session
 (about 2 hours)**") names it; a length in that line ("about 2 hours", "90
@@ -13,7 +15,7 @@ component, timed from the gap to the next row. "**Learning points:** (1) ...
 (2) ..." become the learning points, and the rest of the week's notes become
 the session notes.
 
-Sessions are matched on external_id "plan-<season>-w<NN>-<squad>", so
+Sessions are matched on external_id "plan-<season>-w<NN>-<squad slug>", so
 building again updates them in place: the plan owns the title, date, times,
 location, aim, notes and components. Attendance and RSVPs are never touched.
 A session the plan no longer has is deleted if nobody has RSVPed or been
@@ -21,7 +23,7 @@ marked present, and otherwise left alone with a warning.
 
 When the team has a training schedule, a week's session fills in the
 schedule's date that week for the same squads (joint: a session for the
-whole club; 1s / 2s: that squad's own session) instead of making a new one,
+whole club; a squad: that squad's own session) instead of making a new one,
 so players' answers for that date stay with it. The schedule keeps the date,
 time and place; the plan's training days and times are only used for weeks
 no schedule covers.
@@ -34,9 +36,8 @@ from app import db
 from app.models.drill import SavedDrill
 from app.models.session import SessionPlan
 from app.utils.season_import import _apply, _sync_components
-from app.utils.season_plan_import import clean_cell, parse_tables
+from app.utils.season_plan_import import clean_cell, parse_tables, squad_name
 
-SQUAD_LABELS = {'joint': 'Joint', '1s': '1s', '2s': '2s'}
 WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 NAME_LIMIT = 100  # SessionComponent.title and SessionPlan.title
 SHORT_NAME = 80   # longer cells are split into a name and a description
@@ -143,8 +144,22 @@ def _col(header, *prefixes):
     return next((i for i, h in enumerate(header) if any(h.startswith(p) for p in prefixes)), None)
 
 
-def parse_week_notes(markdown):
-    """Read one week's session notes. Returns
+def _squad_columns(table, squads):
+    """{column index: plan squad} for a split table's squad columns."""
+    by_lower = {q.lower(): q for q in squads}
+    out = {}
+    for i, raw in enumerate(table.get('raw_header') or table['header']):
+        if i == 0:
+            continue
+        squad = by_lower.get(squad_name(raw).lower())
+        if squad and squad not in out.values():
+            out[i] = squad
+    return out
+
+
+def parse_week_notes(markdown, squads=('1s', '2s')):
+    """Read one week's session notes. `squads` are the plan's squads, which a
+    split table's columns are matched to. Returns
     {'sessions': [{'squad', 'label', 'activities'}], 'learning_points': [...],
      'notes': the rest of the markdown}."""
     lines = (markdown or '').splitlines()
@@ -156,8 +171,8 @@ def parse_week_notes(markdown):
         if not header or header[0] != 'time':
             continue
         activity, how, source = _col(header, 'activity'), _col(header, 'how'), _col(header, 'source')
-        firsts, seconds = _col(header, '1s'), _col(header, '2s')
-        if activity is None and (firsts is None or seconds is None):
+        squad_cols = _squad_columns(table, squads) if activity is None else {}
+        if activity is None and not squad_cols:
             continue
         label, label_line = _label_above(lines, table['start'])
         length = length_from_label(label)
@@ -169,31 +184,31 @@ def parse_week_notes(markdown):
         if activity is not None:
             rows = [(_clock(r[0]), cell(r, activity), cell(r, how), cell(r, source))
                     for r in cells if cell(r, activity)]
-            squad = 'joint' if not sessions or all(s['squad'] != 'joint' for s in sessions) else None
-            if squad is None:
+            if any(s['squad'] == 'joint' for s in sessions):
                 continue  # a second joint table in one week: keep it in the notes
             sessions.append({'squad': 'joint', 'label': label or 'Joint session',
                              'length': length, 'activities': _rows_to_activities(rows, length)})
         else:
-            if any(s['squad'] in ('1s', '2s') for s in sessions):
+            if any(s['squad'] != 'joint' for s in sessions):
                 continue
-            ones, twos = [], []
+            columns = sorted(squad_cols.items())
+            per_squad = {squad: [] for _, squad in columns}
             for r in cells:
-                one, two = cell(r, firsts), cell(r, seconds)
                 start, src = _clock(r[0]), cell(r, source)
-                two_how = None
-                same = SAME_RE.match(two or '')
-                if same and one:
-                    # "Same", "The same", "Same drill at stall 7": the 1s
-                    # activity, with what the 2s change in its description
-                    two = one
-                    rest = same.group(1).strip(' .,;:')
-                    two_how = f'2s: {rest}' if rest else None
-                if one:
-                    ones.append((start, one, None, src))
-                if two:
-                    twos.append((start, two, two_how, src))
-            for squad, rows in (('1s', ones), ('2s', twos)):
+                first = cell(r, columns[0][0])
+                for n, (i, squad) in enumerate(columns):
+                    text, extra = cell(r, i), None
+                    same = SAME_RE.match(text or '') if n else None
+                    if same and first:
+                        # "Same", "The same", "Same drill at stall 7": the
+                        # first squad's activity, with what changes in its
+                        # description
+                        text = first
+                        rest = same.group(1).strip(' .,;:')
+                        extra = f'{squad}: {rest}' if rest else None
+                    if text:
+                        per_squad[squad].append((start, text, extra, src))
+            for squad, rows in per_squad.items():
                 if rows:
                     sessions.append({'squad': squad, 'label': label or 'Split session',
                                      'length': length, 'activities': _rows_to_activities(rows, length)})
@@ -244,8 +259,12 @@ class BuildReport:
         return '\n'.join(out)
 
 
+def squad_slug(squad):
+    return re.sub(r'[^a-z0-9]+', '-', (squad or '').lower()).strip('-') or 'squad'
+
+
 def external_id(plan, week_number, squad):
-    return f'plan-{plan.season}-w{week_number:02d}-{squad}'
+    return f'plan-{plan.season}-w{week_number:02d}-{squad_slug(squad)}'
 
 
 def _external_prefix(plan):
@@ -275,20 +294,38 @@ def _minutes_between(start, end):
 
 
 def _theme(week, squad):
-    return {'joint': week.joint_theme, '1s': week.firsts_theme, '2s': week.seconds_theme}[squad]
+    return week.theme_for(squad)
+
+
+def squad_label(squad):
+    """SessionPlan.squad for a plan squad: 'joint', '1s' or '2s' (the
+    labels the sessions pages filter on), else None; the session's ticked
+    squads say who it's for."""
+    value = 'joint' if squad == 'joint' else (squad or '').strip().lower()
+    return value if value in {v for v, _ in SessionPlan.SQUAD_CHOICES} else None
 
 
 def _title(week, squad):
     name = week.session_title or week.block
-    title = f'Week {week.week_number} {SQUAD_LABELS[squad]}' + (f': {name}' if name else '')
+    title = f'Week {week.week_number} {"Joint" if squad == "joint" else squad}' + (f': {name}' if name else '')
     return title if len(title) <= NAME_LIMIT else title[:NAME_LIMIT - 1].rstrip() + '…'
+
+
+def split_squads(plan):
+    """The squads a split table's columns can name: the plan's squads, or,
+    for a plan without any, the club's squads."""
+    if plan.squads:
+        return plan.squads
+    from app.models.season import Squad
+    return [q.name for q in Squad.query.filter_by(team_organization_id=plan.team_organization_id)
+            .order_by(Squad.sort_order, Squad.name)]
 
 
 def plan_week(plan, week):
     """The sessions one week should have: [{'external_id', 'values', 'components'}]."""
     if week.is_break or not week.session_detail_md:
         return []
-    parsed = parse_week_notes(week.session_detail_md)
+    parsed = parse_week_notes(week.session_detail_md, split_squads(plan))
     out = []
     for s in parsed['sessions']:
         squad = s['squad']
@@ -311,7 +348,7 @@ def plan_week(plan, week):
             'block': week.block,
             'week_number': week.week_number,
             'week_commencing': week.week_commencing,
-            'squad': squad,
+            'squad': squad_label(squad),
             'aim': _theme(week, squad) or week.session_title,
             'learning_points': parsed['learning_points'] or None,
             'notes': parsed['notes'],
@@ -321,7 +358,7 @@ def plan_week(plan, week):
             'end_time': end,
             'location': plan.session_location,
         }
-        out.append({'external_id': external_id(plan, week.week_number, squad),
+        out.append({'external_id': external_id(plan, week.week_number, squad), 'squad': squad,
                     'values': values, 'components': activities})
     return out
 
@@ -331,12 +368,13 @@ def _like_prefix(prefix):
 
 
 def week_sessions(plan, week):
-    """The sessions built from one week, joint first."""
-    order = {'joint': 0, '1s': 1, '2s': 2}
+    """The sessions built from one week, joint first, then in the plan's
+    squad order."""
+    prefix = f'{_external_prefix(plan)}{week.week_number:02d}-'
+    order = {'joint': 0, **{squad_slug(q): i + 1 for i, q in enumerate(split_squads(plan))}}
     rows = SessionPlan.query.filter(
-        SessionPlan.team_organization_id == plan.team_organization_id,
-        _like_prefix(f'{_external_prefix(plan)}{week.week_number:02d}-')).all()
-    return sorted(rows, key=lambda s: order.get(s.squad, 3))
+        SessionPlan.team_organization_id == plan.team_organization_id, _like_prefix(prefix)).all()
+    return sorted(rows, key=lambda s: order.get(s.external_id[len(prefix):], len(order)))
 
 
 QUALIFIER_RE = re.compile(r'\b(stall \d+|then|with|against|as in|from week|in ho|in vert)\b.*$')
@@ -420,7 +458,8 @@ PLAN_KEYS = ('season', 'phase_number', 'phase_name', 'block', 'week_number', 'we
 
 
 def _scheduled_date(team_id, week, squad):
-    """An unplanned training-schedule date in this week for this squad."""
+    """An unplanned training-schedule date in this week for this squad
+    ('joint' or a plan squad name)."""
     if not week.week_commencing:
         return None
     candidates = SessionPlan.query.filter(
@@ -432,7 +471,7 @@ def _scheduled_date(team_id, week, squad):
         if session.components.count():
             continue
         names = {q.name.strip().lower() for q in session.squads}
-        if (squad == 'joint' and len(names) != 1) or (squad != 'joint' and names == {squad}):
+        if (squad == 'joint' and len(names) != 1) or (squad != 'joint' and names == {squad.strip().lower()}):
             return session
     return None
 
@@ -442,7 +481,8 @@ def _squads_for(team_id, squad):
     if squad == 'joint':
         return []
     from app.models.season import Squad
-    return [q for q in Squad.query.filter_by(team_organization_id=team_id) if q.name.strip().lower() == squad]
+    return [q for q in Squad.query.filter_by(team_organization_id=team_id)
+            if q.name.strip().lower() == squad.strip().lower()]
 
 
 def _has_people(session):
@@ -478,7 +518,7 @@ def build_sessions(plan, weeks=None, dry_run=False, commit=True):
                 session = existing.pop(ext, None)
                 values = item['values']
                 if session is None:
-                    session = _scheduled_date(team_id, week, values['squad'])
+                    session = _scheduled_date(team_id, week, item['squad'])
                     if session is not None:
                         # Fill in the schedule's date; it keeps its own when and where
                         session.external_id = ext
@@ -488,7 +528,7 @@ def build_sessions(plan, weeks=None, dry_run=False, commit=True):
                     else:
                         session = SessionPlan(team_organization_id=team_id, external_id=ext)
                         _apply(session, values)
-                        session.squads = _squads_for(team_id, values['squad'])
+                        session.squads = _squads_for(team_id, item['squad'])
                         db.session.add(session)
                         status = 'created'
                     db.session.flush()
@@ -501,9 +541,9 @@ def build_sessions(plan, weeks=None, dry_run=False, commit=True):
                                               if c['component_type'] not in UNLINKED_TYPES else None)
                 if _sync_components(session, item['components'], drills, team_id) and status == 'unchanged':
                     status = 'updated'
-                if session.squad == 'joint':
+                if item['squad'] == 'joint':
                     joint_by_week[week.week_number] = session
-                report.rows.append({'week': week.week_number, 'squad': session.squad,
+                report.rows.append({'week': week.week_number, 'squad': item['squad'],
                                     'session_id': session.id,
                                     'title': session.title, 'date': session.date,
                                     'activities': len(item['components']), 'status': status,

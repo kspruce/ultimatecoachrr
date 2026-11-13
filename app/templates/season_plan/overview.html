@@ -13,11 +13,25 @@
   {% if current_user.is_coach and request.args.get('on') %}
   <span class="sp-badge sp-badge-event">Previewing {{ today.strftime('%-d %b %Y') }}</span>
   {% elif current_user.is_coach %}
-  <a class="btn btn-primary btn-sm" href="{{ url_for('season_plan.sessions') }}"><i class="bi bi-hammer"></i> {{ 'Update sessions' if plan.sessions_built_at else 'Build sessions' }}</a>
+  <div class="d-flex gap-2 flex-wrap">
+    <a class="btn btn-outline-primary btn-sm" href="{{ url_for('season_plan.settings') }}"><i class="bi bi-pencil-square"></i> Edit plan</a>
+    <a class="btn btn-primary btn-sm" href="{{ url_for('season_plan.sessions') }}"><i class="bi bi-hammer"></i> {{ 'Update sessions' if plan.sessions_built_at else 'Build sessions' }}</a>
+  </div>
   {% endif %}
 </div>
 
 {% set link_phases = season_plan_sees_all() or plan.players_see_phases %}
+{% if current_user.is_coach and players_see_nothing %}
+<div class="alert alert-warning d-flex justify-content-between align-items-center gap-2 flex-wrap">
+  <span><i class="bi bi-eye-slash"></i> Players can't see any of this plan yet. Coaches and captains see everything.</span>
+  <a class="btn btn-sm btn-warning" href="{{ url_for('season_plan.access') }}">Choose what players see</a>
+</div>
+{% endif %}
+{% if current_user.is_coach and empty_weeks == plan.weeks|length and plan.weeks %}
+<div class="alert alert-info">
+  <i class="bi bi-lightbulb"></i> Next: give each week a theme. Open a week from <a href="{{ url_for('season_plan.weeks') }}">Weeks</a> and edit it, or fill them all in a spreadsheet: <a href="{{ url_for('season_plan.export_xlsx') }}">export the plan</a>, add the themes and <a href="{{ url_for('season_plan.import_sheet') }}">import it again</a>.
+</div>
+{% endif %}
 {% if timeline and timeline.bands %}
 <div class="sp-card">
   <div class="d-flex justify-content-between align-items-baseline flex-wrap gap-2 mb-1">

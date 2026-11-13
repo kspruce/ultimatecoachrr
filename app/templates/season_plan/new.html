@@ -1,0 +1,152 @@
+{% extends "season_plan/_layout.html" %}
+{% block sp_content %}
+<div class="uc-page-header">
+  <div>
+    <h1>Create a season plan</h1>
+    <p>Everything here can be changed later. The weeks are made from the first week and the phases' lengths; you fill in each week's theme and session notes afterwards.</p>
+  </div>
+</div>
+
+<form method="post" class="sp-new" style="max-width:860px">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  <div class="sp-card">
+    <h3>1. The plan</h3>
+    <div class="row g-3">
+      <div class="col-md-8">
+        <label class="form-label" for="title">Title</label>
+        <input class="form-control" id="title" name="title" maxlength="200" required value="{{ form.get('title', '') }}">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label" for="season">Season</label>
+        <input class="form-control" id="season" name="season" maxlength="20" required placeholder="2027/28" value="{{ form.get('season', '') }}">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label" for="start_date">First week</label>
+        <input class="form-control" type="date" id="start_date" name="start_date" required value="{{ form.get('start_date', '') }}">
+        <div class="form-text">Weeks run Monday to Sunday from this date's week.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sp-card">
+    <h3>2. Start from</h3>
+    {% set chosen = form.get('template', '') %}
+    <div class="sp-choice">
+      <label class="sp-choice-item">
+        <input class="form-check-input" type="radio" name="template" value="" {{ 'checked' if not chosen }} data-template-choice>
+        <span><b>My own phases</b><small>Name the phases and say how long each lasts. Weeks start empty.</small></span>
+      </label>
+      {% for t in templates %}
+      <label class="sp-choice-item">
+        <input class="form-check-input" type="radio" name="template" value="{{ t.key }}" {{ 'checked' if chosen == t.key }} data-template-choice>
+        <span><b>{{ t.name }}</b><small>{{ t.hint }} {{ template_weeks(t) }} weeks: {% for p in t.phases %}{{ p.name }} ({{ p.weeks }}){{ ', ' if not loop.last }}{% endfor %}.</small></span>
+      </label>
+      {% endfor %}
+    </div>
+
+    <div id="own-phases" class="mt-3" {% if chosen %}hidden{% endif %}>
+      <div class="sp-label mb-2">Phases, in order</div>
+      <div id="phase-rows">
+        {% for name, weeks in phase_rows %}
+        <div class="sp-phase-row">
+          <input class="form-control form-control-sm" name="phase_name" maxlength="100" aria-label="Phase name" placeholder="Phase name" value="{{ name or '' }}">
+          <input class="form-control form-control-sm" name="phase_weeks" type="number" min="1" max="60" aria-label="Weeks" value="{{ weeks or '' }}" data-weeks>
+          <span class="sp-muted small">weeks</span>
+        </div>
+        {% endfor %}
+      </div>
+      <button type="button" class="btn btn-sm btn-outline-secondary mt-1" id="add-phase"><i class="bi bi-plus"></i> Add a phase</button>
+      <p class="sp-muted small mt-2 mb-0" id="phase-total" aria-live="polite"></p>
+    </div>
+  </div>
+
+  <div class="sp-card">
+    <h3>3. Squads</h3>
+    <p class="sp-muted small">Tick the squads that have their own theme each week, alongside a joint theme for everyone (e.g. a joint skill session, then each squad's tactics). Leave them all unticked for one theme a week for the whole club.</p>
+    {% if team_squads %}
+    <div class="d-flex flex-wrap gap-3 mb-2">
+      {% for q in team_squads %}
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" id="squad_{{ loop.index }}" name="squad" value="{{ q }}" {{ 'checked' if q in picked_squads }}>
+        <label class="form-check-label" for="squad_{{ loop.index }}">{{ q }}</label>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    <label class="form-label small" for="other_squads">{{ 'Other squads' if team_squads else 'Squads' }} (separated by commas)</label>
+    <input class="form-control form-control-sm" id="other_squads" name="other_squads" placeholder="1s, 2s" value="{{ form.get('other_squads', '') }}">
+    {% if not team_squads %}<div class="form-text">Your club has no squads set up (Team settings → Seasons & squads). You can still name squads here for their themes.</div>{% endif %}
+  </div>
+
+  <div class="sp-card">
+    <h3>4. Training days <span class="sp-muted small">(optional)</span></h3>
+    <p class="sp-muted small">Used when sessions are built from the plan's weekly notes. You can set these later under Sessions.</p>
+    <div class="sp-session-grid">
+      {% for key, title in [('joint', 'Main / joint session'), ('split', 'Squad sessions')] %}
+      <fieldset>
+        <legend class="sp-label">{{ title }}</legend>
+        <select class="form-select form-select-sm mb-2" name="{{ key }}_weekday" aria-label="{{ title }} day">
+          <option value="">No day</option>
+          {% for day in weekdays %}<option value="{{ loop.index0 }}" {{ 'selected' if form.get(key ~ '_weekday') == loop.index0|string }}>{{ day }}</option>{% endfor %}
+        </select>
+        <div class="d-flex gap-2">
+          <input class="form-control form-control-sm" type="time" name="{{ key }}_start" aria-label="{{ title }} start" value="{{ form.get(key ~ '_start', '') }}">
+          <input class="form-control form-control-sm" type="time" name="{{ key }}_end" aria-label="{{ title }} end" value="{{ form.get(key ~ '_end', '') }}">
+        </div>
+      </fieldset>
+      {% endfor %}
+      <fieldset>
+        <legend class="sp-label">Where</legend>
+        <input class="form-control form-control-sm" name="session_location" maxlength="100" aria-label="Location" value="{{ form.get('session_location', '') }}">
+      </fieldset>
+    </div>
+  </div>
+
+  <div class="sp-card">
+    <h3>5. Who sees it</h3>
+    <div class="form-check form-switch">
+      <input class="form-check-input" type="checkbox" role="switch" id="players_see" name="players_see" {{ 'checked' if form.get('players_see') }}>
+      <label class="form-check-label" for="players_see">Players can see the overview, the weeks and the phases</label>
+    </div>
+    <div class="form-text">Coaches and captains always see everything. Session notes and pages can be opened to players later under Player access.</div>
+  </div>
+
+  <div class="d-flex justify-content-end gap-2 mb-4">
+    <a class="btn btn-outline-secondary" href="{{ url_for('season_plan.index') }}">Cancel</a>
+    <button class="btn btn-primary" type="submit"><i class="bi bi-check-lg"></i> Create the plan</button>
+  </div>
+</form>
+
+<script>
+(function () {
+  var own = document.getElementById('own-phases');
+  var rows = document.getElementById('phase-rows');
+  var total = document.getElementById('phase-total');
+  var start = document.getElementById('start_date');
+  function update() {
+    var weeks = 0;
+    rows.querySelectorAll('[data-weeks]').forEach(function (el) { weeks += parseInt(el.value, 10) || 0; });
+    var text = weeks + ' week' + (weeks === 1 ? '' : 's');
+    if (start.value && weeks) {
+      var d = new Date(start.value + 'T12:00:00');
+      d.setDate(d.getDate() - ((d.getDay() + 6) % 7) + weeks * 7 - 1);
+      text += ', ending ' + d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+    total.textContent = text;
+  }
+  document.querySelectorAll('[data-template-choice]').forEach(function (el) {
+    el.addEventListener('change', function () { own.hidden = !!document.querySelector('[data-template-choice]:checked').value; });
+  });
+  document.getElementById('add-phase').addEventListener('click', function () {
+    var row = rows.lastElementChild.cloneNode(true);
+    row.querySelectorAll('input').forEach(function (el) { el.value = ''; });
+    rows.appendChild(row);
+    row.querySelector('input').focus();
+  });
+  rows.addEventListener('input', update);
+  start.addEventListener('change', update);
+  update();
+})();
+</script>
+{% endblock %}

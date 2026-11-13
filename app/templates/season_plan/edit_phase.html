@@ -1,0 +1,64 @@
+{% extends "season_plan/_layout.html" %}
+{% from "season_plan/_edit_nav.html" import edit_nav %}
+{% block sp_content %}
+{% macro val(name) %}{{ form.get(name) if form.get(name) is not none else (phase[name] if phase and phase[name] is not none else '') }}{% endmacro %}
+<div class="uc-page-header">
+  <div>
+    <div class="sp-label">{{ plan.season }}</div>
+    <h1>{{ 'Phase ' ~ phase.number ~ ': ' ~ phase.name if phase else 'Add a phase' }}</h1>
+  </div>
+</div>
+{{ edit_nav('season_plan.phases') }}
+
+<form method="post" style="max-width:860px">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="sp-card">
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label" for="name">Name</label>
+        <input class="form-control" id="name" name="name" maxlength="100" required value="{{ val('name') }}">
+      </div>
+      {% for field, label in [('start_week', 'First week'), ('end_week', 'Last week')] %}
+      <div class="col-6 col-md-2">
+        <label class="form-label" for="{{ field }}">{{ label }}</label>
+        <select class="form-select" id="{{ field }}" name="{{ field }}">
+          {% set current = val(field)|string %}
+          {% for w in plan.weeks %}
+          <option value="{{ w.week_number }}" {{ 'selected' if current == w.week_number|string }}>{{ w.week_number }}{% if w.week_commencing %} · {{ w.week_commencing.strftime('%-d %b') }}{% endif %}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endfor %}
+      <div class="col-md-2">
+        <label class="form-label" for="colour">Colour</label>
+        <input class="form-control form-control-color w-100" type="color" id="colour" name="colour" value="{{ val('colour') or '#2E7D5B' }}">
+      </div>
+      {% for field, label, hint in [
+          ('aim', 'Aim', 'What the phase is for, in a sentence'),
+          ('training_focus', 'Training focus', 'What sessions concentrate on'),
+          ('events', 'Events', 'Tournaments, trials and other dates in the phase'),
+          ('strategic_anchor', 'Strategic anchor', 'One idea that runs through the phase')] %}
+      <div class="col-md-6">
+        <label class="form-label" for="{{ field }}">{{ label }}</label>
+        <textarea class="form-control" id="{{ field }}" name="{{ field }}" rows="2" placeholder="{{ hint }}">{{ val(field) }}</textarea>
+      </div>
+      {% endfor %}
+      <div class="col-12">
+        <label class="form-label" for="programme_id">Training programme during this phase</label>
+        <select class="form-select" id="programme_id" name="programme_id">
+          <option value="">None</option>
+          {% set current = val('programme_id')|string %}
+          {% for p in programmes %}
+          <option value="{{ p.id }}" {{ 'selected' if current == p.id|string }}>{{ p.name }}{% if p.start_date %} (from {{ p.start_date.strftime('%-d %b %Y') }}){% endif %}{% if not p.published %} · not published yet{% endif %}</option>
+          {% endfor %}
+        </select>
+        <div class="form-text">Each week of the phase then shows that week's programme sessions (e.g. the off-season fitness plan). Make one under <a href="{{ url_for('programmes.index') }}">Training › Programmes</a>.</div>
+      </div>
+    </div>
+  </div>
+  <div class="d-flex justify-content-end gap-2">
+    <a class="btn btn-outline-secondary" href="{{ url_for('season_plan.phases') }}">Cancel</a>
+    <button class="btn btn-primary" type="submit">Save phase</button>
+  </div>
+</form>
+{% endblock %}

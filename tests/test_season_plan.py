@@ -98,13 +98,15 @@ def test_parser_reads_the_real_export():
     assert weeks[12]['is_break'] and weeks[13]['is_break']
     assert weeks[12]['week_commencing'] == date(2027, 12, 20)
     assert weeks[13]['week_commencing'] == date(2027, 12, 27)
-    assert weeks[12]['phase_number'] is None and weeks[12]['firsts_theme'] is None
+    assert weeks[12]['phase_number'] is None and weeks[12]['squad_themes'] is None
+    assert data['plan']['squad_names'] == ['1s', '2s']
+    assert weeks[1]['squad_themes'] and set(weeks[1]['squad_themes']) == {'1s', '2s'}
     # Year rolls over in January
     assert weeks[14]['week_commencing'] == date(2028, 1, 3)
     assert weeks[51]['week_commencing'] == date(2028, 9, 18)
     # Escapes, dash cells and joint-only weeks
     assert weeks[26]['block'] == 'UKU Tour 1 (~28 Mar)'
-    assert weeks[48]['seconds_theme'] is None and weeks[48]['joint_theme'] == 'Light: throwing, set pieces'
+    assert '2s' not in (weeks[48]['squad_themes'] or {}) and weeks[48]['joint_theme'] == 'Light: throwing, set pieces'
     assert weeks[50]['joint_theme'] is None
     assert weeks[3]['classroom'] == 'C1 How we learn (online)'
     assert weeks[1]['off_pitch'] == 'Baseline benchmarks'
@@ -139,7 +141,8 @@ def test_unparseable_rows_are_reported_not_fatal(tmp_path):
     data = parse_export(*load_export(str(tmp_path)))
     assert [w['week_number'] for w in data['weeks']] == [1]
     assert len(data['skipped']) == 3
-    assert data['weeks'][0]['firsts_theme'] is None
+    assert data['weeks'][0]['squad_themes'] is None
+    assert data['plan']['squad_names'] is None
 
 
 # --------------------------------------------------------------------------
@@ -322,12 +325,12 @@ def test_coach_can_edit_a_week(app, herd):
     sp_id = sp.id
     c = client(app, herd, 'coach')
     r = c.post('/season-plan/week/5/edit', data={
-        'block': 'B', 'joint_theme': 'New joint', 'firsts_theme': '', 'notes': 'Cones',
+        'block': 'B', 'theme_0': 'New joint', 'theme_1': '', 'theme_2': 'Zone O', 'notes': 'Cones',
         'is_event': 'on', 'session_plan_id': str(sp_id)})
     assert r.status_code == 302
     week = SeasonWeek.query.filter_by(week_number=5).one()
-    assert (week.joint_theme, week.firsts_theme, week.notes, week.is_event, week.session_plan_id) == \
-        ('New joint', None, 'Cones', True, sp_id)
+    assert (week.joint_theme, week.theme_for('1s'), week.theme_for('2s'), week.notes, week.is_event,
+            week.session_plan_id) == ('New joint', None, 'Zone O', 'Cones', True, sp_id)
     assert 'Linked' in c.get('/season-plan/week/5').get_data(as_text=True)
 
 
@@ -380,6 +383,9 @@ def test_another_teams_plan_is_not_visible(app, herd):
     db.session.add(TeamSettings(team_id=other.id, season_plan_enabled=True))
     db.session.commit()
     coach = stats_data.Client(app, make_user(other, 'othercoach', role='coach').id, other.id)
-    assert 'No season plan has been imported' in coach.get('/season-plan/').get_data(as_text=True)
+    assert 'Create a plan' in coach.get('/season-plan/').get_data(as_text=True)
+    for url in ('/season-plan/settings', '/season-plan/phases', '/season-plan/export.xlsx'):
+        assert coach.get(url).status_code == 404, url
+    assert coach.get('/season-plan/year').headers['Location'].endswith('/season-plan/')
     assert coach.get('/season-plan/weeks').status_code == 404
     assert coach.get('/season-plan/week/1').status_code == 404

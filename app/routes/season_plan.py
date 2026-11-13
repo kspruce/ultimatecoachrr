@@ -35,8 +35,7 @@ SECTIONS = [
     ('phases', 'Phases', 'Each phase\'s aim, focus and strategic anchor'),
     ('classroom', 'Classroom sessions', 'Prep, join links, recordings, slides and published summaries'),
 ]
-WEEK_TEXT_FIELDS = ['block', 'joint_theme', 'firsts_theme', 'seconds_theme', 'classroom',
-                    'off_pitch', 'session_title', 'session_detail_md', 'notes']
+WEEK_TEXT_FIELDS = ['block', 'classroom', 'off_pitch', 'session_title', 'session_detail_md', 'notes']
 
 
 def feature_enabled(team_id):
@@ -173,7 +172,8 @@ def index():
     if plan is None:
         if not sees_everything():
             abort(404)
-        return render_template('season_plan/empty.html')
+        from app.utils.season_plan_templates import TEMPLATES, template_weeks
+        return render_template('season_plan/empty.html', templates=TEMPLATES, template_weeks=template_weeks)
     if not can_see(plan, 'overview'):
         # Send players to the first part they can see
         if can_see(plan, 'weeks'):
@@ -197,6 +197,9 @@ def index():
         featured_classroom=featured_classroom,
         featured=featured, featured_label=featured_label, timeline=_timeline(plan, today),
         next_event=next_event, next_milestone=next_milestone, pages=visible_pages(plan),
+        players_see_nothing=not (any(getattr(plan, f'players_see_{s}') for s, _, _ in SECTIONS)
+                                 or any(p.players_can_view for p in plan.pages)),
+        empty_weeks=sum(1 for w in plan.weeks if not (w.joint_theme or w.squad_themes or w.block)),
         days_to_start=(plan.start_date - today).days if plan.start_date and today < plan.start_date else None)
 
 
@@ -207,12 +210,14 @@ def weeks():
     today = _today()
     phase_no = request.args.get('phase', type=int)
     squad = request.args.get('squad', 'all')
-    if squad not in ('all', '1s', '2s'):
+    if squad not in plan.squads:
         squad = 'all'
+    columns = [(k, label) for k, label in plan.theme_columns if k == 'joint' or squad in ('all', k)]
     rows = [w for w in plan.weeks if not phase_no or (w.phase and w.phase.number == phase_no)]
     current = plan.week_for(today)
     return render_template('season_plan/weeks.html', plan=plan, weeks=rows, phase_no=phase_no,
-                           squad=squad, current=current, today=today, pages=visible_pages(plan),
+                           squad=squad, columns=columns, current=current, today=today,
+                           pages=visible_pages(plan),
                            link_classroom=can_see(plan, 'classroom'))
 
 
@@ -235,7 +240,10 @@ def week(number):
     next_wk = plan.weeks[i + 1] if i + 1 < len(plan.weeks) else None
     classroom_page = next((p for p in visible_pages(plan) if 'classroom' in p.slug), None)
     cards = classroom_cards(plan, wk.classroom_sessions, _now()) if can_see(plan, 'classroom') else []
+    from app.routes.season_plan_year import programme_week
+    programme = wk.phase.programme if wk.phase and wk.phase.programme and not wk.phase.programme.archived else None
     return render_template('season_plan/week.html', plan=plan, week=wk, prev_wk=prev_wk,
+                           programme=programme, programme_weeks=programme_week(programme, wk.week_commencing),
                            next_wk=next_wk, show_notes=can_see(plan, 'session_notes'),
                            classroom=cards,
                            show_phase=can_see(plan, 'phases'), classroom_page=classroom_page,
@@ -260,6 +268,8 @@ def edit_week(number):
                 return render_template('season_plan/edit_week.html', plan=plan, week=wk,
                                        session_plans=session_plans, pages=visible_pages(plan)), 400
             setattr(wk, name, value or None)
+        for i, (key, _) in enumerate(plan.theme_columns):
+            wk.set_theme(key, (request.form.get(f'theme_{i}') or '').strip() or None)
         wk.is_event = bool(request.form.get('is_event'))
         wk.is_break = bool(request.form.get('is_break'))
         sp_id = request.form.get('session_plan_id', type=int)
@@ -586,3 +596,7 @@ def move_classroom_resource(code, resource_id):
             item.order = n
         db.session.commit()
     return redirect(url_for('season_plan.edit_classroom', code=cs.code) + '#resources')
+
+
+# Creating and editing plans, and the year view, live in their own modules
+from app.routes import season_plan_edit, season_plan_year  # noqa: E402,F401

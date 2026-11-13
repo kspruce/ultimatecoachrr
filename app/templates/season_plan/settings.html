@@ -1,0 +1,115 @@
+{% extends "season_plan/_layout.html" %}
+{% from "season_plan/_edit_nav.html" import edit_nav %}
+{% block sp_content %}
+<div class="uc-page-header">
+  <div>
+    <div class="sp-label">{{ plan.season }}</div>
+    <h1>Plan settings</h1>
+    <p>The plan's name, dates and squads. Each week's themes and notes are edited from the week itself.</p>
+  </div>
+</div>
+{{ edit_nav('season_plan.settings') }}
+
+<form method="post" style="max-width:860px">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="sp-card">
+    <h3>The plan</h3>
+    <div class="row g-3">
+      <div class="col-md-8">
+        <label class="form-label" for="title">Title</label>
+        <input class="form-control" id="title" name="title" maxlength="200" required value="{{ plan.title }}">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label" for="season">Season</label>
+        <input class="form-control" id="season" name="season" maxlength="20" required value="{{ plan.season }}">
+      </div>
+      <div class="col-12">
+        <label class="form-label" for="summary">Summary</label>
+        <textarea class="form-control" id="summary" name="summary" rows="2" placeholder="One or two sentences shown at the top of the overview">{{ plan.summary or '' }}</textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="sp-card">
+    <h3>Weeks</h3>
+    <div class="row g-3">
+      <div class="col-md-4">
+        <label class="form-label" for="start_date">First week</label>
+        <input class="form-control" type="date" id="start_date" name="start_date" value="{{ plan.start_date.isoformat() if plan.start_date else '' }}">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label" for="week_count">Number of weeks</label>
+        <input class="form-control" type="number" min="1" max="60" id="week_count" name="week_count" value="{{ plan.weeks|length }}">
+      </div>
+      <div class="col-md-4 d-flex align-items-end">
+        <p class="sp-muted small mb-1">{% if plan.end_date %}Ends {{ plan.end_date.strftime('%a %-d %b %Y') }}{% endif %}</p>
+      </div>
+    </div>
+    <p class="form-text mb-0">Changing the first week moves every week (and its phase) by the same amount; themes and notes stay with their week. Fewer weeks removes empty weeks from the end; a week with anything written in it is kept.</p>
+  </div>
+
+  <div class="sp-card">
+    <h3>Squads</h3>
+    <p class="sp-muted small">Squads listed here get their own theme each week next to the {{ 'joint' if plan.squads else 'one' }} theme. Renaming a squad keeps its themes; removing it deletes them.</p>
+    {% for q in plan.squads %}
+    <div class="sp-phase-row">
+      <input class="form-control form-control-sm" name="squad_{{ loop.index0 }}" value="{{ q }}" maxlength="50" aria-label="Squad name">
+      <div class="form-check m-0">
+        <input class="form-check-input" type="checkbox" id="remove_squad_{{ loop.index0 }}" name="remove_squad_{{ loop.index0 }}">
+        <label class="form-check-label small" for="remove_squad_{{ loop.index0 }}">Remove</label>
+      </div>
+    </div>
+    {% endfor %}
+    {% set suggestions = team_squads|reject('in', plan.squads)|list %}
+    <div class="sp-phase-row">
+      <input class="form-control form-control-sm" name="new_squad" maxlength="50" placeholder="Add a squad" aria-label="Add a squad" list="team-squads">
+    </div>
+    {% if suggestions %}<datalist id="team-squads">{% for q in suggestions %}<option value="{{ q }}">{% endfor %}</datalist>{% endif %}
+  </div>
+
+  <div class="d-flex justify-content-end gap-2 mb-4">
+    <a class="btn btn-outline-secondary" href="{{ url_for('season_plan.index') }}">Cancel</a>
+    <button class="btn btn-primary" type="submit">Save settings</button>
+  </div>
+</form>
+
+<div class="sp-card" style="max-width:860px">
+  <h3>Your plans</h3>
+  <p class="sp-muted small">Everyone sees one plan at a time. Older plans are kept here.</p>
+  <div class="table-responsive">
+  <table class="table sp-table align-middle mb-2">
+    <thead><tr><th>Season</th><th>Plan</th><th>Weeks</th><th></th></tr></thead>
+    <tbody>
+    {% for p in plans %}
+    <tr>
+      <td class="text-nowrap">{{ p.season }}</td>
+      <td>{{ p.title }}{% if p.id == plan.id %} <span class="sp-badge sp-badge-now">Showing</span>{% endif %}</td>
+      <td class="text-nowrap">{% if p.start_date %}{{ p.start_date.strftime('%-d %b %Y') }} – {{ p.end_date.strftime('%-d %b %Y') if p.end_date }}{% endif %}</td>
+      <td class="text-end">
+        {% if p.id != plan.id %}
+        <form method="post" action="{{ url_for('season_plan.make_current', plan_id=p.id) }}" class="d-inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-sm btn-outline-primary">Show this plan</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <a class="btn btn-sm btn-outline-primary" href="{{ url_for('season_plan.new_plan') }}"><i class="bi bi-plus"></i> Create a plan for another season</a>
+</div>
+
+<details class="sp-card sp-danger" style="max-width:860px">
+  <summary>Delete this plan</summary>
+  <form method="post" action="{{ url_for('season_plan.delete_plan', plan_id=plan.id) }}" class="mt-3">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <p class="small">This deletes the plan's weeks, phases, milestones, pages and classroom sessions. Sessions built from it are kept. Type the season (<b>{{ plan.season }}</b>) to confirm.</p>
+    <div class="d-flex gap-2">
+      <input class="form-control form-control-sm" name="confirm" aria-label="Type the season to confirm" autocomplete="off" style="max-width:12rem">
+      <button class="btn btn-sm btn-danger">Delete plan</button>
+    </div>
+  </form>
+</details>
+{% endblock %}

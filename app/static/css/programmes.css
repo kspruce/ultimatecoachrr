@@ -117,3 +117,8 @@
   .pg-do-body { padding-left: 0; }
   .pg-do-body .pg-tap { width: 100%; }
 }
+
+/* Starter templates on the list page */
+.pg-starter { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; padding: .7rem 0; border-top: 1px solid var(--rule); }
+.pg-starter:first-of-type { border-top: 0; }
+.pg-starter > div:first-child { flex: 1 1 18rem; }

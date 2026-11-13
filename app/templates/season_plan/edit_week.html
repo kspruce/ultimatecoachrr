@@ -5,7 +5,7 @@
   <div>
     <div class="sp-label">{{ plan.season }}{% if week.week_commencing %} · w/c {{ week.week_commencing.strftime('%-d %b %Y') }}{% endif %}</div>
     <h1>Edit week {{ week.week_number }}</h1>
-    <p>Re-importing the plan replaces these fields with the export's text, except the coaches' notes and the session plan link.
+    <p>{% if plan.imported_at %}Re-importing the plan replaces these fields, except the coaches' notes and the session plan link.{% endif %}
       {% if plan.sessions_built_at %}Saving also updates this week's sessions from the session notes.{% endif %}</p>
   </div>
 </div>
@@ -17,12 +17,13 @@
       <label class="form-label" for="block">Block or event</label>
       <input class="form-control" id="block" name="block" maxlength="200" value="{{ week.block or '' }}">
     </div>
-    {% for name, label in [('joint_theme', 'Joint session'), ('firsts_theme', '1s split'), ('seconds_theme', '2s split')] %}
+    {% for key, label in plan.theme_columns %}
     <div class="mb-3">
-      <label class="form-label" for="{{ name }}">{{ label }}</label>
-      <textarea class="form-control" id="{{ name }}" name="{{ name }}" rows="2">{{ week[name] or '' }}</textarea>
+      <label class="form-label" for="theme_{{ loop.index0 }}">{{ label }}{% if key != 'joint' %} theme{% endif %}</label>
+      <textarea class="form-control" id="theme_{{ loop.index0 }}" name="theme_{{ loop.index0 }}" rows="2">{{ week.theme_for(key) or '' }}</textarea>
     </div>
     {% endfor %}
+    <p class="form-text mt-n2 mb-3">Squads with their own theme are set in <a href="{{ url_for('season_plan.settings') }}">Plan settings</a>.</p>
     <div class="row g-3">
       <div class="col-md-6">
         <label class="form-label" for="classroom">Classroom</label>

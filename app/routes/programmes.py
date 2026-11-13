@@ -30,6 +30,7 @@ from app.models.programme import (
     ProgrammeTrack, ProgrammeWeek, SessionLog, TestResult,
 )
 from app.utils import programme_import as pimport
+from app.utils import programme_starters as starters
 from app.utils import programme_template as ptemplate
 from app.utils import programmes as svc
 from app.utils.media_embed import is_web_url
@@ -221,7 +222,37 @@ def index():
         programmes=[p for p in rows if not p.is_template and not p.archived],
         templates=[p for p in rows if p.is_template and not p.archived],
         archived=[p for p in rows if p.archived],
-        shared=[p for p in shared if p.published], enrolments=enrolments)
+        shared=[p for p in shared if p.published], enrolments=enrolments,
+        starters=starters.STARTERS, next_monday=date.today() + timedelta(days=7 - date.today().weekday()))
+
+
+@bp.route('/starters/<key>', methods=['POST'])
+@coach_required
+def add_starter(key):
+    """A starter programme (Starter templates on the list page) as a new
+    draft programme for this club, from the chosen start date."""
+    team_id = _team()
+    starter = starters.BY_KEY.get(key)
+    if starter is None:
+        abort(404)
+    parsed, digest = starters.parsed(starter)
+    name = starter['name']
+    taken = {p.name for p in Programme.query.filter_by(team_organization_id=team_id, archived=False)}
+    n = 2
+    while name in taken:
+        name, n = f'{starter["name"]} ({n})', n + 1
+    try:
+        start_date = _date('start_date')
+    except ValueError as e:
+        flash(str(e), 'danger')
+        return redirect(url_for('programmes.index'))
+    programme = pimport.build(parsed, team_id, current_user, name=name, description=starter['description'],
+                              start_date=start_date, filename=f'Starter: {starter["name"]}'[:200])
+    programme.source_kind = 'template'
+    programme.source_name = starter['name']
+    db.session.commit()
+    flash('Added as a draft. Change anything you like, then publish it and add players.', 'success')
+    return redirect(url_for('programmes.build', programme_id=programme.id))
 
 
 @bp.route('/new', methods=['GET', 'POST'])

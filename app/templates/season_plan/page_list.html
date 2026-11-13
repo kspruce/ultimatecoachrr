@@ -1,0 +1,39 @@
+{% extends "season_plan/_layout.html" %}
+{% from "season_plan/_edit_nav.html" import edit_nav %}
+{% block sp_content %}
+<div class="uc-page-header">
+  <div>
+    <div class="sp-label">{{ plan.season }}</div>
+    <h1>Pages</h1>
+    <p>Longer writing that goes with the plan: the philosophy, how sessions run, a guide for captains. Written in markdown.</p>
+  </div>
+  <a class="btn btn-primary btn-sm" href="{{ url_for('season_plan.edit_page') }}"><i class="bi bi-plus"></i> Add a page</a>
+</div>
+{{ edit_nav('season_plan.page_list') }}
+
+<div class="sp-card" style="max-width:860px">
+  {% for p in all_pages %}
+  <div class="sp-access-row">
+    <div>
+      <a class="fw-semibold" href="{{ url_for('season_plan.page', slug=p.slug) }}">{{ p.title }}</a>
+      <span class="d-block">{{ 'Players can see it' if p.players_can_view else 'Coaches and captains only' }}</span>
+    </div>
+    <div class="d-flex gap-1 flex-wrap justify-content-end">
+      {% for direction, icon in [('up', 'arrow-up'), ('down', 'arrow-down')] %}
+      <form method="post" action="{{ url_for('season_plan.move_page', slug=p.slug) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="direction" value="{{ direction }}">
+        <button class="btn btn-sm btn-outline-secondary" aria-label="Move {{ direction }}"><i class="bi bi-{{ icon }}"></i></button>
+      </form>
+      {% endfor %}
+      <a class="btn btn-sm btn-outline-primary" href="{{ url_for('season_plan.edit_page', slug=p.slug) }}"><i class="bi bi-pencil"></i> Edit</a>
+      <form method="post" action="{{ url_for('season_plan.delete_page', slug=p.slug) }}" onsubmit="return confirm('Delete this page?')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-sm btn-outline-danger" aria-label="Delete {{ p.title }}"><i class="bi bi-trash"></i></button>
+      </form>
+    </div>
+  </div>
+  {% else %}
+  <p class="m-0 sp-muted">No pages yet.</p>
+  {% endfor %}
+</div>
+{% endblock %}

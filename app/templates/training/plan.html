@@ -105,7 +105,7 @@
       <div class="tr-card">
         <h3>Season plan · week {{ week.week_number }}</h3>
         {% if week.block %}<div><b>{{ week.block }}</b></div>{% endif %}
-        {% for label, theme in [('Joint', week.joint_theme), ('1s', week.firsts_theme), ('2s', week.seconds_theme)] if theme %}
+        {% for label, theme in week.themes() %}
         <div class="small"><b>{{ label }}:</b> {{ theme }}</div>
         {% endfor %}
         {% if session.aim %}<div class="small mt-1"><b>Aim:</b> {{ session.aim }}</div>{% endif %}
