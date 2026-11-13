@@ -9,8 +9,8 @@
             <h1>Session Components</h1>
             <p class="lead">{{ session.title }} | {{ session.formatted_date }}</p>
         </div>
-        <div class="col-md-4 text-end">
-            <div class="btn-group">
+        <div class="col-md-4 text-md-end">
+            <div class="d-flex flex-wrap gap-2 justify-content-md-end">
                 <a href="{{ url_for('session.add_component', session_id=session.id) }}" class="btn btn-primary">
                     <i class="bi bi-plus-circle"></i> Add Component
                 </a>
@@ -25,24 +25,24 @@
         <div class="col-12">
             {% if components %}
             {% set total_duration = components | map(attribute='duration_minutes') | select('number') | sum %}
-            <div class="alert alert-light border mb-3 d-flex justify-content-between align-items-center">
+            <div class="alert alert-light border mb-3 d-flex flex-wrap gap-2 justify-content-between align-items-center">
                 <span><strong>{{ components|length }}</strong> component{{ 's' if components|length != 1 else '' }}</span>
                 <span><i class="bi bi-clock"></i> Total duration: <strong>{{ total_duration }}</strong> minutes</span>
             </div>
 
             {% for component in components %}
             <div class="card mb-3 shadow-sm">
-                <div class="card-header d-flex justify-content-between align-items-center py-2">
-                    <div class="d-flex align-items-center gap-2">
+                <div class="card-header d-flex flex-wrap gap-2 justify-content-between align-items-center py-2">
+                    <div class="d-flex flex-wrap align-items-center gap-2" style="min-width:0;flex:1 1 12rem">
                         <span class="badge bg-secondary rounded-pill">{{ component.order }}</span>
                         <h5 class="mb-0">{{ component.title }}</h5>
                         <span class="badge bg-{{ component_colour(component.component_type, dark_text=True) }}">
                             {{ component.component_type|replace('_', ' ')|capitalize }}
                         </span>
                     </div>
-                    <div class="d-flex align-items-center gap-2">
+                    <div class="d-flex align-items-center gap-2 ms-auto">
                         {% if component.duration_minutes %}
-                        <span class="text-muted"><i class="bi bi-clock"></i> {{ component.duration_minutes }} min</span>
+                        <span class="text-muted text-nowrap"><i class="bi bi-clock"></i> {{ component.duration_minutes }} min</span>
                         {% endif %}
                         <div class="btn-group btn-group-sm">
                             <a href="{{ url_for('session.edit_component', component_id=component.id) }}" class="btn btn-outline-secondary" title="Edit">

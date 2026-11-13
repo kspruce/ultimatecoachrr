@@ -10,8 +10,8 @@
         <div class="col-md-8">
             <h1>Drill Library</h1>
         </div>
-        <div class="col-md-4 text-end">
-            <div class="btn-group">
+        <div class="col-md-4 text-md-end">
+            <div class="d-flex flex-wrap gap-2 justify-content-md-end">
                 {% if current_user.is_admin %}
                     <a href="{{ url_for('session.add_drill') }}" class="btn btn-primary">
                         <i class="bi bi-plus-lg"></i> Add New Drill
@@ -22,7 +22,7 @@
                         <i class="bi bi-pencil-square"></i> Draw a Drill
                     </a>
                 {% endif %}
-                <a href="{{ url_for('session.index') }}" class="btn btn-secondary">Back to Sessions</a>
+                <a href="{{ url_for('session.index') }}" class="btn btn-secondary">Back<span class="d-none d-md-inline"> to Sessions</span></a>
             </div>
         </div>
     </div>
@@ -37,7 +37,7 @@
                             <input type="text" class="form-control" name="q" placeholder="Search drills..." 
                                    value="{{ request.args.get('q', '') }}">
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-6 col-md-3">
                             <select class="form-select" name="skill_level">
                                 <option value="">Any Skill Level</option>
                                 {% for value, label in [('beginner', 'Beginner'), ('intermediate', 'Intermediate'), ('advanced', 'Advanced')] %}
@@ -45,7 +45,7 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-6 col-md-3">
                             <input type="text" class="form-control" name="focus_area" 
                                    placeholder="Focus Area" value="{{ request.args.get('focus_area', '') }}">
                         </div>
@@ -72,7 +72,7 @@
                         {{ drill.ultiplay_embed|embed_html }}
                     </div>
                 {% else %}
-                    <div class="drill-placeholder">
+                    <div class="drill-placeholder drill-placeholder-empty">
                         <i class="bi bi-camera-video fa-3x text-muted"></i>
                     </div>
                 {% endif %}
@@ -111,7 +111,7 @@
                     </div>
                 </div>
                 <div class="card-footer bg-transparent">
-                    <div class="btn-group w-100">
+                    <div class="btn-group uc-row w-100">
                         <a href="{{ url_for('session.drill_detail', drill_id=drill.id) }}" 
                            class="btn btn-sm btn-outline-primary">View</a>
                         {% if current_user.is_admin %}

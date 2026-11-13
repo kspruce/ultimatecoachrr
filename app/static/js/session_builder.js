@@ -12,6 +12,8 @@
   let timer = null;
   let saving = false;
   let dirtyAgain = false;
+  // On a phone the blocks start folded, showing a line of what's in them
+  const phone = window.matchMedia('(max-width: 575.98px)');
 
   // ── Blocks ──────────────────────────────────────────────────────────────
   function addBlock(block, before = null) {
@@ -29,9 +31,29 @@
       tag.hidden = false;
       tag.textContent = `Drill: ${(drill && drill.title) || block.drill_title}`;
     }
-    if (block.description || block.coach_cue || block.notes) el.classList.add('open');
+    if ((block.description || block.coach_cue || block.notes) && !phone.matches) el.classList.add('open');
     list.insertBefore(el, before);
+    peek(el);
     return el;
+  }
+
+  // The folded block's preview: how it runs, or the cue
+  function peek(el) {
+    const text = ['description', 'coach_cue', 'focus_area', 'notes']
+      .map((f) => el.querySelector(`[name=${f}]`).value.trim()).find(Boolean);
+    const button = el.querySelector('.pb-peek');
+    const span = document.createElement('span');
+    span.textContent = text || 'Add how it runs, a coach cue, notes…';
+    button.replaceChildren(span);
+    button.classList.toggle('empty', !text);
+    button.setAttribute('aria-label', 'Show details');
+  }
+
+  // Text boxes grow with what's typed, so nothing hides behind a scrollbar
+  function grow(area) {
+    if (!area.offsetParent) return;
+    area.style.height = 'auto';
+    area.style.height = `${area.scrollHeight + 2}px`;
   }
 
   function readBlocks() {
@@ -125,7 +147,10 @@
   });
 
   // ── Editing ─────────────────────────────────────────────────────────────
-  list.addEventListener('input', changed);
+  list.addEventListener('input', (event) => {
+    if (event.target.matches('textarea')) grow(event.target);
+    changed();
+  });
   ['pb-title', 'pb-focus', 'pb-notes'].forEach((id) => document.getElementById(id).addEventListener('input', changed));
 
   list.addEventListener('click', (event) => {
@@ -142,6 +167,11 @@
       list.insertBefore(el.nextElementSibling, el);
     } else if (act === 'more') {
       el.classList.toggle('open');
+      peek(el);
+      if (el.classList.contains('open')) {
+        el.querySelectorAll('.pb-more textarea').forEach(grow);
+        if (button.classList.contains('pb-peek')) el.querySelector('[name=description]').focus();
+      }
       return;
     } else {
       return;
@@ -152,8 +182,10 @@
 
   document.querySelectorAll('[data-add]').forEach((b) => b.addEventListener('click', () => {
     const el = addBlock({component_type: b.dataset.add, title: ''});
+    if (phone.matches) el.classList.add('open');
     changed();
     el.querySelector('[name=title]').focus();
+    el.scrollIntoView({block: 'center', behavior: 'smooth'});
   }));
 
   // Drag by the grip
@@ -209,6 +241,10 @@
         addBlock({title: d.title.slice(0, 100), component_type: 'drill', duration_minutes: d.duration_minutes,
                   description: d.description, focus_area: d.focus_area, drill_id: d.id});
         changed();
+        // In the phone sheet the plan is out of sight, so say it worked
+        add.textContent = 'Added ✓';
+        add.classList.replace('btn-outline-primary', 'btn-success');
+        setTimeout(() => { add.textContent = 'Add'; add.classList.replace('btn-success', 'btn-outline-primary'); }, 1500);
       });
       row.append(name, add);
       lib.appendChild(row);
@@ -281,6 +317,15 @@
     }
   });
 
+  // When the drill sheet closes, show the last block added
+  const sheet = document.getElementById('pb-lib-sheet');
+  let countAtOpen = 0;
+  sheet.addEventListener('show.bs.offcanvas', () => { countAtOpen = list.children.length; });
+  sheet.addEventListener('hidden.bs.offcanvas', () => {
+    if (list.children.length > countAtOpen) list.lastElementChild.scrollIntoView({block: 'center', behavior: 'smooth'});
+  });
+
   setBlocks(data.blocks);
+  list.querySelectorAll('.open textarea').forEach(grow);
   showDrills();
 })();

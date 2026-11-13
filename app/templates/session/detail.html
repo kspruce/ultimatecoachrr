@@ -21,17 +21,27 @@
             {{ squad_pills(session) }}
             {% if session.schedule %}<span class="tr-muted">· {{ session.schedule.name }} schedule</span>{% endif %}
             {% if current_user.is_coach and not session.is_published %}<span class="pill pill-none">Plan not published</span>{% endif %}
+            <div class="sd-when">
+                {% if session.date %}<span><i class="bi bi-calendar-event"></i> {{ session.date.strftime('%a %-d %b %Y') }}</span>{% endif %}
+                {% if session.start_time %}<span><i class="bi bi-clock"></i> {{ session.formatted_time }}</span>{% endif %}
+                {% if session.location %}<span><i class="bi bi-geo-alt"></i> {{ session.location }}</span>{% endif %}
+            </div>
         </div>
-        <div class="col-md-4 text-end">
-            <div class="btn-group">
+        <div class="col-md-4 text-md-end">
+            <div class="sd-head-actions">
                 <a href="{{ url_for('session.index') }}" class="btn btn-secondary">
-                    <i class="bi bi-arrow-left"></i> Back to Sessions
+                    <i class="bi bi-arrow-left"></i><span class="{{ 'sd-back-label' if current_user.is_coach }}"> Back to Sessions</span>
                 </a>
                 {{ ask_button('session', session.id, 'btn btn-outline-secondary') }}
                 {% if current_user.is_coach %}
                 <a href="{{ url_for('training.plan', session_id=session.id) }}" class="btn btn-primary">
                     <i class="bi bi-layout-text-sidebar"></i> {{ 'Edit plan' if components else 'Plan this session' }}
                 </a>
+                {% if components %}
+                <a href="{{ url_for('training.run', session_id=session.id) }}" class="btn btn-outline-primary d-md-none">
+                    <i class="bi bi-play-fill"></i> Run
+                </a>
+                {% endif %}
                 <a href="{{ url_for('session.edit_session', session_id=session.id) }}" class="btn btn-outline-primary">
                     <i class="bi bi-pencil"></i> Details
                 </a>
@@ -68,7 +78,7 @@
         </a>
         {% endif %}
         {% if current_user.is_coach %}
-        <form method="post" action="{{ url_for('training.cancel', session_id=session.id) }}" class="d-flex gap-2"
+        <form method="post" action="{{ url_for('training.cancel', session_id=session.id) }}" class="d-flex gap-2 sd-cancel"
               onsubmit="return confirm('Cancel this session? Players who answered will see it is off.')">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input name="reason" class="form-control form-control-sm" placeholder="Reason (optional)" maxlength="200" aria-label="Reason for cancelling">
@@ -79,8 +89,8 @@
     {% endif %}
 
     <div class="row">
-        <!-- Session Details -->
-        <div class="col-md-4">
+        <!-- Session Details (below the plan on a phone) -->
+        <div class="col-md-4 order-2 order-md-1">
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-light">
                     <h5 class="mb-0">Session Details</h5>
@@ -147,7 +157,7 @@
                     <h5 class="mb-0">Quick Actions</h5>
                 </div>
                 <div class="card-body">
-                    <div class="d-grid gap-2">
+                    <div class="d-grid gap-2 sd-actions">
                         {% if current_user.player %}
                         <a href="{{ url_for('training.availability') }}" class="btn btn-outline-success">
                             <i class="bi bi-calendar-check"></i> All your upcoming sessions
@@ -239,7 +249,7 @@
         </div>
 
         <!-- Session Components -->
-        <div class="col-md-8">
+        <div class="col-md-8 order-1 order-md-2">
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-light d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Session Components</h5>
@@ -388,39 +398,11 @@
                     <h5 class="mb-0">Attendance Summary</h5>
                 </div>
                 <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-3 mb-3">
-                            <div class="card bg-success text-white">
-                                <div class="card-body text-center">
-                                    <h3>{{ attendance_by_status.present|length }}</h3>
-                                    <p class="mb-0">Present</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <div class="card bg-warning text-dark">
-                                <div class="card-body text-center">
-                                    <h3>{{ attendance_by_status.late|length }}</h3>
-                                    <p class="mb-0">Late</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <div class="card bg-danger text-white">
-                                <div class="card-body text-center">
-                                    <h3>{{ attendance_by_status.absent|length }}</h3>
-                                    <p class="mb-0">Absent</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <div class="card bg-info text-white">
-                                <div class="card-body text-center">
-                                    <h3>{{ attendance_by_status.excused|length }}</h3>
-                                    <p class="mb-0">Excused</p>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="pb-who sd-register mb-0">
+                        <div class="present"><b>{{ attendance_by_status.present|length }}</b><span>Present</span></div>
+                        <div class="late"><b>{{ attendance_by_status.late|length }}</b><span>Late</span></div>
+                        <div class="absent"><b>{{ attendance_by_status.absent|length }}</b><span>Absent</span></div>
+                        <div class="excused"><b>{{ attendance_by_status.excused|length }}</b><span>Excused</span></div>
                     </div>
                 </div>
             </div>

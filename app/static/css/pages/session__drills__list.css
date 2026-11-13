@@ -34,3 +34,11 @@
 .badge {
     margin-right: 0.5rem;
 }
+
+/* Phones: no empty picture boxes, shorter diagrams, tighter cards */
+@media (max-width: 767.98px) {
+    .drill-placeholder-empty { display: none; }
+    .drill-placeholder { height: 150px; }
+    .row.g-4 { --bs-gutter-y: .75rem; }
+    h1 { font-size: 1.9rem; }
+}
