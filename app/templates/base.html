@@ -233,13 +233,13 @@
       </li>
       {% endif %}
 
-      {# Stats & Clips (games themselves live under Team & Games) #}
+      {# Analysis: stats and clips (games themselves live under Team & Games) #}
       {% set stats_on = not ts or ts.stats_enabled %}
       {% set clips_on = not ts or ts.clip_enabled %}
       {% if stats_on %}
       <li class="nav-item dropdown {% if in_stats or in_clips %}uc-active{% endif %}">
         <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
-          <i class="bi bi-graph-up"></i> {{ 'Stats & Clips' if clips_on else 'Stats' }}
+          <i class="bi bi-graph-up"></i> Analysis
         </a>
         <ul class="dropdown-menu">
           <li><a class="dropdown-item" href="{{ url_for('stats_dashboard.index') }}">

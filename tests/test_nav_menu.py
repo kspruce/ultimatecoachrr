@@ -1,6 +1,6 @@
 """The main menu, grouped so it stays short: Training split into Plan /
 Sessions / Squad with one Availability link for everyone, Strategy and Theory
-merged into Playbook, Clips under Stats, and the player's own inbox (My
+merged into Playbook, Stats and Clips under Analysis, and the player's own inbox (My
 Feedback, My Questions) in the account menu."""
 import re
 
@@ -45,8 +45,8 @@ def test_coach_menu_is_grouped(app, club):
         assert old not in menu, old
     # Theory sits in Playbook, Clips in Stats: no single-link top-level items
     assert re.search(r'Tactics\s*</a>\s*<ul class="dropdown-menu">', menu)
-    assert '> Team &amp; Games' in menu and '> Tactics' in menu and 'Stats &amp; Clips' in menu
-    assert menu.index('Tactics') < menu.index('href="/theory/"') < menu.index('Stats &amp;') < menu.index('href="/clips/"')
+    assert '> Team &amp; Games' in menu and '> Tactics' in menu and '> Analysis' in menu
+    assert menu.index('Tactics') < menu.index('href="/theory/"') < menu.index('Analysis') < menu.index('href="/clips/"')
     assert 'uc-on-tabbar' in menu  # Home is hidden from the phone menu
 
 
