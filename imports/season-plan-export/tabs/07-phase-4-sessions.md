@@ -6,8 +6,8 @@
 
 **What changes:** no new structures. The playbook from Phases 2-3 is sharpened, scouted and rehearsed until each squad can switch plans on a call. Sessions get shorter and sharper: high intensity, a little less volume, and they finish on time.
 
-- **Joint session:** the first hour is one fundamental refresher, chosen from the latest review; the rest is game-speed play and rehearsal.
-- **Split session:** built around scouting and Plans A, B and C, with the 4v4 conditioning block kept. It still starts with the 25-minute skill floor, because individual improvement doesn't stop for Regionals.
+- **Joint session:** starts with the 25-minute skill floor, because individual improvement doesn't stop for Regionals; the rest of the first hour is one fundamental refresher, chosen from the latest review; the rest is game-speed play and rehearsal.
+- **Split session:** built around scouting and Plans A, B and C, with the 4v4 conditioning block kept.
 - **The 4v3 mini** stays as the warm-up finisher every week and at every event.
 - **Heat:** July sessions need water breaks every 20-25 minutes, shade for the sideline and sunscreen; shorten the conditioning block on hot days rather than skipping water (Plan).
 - **Fitness:** keep the speed and agility work ticking over; the big peak comes 2-3 weeks before Nationals, in Phase 5. Hard leg sessions should not fall on consecutive days (Season plan, Fitness).
@@ -61,8 +61,9 @@ CUSB put their 2019 EUCF result down to scouting: a team of scouts watched three
 | Time | Activity | How it runs | Source |
 | --- | --- | --- | --- |
 | 0:00 | Warm-up and review | Herd standard warm-up and 4v3 mini; 10 minutes on the Tour 3 stats | HN Practice Sessions; Kieran; HN Coach Corner, Base Metric Analysis |
-| 0:30 | Fix from the Tour 3 review | Drill, then a constrained game | Fix menu, Phase 3 |
-| 1:00 | Break-throw bonus point | 5v5 | IF |
+| 0:30 | Skill floor | Self-running groups of three built around mentor pairs, as many lanes as there are groups: 12 min on one partner's development focus, then 12 min on the other's; the third player defends or marks. Skill leads move between lanes | Season plan, Skill floor |
+| 0:55 | Fix from the Tour 3 review | Drill, then a constrained game | Fix menu, Phase 3 |
+| 1:15 | Break-throw bonus point | 5v5 | IF |
 | 1:30 | Water |  |  |
 | 1:40 | 3v3 scoring game | Offence gets 2 points for each open-side catch; the defence gets 1 point for each block, so it has to block the open side | HN Case Studies, CUSB 2019 |
 | 2:00 | Short-stall 7v7 | Stall 5 for ten minutes, then stall 3 | HN Case Studies, CUSB 2019 |
@@ -73,10 +74,9 @@ CUSB put their 2019 EUCF result down to scouting: a team of scouts watched three
 | Time | 1s | 2s (suggested) | Source |
 | --- | --- | --- | --- |
 | 0:00 | Warm-up | Warm-up | HN Practice Sessions |
-| 0:20 | Skill floor: each player works at the station for their development focus for 12 min, then a second station of their choice | Same, with a 2s captain or visiting 1s skill lead running the stations | Season plan, Skill floor |
-| 0:45 | Scouting brief: hand out opponents, two scouts each, card template | Tour 3 review and Regionals process goals | HN Case Studies, CUSB 2019; HN Case Studies, Mooncatchers 2024 |
-| 1:00 | Offence Plan A v Plan B walk-through | Fix from Tour 3 | BFD, Game plans |
-| 1:20 | 7v7: the captain calls Plan A or B before each pull | 7v7 vert, stall 5 | Plan |
+| 0:20 | Scouting brief: hand out opponents, two scouts each, card template | Tour 3 review and Regionals process goals | HN Case Studies, CUSB 2019; HN Case Studies, Mooncatchers 2024 |
+| 0:40 | Offence Plan A v Plan B walk-through | Fix from Tour 3 | BFD, Game plans |
+| 1:10 | 7v7: the captain calls Plan A or B before each pull | 7v7 vert, stall 5 | Plan |
 | 1:40 | 4v4 continuous, stall 5 | 4v4 continuous, stall 7 | BFD S&C |
 | 2:00 | 7v7: switch plans mid-point on a call | Vert from the back v vert from the front on a call | Plan |
 | 2:40 | Scrimmage | Scrimmage | Plan |
@@ -108,10 +108,10 @@ CUSB put their 2019 EUCF result down to scouting: a team of scouts watched three
 | Time | Activity | How it runs | Source |
 | --- | --- | --- | --- |
 | 0:00 | Warm-up | Herd standard warm-up and 4v3 mini | HN Practice Sessions; Kieran |
-| 0:20 | Marking refresher | Theory Card 27: on your toes, take away the thrower's favourite throw, full intensity | GRUT |
-| 0:30 | Mark-call drill | Thrower v mark; the coach calls "triangle" or "flat" mid-stall and the mark changes at once | HB 29.5 (random calls); BFD |
-| 0:40 | Tag prestall | As in Phase 2 trials | Phase 2 week 20 |
-| 1:00 | Blocks Only | As in Phase 2 | Phase 2 week 24 |
+| 0:20 | Skill floor | Self-running groups of three built around mentor pairs, as many lanes as there are groups: 12 min on one partner's development focus, then 12 min on the other's; the third player defends or marks. Skill leads move between lanes | Season plan, Skill floor |
+| 0:45 | Mark-call drill | Thrower v mark; the coach calls "triangle" or "flat" mid-stall and the mark changes at once | HB 29.5 (random calls); BFD |
+| 0:55 | Tag prestall | As in Phase 2 trials | Phase 2 week 20 |
+| 1:10 | Blocks Only | As in Phase 2 | Phase 2 week 24 |
 | 1:30 | Water |  |  |
 | 1:40 | 7v7 with defence calls | The defence changes mark or defence on a call between points | Plan |
 | 2:30 | Free game and recap |  |  |
@@ -121,10 +121,9 @@ CUSB put their 2019 EUCF result down to scouting: a team of scouts watched three
 | Time | 1s | 2s (suggested) | Source |
 | --- | --- | --- | --- |
 | 0:00 | Warm-up | Warm-up | HN Practice Sessions |
-| 0:20 | Skill floor: each player works at the station for their development focus for 12 min, then a second station of their choice | Same, with a 2s captain or visiting 1s skill lead running the stations | Season plan, Skill floor |
-| 0:45 | Defence plan walk-through: person D, Bull zone, CRUMBLE, arrowhead in wind | Arrowhead walk-through: wall, chase, line trap and tips | HN Bull Zone; HN Flik, Arrow Head |
-| 1:05 | Defence straight after a timeout: double the reset, or poach the nearest lane | 5-pull against the arrowhead | HN Coach Corner, Time Outs; Flik Zone Concepts 6 |
-| 1:25 | 7v7: defence switches plan on the trigger | 7v7 arrowhead, then person D on a call | Plan |
+| 0:20 | Defence plan walk-through: person D, Bull zone, CRUMBLE, arrowhead in wind | Arrowhead walk-through: wall, chase, line trap and tips | HN Bull Zone; HN Flik, Arrow Head |
+| 0:50 | Defence straight after a timeout: double the reset, or poach the nearest lane | 5-pull against the arrowhead | HN Coach Corner, Time Outs; Flik Zone Concepts 6 |
+| 1:20 | 7v7: defence switches plan on the trigger | 7v7 arrowhead, then person D on a call | Plan |
 | 1:40 | 4v4 continuous, stall 5 | 4v4 continuous, stall 7 | BFD S&C |
 | 2:00 | Scrimmage with timeouts | Scrimmage | Plan |
 
@@ -152,8 +151,9 @@ CUSB put their 2019 EUCF result down to scouting: a team of scouts watched three
 | Time | Activity | How it runs | Source |
 | --- | --- | --- | --- |
 | 0:00 | Warm-up | Herd standard warm-up and 4v3 mini | HN Practice Sessions; Kieran |
-| 0:20 | Variable stall count | As in week 21 | Phase 2 week 21 |
-| 0:50 | Retention game | 7v7. A throw to a player who wasn't open, even if caught, costs the team a sprint | HB 39.2 |
+| 0:20 | Skill floor | Self-running groups of three built around mentor pairs, as many lanes as there are groups: 12 min on one partner's development focus, then 12 min on the other's; the third player defends or marks. Skill leads move between lanes | Season plan, Skill floor |
+| 0:45 | Variable stall count | As in week 21 | Phase 2 week 21 |
+| 1:05 | Retention game | 7v7. A throw to a player who wasn't open, even if caught, costs the team a sprint | HB 39.2 |
 | 1:20 | Water |  |  |
 | 1:30 | Escape game | 7v7. The defence plays the looks from the scouting cards (poaches, junk, a zone); the offence scores double for a score without a turnover | HN Case Studies, CUSB 2019 |
 | 2:20 | Free game |  |  |
@@ -164,10 +164,9 @@ CUSB put their 2019 EUCF result down to scouting: a team of scouts watched three
 | Time | 1s | 2s (suggested) | Source |
 | --- | --- | --- | --- |
 | 0:00 | Warm-up | Warm-up | HN Practice Sessions |
-| 0:20 | Skill floor: each player works at the station for their development focus for 12 min, then a second station of their choice | Same, with a 2s captain or visiting 1s skill lead running the stations | Season plan, Skill floor |
-| 0:45 | Scouting cards presented, two minutes per opponent | Vert from the back and front: switching on a call | HN Case Studies, Mooncatchers scouting sheet; SP 3H cutting |
-| 1:05 | Offence against the scouted defences: dominator v poach; zone O v their zone; Spread v a poachy endzone | Give-and-go off the sideline | HB 34.2; Flik Zone Offence 9; Kieran; HN Practice Sessions 7 |
-| 1:25 | Out-of-timeout plays: one for a stall 7 reset, one for the endzone | Their Regionals plans and process goals | HN Coach Corner, Time Outs |
+| 0:20 | Scouting cards presented, two minutes per opponent | Vert from the back and front: switching on a call | HN Case Studies, Mooncatchers scouting sheet; SP 3H cutting |
+| 0:50 | Offence against the scouted defences: dominator v poach; zone O v their zone; Spread v a poachy endzone | Give-and-go off the sideline | HB 34.2; Flik Zone Offence 9; Kieran; HN Practice Sessions 7 |
+| 1:20 | Out-of-timeout plays: one for a stall 7 reset, one for the endzone | Their Regionals plans and process goals | HN Coach Corner, Time Outs |
 | 1:40 | 4v4 continuous, stall 5 | 4v4 continuous, stall 7 | BFD S&C |
 | 2:00 | O-line v D-line scrimmage, stats split by line | Scrimmage | HN Coach Corner, Base Metric Analysis |
 

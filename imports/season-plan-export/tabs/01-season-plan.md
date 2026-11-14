@@ -76,7 +76,7 @@ Each week has one theme, announced in advance, with no more than three learning 
 | Time | Block | Notes |
 | --- | --- | --- |
 | 0:00 | Warm-up and footwork | Led by a rotating player; includes ladder or cone footwork |
-| 0:20 | Focused throwing | Groups of 4-5 mixing 1s and 2s; one technique point of the week |
+| 0:20 | Focused throwing (the skill floor from week 25) | Groups of 4-5 mixing 1s and 2s; one technique point of the week. From week 25, the 25-minute skill floor takes this slot |
 | 0:40 | Opening game | A small game that exposes the theme, e.g. variable stall count for sideline retention |
 | 1:00 | Skill block | Short drills (8-12 min each) if the game shows a skill needs isolating; groups by skill level, not team |
 | 1:30 | Water and questions | "What did you notice? Where was the space?" |
@@ -97,19 +97,20 @@ Each week has one theme, announced in advance, with no more than three learning 
 
 Until squads are picked in March, split sessions run as two provisional groups based on last season's teams, and players can move between them. In Phase 1 they can also be split by skill level.
 
-**The skill floor (weeks 25-46).** Once squads are picked, events and game plans crowd out individual work unless it has protected time. Every full split session from week 25 starts with a 25-minute skill floor straight after the warm-up, and the theme blocks are shortened to make room. Event, rehearsal and taper weeks are the only exceptions.
+**The skill floor (weeks 25-46).** Once squads are picked, events and game plans crowd out individual work unless it has protected time. Every full joint session from week 25 has a 25-minute skill floor straight after the warm-up, in place of focused throwing, so 1s and 2s players work side by side and learn from each other. Event, rehearsal and taper weeks are the only exceptions.
 
-| Station | What players do | Scored by | Source |
-| --- | --- | --- | --- |
-| Getting open | 1v1 "name your cut" and the five ways to get open against a back-shoulder defender; five-cone cutting at speed | Catches with clear separation, out of 10 | UAP Cutting (Raynor); Flik L4 Lesson 3; Wiggins |
-| Breaking the mark | Extended mark; the one-crossover game; Get 10 | Get 10 score; one-crossover wins | UAP Breaking the mark (Saul); Wiggins; Flik L4 Lesson 1 |
-| Catching and hucking | Turn and attack; box hucking; read-the-defender hucking | Clean catches out of 20; hucks in the box out of 10 | GRUT; UAP Backhand hucks |
-| Marking and 1v1 defence | Triangle marking progression; Win the Box; keeping margins | Throws stopped; boxes won | HN Point of Attack; HN 10 Big Drills; HB 22.3 |
+| Focus | Roles in a group of three | What players do | Scored by | Source |
+| --- | --- | --- | --- | --- |
+| Getting open | Thrower, cutter, defender | 1v1 "name your cut" and the five ways to get open from a stack spot 15 m out, against a back-shoulder defender | Catches with clear separation, out of 10 | UAP Cutting (Raynor); Flik L4 Lesson 3; Wiggins |
+| Breaking the mark | Thrower, mark, receiver | Extended mark (two discs); the one-crossover game; Get 10 | Get 10 score; one-crossover wins | UAP Breaking the mark (Saul); Wiggins; Flik L4 Lesson 1 |
+| Catching and hucking | Thrower, receiver, defender | Turn and attack with a defender; box hucking; read-the-defender hucking | Clean catches out of 20; hucks in the box out of 10 | GRUT; UAP Backhand hucks |
+| Marking and 1v1 defence | Thrower, mark, receiver | Triangle marking progression; Win the Box; keeping margins | Throws stopped; boxes won | HN Point of Attack; HN 10 Big Drills; HB 22.3 |
 
-- Each player starts at the station for their development focus for 12 minutes, then picks a second station.
-- Skill leads run the stations; in the 2s session, a 2s captain or a visiting 1s skill lead does.
-- Players write their station score in their log, so the skill floor feeds the mini-tests.
-- Each station uses that week's harder and easier options, so newer and experienced players can share it.
+- **Maximise reps:** groups of three, one lane each, a disc per group (two for the extended mark), and roles rotate after every rep, so nobody waits more than one rep. With about 40 players that's 13 lanes running at once.
+- **Groups run themselves:** each focus has a card with the setup, the scoring and the harder and easier options. Skill leads move between lanes, fix one thing per group and keep the scores honest; they don't run a station.
+- **Built around mentor pairs:** each group is a mentor pair (a 1s player with a 2s or newer player) plus one more. The first 12 minutes go on one partner's development focus, the next 12 on the other's, and the third player takes the defender or mark role.
+- **Scores feed the mini-tests:** players write their score in their log, and from week 25 the mini-tests run at the start of the skill floor.
+- **Throwing still counts:** the skill floor replaces focused throwing, so the breaking-the-mark and hucking work, plus the home routine, carry the throwing volume.
 
 The week-by-week themes for both sessions are in Weekly plan.
 
@@ -298,7 +299,7 @@ Two captains cannot coach 44 players well alone, so the plan adds a small leader
 | 1s captain | Team management, culture, selection with the head coach | Second 1s captain |
 | 2s captains (2) | Run 2s split sessions; equal voice in captains' meetings; plan sessions with support from the 1s captains | 2s captains |
 | Internal guest coaches | One-off sessions or blocks on a specialism (e.g. marking, handling, pulling) | Masters players and friends of the club |
-| Skill leads (3-4) | Each owns an area (getting open, breaking the mark, catching and hucking, marking and 1v1 defence), runs that skill-floor station from week 25 and helps players set their development focus | Experienced 1s players, recruited before week 1 |
+| Skill leads (3-4) | Each owns an area (getting open, breaking the mark, catching and hucking, marking and 1v1 defence), writes the skill-floor card for that area, coaches it in joint sessions from week 25 and helps players set their development focus | Experienced 1s players, recruited before week 1 |
 | Warm-up and fitness lead | Warm-ups, home fitness sheet, skill tests and mini-tests | To recruit before week 1 |
 | Stats and video lead | Films games, keeps team and player stats, builds the clip library and cuts two clips per player after each event | To recruit before week 1 |
 | Comms and kit | Posts sessions in advance, kit, socials | To recruit |

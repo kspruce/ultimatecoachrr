@@ -506,7 +506,7 @@ The same rules as Phase 1 apply. The source key (IF, BFD, DK, HB, UAP, Flik, SP,
 
 **Background (say two at most)**
 
-- **Squads:** announce them with individual conversations, not just a list. Everyone gets their trial feedback and a development focus, and the pitch still applies: everyone improves, in both squads. The development focus is the player's weakest skill test against their squad's median, and from week 25 they get time on it in every split session (the skill floor).
+- **Squads:** announce them with individual conversations, not just a list. Everyone gets their trial feedback and a development focus, and the pitch still applies: everyone improves, in both squads. The development focus is the player's weakest skill test against their squad's median, and from week 25 they get time on it in every joint session (the skill floor).
 - **Solent review:** use the four-number stats (no-turn goals, breaks, conversion rate) and the process goals rather than the results (HN Coach Corner, Base Metric Analysis; HN Amsterdam Conference).
 - **1s, the Bull zone (2-3-2):**
   - Two chases hold a middle force and stop easy resets.
@@ -553,7 +553,7 @@ The same rules as Phase 1 apply. The source key (IF, BFD, DK, HB, UAP, Flik, SP,
 
 **Coaching notes**
 
-- Before week 25, the skill leads get their station lists (who has which focus), and the 2s captains get theirs.
+- Before week 25, the skill leads get the list of each player's focus and build the groups of three around the mentor pairs.
 - Zone players should count the attackers in their area (BFD).
 - The wings need constant sideline and deep talk; build sideline calls into every zone rep (HN Bull Zone).
 - Weeks 24-25 are a two-week defence block for Mixed Tour 1, which is usually very windy, so defence is our goal for that event. Phase 3 week 25 continues with the Bull zone, the arrowhead, deep defence and pulls in wind.

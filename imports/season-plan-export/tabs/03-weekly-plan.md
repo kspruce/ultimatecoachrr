@@ -17,7 +17,7 @@ The joint session teaches the skill; the split session uses it straight away in 
 
 The 1s and 2s split themes in each week can run side by side on neighbouring pitches, so a coach can move between them.
 
-From week 25, every full split session starts with the 25-minute skill floor (Season plan, Weekly structure), so the split themes below are what follows it.
+From week 25, every full joint session starts with the 25-minute skill floor in place of focused throwing (Season plan, Weekly structure), so the joint fundamentals below follow it.
 
 ## Phase 1: Foundations (Oct–Dec 2027)
 
@@ -104,7 +104,7 @@ A recovery week after back-to-back events, three weeks to rebuild and peak, then
 | Wk | w/c | Event | Joint | 1s split | 2s split |
 | --- | --- | --- | --- | --- | --- |
 | 44 | 31 Jul | Recovery | Optional throwing and social session | Rest | Rest |
-| 45 | 7 Aug | — | Fundamentals at game speed | Top fixes from Regionals | Step-up camp 1: skill floor on each player's focus; mini-test |
+| 45 | 7 Aug | — | Fundamentals at game speed | Top fixes from Regionals | Step-up camp 1: groups of three on each player's focus; mini-test |
 | 46 | 14 Aug | — | High-intensity small-sided games | Nationals scouting cards and Plans A, B and C | Step-up camp 2: 1v1 ladders; season review and awards |
 | 47 | 21 Aug | — | Peak intensity; fun competition | Full rehearsal against the 2s and guests | Rehearsal opponents for the 1s, playing the scouted looks |
 | 48 | 28 Aug | Taper | Light: throwing, set pieces | Walkthroughs, pulls, endzone reps | Step-up camp 3: final mini-test and a 2028/29 plan for each player |

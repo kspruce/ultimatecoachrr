@@ -51,7 +51,7 @@
 | Time | Activity | How it runs | Source |
 | --- | --- | --- | --- |
 | 0:00 | Warm-up | Herd standard warm-up and 4v3 mini | HN Practice Sessions; Kieran |
-| 0:20 | Focused throwing at game speed | Quick-throw pairs, then the extended mark | HB 34.1; UAP Breaking the mark (Saul) |
+| 0:20 | Skill floor | Self-running groups of three built around mentor pairs, as many lanes as there are groups: 12 min on one partner's development focus, then 12 min on the other's; the third player defends or marks. Skill leads move between lanes. 30 minutes this week, at game speed: hands first | Season plan, Skill floor |
 | 0:50 | Fix from the Regionals review | Drill, then a constrained game | Fix menu, Phase 3 |
 | 1:20 | Water |  |  |
 | 1:30 | 4v4 continuous, stall 5 | Short games, full rest between | BFD S&C |
@@ -63,18 +63,16 @@
 | Time | 1s | 2s (suggested) | Source |
 | --- | --- | --- | --- |
 | 0:00 | Warm-up | Warm-up | HN Practice Sessions |
-| 0:20 | Skill floor: each player at the station for their development focus | Step-up camp 1: skill floor on each player's focus from the week 35 tests, with a 1s skill lead or guest at each station | Season plan, Skill floor |
-| 0:45 | Plan A offence and defence, at game speed | Skill floor continues: second station of the player's choice | BFD, Game plans; Season plan, Skill floor |
-| 1:20 | Second Regionals fix | Mini-test: the two tests nearest each player's focus; log against week 35 | Fix menu, Phase 3; Season plan, Measuring improvement |
+| 0:20 | Plan A offence and defence, at game speed | Step-up camp 1: 40 minutes in groups of three on each player's focus from the week 35 tests, with a 1s skill lead or guest coaching | BFD, Game plans; Season plan, Skill floor |
+| 1:00 | Second Regionals fix | Mini-test: the two tests nearest each player's focus, logged against week 35; then a 4v3 mini tournament | Fix menu, Phase 3; Season plan, Measuring improvement; Kieran |
 | 1:40 | Repeated sprints: 2-3 sets of 3-6 sprints over 10-50 m, 20-30 s rest | Repeated sprints, as the 1s | BFD S&C |
 | 2:00 | Scrimmage, short stall | Small-sided games at stall 6 with the break-throw bonus | HN Case Studies, CUSB 2019; IF |
 
 **Harder / easier**
 
-- **Quick-throw pairs and the extended mark:** harder: stall 3 on the extended mark; easier: one disc, stall 6.
 - **4v4 continuous:** harder: stall 4; easier: stall 6.
 
-**Coaching notes:** scouts are assigned to the likely Nationals opponents this week; cards are due in week 46. **Mini-test:** the 1s run Get 10 and the 1v1 cutting test at the start of the skill floor.
+**Coaching notes:** scouts are assigned to the likely Nationals opponents this week; cards are due in week 46. **Mini-test:** Get 10 and the 1v1 cutting test at the start of the joint skill floor.
 
 ## Week 46 · 14 Aug · High intensity; Nationals game plans; 2s awards
 
@@ -90,8 +88,9 @@
 | Time | Activity | How it runs | Source |
 | --- | --- | --- | --- |
 | 0:00 | Warm-up | Herd standard warm-up and 4v3 mini | HN Practice Sessions; Kieran |
-| 0:20 | Speed and reaction | Mirror drill, reactive fakes | BFD S&C |
-| 0:35 | 3v3 and 4v4 on a 30 m pitch | Stall 5, continuous; 3-minute games, full rest | BFD S&C |
+| 0:20 | Skill floor | Self-running groups of three built around mentor pairs, as many lanes as there are groups: 12 min on one partner's development focus, then 12 min on the other's; the third player defends or marks. Skill leads move between lanes. At game speed | Season plan, Skill floor |
+| 0:45 | Speed and reaction | Mirror drill, reactive fakes | BFD S&C |
+| 0:55 | 3v3 and 4v4 on a 30 m pitch | Stall 5, continuous; 3-minute games, full rest | BFD S&C |
 | 1:10 | Water |  |  |
 | 1:20 | Short-stall 7v7 | Stall 5, then stall 3 | HN Case Studies, CUSB 2019 |
 | 2:00 | Break-throw bonus 7v7 |  | IF |
@@ -102,9 +101,8 @@
 | Time | 1s | 2s (suggested) | Source |
 | --- | --- | --- | --- |
 | 0:00 | Warm-up | Warm-up | HN Practice Sessions |
-| 0:20 | Skill floor: each player at the station for their development focus | Step-up camp 2: skill floor on each player's focus | Season plan, Skill floor |
-| 0:45 | Scouting cards presented; Plans A, B and C per opponent | 1v1 ladders: "name your cut" and the one-crossover game; winners move up a court | HN Case Studies, Mooncatchers scouting sheet; BFD; Flik L4 Lesson 3; UAP Handler O and D (Wiggins) |
-| 1:20 | 7v7: rehearse each opponent's plan, with the defence playing their looks | 2s season review with players: what went well, what next season | HN Case Studies, CUSB 2019 |
+| 0:20 | Scouting cards presented; Plans A, B and C per opponent | Step-up camp 2: 1v1 ladders ("name your cut" and the one-crossover game; winners move up a court), then groups of three on each player's focus | HN Case Studies, Mooncatchers scouting sheet; BFD; Flik L4 Lesson 3; UAP Handler O and D (Wiggins) |
+| 1:00 | 7v7: rehearse each opponent's plan, with the defence playing their looks | 2s season review with players: what went well, what next season | HN Case Studies, CUSB 2019 |
 | 1:40 | Plyometrics and repeated sprints (short) | Awards and social | BFD S&C |
 | 2:00 | Scrimmage |  | Plan |
 
@@ -193,7 +191,7 @@ No sessions. The captains collect the season's stats and send out the player sur
 | Weeks | Theme | Key games and drills |
 | --- | --- | --- |
 | 44 | Recovery | Optional throwing; Regionals and EUCS review |
-| 45 | Rebuild; 2s step-up camp starts | Throwing at game speed; Regionals fixes; repeated sprints; skill floor and mini-test |
+| 45 | Rebuild; 2s step-up camp starts | Skill floor at game speed; Regionals fixes; repeated sprints; mini-test |
 | 46 | High intensity; Nationals game plans; 2s awards | 3v3 and 4v4 on a small pitch; short-stall 7v7; scouting cards |
 | 47 | Peak | Mini-tournament; "what if" scrimmage; full rehearsal against the 2s and guests |
 | 48 | Taper | Light session; walk-throughs, pulls, endzone reps |

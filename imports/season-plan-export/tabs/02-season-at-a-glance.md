@@ -16,8 +16,8 @@ The whole 2027/28 plan on one page: the phases, the training blocks and themes f
 
 | Session | Length | Who | Shape |
 | --- | --- | --- | --- |
-| Joint session | 3 hours | Whole club | Herd warm-up and 4v3 mini; one fundamental, taught game-drill-game (Ian French games first, then Flik drills); conditioned and free games |
-| Split session | 3 hours | 1s and 2s separately | Throwing under pressure (the 25-minute skill floor from week 25); squad tactics; 4v4 continuous conditioning; team toolkit; scrimmage with fun consequences |
+| Joint session | 3 hours | Whole club | Herd warm-up and 4v3 mini; the 25-minute skill floor from week 25; one fundamental, taught game-drill-game (Ian French games first, then Flik drills); conditioned and free games |
+| Split session | 3 hours | 1s and 2s separately | Throwing under pressure; squad tactics; 4v4 continuous conditioning; team toolkit; scrimmage with fun consequences |
 | Classroom session | 45-60 minutes, about monthly | Usually the whole club | Hook, one idea, small groups, share back, commitment |
 
 ## Off-pitch milestones
@@ -30,7 +30,7 @@ The whole 2027/28 plan on one page: the phases, the training blocks and themes f
 | Week 14 | Season priorities shared (C4, the pre-season meeting) |
 | Weeks 18-20 | Trials, with full skill tests at Trial 1 |
 | Week 24 | Squads announced; each player's development focus agreed |
-| Week 25 | Skill floor starts in every full split session (to week 46) |
+| Week 25 | Skill floor starts in every full joint session (to week 46) |
 | Week 27 | 10-minute check-in for every player after Tour 1 |
 | Week 29 | Herdlodge: values, season goals, Spirit |
 | Week 35 | Mid-season skill tests for everyone |
@@ -110,7 +110,7 @@ Ph = phase. Letters A-L are the training blocks. Dates are week commencing (Mond
 | 42 | 17 Jul | 4 | UKU Regionals (\~18-19 Jul) | Light session | Walkthroughs and pulls | Walkthroughs |  | Event review |
 | 43 | 24 Jul | 4 | EUCS Summer Tour (\~25-26 Jul, 1s) | Light recovery session | Regionals review; walkthroughs | No event: optional throwing and social |  |  |
 | 44 | 31 Jul | 5 | Recovery | Optional throwing and social session | Rest | Rest |  | Captains review Regionals and EUCS |
-| 45 | 7 Aug | 5 | Rebuild | Fundamentals at game speed | Top fixes from Regionals | Step-up camp 1: skill floor on each player's focus; mini-test |  | Mini-test; 2s step-up camp starts |
+| 45 | 7 Aug | 5 | Rebuild | Fundamentals at game speed | Top fixes from Regionals | Step-up camp 1: groups of three on each player's focus; mini-test |  | Mini-test; 2s step-up camp starts |
 | 46 | 14 Aug | 5 | Peak | High-intensity small-sided games | Nationals scouting cards and Plans A, B and C | Step-up camp 2: 1v1 ladders; season review and awards | C11 Nationals mindset (online, 1s) | Euros travel confirmed (if in contention) |
 | 47 | 21 Aug | 5 | Peak | Peak intensity; fun competition | Full rehearsal against the 2s and guests | Rehearsal opponents for the 1s, playing the scouted looks |  |  |
 | 48 | 28 Aug | 5 | Taper | Light: throwing, set pieces | Walkthroughs, pulls, endzone reps | Step-up camp 3: final mini-test and a 2028/29 plan for each player |  |  |
@@ -118,4 +118,4 @@ Ph = phase. Letters A-L are the training blocks. Dates are week commencing (Mond
 | 50 | 11 Sep | 5 | Rest | — | — | — |  | Season stats collected; player survey sent |
 | 51 | 18 Sep | 5 | Review | Final skill tests and player survey | One-to-one reviews | One-to-one reviews | C12 Season review (at the social) | Final skill tests; one-to-ones; awards |
 
-**Totals:** 49 weeks (weeks 1-51 with a two-week Christmas break); 5 test events before Regionals (Tours 1-3, EUCS Spring, plus the Solent warm-up); Regionals, EUCS Summer and Nationals; 12 classroom sessions; 4 full rounds of skill tests (October, trials, late May, September) and 8 mini-tests; a skill floor in every full split session from week 25.
+**Totals:** 49 weeks (weeks 1-51 with a two-week Christmas break); 5 test events before Regionals (Tours 1-3, EUCS Spring, plus the Solent warm-up); Regionals, EUCS Summer and Nationals; 12 classroom sessions; 4 full rounds of skill tests (October, trials, late May, September) and 8 mini-tests; a skill floor in every full joint session from week 25.
