@@ -173,7 +173,7 @@ def test_build_from_the_real_plan(app, herd):
     assert (joint.date, joint.start_time, joint.location) == (date(2027, 10, 10), time(10), 'Regent\'s Park')
     assert ones.date == date(2027, 10, 6) and ones.squad == '1s' and twos.squad == '2s'
     assert joint.week_number == 1 and joint.phase_number == 1 and joint.season == '2027/28'
-    assert len(joint.learning_points) == 3 and 'What to tell players' in joint.notes
+    assert len(joint.learning_points) == 3 and 'Background (say two at most)' in joint.notes
     comps = joint.components.order_by(SessionComponent.order).all()
     assert [c.title for c in comps][:3] == ['Welcome and the pitch', 'Warm-up', 'Baseline tests']
     assert comps[-1].title == 'Recap' and comps[-1].duration_minutes == 10  # runs to 13:00

@@ -25,17 +25,17 @@ Each team has one headline outcome and a few process goals we control. The proce
 
 |  | Outcome goal | Process goals |
 | --- | --- | --- |
-| **1s** | Qualify for Nationals, September 2028 | Fewer turnovers per point than 2026/27; at least 6 confident break throwers on the roster; every player improves on 3 of 4 benchmark tests |
-| **2s** | Win more games than 2026/27, and enjoy it | Every 2s player handles in games; at least 2 players move up to the 1s during the season; every player improves on 3 of 4 benchmark tests |
+| **1s** | Qualify for Nationals, September 2028 | Fewer turnovers per point than 2026/27; at least 6 confident break throwers on the roster (defined in *Measuring improvement*); every player improves on 3 of the 5 skill tests |
+| **2s** | Win more games than 2026/27, and enjoy it | Every 2s player handles in games; at least 2 players move up to the 1s during the season; every player improves on 3 of the 5 skill tests; every player leaves the August step-up camp with a plan for 2028/29 |
 | **Club** | Grow and keep players | Off-season sessions bring in new players; most 2026/27 players return for 2028/29; players rate enjoyment highly in the end-of-season survey |
 
-The benchmark tests are set out in *Measuring improvement*.
+The skill tests are set out in *Measuring improvement*.
 
 ## Season at a glance
 
 &#91;embedded content: season roadmap · 5 phases, 2 gates\]
 
-Phase 0 (Oct 2026 to Sep 2027) is planning only; there is no pilot season. Benchmark tests run in October, at the trials and after Nationals.
+Phase 0 (Oct 2026 to Sep 2027) is planning only; there is no pilot season. Full skill tests run in October, at the trials, in late May and after Nationals, with short mini-tests every 4-6 weeks in between.
 
 ## Phase by phase
 
@@ -43,12 +43,12 @@ Five training phases lead from an open, skills-only off-season to Nationals. Com
 
 | Phase | Dates (approx.) | Aim | Training emphasis | Events |
 | --- | --- | --- | --- | --- |
-| 0. Build the plan | Oct 2026 – Sep 2027 | Plan ready, leaders and guest coaches lined up | Planning only; no pilot season | — |
+| 0. Build the plan | Oct 2026 – Sep 2027 | Plan ready, leaders and guest coaches lined up; skill leads and the stats and video lead recruited before October | Planning only; no pilot season | — |
 | 1. Foundations | Oct – Dec 2027 | Every player's technique improves; new players join | Throwing, footwork, marking, cutting; shared vocabulary; baseline tests | — |
-| 2. Pressure and trials | Jan – mid Mar 2028 | Skills hold up against a defence; squads picked fairly | Constraint games; vert, horizontal and team-defence principles introduced; trials use the same games and benchmarks | Trials \~31 Jan, 7 Feb, 14 Feb; selection early March; Solent warm-up (whole club) \~7 Mar |
+| 2. Pressure and trials | Jan – mid Mar 2028 | Skills hold up against a defence; squads picked fairly | Constraint games; vert, horizontal and team-defence principles introduced; trials use the same games and skill tests | Trials \~31 Jan, 7 Feb, 14 Feb; selection early March; Solent warm-up (whole club) \~7 Mar |
 | 3. Early season | mid Mar – mid Jun | Build the playbook through test events | Defence and zones for a windy Tour 1 first; then zone offence (around, through, over), endzone calls, Bull zone and arrowhead, switching, pulling and wind; team values at Herdlodge; review and fix after every event | UKU Tour 1 \~28 Mar (usually very windy; goal: defence); Herdlodge \~17-19 Apr; EUCS Spring Tour \~25-26 Apr (1s only); UKU Tour 2 \~2-3 May; UKU Tour 3 \~13-14 Jun |
 | 4. Regionals | mid Jun – Jul | Qualify for Nationals | Scouting and Plans A, B and C; shorter, sharper sessions with one fundamental refresher a week; 2s arrowhead in full; mental skills for big games | UKU Regionals \~18-19 Jul; EUCS Summer Tour \~25-26 Jul (1s only) |
-| 5. Nationals | Aug – Sep | Peak for Nationals | Three-week rebuild, then taper; no new material | UKU Nationals \~5-6 Sep; Euros (stretch goal) \~9-11 Sep |
+| 5. Nationals | Aug – Sep | Peak for Nationals | Three-week rebuild, then taper; no new material; 2s step-up camp (weeks 45-48) | UKU Nationals \~5-6 Sep; Euros (stretch goal) \~9-11 Sep |
 | Review | Sep – Oct 2028 | Learn and keep players | Final tests, player survey, captains' review | — |
 
 Key content is repeated rather than taught once: each phase revisits the four problem areas at a higher level, and the trial sessions are built from the same games the club has played since October.
@@ -97,6 +97,20 @@ Each week has one theme, announced in advance, with no more than three learning 
 
 Until squads are picked in March, split sessions run as two provisional groups based on last season's teams, and players can move between them. In Phase 1 they can also be split by skill level.
 
+**The skill floor (weeks 25-46).** Once squads are picked, events and game plans crowd out individual work unless it has protected time. Every full split session from week 25 starts with a 25-minute skill floor straight after the warm-up, and the theme blocks are shortened to make room. Event, rehearsal and taper weeks are the only exceptions.
+
+| Station | What players do | Scored by | Source |
+| --- | --- | --- | --- |
+| Getting open | 1v1 "name your cut" and the five ways to get open against a back-shoulder defender; five-cone cutting at speed | Catches with clear separation, out of 10 | UAP Cutting (Raynor); Flik L4 Lesson 3; Wiggins |
+| Breaking the mark | Extended mark; the one-crossover game; Get 10 | Get 10 score; one-crossover wins | UAP Breaking the mark (Saul); Wiggins; Flik L4 Lesson 1 |
+| Catching and hucking | Turn and attack; box hucking; read-the-defender hucking | Clean catches out of 20; hucks in the box out of 10 | GRUT; UAP Backhand hucks |
+| Marking and 1v1 defence | Triangle marking progression; Win the Box; keeping margins | Throws stopped; boxes won | HN Point of Attack; HN 10 Big Drills; HB 22.3 |
+
+- Each player starts at the station for their development focus for 12 minutes, then picks a second station.
+- Skill leads run the stations; in the 2s session, a 2s captain or a visiting 1s skill lead does.
+- Players write their station score in their log, so the skill floor feeds the mini-tests.
+- Each station uses that week's harder and easier options, so newer and experienced players can share it.
+
 The week-by-week themes for both sessions are in Weekly plan.
 
 ## The 2s
@@ -107,10 +121,12 @@ The 2s get the same coaching quality, attention and visibility as the 1s. These 
 2. **Same curriculum, same theme.** The 2s learn exactly what the 1s learn each week; only difficulty and numbers change.
 3. **Joint session time is shared fairly.** Mixed groups, Honeypass pairings and mixed 7v7 teams mean 2s players train with and against 1s players every week.
 4. **Everyone handles.** In 2s games and scrimmages, rules such as "last player to touch the disc picks up after a turnover" and Golden Arm make sure no one is only a cutter.
-5. **A clear pathway.** Criteria for moving up to the 1s are published at the start of the season. Players can move up mid-season; 1s players can drop in to support the 2s at tournaments.
+5. **A clear pathway.** Criteria for moving up to the 1s are published at the start of the season. The proposed standard is the 1s squad's median on at least three of the five skill tests, plus the captains' judgement of game stats and attitude. Players can move up mid-season; 1s players can drop in to support the 2s at tournaments.
 6. **2s goals are celebrated.** 2s results, improvement scores and player awards are announced alongside the 1s in club updates and socials.
 7. **Their own tournament plan.** The 2s have a target event and game plans prepared in the same way as the 1s, not left until the week before.
 8. **Individual feedback for everyone.** Each 2s player gets the same mid-season and end-of-season review as a 1s player.
+9. **Session plans as detailed as the 1s'.** Every 2s split activity names a specific drill or game with its rules, not a generic "throwing pairs".
+10. **A step-up camp in August.** The 2s' competitive season ends at Regionals, so weeks 45-48 are a four-session development camp built on each player's test results and aimed at 2028/29. They still play the 1s' rehearsal game in week 47.
 
 ## Defence toolkit
 
@@ -189,12 +205,14 @@ We coach mainly through games and questions, in the spirit of Ian French's *Game
 
 - Ask before telling: "What did you notice? Where was the space? What would you do differently?"
 - Stops last under 30 seconds and carry one idea.
+- Players hear the three learning points and any **Say:** lines. Each week's *Background* list in the session tabs is for the coach running the block: pick two points from it at most.
 - Give feedback that is specific, soon after the moment, and calm on the sideline (Hildo's ready → situation → what you did → what to try → check).
 - Notice and name improvement out loud; specific praise moves players more than criticism.
-- Experienced players coach within drills: each drill has a harder variation for those who are ready.
+- Experienced players coach within drills. Every full training week in the session tabs lists how to make its main activities harder or easier; watch the success rate and move a group up or down (the zone of proximal development).
 
 **Fun consequences (split sessions only)**
 
+- **Consequences follow effort and decisions, never errors in the skill being learned.** Not clearing, no reset by stall 5, no sideline talk, throwing to a covered player or a slow pick-up can cost a sprint. A drop while attacking the disc, a point block on a hard break or an overthrown huck to a cutter in stride costs nothing; reward those attempts with bonus points instead.
 - Losing lines or teams run something useful: a 5-10-5 shuttle, a deep cut, or a rep of box of death.
 - Scores are kept during the drill and settled at the end, so play is not interrupted.
 - Consequences are for the group, not individuals, and stay light-hearted.
@@ -205,6 +223,7 @@ We coach mainly through games and questions, in the spirit of Ian French's *Game
 - Plans are written for a month at a time and shared, so anyone can step in.
 - New drills are tried first with the captains and a few players before the whole club sees them.
 - Sessions end with games and with players wanting more.
+- **Mentor pairs:** the Honeypass pairs (a 1s player with a 2s or newer player) stay together all season. They throw together at the start of joint sessions, share a home throwing log and check in once a month on each other's development focus.
 
 * **4v3 mini is the club's standard warm-up finisher**, at training and before every tournament game. Four offence play three defence on a small pitch; each four gets one possession (score or turnover), then rotates out for the next four, giving quick reps and lots of touches. Full rules are in the Phase 1 sessions tab.
 
@@ -229,22 +248,46 @@ Ultimate is mostly repeated short sprints: roughly 5-6 maximal sprints of 10-15 
 
 **For players with gym access:** the Flik Level 2 programme in the notebook is already periodised: off-season 1-2, pre-season 1-2, in-season and peak. Each block has accessory and stability, strength and power, and speed sessions. There is also a bodyweight, mobilisation and trunk circuit for anyone without a gym (HN Level 2 Strength and Conditioning). Train for intensity, not volume; maximal efforts need full rest (HN Coach Corner, Roster Size and Tryouts).
 
+## Throwing outside training
+
+Training gives each player about 40 minutes of throwing a week, which isn't enough to build six confident break throwers. Every player follows a short home routine all season; the Christmas programme is part of it rather than a one-off.
+
+- **Dose:** three 15-minute sessions a week, about 100 throws each, with a partner where possible (your mentor pair) or alone against a wall or target.
+- **Menu by phase:**
+  - Phase 1: balance and release (single-leg throwing, star throws, the 10-minute low-release session (GRUT)).
+  - Phase 2: breaks (Get 10 with a partner as the marker, half-pivot backhands, off-hand throws).
+  - Phases 3-4: hucks and wind (box hucking, throwing into and with the wind; theory Cards 10 and 11).
+  - Phase 5: quick releases at game speed ("hands before legs").
+- **Log it:** one line per session (date, throws, focus) in the club's shared log. Skill leads look at it before each mini-test.
+- **Players with a specific gap** follow the matching UAP module for four weeks.
+
 ## Measuring improvement
 
-Every player is tested three times (October, at the February trials, and September) on four quick benchmarks, so the pitch — everyone improves — has evidence behind it.
+Every player takes five skill tests in full four times (October, Trial 1 in week 18, week 35 and September), with short mini-tests in between. Each test matches one of last season's problem areas or the throwing base, so the pitch (everyone improves) has evidence behind it and each player knows what to work on.
 
-| Benchmark | Test | Source |
-| --- | --- | --- |
-| Throwing range and accuracy | Hucking alley: 10 hucks into a 20 m-wide lane; count in and record distance | UAP backhand hucks module |
-| Breaking the mark | Get 10: 10 throws past a marker to a static receiver 10-15 m away; count completions | Flik Level 4 |
-| Change of direction | 5-10-5 agility shuttle, filmed and timed | UAP changing direction module |
-| Catching under pressure | 20 catches in a heads-on or overload drill; count clean catches | Hildo Bijl |
+| Skill test | Test | Problem area | Source |
+| --- | --- | --- | --- |
+| Throwing range and accuracy | Hucking alley: 10 hucks into a 20 m-wide lane; count in and record distance | Throwing base | UAP backhand hucks module |
+| Breaking the mark | Get 10: 10 throws past a marker to a static receiver 10-15 m away; count completions | Breaking the mark | Flik Level 4 |
+| Getting open | 1v1 cutting test: from a stack spot 15 m from the thrower, the cutter has until stall 6 to get open against a defender starting on their back shoulder; 10 reps (5 under, 5 deep or away), count clean catches. Defenders are 1s players asked to play at full intensity | Getting open | Adapted from Win the Box (HN 10 Big Drills) and the cut families (UAP Cutting) |
+| Catching under pressure | 20 catches in a heads-on or overload drill; count clean catches | Keeping the disc | Hildo Bijl |
+| Reading the pitch | Decision quiz: 20 game screenshots or clips, each shown for 2 seconds: what's the force, who's open, would you huck? New pictures each round; done online in the test week | Seeing the field | HN Excel Premium, Game IQ |
 
-**Team stats (from Phase 3, filmed games where possible):** turnovers per point, completion rate, breaks thrown, discs received by opponents by zone (break / reset / open), and offensive yardage per player. At minimum, a sideliner records four things per point: score, O or D start, blocks and turnovers. From those, work out no-turn goals, breaks, conversion rate, perfect conversion rate, recovery and successful-defence rate (HN Coach Corner, Base Metric Analysis).
+**Athletic profile (recorded, not counted in the skill goal):** the 5-10-5 agility shuttle, filmed and timed (UAP changing direction module); at trials, also the 50 m sprint with splits and the arrowhead agility test.
+
+**Mini-tests:** in weeks 6, 10, 15, 22, 27, 32, 40 and 45, run two tests in 10 minutes, usually Get 10 and the 1v1 cutting test (at the end of the warm-up until week 24, then at the start of the skill floor). Players log their own scores and see their curve.
+
+**Development focus:** after each full test round, every player agrees one development focus with a skill lead or captain, normally their weakest skill test against their squad's median. They spend the skill floor on it, and it shapes their home throwing.
+
+**Confident break thrower:** a Get 10 score of 8 or more on both sides, and at least 80% completion on break throws in filmed games at Tours 2 and 3.
+
+**Team stats (from Phase 3, filmed games where possible):** turnovers per point, completion rate, breaks thrown, discs received by opponents by zone (break / reset / open), and offensive yardage per player. From filmed games, each player also gets their own turnovers per touch (throwaways and drops separately) and completed breaks, the game measure of keeping the disc. At minimum, a sideliner records four things per point: score, O or D start, blocks and turnovers. From those, work out no-turn goals, breaks, conversion rate, perfect conversion rate, recovery and successful-defence rate (HN Coach Corner, Base Metric Analysis).
 
 **Process goals:** alongside outcome goals (Nationals, wins), every player and team sets goals they can hit several times a session. For example: check your shoulder 5-6 times a point, give sideline talk three times a point, make the opposition throw 10 passes before scoring. These give feedback every week (HN Amsterdam Conference, Process over Outcome).
 
-**Player reviews:** a short one-to-one at the start, middle and end of the season. Each player keeps a simple decision grid (situations where they turn it over, and what they'll try instead) and sets two personal goals. Players with a home throwing or fitness plan can follow a UAP module for four weeks.
+**Decision training:** every week from week 5, the stats and video lead posts a two-minute clip quiz in the group chat: one clip, three questions (the force, the open player, the best throw), with the answer and a short discussion two days later. After each event, every player gets two clips of themselves (one to keep, one to fix), used in their next check-in.
+
+**Player reviews:** short one-to-ones at the start (weeks 1-3), when squads are announced (week 24), in mid-season (weeks 38-39) and at the end, plus a 10-minute check-in after Tour 1 (week 27). Bring the player's test results and two clips where possible. Mentor pairs check in monthly in between. Each player keeps a simple decision grid (situations where they turn it over, and what they'll try instead) and sets two personal goals, one of which is their development focus.
 
 ## Leadership and roles
 
@@ -256,9 +299,9 @@ Two captains cannot coach 44 players well alone, so the plan adds a small leader
 | 1s captain | Team management, culture, selection with the head coach | Second 1s captain |
 | 2s captains (2) | Run 2s split sessions; equal voice in captains' meetings; plan sessions with support from the 1s captains | 2s captains |
 | Internal guest coaches | One-off sessions or blocks on a specialism (e.g. marking, handling, pulling) | Masters players and friends of the club |
-| Skill leads (2-3) | Each owns an area (throwing, marking and defence, cutting) and runs that block | Experienced 1s players, to recruit |
-| Warm-up and fitness lead | Warm-ups, home fitness sheet, benchmark testing | To recruit |
-| Stats and video lead | Films games, keeps team stats, builds the clip library | To recruit |
+| Skill leads (3-4) | Each owns an area (getting open, breaking the mark, catching and hucking, marking and 1v1 defence), runs that skill-floor station from week 25 and helps players set their development focus | Experienced 1s players, recruited before week 1 |
+| Warm-up and fitness lead | Warm-ups, home fitness sheet, skill tests and mini-tests | To recruit before week 1 |
+| Stats and video lead | Films games, keeps team and player stats, builds the clip library, runs the weekly clip quiz and cuts two clips per player after each event | To recruit before week 1 |
 | Comms and kit | Posts sessions in advance, kit, socials | To recruit |
 
 **Sideline buddies:** at tournaments, players are paired (ideally similar roles) to coach each other from the sideline. Sideline talk is practised in training too, e.g. points where only players off the pitch may talk.
@@ -278,7 +321,7 @@ The Phase 1 skills sessions double as the club's shop window: open to any player
 - **Advertise the pitch.** Posts lead with "get better at ultimate this winter", name each week's skill, and go out at least a day ahead.
 - **Make newcomers' first session great.** A named welcomer, mixed throwing groups, and games with overloads so new players complete passes.
 - **Experienced players host.** In games with newcomers, experienced players throw to them, don't poach and let them handle (DK's welcome-session rules).
-- **Show progress early.** Newcomers do the benchmark tests in their first month and see their own improvement by March.
+- **Show progress early.** Newcomers do the skill tests in their first month and see their own improvement at the mini-tests.
 - **Clear next step.** Newcomers know how squads are picked and that the 2s are a real team with real goals.
 
 **How trials run** (based on GB Open 2010 trials; HN Coach Corner, Tryouts):
@@ -293,6 +336,8 @@ The Phase 1 skills sessions double as the club's shop window: open to any player
 
 - [ ] Confirm 2028 event dates as UKU and EUCS publish them.
 - [ ] Selection criteria for trials, published before the first trial.
+- [ ] The 2s-to-1s pathway criteria (proposed: the 1s median on three of the five skill tests), published in week 1.
+- [ ] Skill leads and the stats and video lead recruited before October.
 - [ ] Which internal guest coaches to ask, and which blocks they take.
 - [ ] How the 1s captains and 2s captains share planning each month.
 - [x] Which GRUT clips form the offence clip library: the 9 GRUT drill videos are in the drill library and the sessions, and 4 more sit on theory cards 10, 11, 20 and 27. Still to add: game clips from the WUCC 2026 final (Scandal v GRUT).

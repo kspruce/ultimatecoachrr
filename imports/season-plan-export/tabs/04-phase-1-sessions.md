@@ -28,18 +28,22 @@ Each week lists three learning points, a timed joint session and both split sess
 - Explain the drill and its rotation in under two minutes; experienced players demo it, and a coach adds the finer points while it runs (DK 5.2.3, HB App. A.4).
 - Water breaks every two to three activities (HB App. A.5).
 - Coach by questions in games: "What did you notice? Where was the space?" (IF).
+- **What to say:** players hear the three learning points and any **Say:** lines. The *Background* list under each week is for whoever runs the block: pick two points from it at most.
+- **Harder / easier:** each full week lists how to make its main activities harder or easier. Watch the success rate: if nearly every rep works, go harder; if most reps fail, go easier (the zone of proximal development, week 1).
+- **Consequences** in split sessions follow effort and decisions, never errors in the skill being taught (Season plan, How we coach).
+- **Mentor pairs** (a 1s player with a 2s or newer player) throw together in focused throwing and share a home throwing log (Season plan, Throwing outside training).
 
 * **Warm-up finisher: 4v3 mini.** Four on offence, three on defence, on a small pitch (about 30 x 20 m with endzones), with groups of 10-11 per pitch. Each four gets one possession: they score, or turn it over, then jog off while the next four start from their back line. Swap the defenders every few minutes. It gives quick reps and lots of touches, and the offence always has a free player to find; it fits the IF asymmetric-offence idea. Use it at the end of the warm-up whenever the session allows, and before every tournament game (Kieran).
 
 **Numbers:** plans assume around 40 players at a joint session. Most drills run as four parallel groups of about 10; small-sided games use 4-5 pitches of about 30 x 20 m.
 
-**Kit:** 40+ discs, 60+ cones, bibs in three colours, 4 pool noodles (week 10), tennis balls (week 9), a phone for filming the 5-10-5 test, and a printed test sheet.
+**Kit:** 40+ discs, 60+ cones, bibs in three colours, 4 pool noodles (week 10), tennis balls (week 9), a phone for filming the 5-10-5 test, a 10 x 10 m cone box for the 1v1 cutting test, and a printed test sheet.
 
 ## Week 1 · 4 Oct · Welcome, baseline tests, grip and pivot
 
 **Learning points:** (1) Balance: weight on the non-pivot foot, no extra step after the throw. (2) Your pivot gives you 360 degrees of threat; use it. (3) Two hands on the disc whenever you can.
 
-**What to tell players**
+**Background (say two at most)**
 
 - **Why fundamentals first:** HB recommends fundamentals at the start of every season, experienced players included, and repeating the key subjects regularly because one-time teaching doesn't stick (HB App. A.1).
 - **Stability:** step into the throw with most of your weight on the non-pivot foot, stay upright, and don't need an extra step afterwards. Being off balance costs accuracy, and a lifted pivot foot is a travel. If someone leans forward, have them pivot at 90 degrees to the target and hold the non-throwing arm out for balance (DK 4.4, 4.8.4).
@@ -56,7 +60,7 @@ Each week lists three learning points, a timed joint session and both split sess
 | --- | --- | --- | --- |
 | 0:00 | Welcome and the pitch | Captains explain the season pitch and the 1s/2s pathway; new players paired with a host. Make it a threshold moment: welcome each new player by name, and tell everyone that whatever team they came from, they're Herd now and we want their help to make the club better (The Culture Code) | Plan |
 | 0:10 | Warm-up | Three-part warm-up | HB App. A.3 |
-| 0:30 | Baseline tests | Four stations, 10 min each, groups of about 10: hucking alley (10 hucks into a 20 m lane, count in and distance); Get 10 (10 throws past a marker to a static receiver 10-15 m away); 5-10-5 shuttle, filmed; heads-on catching (count clean catches out of 20) | UAP Backhand hucks wk 1; Flik L4 Lesson 1; UAP Changing direction wk 1; HB 15.1 |
+| 0:30 | Baseline tests | Five stations, 8 min each, groups of about 8: hucking alley (10 hucks into a 20 m lane, count in and distance); Get 10 (10 throws past a marker to a static receiver 10-15 m away); 1v1 cutting test (10 reps against a back-shoulder defender, count clean catches before stall 6); heads-on catching (count clean catches out of 20); 5-10-5 shuttle, filmed (athletic profile). The decision quiz goes out online this week | UAP Backhand hucks wk 1; Flik L4 Lesson 1; HN 10 Big Drills (Win the Box); HB 15.1; UAP Changing direction wk 1 |
 | 1:10 | Focused throwing: 70-pass | Pairs: 10 each of flat, IO and OI backhands and forehands, then hammers; rotate against the wind | DK 9.1 |
 | 1:25 | Star throws | Pivot foot on a centre cone with 8 cones around it; touch each point before throwing, then two non-adjacent points (fakes), then add a mark | BFD ch. 1 |
 | 1:40 | Water |  |  |
@@ -78,15 +82,23 @@ Each week lists three learning points, a timed joint session and both split sess
 | 2:30 | Scrimmage: dead discs are tapped in on the nearest sideline | Scrimmage: stall 4 facing forward, stall 10 facing backward | DK ch. 7; Flik L3 Lesson 7 |
 | 2:55 | Recap | Recap |  |
 
+**Harder / easier**
+
+- **Star throws:** harder: add a live mark at stall 6; easier: no mark; touch fewer points.
+- **Asymmetric offence:** harder: go 5v5 or shrink the pitch; easier: go 5v3.
+- **Golden Arm:** harder: the golden arm must be a newer player; easier: any newcomer's assist counts double.
+- **1s resets 2v2:** harder: stall 4 with a live mark on the reset handler; easier: make it 3v2.
+
 **Coaching notes**
 
 - "It is never a bad idea to use the dump": at worst it is a neutral reset (DK 6.11).
 - Set the reset handler negative (behind, about 45 degrees) on the open side and positive (ahead, about 30 degrees) on the break side (BFD).
-- Keep the baseline tests quick and positive: the point is the March comparison, not today's number.
+- Keep the baseline tests quick and positive: the point is each player's curve over the season, not today's number.
+- Every player has a first one-to-one in weeks 1-3 and leaves it with one development focus (their weakest test against their squad), a mentor pair and a home throwing log.
 
 **From the Herd notebook**
 
-- **Where am I now?** Show the rookie → substitute → starter → baller ladder and ask each player to place themselves skill by skill (throwing, cutting, defence); you can be a starter thrower and a rookie cutter. Revisit at the February benchmark (HN Amsterdam Conference, From Rookie to Baller).
+- **Where am I now?** Show the rookie → substitute → starter → baller ladder and ask each player to place themselves skill by skill (throwing, cutting, defence); you can be a starter thrower and a rookie cutter. Revisit at the Trial 1 skill tests (HN Amsterdam Conference, From Rookie to Baller).
 - **Process goals, not just outcome goals:** goals that can be hit several times a session, such as "check your shoulder 5-6 times a point" or "give sideline talk three times a point" (HN Amsterdam Conference, Process over Outcome).
 - **Home position:** both hands on the disc, lined up with your centre. Every pivot, fake and half-pivot throw starts from here (HN Amsterdam Conference, Breaking a Defensive Heart).
 - **For coaches:** aim for the zone of proximal development, where mistakes happen but not on every rep. If players are bored or everything goes perfectly, add challenge; if every rep is a turnover, regress (HN Coach Corner, Zone of Proximal Development).
@@ -95,7 +107,7 @@ Each week lists three learning points, a timed joint session and both split sess
 
 **Learning points:** (1) A fake has to look like a real throw: full arm, eyes and shoulders. (2) One decisive pivot beats three half-pivots. (3) Catch in threat position: square to the field, ready to throw upfield.
 
-**What to tell players**
+**Background (say two at most)**
 
 - **Fakes must look like real options.** One decisive early move beats lots of small, non-threatening fakes. Decide based on how the marker is set up (DK, Breaking the mark).
 - **The break-side space is only behind the marker:** either an early IO break, or fake and go into a late around (DK).
@@ -128,8 +140,15 @@ Each week lists three learning points, a timed joint session and both split sess
 | 1:10 | Getting off the sideline (from week 1), adding a trap mark | Sideline wrinkle and sideline attack move | HB 13.3; Flik L3 Lesson 8 |
 | 1:40 | Small-sided games: 4v4, stall 5 | 4v4, stall 7 | BFD S&C |
 | 2:00 | 3-handler game: three handlers vs two defenders plus a mark, keep it for 10 passes | Game where every possession starts on the sideline | HB 13.4; Flik L3 Lesson 8 |
-| 2:30 | Scrimmage, consequence: a turnover from a trap costs the team a 20 m sprint (fun, not punitive) | Scrimmage, every possession restarts on the sideline | Plan |
+| 2:30 | Scrimmage, consequence: a trap with no reset available by stall 5 (the dump and cutters didn't come) costs the line a 20 m sprint; a turnover on the escape throw itself costs nothing | Scrimmage, every possession restarts on the sideline | Plan |
 | 2:55 | Recap | Recap |  |
+
+**Harder / easier**
+
+- **Gauntlet:** harder: stall 3 and a narrower channel; easier: stall 6 and no mark on the first pass.
+- **Fake-fake-throw:** harder: the marker only bites on fakes that use eyes and shoulders; easier: passive mark, one fake.
+- **Front Force Only:** harder: stall 6; easier: offence 5v4.
+- **3-handler game (1s):** harder: 10 passes at stall 5 against a trap; easier: three handlers against one defender plus the mark.
 
 **Coaching notes**
 
@@ -149,7 +168,7 @@ Each week lists three learning points, a timed joint session and both split sess
 
 **Learning points:** (1) Feet first: get your body behind the disc before your hands. (2) Two hands whenever you can (pancake or crab). (3) Catch the edge that is spinning towards you, and watch it all the way in.
 
-**What to tell players**
+**Background (say two at most)**
 
 - **The catching sequence:** move your feet first, splay your fingers, clap the centre or leading edge, bring the disc in (UAP Catching, Shardlow).
 - **Three catches:** clap (pancake), crab and one-handed. Always two hands where possible. Aim for ideal technique 9 times out of 10 and use the other 1 in 10 for variety (UAP Catching).
@@ -185,8 +204,15 @@ Each week lists three learning points, a timed joint session and both split sess
 | 1:10 | Distractor tube: sprint through three flailing (non-blocking) distractors, catch at full speed, pivot and return; 3 out of 6 is a good score (HN Handler Offense, Moment of Catching) | Give and go in pairs up the pitch | HN Handler Offense; DK 9.19 |
 | 1:40 | Small-sided games: 4v4, stall 5 | 4v4, stall 7 | BFD S&C |
 | 2:00 | Handler weave: "Strike, Swing, Dump, Chill, Fill" | Last player to touch the disc picks it up after a turnover | DK 9.17; DK 7.9 |
-| 2:30 | Scrimmage, consequence: any drop costs a quick sprint to the sideline and back | Scrimmage, last player to touch picks up | Plan; DK 7.9 |
+| 2:30 | Scrimmage, consequence: a disc the receiver waited for instead of attacking costs a quick sprint to the sideline and back; drops while attacking the disc cost nothing | Scrimmage, last player to touch picks up | Plan; DK 7.9 |
 | 2:55 | Recap | Recap |  |
+
+**Harder / easier**
+
+- **Catching zones:** harder: the thrower adds pace and wobble while the catcher moves; easier: static catcher, chest height only.
+- **First to Disc:** harder: longer, floatier throws so both players arrive together; easier: give the newer player a 2 m start.
+- **Multi-disc:** harder: three discs live; easier: two discs on a bigger pitch.
+- **Distractor tube (1s):** harder: distractors may touch the catcher's arms; easier: one distractor.
 
 **Coaching notes**
 
@@ -205,7 +231,7 @@ Each week lists three learning points, a timed joint session and both split sess
 
 **Learning points:** (1) Small steps and a chop stop: stay low to change direction. (2) Five or six hard steps sell the fake to the defender. (3) Commit: a half-cut is worse than no cut.
 
-**What to tell players**
+**Background (say two at most)**
 
 - **Accelerate with many small steps.** In the chop stop, stay low for a second, then commit to one side (HB Tr 14).
 - **Say:** "A cut of 2-3 steps fakes the thrower, 5-6 steps fakes the defender", so never make short cuts (HB App. B).
@@ -234,18 +260,25 @@ Each week lists three learning points, a timed joint session and both split sess
 | Time | 1s group | 2s group (suggested) | Source |
 | --- | --- | --- | --- |
 | 0:00 | Warm-up | Warm-up | HB App. A.3 |
-| 0:20 | Throwing under pressure: hold, stall 4 | Throwing pairs with a mark | Plan |
+| 0:20 | Throwing under pressure: hold, stall 4 | Throwing under a passive mark at stall 7: two fakes before every throw; the mark calls which fake moved them | Plan; DK 8.5 |
 | 0:40 | Five-cone cutting: cut families walked, then at speed | Zig-zag cuts | UAP Cutting (Raynor) wk 1; DK 8.13 |
 | 1:10 | Cut families: in-out, out-in, lateral, with a defender | Away to open under, then marked cutting | UAP Cutting wk 2; Flik L2 Lesson 5; SP; DK 8.15 |
 | 1:40 | Small-sided games: 4v4, stall 5 | 4v4, stall 7 | BFD S&C |
-| 2:00 | 1v1 "name your cut": cutter calls the cut before running it, then wins anyway; work through the five ways to get open (rush, jab, drive, wait, seal) | Centre-line game | Flik L4 Lesson 3; Wiggins |
+| 2:00 | 1v1 "name your cut": cutter calls the cut before running it, then wins anyway; work through the five ways to get open (rush, jab, drive, wait, seal) | 1v1 "name your cut" at stall 8, using three of the five ways to get open (rush, jab, drive) | Flik L4 Lesson 3; Wiggins |
 | 2:30 | Scrimmage, consequence: losing team does a 5-10-5 | Scrimmage | Plan |
 | 2:55 | Recap | Recap |  |
+
+**Harder / easier**
+
+- **Chop stop progression:** harder: react to a coach's point instead of a cone; easier: stay at jog pace.
+- **Box of death:** harder: catch a disc at the end of each rep; easier: fewer calls and longer rest.
+- **Shortened Stall Tag:** harder: stall 3; easier: stall 6.
+- **1v1 "name your cut":** harder: the defender is told the cut; easier: the defender starts a step off.
 
 **Coaching notes**
 
 - Stay low through every change of direction: the athletic and hockey-stop positions (UAP Witmer).
-- These are the habits behind "cutting under pressure": film one 1v1 rep per player now and compare at the February trials benchmark.
+- These are the habits behind "cutting under pressure": film one 1v1 rep per player now and compare at the 1v1 cutting test in week 6 and at the February trials.
 - No gym or track: this is our speed work, so keep reps short, rest full and quality high (BFD S&C).
 
 **From the Herd notebook**
@@ -262,7 +295,7 @@ Each week lists three learning points, a timed joint session and both split sess
 
 **Learning points:** (1) Throw to the space, not the person. (2) Huck flight: IO early, flat through the middle, OI to finish, so the disc floats into space. (3) Time the throw to the cutter's turn, not their arrival.
 
-**What to tell players**
+**Background (say two at most)**
 
 - **Lead the receiver:** throw into the space they are running into, not at where they are now (DK 9.12; Flik L1).
 - **Ideal huck flight:** IO, then flat, then OI into the receiver. Practise at 110% of your range, because overthrowing is better than underthrowing (Flik L4 Lesson 4).
@@ -297,8 +330,15 @@ Each week lists three learning points, a timed joint session and both split sess
 | 1:10 | Continuation pairs: gold and silver cutters, second cutter times off the first catch | Vert stack: cut from the back and clear the lane | DK 8.17, 10.6; DK 6.3 |
 | 1:40 | Small-sided games: 4v4, stall 5 | 4v4, stall 7 | BFD S&C |
 | 2:00 | Vert from the back: continuation timing drill into a 7v7 walk-through | Vert stack game | DK 10.5; DK 6.3 |
-| 2:30 | Scrimmage in vert, consequence: a huck to nobody costs a 30 m sprint | Scrimmage in vert | Plan |
+| 2:30 | Scrimmage in vert: a huck caught in stride scores 2. Consequence: a huck thrown with no cutter going costs a 30 m sprint; an overthrow to a cutter in stride costs nothing | Scrimmage in vert | Plan |
 | 2:55 | Recap | Recap |  |
+
+**Harder / easier**
+
+- **Archery:** harder: 30 and 40 m targets, or across the wind; easier: 10 and 20 m targets only.
+- **20-20-20 (GRUT):** harder: any drop sends everyone back to the start; easier: a drop restarts only the current stage.
+- **Long and short bonus points:** harder: the long throw must be a break-side huck; easier: the long throw only needs 20 m.
+- **Continuation pairs (1s):** harder: defenders on both cutters; easier: a defender on the first cutter only.
 
 **Coaching notes**
 
@@ -319,7 +359,7 @@ Each week lists three learning points, a timed joint session and both split sess
 
 **Learning points:** (1) Your clear is a cut: run it with purpose. (2) Make space before you take it. (3) Know where active, inactive and ready space is on every possession.
 
-**What to tell players**
+**Background (say two at most)**
 
 - **Three kinds of space** (UAP Cutting, Raynor, after Martin Aguilera): *active* space is what our offence intends to use to advance the disc; *inactive* space is what we don't intend to use; *ready* space is where we wait to set up. In a vert stack, the open side is active, the break side inactive and the stack is ready space. These change as the disc moves.
 - **Make space:** clearing is always space-making; you vacate active space for a teammate. Think of yourself as part of the cutters, not an individual cutter (UAP Raynor).
@@ -348,13 +388,22 @@ Each week lists three learning points, a timed joint session and both split sess
 | Time | 1s group | 2s group (suggested) | Source |
 | --- | --- | --- | --- |
 | 0:00 | Warm-up | Warm-up | HB App. A.3 |
-| 0:20 | Throwing under pressure: H cut drill | Throwing pairs | DK 9.21 |
+| 0:20 | Throwing under pressure: H cut drill | H cut drill at half pace, stall 7 | DK 9.21 |
 | 0:40 | Zipper: away, under, then up-and-under | Triangle cutting, then team triangle cutting | SP; Flik L3 Lesson 4 |
 | 1:10 | Vert from the front and ho spacing: walk through, then live | Peppermills: open side under | SP "Horizontal stack 1"; Flik L3 Lesson 5 |
 | 1:40 | Small-sided games: 4v4, stall 5 | 4v4, stall 7 | BFD S&C |
 | 2:00 | Ho game with 3 lives: each team has three turnovers before the point ends | Static-start game: every possession restarts with the stack set | DK 7.10; Plan |
 | 2:30 | Scrimmage, consequence: two players in the same lane costs the team a 20 m sprint | Scrimmage cutting and clearing in both lanes | Plan |
 | 2:55 | Recap | Recap |  |
+
+**Mini-test:** take 10 minutes from the start of focused throwing for the 1v1 cutting test and Get 10; players log their scores against week 1.
+
+**Harder / easier**
+
+- **Clear-cut drill:** harder: a defender on the clearing cutter who may poach; easier: walk the clear first.
+- **Honeypass:** harder: fewer zones and stall 6; easier: bigger zones.
+- **Caterpillar:** harder: 7v7 with a target number of passes; easier: 5v4.
+- **Ho game (1s):** harder: two lives; easier: four lives.
 
 **Coaching notes**
 
@@ -375,7 +424,7 @@ Each week lists three learning points, a timed joint session and both split sess
 
 **Learning points:** (1) Marking base: wide, low, weight on the balls of the feet. (2) Shuffle, never cross; load the inside leg. (3) Take away the dangerous throw first, then close the other.
 
-**What to tell players**
+**Background (say two at most)**
 
 - **Marking base:** an athletic stance with weight on the balls of the feet, hips back, chest open and eyes on the thrower (UAP Marking, Wiseman). Feet shoulder width; shuffle, don't lunge (DK).
 - **To change direction, load the inside leg** without the knee buckling (UAP Wiseman).
@@ -405,12 +454,19 @@ Each week lists three learning points, a timed joint session and both split sess
 | --- | --- | --- | --- |
 | 0:00 | Warm-up | Warm-up | HB App. A.3 |
 | 0:20 | Triangle marking progression: zero-pivot drill, one-pivot drill, then the full triangle drill; a win for the mark is any throw that doesn't hit the cutter in stride (HN Point of Attack) | Marker movement one way, 3-person modified | UAP Marking wk 4; Flik L2 Lesson 7 |
-| 0:40 | One-crossover marking game: marker can only cross once | Piggy in the middle | Wiggins; DK 8.9 |
+| 0:40 | One-crossover marking game: marker can only cross once | Piggy in the middle: two throwers 8 m apart, the mark between them holds a one-way force; swap after 10 throws, and the mark scores for every throw kept to the forced side | Wiggins; DK 8.9 |
 | 1:10 | Triangle mark and hard force: walk through, then live | Triangle forcing in fours: the thrower looks at A for 4 s, then B for 3 s; the mark forces about five times then swaps (HN Practice Sessions 3) | Plan |
 | 1:40 | Small-sided games: 4v4, stall 5 | 4v4, stall 7 | BFD S&C |
-| 2:00 | BFD feedback exercise: 5 x 1 min, marker and thrower give each other one point to fix | Tram-line game | BFD; Flik |
-| 2:30 | Scrimmage, consequence: 5-10-5 for every break allowed | Scrimmage, force one way all game | Plan |
+| 2:00 | BFD feedback exercise: 5 x 1 min, marker and thrower give each other one point to fix | Tram-line game: 5v5 on a narrow pitch so the force is easy to hold; the defence scores for a stall-out or a block | BFD; Flik |
+| 2:30 | Scrimmage: the mark earns a point for every stall-out or point block. Consequence: a break given up by a mark who didn't move their feet costs a 5-10-5 | Scrimmage, force one way all game | Plan |
 | 2:55 | Recap | Recap |  |
+
+**Harder / easier**
+
+- **Marking with intensity:** harder: the thrower may use both sides; easier: the thrower names the throw before each rep.
+- **Tag Prestall:** harder: stall 6, and the mark must also hold the force; easier: no stall; the mark only tags.
+- **Break force elimination:** harder: the thrower gets two pivots at stall 6; easier: the thrower stays static.
+- **Triangle mark game:** harder: 5v5 with a live dump; easier: the defence also scores for a throw kept to the forced side.
 
 **Coaching notes**
 
@@ -430,7 +486,7 @@ Each week lists three learning points, a timed joint session and both split sess
 
 **Learning points:** (1) Low and balanced, on the balls of your feet. (2) Never turn your back on the disc: drop step and open the hips. (3) Choose the space you're protecting and buffer to it.
 
-**What to tell players**
+**Background (say two at most)**
 
 - **Say:** "Low, fast feet, head up, pick your spot" (UAP Defensive footwork, Matthews).
 - **Don't turn your hips or back:** the attacker will attack your shoulder to turn your hips. Run progressively: sidestep, then crossover, then sprint (DK).
@@ -459,13 +515,20 @@ Each week lists three learning points, a timed joint session and both split sess
 | Time | 1s group | 2s group (suggested) | Source |
 | --- | --- | --- | --- |
 | 0:00 | Warm-up | Warm-up | HB App. A.3 |
-| 0:20 | Throwing under pressure, stall 4 | Throwing pairs with a mark | Plan |
+| 0:20 | Throwing under pressure, stall 4 | Throwing under a mark at stall 6: pivot before every throw | Plan |
 | 0:40 | Buffering: jog then full pace, keeping the "string from belly button to belly button" | Mirror defending, then defending square | Flik L4 Lesson 6; Flik L2 Lesson 8 |
 | 1:10 | Back-shoulder positioning: diamond drill, then Win the Box (2 O v 1 D; offence wins by catching in the box or reaching the cushion cone first) (HN 10 Big Drills), then Space Invaders | Back-shoulder on the open side: zig-zag and tunnel drills | UAP Defence wk 3; DK 8.23, 8.24 |
 | 1:40 | Small-sided games: 4v4, stall 5 | 4v4, stall 7 | BFD S&C |
-| 2:00 | 2v2 deep space: defence must stop the deep first, then the under | Tram-line game | Plan; Flik |
-| 2:30 | Scrimmage, consequence: a defender beaten deep does a 20 m sprint | Scrimmage, match D | Plan |
+| 2:00 | 2v2 deep space: defence must stop the deep first, then the under | 2v2 deep space, as the 1s but stall 8 | Plan |
+| 2:30 | Scrimmage, consequence: a defender beaten deep from the wrong shoulder (not on the deep, open-side shoulder) does a 20 m sprint; beaten from the right position costs nothing | Scrimmage, match D | Plan |
 | 2:55 | Recap | Recap |  |
+
+**Harder / easier**
+
+- **Asymmetric Defence:** harder: a bigger pitch; easier: a smaller pitch.
+- **Keeping margins:** harder: the cutter may change direction twice per rep; easier: the margin grows from an arm's length to 2 m.
+- **Blocks Only:** harder: only a caught block counts; easier: any touch counts.
+- **Win the Box (1s):** harder: stall 5 on the thrower; easier: the offence starts from a walk.
 
 **Coaching notes**
 
@@ -486,7 +549,7 @@ Each week lists three learning points, a timed joint session and both split sess
 
 **Learning points:** (1) Watch the thrower's eyes, hips and shoulders. (2) React, don't guess. (3) Sideline and teammates call: "up", "break", "strike".
 
-**What to tell players**
+**Background (say two at most)**
 
 - **Do reaction work early in the session, while players are fresh:** mirror drills, tennis-ball drops and reactive fakes (BFD S&C).
 - **1s, the flat mark (BFD):** shoulders and hips parallel to the endzone, except on the trap. Vary your distance through the stall: close down on the first threatened throw, then stay within 3 m for the second.
@@ -515,13 +578,20 @@ Each week lists three learning points, a timed joint session and both split sess
 | Time | 1s group | 2s group (suggested) | Source |
 | --- | --- | --- | --- |
 | 0:00 | Warm-up | Warm-up | HB App. A.3 |
-| 0:20 | True mark vs 45-degree flat mark shuffles | Piggy in the middle | UAP Marking wk 2; DK 8.9 |
+| 0:20 | True mark vs 45-degree flat mark shuffles | Reaction pairs: mirror drill, then the mark reacts to the thrower's fakes for 30 s | UAP Marking wk 2; BFD |
 | 0:40 | Flat mark (BFD): walk through, then the Best Breakmark drill: the handler receives a short pass and moves, so the mark sets up in the chaos of the first seconds; the dishing player calls travels (HN Point of Attack) | Defending the line and Hollywood squares | BFD; Flik L4 Lesson 8 |
 | 1:10 | Switching marks on a call: "triangle" or "flat" from the sideline | Mark and downfield D together: 2v2 with a mark | Plan |
 | 1:40 | Small-sided games: 4v4, stall 5 | 4v4, stall 7 | BFD S&C |
-| 2:00 | BFD feedback exercise: 5 x 1 min | Tram-line game | BFD; Flik |
+| 2:00 | BFD feedback exercise: 5 x 1 min | BFD feedback exercise: 5 x 1 min, as the 1s | BFD |
 | 2:30 | Scrimmage: the mark is called per point and switched mid-point; consequence for a missed switch is a 10 m sprint | Scrimmage | Plan |
 | 2:55 | Recap | Recap |  |
+
+**Harder / easier**
+
+- **Star drill with tennis ball:** harder: two balls, or a later call; easier: an earlier drop.
+- **Break force with hand calls:** harder: the call comes at stall 4; easier: the call comes before the stall.
+- **Three-Team Transitions:** harder: the new team must start within 3 seconds; easier: walk on.
+- **Silent points:** harder: the whole point is silent; easier: the sideline may call.
 
 **Coaching notes**
 
@@ -541,7 +611,7 @@ Each week lists three learning points, a timed joint session and both split sess
 
 **Learning points:** (1) Width and a low release beat the mark. (2) Hold the finish for 2 s to prove your balance. (3) IO early or around late: choose and commit.
 
-**What to tell players**
+**Background (say two at most)**
 
 - **Wide release:** hold the finish for 2 seconds to prove your balance. **Low release:** get it below the knee (Flik L4 Lesson 1).
 - **One decisive move:** the break-side space is only behind the marker, so go with an early IO break or fake into a late around (DK).
@@ -560,7 +630,7 @@ Each week lists three learning points, a timed joint session and both split sess
 | 0:20 | Wide release and cone width | Step out past a cone to release; widen the cone each round | Flik L4 Lesson 1 |
 | 0:40 | Break Force Game | Small-sided game rewarding break throws | IF |
 | 1:00 | Low release | Release under a pool noodle held at hip height; marker says "ding" if the disc is above it; the height can change rep to rep (also in Herd's own HN Practice Sessions 5) | Plan |
-| 1:15 | Get 10 | Re-run the week 1 test and compare | Flik L4 Lesson 1 |
+| 1:15 | Get 10 | Mini-test: Get 10, then the 1v1 cutting test; players log their scores against weeks 1 and 6 | Flik L4 Lesson 1 |
 | 1:30 | Water |  |  |
 | 1:40 | Break Throw Bonus Point | 5v5: a point with a break throw scores 2 | IF |
 | 2:20 | Conditioned 7v7 | Score only on a break throw | Flik L3 Lesson 1 |
@@ -578,6 +648,13 @@ Each week lists three learning points, a timed joint session and both split sess
 | 2:00 | Threat position and 75-degree cutting-through drill: break into continuation; then Break to a Point (hit the cutter in stride at a break-side cone; turnovers are fine) (HN 10 Big Drills) | Score-on-break game | BFD; Flik L3 Lesson 1 |
 | 2:30 | Scrimmage, consequence: the losing team does relay sprints with a disc | Scrimmage | Plan |
 | 2:55 | Recap | Recap |  |
+
+**Harder / easier**
+
+- **Low release (pool noodle):** harder: noodle at knee height with a live mark; easier: hip height, static.
+- **Break Throw Bonus Point:** harder: only a break into a continuation scores 2; easier: any caught break scores 2.
+- **Conditioned 7v7 (score on a break):** harder: stall 6; easier: a break anywhere in the possession counts.
+- **Extended mark (1s):** harder: stall 3; easier: one disc, stall 6.
 
 **Coaching notes**
 
@@ -602,7 +679,7 @@ Each week lists three learning points, a timed joint session and both split sess
 
 **Purpose:** celebrate the block, bring newcomers and friends, and end the year on a high before the break.
 
-**What to tell players**
+**Background (say two at most)**
 
 - **Look back on the block:** ask players to name the learning points they remember from the term. HB has players repeat learning points back, and repetition is how they stick (HB App. A.1-A.2).
 - **Peer reflection, 2-5 minutes in mixed pairs:** "one thing you found challenging, one thing that's working" (Flik lesson format).
@@ -665,29 +742,36 @@ By the Christmas break, everyone has worked through the technique behind last se
 
 **New vocabulary**
 
+Players use these out loud:
+
 | Term | Meaning |
 | --- | --- |
 | Dump | Any pass behind the disc line (BFD) |
 | Mac | An upline cut from level with or above the disc (BFD) |
 | Zip | A vertical cut for a short throw on the move (BFD) |
-| Dynamic dump | A dump caught on the closed side that flows quickly to the break side (BFD) |
 | Positive / negative reset | A reset set up ahead of the disc (break side) or behind it (open side) (BFD) |
 | Five Frisbee Habits | Sprint your cuts; cut up and down; check behind you; look for the dump by stall 5; only throw to free players (DK) |
-| Home position | Both hands on the disc, lined up with your centre: where every pivot and fake starts (HN) |
 | Threat position | Catching in a credible throwing stance so the marker has to choose (BFD) |
+| Make space / take space | Clearing to open space for a teammate / attacking space a teammate opened (UAP) |
+| Marking base | Wide, low stance, weight on the balls of the feet, eyes on the thrower (UAP; HN) |
+| Triangle mark | Stop the shown throw, then the first pivot, then drop deeper for the second (HN; UAP) |
+| Flat mark | Shoulders and hips parallel to the endzone, distance varied through the stall (BFD) |
+| Back-shoulder D | Defending from the cutter's deep, open-side shoulder so the under is the only option (Plan) |
+
+Coaches' reference (players pick these up through play; no need to teach them as words):
+
+| Term | Meaning |
+| --- | --- |
+| Dynamic dump | A dump caught on the closed side that flows quickly to the break side (BFD) |
+| Home position | Both hands on the disc, lined up with your centre: where every pivot and fake starts (HN) |
 | Shimmy | A fake of the first few inches of a pivot (HN) |
 | Half pivot | Releasing before the non-pivot foot lands (HB) |
 | Extended mark | Breaking drill: two discs, stall 4, two pivots, no repeated throw (UAP) |
 | Cutting through | A break at about 75 degrees that lets the receiver keep running on the break side (BFD) |
 | Active / inactive / ready space | Space we're attacking / not using / waiting in to set up (UAP) |
-| Make space / take space | Clearing to open space for a teammate / attacking space a teammate opened (UAP) |
 | Explosion, commitment and shoulder cuts | Change speed; drive until the defender commits hips; attack the defender's shoulder (UAP) |
 | Rush, jab, drive, wait, seal | The five ways to get open (UAP) |
 | Chop stop | Small, fast steps to decelerate, staying low (HB) |
-| Marking base | Wide, low stance, weight on the balls of the feet, eyes on the thrower (UAP; HN) |
-| Triangle mark | Stop the shown throw, then the first pivot, then drop deeper for the second (HN; UAP) |
-| Flat mark | Shoulders and hips parallel to the endzone, distance varied through the stall (BFD) |
-| Back-shoulder D | Defending from the cutter's deep, open-side shoulder so the under is the only option (Plan) |
 | Buffer | The gap you keep to your cutter: the "string from belly button to belly button" (Flik) |
 | Heads-up D | Stealing a look at the field without losing your player (HN) |
 | Bail step | Running at 45 degrees with your head on a swivel (HN) |
@@ -697,7 +781,8 @@ By the Christmas break, everyone has worked through the technique behind last se
 
 **Ready for Phase 2?**
 
-- [ ] Week 1 benchmarks re-run informally (Get 10 in week 10) and players have seen their progress
+- [ ] Mini-tests in weeks 6 and 10 logged, and players have seen their progress against week 1
+- [ ] Every player has a development focus, a mentor pair and a home throwing log
 - [ ] Every player has placed themselves on the rookie-to-baller ladder and set process goals
 - [ ] Both teams use the shared reset vocabulary out loud in drills
 - [ ] The 1s can switch between triangle and flat mark on a call

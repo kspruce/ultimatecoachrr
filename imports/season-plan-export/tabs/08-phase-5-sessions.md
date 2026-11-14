@@ -20,9 +20,9 @@
 - **Scouting for Nationals:** CUSB spent the month before EUCF watching games of every likely opponent; we do a smaller version in weeks 45-46 (HN Case Studies, CUSB 2019).
 - **Identity:** PoNY rallied around being the best defensive team in the country. Use the values from Herdlodge and the squad's own identity in the last briefings (HN Case Studies, Pony 2018).
 
-**The 2s in Phase 5:** their competitive season ended at Regionals. They have end-of-season games and awards in weeks 45-46, and then join week 47 as the 1s' rehearsal opponents, playing the looks from the scouting cards. Joint sessions stay open to everyone until the taper.
+**The 2s in Phase 5: the step-up camp.** Their competitive season ended at Regionals, but their development doesn't stop. Weeks 45-48 are a four-session camp built on each player's week 35 tests and mid-season one-to-one, run by the 2s captains with the skill leads. The aim is that every 2s player leaves with a measured improvement and a written plan for 2028/29, and players close to the 1s standard get targeted reps. Week 46 still has the season review and awards, and in week 47 they play the 1s' rehearsal game, playing the looks from the scouting cards. Joint sessions stay open to everyone until the taper.
 
-**If the 1s don't qualify:** Phase 5 becomes an end-of-season block for the whole club: the recovery week, two weeks of fun games and a club mini-tournament, then the week 51 benchmarks, reviews and awards.
+**If the 1s don't qualify:** Phase 5 becomes an end-of-season block for the whole club: the recovery week, two weeks of fun games and a club mini-tournament, then the week 51 skill tests, reviews and awards. The 2s step-up camp runs as planned, and 1s players who want it can join it.
 
 **Euros:** if the 1s qualify for Euros (\~9-11 Sep), confirm availability and travel in week 46 so it doesn't distract from Nationals.
 
@@ -41,7 +41,7 @@
 
 **Learning points:** (1) Hands first: lots of throwing at game speed. (2) The top fix from Regionals. (3) Plan A, done quickly.
 
-**What to tell players**
+**Background (say two at most)**
 
 - **Throwing:** after a summer break, hands get worse faster than legs, so this week has more throwing than any other (HN Case Studies, CUSB 2019).
 - **Nothing new:** "we're not learning anything new now; we're getting faster at what we already do."
@@ -63,18 +63,24 @@
 | Time | 1s | 2s (suggested) | Source |
 | --- | --- | --- | --- |
 | 0:00 | Warm-up | Warm-up | HN Practice Sessions |
-| 0:20 | Plan A offence and defence, at game speed | End-of-season games: Golden Arm, Honeypass, mixed 7v7 | IF; Plan |
-| 1:00 | Second Regionals fix | 4v3 mini tournament | Fix menu, Phase 3; Kieran |
-| 1:40 | Repeated sprints: 2-3 sets of 3-6 sprints over 10-50 m, 20-30 s rest | Optional | BFD S&C |
-| 2:00 | Scrimmage, short stall | Free games | HN Case Studies, CUSB 2019 |
+| 0:20 | Skill floor: each player at the station for their development focus | Step-up camp 1: skill floor on each player's focus from the week 35 tests, with a 1s skill lead or guest at each station | Season plan, Skill floor |
+| 0:45 | Plan A offence and defence, at game speed | Skill floor continues: second station of the player's choice | BFD, Game plans; Season plan, Skill floor |
+| 1:20 | Second Regionals fix | Mini-test: the two tests nearest each player's focus; log against week 35 | Fix menu, Phase 3; Season plan, Measuring improvement |
+| 1:40 | Repeated sprints: 2-3 sets of 3-6 sprints over 10-50 m, 20-30 s rest | Repeated sprints, as the 1s | BFD S&C |
+| 2:00 | Scrimmage, short stall | Small-sided games at stall 6 with the break-throw bonus | HN Case Studies, CUSB 2019; IF |
 
-**Coaching notes:** scouts are assigned to the likely Nationals opponents this week; cards are due in week 46.
+**Harder / easier**
+
+- **Quick-throw pairs and the extended mark:** harder: stall 3 on the extended mark; easier: one disc, stall 6.
+- **4v4 continuous:** harder: stall 4; easier: stall 6.
+
+**Coaching notes:** scouts are assigned to the likely Nationals opponents this week; cards are due in week 46. **Mini-test:** the 1s run Get 10 and the 1v1 cutting test at the start of the skill floor.
 
 ## Week 46 · 14 Aug · High intensity; Nationals game plans; 2s awards
 
 **Learning points:** (1) Short, very intense games with full rest. (2) Plans A, B and C for each Nationals opponent. (3) Celebrate the 2s' season.
 
-**What to tell players**
+**Background (say two at most)**
 
 - **Why intensity, not volume:** Nationals points are fast and short, so this week's games are short and all-out, with proper rest between (BFD S&C).
 - **Game plans:** each likely opponent has a scouting card, and Plans A, B and C are agreed against each one (BFD, Game plans).
@@ -96,10 +102,17 @@
 | Time | 1s | 2s (suggested) | Source |
 | --- | --- | --- | --- |
 | 0:00 | Warm-up | Warm-up | HN Practice Sessions |
-| 0:20 | Scouting cards presented; Plans A, B and C per opponent | End-of-season games | HN Case Studies, Mooncatchers scouting sheet; BFD |
-| 1:00 | 7v7: rehearse each opponent's plan, with the defence playing their looks | 2s season review with players: what went well, what next season | HN Case Studies, CUSB 2019 |
+| 0:20 | Skill floor: each player at the station for their development focus | Step-up camp 2: skill floor on each player's focus | Season plan, Skill floor |
+| 0:45 | Scouting cards presented; Plans A, B and C per opponent | 1v1 ladders: "name your cut" and the one-crossover game; winners move up a court | HN Case Studies, Mooncatchers scouting sheet; BFD; Flik L4 Lesson 3; UAP Handler O and D (Wiggins) |
+| 1:20 | 7v7: rehearse each opponent's plan, with the defence playing their looks | 2s season review with players: what went well, what next season | HN Case Studies, CUSB 2019 |
 | 1:40 | Plyometrics and repeated sprints (short) | Awards and social | BFD S&C |
 | 2:00 | Scrimmage |  | Plan |
+
+**Harder / easier**
+
+- **3v3 and 4v4:** harder: a 25 m pitch; easier: a 35 m pitch.
+- **Short-stall 7v7:** harder: stall 3 for the whole block; easier: stay at stall 5.
+- **1v1 ladders (2s):** harder: the defender is told the cut; easier: the defender starts a step off.
 
 **Coaching notes:** confirm Euros availability and travel this week if the 1s are in contention, so it's settled before the peak.
 
@@ -107,10 +120,10 @@
 
 **Learning points:** (1) Game-day routine exactly as at Nationals. (2) Switch plans on the captains' calls. (3) Reset after mistakes and stay present.
 
-**What to tell players**
+**Background (say two at most)**
 
 - **This is the hardest week.** After it, everything gets lighter.
-- **For the 2s:** you are the opposition. Play each scouted team's looks as well as you can; it's a chance to play against the 1s at full speed.
+- **For the 2s:** you are the opposition. Play each scouted team's looks as well as you can; it's a chance to play against the 1s at full speed. Afterwards, each 2s player gets one piece of feedback on their development focus from a 1s player or guest.
 - **Pressure:** practise the "what if" situations now so they feel familiar at Nationals (HN Coach Corner, Preparing for Pressure).
 
 **Joint session: fun competition at peak intensity**
@@ -133,6 +146,7 @@
 
 - **One light joint session (about 90 minutes):** the game-day warm-up and the 4v3 mini, throwing, set pieces, a few short sprints, and short games.
 - **1s split (about 60 minutes):** walk-throughs of Plans A, B and C, pulls, and endzone and Spread reps.
+- **2s split, step-up camp 3 (about 90 minutes):** a final mini-test on each player's focus, small-sided games, then each player writes their 2028/29 plan with a 2s captain: one development focus, one home throwing routine, and the pathway numbers they're aiming for.
 - **No conditioning.** Sleep, food and water matter more this week than extra training.
 - **Tell players:** feeling a bit flat early in a taper is normal; the legs come back by the weekend.
 
@@ -160,14 +174,14 @@ No sessions. The captains collect the season's stats and send out the player sur
 | Time | Activity | How it runs | Source |
 | --- | --- | --- | --- |
 | 0:00 | Warm-up | Herd standard warm-up and 4v3 mini | HN Practice Sessions; Kieran |
-| 0:20 | Final benchmark tests | The same tests as in October and at trials; players see their own October-to-September change | Season plan, Measuring improvement |
+| 0:20 | Final skill tests | The same five tests as in October, at trials and in May; players see their own October-to-September change | Season plan, Measuring improvement |
 | 1:10 | Water |  |  |
 | 1:20 | Festive mixed games | Golden Arm, Honeypass, mixed 7v7 | IF; Kieran |
 | 2:20 | Club awards | Most improved in each squad, spirit award, and the club's own awards | Plan |
 
 **After the session:**
 
-- **One-to-one reviews:** short one-to-ones for every 1s and 2s player, using their benchmarks, stats and the mid-season focus.
+- **One-to-one reviews:** short one-to-ones for every 1s and 2s player, using their October-to-September test curve, stats, two clips from the season and the mid-season focus.
 - **Captains' review:** what worked, what didn't, and what to change in this plan for 2028/29. Use the player survey and the season's stats.
 - **Off-season:** 1-2 months of low-intensity training 2-3 times a week, not a full stop (BFD S&C).
 - **Recruitment:** Phase 1 of 2028/29 starts in October; plan the open skills sessions now (Season plan, Recruitment).
@@ -179,12 +193,12 @@ No sessions. The captains collect the season's stats and send out the player sur
 | Weeks | Theme | Key games and drills |
 | --- | --- | --- |
 | 44 | Recovery | Optional throwing; Regionals and EUCS review |
-| 45 | Rebuild | Throwing at game speed; Regionals fixes; repeated sprints |
+| 45 | Rebuild; 2s step-up camp starts | Throwing at game speed; Regionals fixes; repeated sprints; skill floor and mini-test |
 | 46 | High intensity; Nationals game plans; 2s awards | 3v3 and 4v4 on a small pitch; short-stall 7v7; scouting cards |
 | 47 | Peak | Mini-tournament; "what if" scrimmage; full rehearsal against the 2s and guests |
 | 48 | Taper | Light session; walk-throughs, pulls, endzone reps |
 | 49-50 | Nationals and Euros; rest | Event routine |
-| 51 | Season review | Final benchmarks; awards; one-to-ones; captains' review |
+| 51 | Season review | Final skill tests; awards; one-to-ones; captains' review |
 
 ### The full playbook at the end of the season
 
@@ -193,7 +207,7 @@ No sessions. The captains collect the season's stats and send out the player sur
 | Offence | Horizontal stack with the dominator; vert from the back or front; zone offence around, through and over; Endzone and Spread | Vert from the back and front; zone offence around and through; Endzone |
 | Defence | Person D with triangle and flat marks, poach and clog, called switches; Bull zone; arrowhead with line trap | Person D with poach and clog, called switches; basic Bull zone; arrowhead |
 | Game management | Plans A, B and C with triggers; scouting cards; timeouts and out-of-timeout plays; O- and D-lines | Plans A and B; timeouts |
-| Club | Values and behaviours; spirit practices; process goals; benchmarks; mid- and end-of-season reviews | Same |
+| Club | Values and behaviours; spirit practices; process goals; skill tests and mini-tests; the skill floor; mid- and end-of-season reviews | Same |
 
 ### New vocabulary
 
@@ -207,9 +221,10 @@ No sessions. The captains collect the season's stats and send out the player sur
 
 ### Ready for next season?
 
-- [ ] Final benchmarks recorded and compared with October.
+- [ ] Final skill tests recorded and compared with October.
 - [ ] Every player has had an end-of-season one-to-one.
 - [ ] Player survey results summarised.
 - [ ] Captains' review done, with changes to this plan noted.
-- [ ] 2s' pathway decisions made for 2028/29.
+- [ ] 2s' pathway decisions made for 2028/29, using the step-up camp tests and the published criteria.
+- [ ] Every 2s player has a written 2028/29 plan from the step-up camp.
 - [ ] Phase 1 open sessions and recruitment planned for October.

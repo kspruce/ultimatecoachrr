@@ -14,6 +14,9 @@ The same rules as Phase 1 apply. The source key (IF, BFD, DK, HB, UAP, Flik, SP,
 - **Trials (weeks 18-20)** are built from games the club already knows, so they reward improvement and decisions rather than familiarity with a system. The method (each assessor grades one attribute, scores are ranked and then discussed) is in the Season plan under Recruitment (HN Coach Corner, Tryouts).
 - **Fun consequences stay in split sessions only.**
 
+- **Harder / easier lists continue** for every full week, and the mini-tests fall in weeks 15 and 22 (10 minutes at the end of the warm-up).
+- **Consequences** follow effort and decisions, not errors in the skill being taught (Season plan, How we coach).
+
 * **The 4v3 mini warm-up finisher continues** (rules in the Phase 1 tab). In Phase 2, add a live mark and drop the stall to 7, so it doubles as resets-under-pressure practice.
 
 **Split session shape in Phase 2**
@@ -41,7 +44,7 @@ The same rules as Phase 1 apply. The source key (IF, BFD, DK, HB, UAP, Flik, SP,
 
 **Learning points:** (1) Look forward once, then engage the dump by stall 4-5. (2) Every reset needs two threats. (3) A reset should create a new angle, not just lower the stall count.
 
-**What to tell players**
+**Background (say two at most)**
 
 - **The new phase:** everything from the autumn now meets a live defender. Trials start in four weeks and use the games we already play.
 - **Two threats:** "Whenever you're trying to get rid of your defender in an Ultimate match, you always need to have (at least) two threats." A dump on the closed side threatens across the field and upfield; a dump on the open side threatens a short pass backwards and upfield (HB 25.1, 25.4).
@@ -76,6 +79,13 @@ The same rules as Phase 1 apply. The source key (IF, BFD, DK, HB, UAP, Flik, SP,
 | 2:00 | Dump Swing Continue: handler, reset and front of stack lines, then a continuation cutter; "better late than early" | Vert from the back: cut and clear | HN 10 Big Drills; DK 6.3 |
 | 2:40 | Scrimmage, stall 6. Consequence: a dump caught in the forbidden region costs that pair a sprint | Scrimmage with look-forward-once-then-dump | Plan; HB 13.2 |
 
+**Harder / easier**
+
+- **Asymmetric offence:** harder: stall 5 with a live mark; easier: 5v3.
+- **Line cutting drill:** harder: the defender starts level; easier: the runner gets a 1 m start.
+- **Continuous dump play:** harder: stall 6, and the defence may switch; easier: three handlers against two defenders.
+- **Resets 2v2 (1s):** harder: a live mark on the reset handler; easier: a passive mark.
+
 **Coaching notes**
 
 - Keep the field big: outdoor dumps set up at least 10 m from the thrower (HB 26.2).
@@ -86,7 +96,7 @@ The same rules as Phase 1 apply. The source key (IF, BFD, DK, HB, UAP, Flik, SP,
 
 **Learning points:** (1) Catch in threat position. (2) Break early, while the mark is still setting. (3) Off-balance and half-pivot throws are skills we train.
 
-**What to tell players**
+**Background (say two at most)**
 
 - **Threat position:** set yourself as soon as you catch, so the marker has to choose; or stay neutral with two hands on the disc (BFD ch. 1).
 - **Break early:** "When a mark initially establishes itself, it is particularly vulnerable to being broken" (HN Flik, Scoring via Upfield Dump).
@@ -121,17 +131,24 @@ The same rules as Phase 1 apply. The source key (IF, BFD, DK, HB, UAP, Flik, SP,
 | 2:00 | Ho spacing walk-through: who cuts (the two in front of the disc, one on each side of the thrower), then live breaks to the active pair | Vert initiation: front of stack cuts open, then break; second goes deep then open under; third cuts under | HN Flik, Horizontal Stack; HN Flik, Initiating Movement |
 | 2:40 | Scrimmage in ho with the break-throw bonus. Consequence: losing line does 3 x 20 m | Scrimmage, score on break | Plan; Flik L3 Lesson 1 |
 
+**Harder / easier**
+
+- **Break Force Game:** harder: defenders may enter the free half for 3 seconds; easier: the free half stays free.
+- **Off-balance throws:** harder: a firmer bump and stall 5; easier: no bump; step-out throws only.
+- **Breakside flow (GRUT):** harder: add a mark and a defender on the first swing; easier: no defence.
+- **Break-Throw Bonus Point:** harder: the break-side goal must come from a break throw; easier: any break-side goal.
+
 **Coaching notes**
 
 - Pivot directly left or right, never straight forward or back (HN Amsterdam Conference).
-- Keep the week 10 Get 10 scores and compare at Trial 1.
+- **Mini-test:** Get 10 and the 1v1 cutting test, 10 minutes at the end of the warm-up; compare with week 10.
 - The 2s don't need the ho yet; keep their focus on breaks into the vert lanes.
 
 ## Week 16 · 17 Jan · Beating a good mark; the dominator
 
 **Learning points:** (1) Threaten both sides so the marker has to choose. (2) After the throw, move straight away. (3) After one break, look for the next break immediately.
 
-**What to tell players**
+**Background (say two at most)**
 
 - **The one-crossover game:** the thrower may bring the disc across their midline only once. Breaking without a pivot is a win for offence, with a pivot it's a tie, and the defence wins on a turnover or two pivots. If you only have 10 minutes a week for marking, this is the one (UAP Handler O and D, Wiggins).
 - **Dominator:** one player gets every second pass. When you catch, immediately fake or throw; after you throw, start running, ideally before the disc has left your hand (HB 34.2).
@@ -164,6 +181,13 @@ The same rules as Phase 1 apply. The source key (IF, BFD, DK, HB, UAP, Flik, SP,
 | 2:00 | Dominator from the ho: two or three handlers play give-and-go in front while cutters clear vertically; the cutters become options when the handlers stop | Inside break, then continuation: Break to a Point, then the next cutter goes as the first one catches | BFD, Dominator; HN Team Analysis, PoNY 2021; HN 10 Big Drills |
 | 2:40 | Scrimmage: a 15 m+ gain from the dominator set scores a bonus. Consequence: losing line does dominator-drill sprints | Scrimmage, recover one incomplete break per point | Plan; DK ch. 7 |
 
+**Harder / easier**
+
+- **One-crossover marking game:** harder: stall 6; easier: the thrower may cross twice.
+- **Gauntlet:** harder: start at the 5 x 5 m box; easier: stop at the 5 x 5 m box.
+- **Dominator drill (1s):** harder: a fresh defender, then two; easier: no defender.
+- **Tap-in (GRUT):** harder: stall 3; easier: a bigger box.
+
 **Coaching notes**
 
 - Dominator risk: the disc can stall in the handler zone, so cutters must time their entry when the handlers stop (BFD, Dominator).
@@ -174,7 +198,7 @@ The same rules as Phase 1 apply. The source key (IF, BFD, DK, HB, UAP, Flik, SP,
 
 **Learning points:** (1) Scan before you catch. (2) Know which spaces are dangerous for the disc's position. (3) On defence, take away the first option, then help.
 
-**What to tell players**
+**Background (say two at most)**
 
 - **Read, process, move:** gather information (where's the force, where's the disc, who's the thrower), work out what it means, then act (HN Excel Premium, Game IQ).
 - **Close isn't covered:** look at separation, hips and the defender's eyes, not just distance (HN Excel Premium, Fixing Focus).
@@ -209,15 +233,22 @@ The same rules as Phase 1 apply. The source key (IF, BFD, DK, HB, UAP, Flik, SP,
 | 2:00 | Team defence by stack: 45-degree mark and dump-defender poach against vert; flatter mark and open-side handler sag against ho; last back talks | Poach and clog near the disc: the open-side dump defender poaches the lane, and the mark rolls with the disc (handler switch) | HN Point of Attack; HN Flik, Marking vs Stacks; HN Excel Premium, Handler Switching |
 | 2:40 | Scrimmage: a poach block scores double. Consequence: missed sideline calls cost the sideline a sprint | Scrimmage with poach bonus | Plan |
 
+**Harder / easier**
+
+- **Asymmetric offence:** harder: 5v5; easier: 5v3.
+- **Whiteboard quiz:** harder: 1 second, plus "and the next throw?"; easier: 4 seconds.
+- **Help the Helper:** harder: the helper may stay only 3 seconds; easier: the helper may stay.
+- **Space Invaders:** harder: the offence must score within 8 passes; easier: break catches score 1 instead of 2.
+
 **Coaching notes**
 
 - Poaching is still hard work, not a shortcut: pick up the next player as soon as you leave the last (HN Practice Sessions 11).
 - Everyone on the line, and the sideline, needs to know the poach plan, or leaving your player looks like laziness (HN Flik, Why Poach).
 - Trials start next week: remind everyone of the dates and the published criteria.
 
-## Week 18 · 31 Jan · Trial 1: benchmarks and small-sided games
+## Week 18 · 31 Jan · Trial 1: skill tests and small-sided games
 
-**Purpose:** repeat the October benchmarks, see everyone in familiar small-sided games, and welcome trialists. Squads are announced after Solent, so nobody is cut at Trial 1.
+**Purpose:** repeat the October skill tests, see everyone in familiar small-sided games, and welcome trialists. Squads are announced after Solent, so nobody is cut at Trial 1.
 
 **What to tell players and trialists**
 
@@ -232,7 +263,7 @@ The same rules as Phase 1 apply. The source key (IF, BFD, DK, HB, UAP, Flik, SP,
 | --- | --- | --- | --- |
 | 0:00 | Welcome and briefing | Criteria, dates, how grading works, what happens after Trial 3 | HN Coach Corner, Tryouts |
 | 0:10 | Warm-up | Herd standard warm-up, led by a senior player | HN Practice Sessions |
-| 0:30 | Benchmark stations | The four October tests (hucking alley, Get 10, filmed 5-10-5, catching), plus a 50 m sprint with 5/10/35 m splits and the arrowhead agility test for anyone new | Season plan, Measuring improvement; HN Testing |
+| 0:30 | Skill test stations | The October skill tests (hucking alley, Get 10, 1v1 cutting test, catching; the decision quiz goes out online this week) and the filmed 5-10-5, plus a 50 m sprint with 5/10/35 m splits and the arrowhead agility test for anyone new | Season plan, Measuring improvement; HN Testing |
 | 1:10 | Water |  |  |
 | 1:20 | Asymmetric offence | 5v4 rotations; assessors grade decision-making and throwing | IF |
 | 1:50 | Variable stall count game | Stall 2 in a wing zone by each sideline, 10 elsewhere: offence must escape the sideline and defence must push them there | IF |
@@ -310,7 +341,7 @@ The same rules as Phase 1 apply. The source key (IF, BFD, DK, HB, UAP, Flik, SP,
 
 **Learning points:** (1) On the sideline, get the disc off early, before the defence settles. (2) The best reset is both off the line and upfield. (3) When trapped, cutters attack the break side and the middle.
 
-**What to tell players**
+**Background (say two at most)**
 
 - **Where to catch a sideline reset:**
   - Worst: behind the thrower and still on the line.
@@ -346,7 +377,14 @@ The same rules as Phase 1 apply. The source key (IF, BFD, DK, HB, UAP, Flik, SP,
 | 1:10 | 3H cutting, then 3H clear dump power play | Getting off the sideline: two passes to get 6 m off the line, stall 5 | SP Vertical Stack; HB 13.3 |
 | 1:40 | 4v4 continuous, stall 5 | 4v4 continuous, stall 7 | BFD S&C |
 | 2:00 | Vert from the front: 3H as upfield reset, offset lateral cuts into the undefended channel | Vert on the sideline: angle the stack to face the disc so both lanes stay open | HN Flik, Upfield Dump and Undefended Channel; HN Flik, Vertical Stack Sideline |
-| 2:40 | Scrimmage starting on the trap sideline. Consequence: a turn within two throws of the sideline costs the line a sprint | Scrimmage starting on the sideline | Plan |
+| 2:40 | Scrimmage starting on the trap sideline. Consequence: a trap where no reset came by stall 5 costs the line a sprint; a turnover on the escape throw itself costs nothing | Scrimmage starting on the sideline | Plan |
+
+**Harder / easier**
+
+- **Variable stall count:** harder: widen the stall-2 zone to 8 m; easier: stall 4 in the zone.
+- **Square-up and double-team:** harder: the double team stays until stall 6; easier: one marker.
+- **Conditioned 7v7 (sideline starts):** harder: stall 6; easier: the dump defender may not poach.
+- **Sideline trap with three handlers (1s):** harder: add a poaching dump defender; easier: no shift call.
 
 **Coaching notes**
 
@@ -358,7 +396,7 @@ The same rules as Phase 1 apply. The source key (IF, BFD, DK, HB, UAP, Flik, SP,
 
 **Learning points:** (1) Catch ready to throw. (2) After a turnover, pick your target before you pick up the disc. (3) Clear the dead space around the disc.
 
-**What to tell players**
+**Background (say two at most)**
 
 - **Fast break principles:** identify a target before picking up, spread the field, and clear the dead space within about 3 m of the disc (HN Coach Corner, Fast Break Principles).
 - **Picking up after a turn:** look upfield before you pick up. Then take the free yards, create disc movement, or wait and walk (HN Handler Situations).
@@ -392,8 +430,16 @@ The same rules as Phase 1 apply. The source key (IF, BFD, DK, HB, UAP, Flik, SP,
 | 2:00 | Ho and dominator in full: 5-pull ho, with the dominator called whenever the disc stalls in the middle | Vert in full: 5-pull | SP Horizontal Stack 8; Flik |
 | 2:40 | Scrimmage with whistle turnovers. Consequence: a slow pick-up costs the line a sprint | Scrimmage with whistle turnovers | Plan |
 
+**Harder / easier**
+
+- **Five-pass game:** harder: 3v3 in 8 x 8 m; easier: 12 x 12 m.
+- **Disc overload:** harder: 60 seconds with three feeders; easier: 40 seconds.
+- **Fast-break game:** harder: the whistle goes with the disc deep in the offence's own end; easier: pick up from the middle.
+- **Peppermills (1s):** harder: the defence may switch; easier: walk it at half pace.
+
 **Coaching notes**
 
+- **Mini-test:** Get 10 and the 1v1 cutting test, 10 minutes at the end of the warm-up.
 - Common fast-break mistakes: rushing to pick up and getting stuck, or a half-speed pick-up that lets the defence set (HN Coach Corner, Fast Break Principles).
 - In ho, the defence will poach off the furthest handler, so handler movement has to be dynamic. Keep the disc in the middle two-thirds of the field (HN Flik, Handling in Horizontal Stack and Handler Positioning).
 
@@ -401,7 +447,7 @@ The same rules as Phase 1 apply. The source key (IF, BFD, DK, HB, UAP, Flik, SP,
 
 **Learning points:** (1) The same warm-up before every game. (2) The sideline is part of the team: buddies and talk. (3) Pull plays: know your first look and your backup.
 
-**What to tell players**
+**Background (say two at most)**
 
 - **Game-day warm-up:** throw, then throw and run, then the 4v3 mini (four offence against three defence, score and rotate out for quick reps). In the second half, let players prepare in their own way (HB App. A.3; Kieran).
 - **Sideline buddies:** each player on the line has a buddy on the sideline who watches their matchup and talks to them (BFD, Team management).
@@ -441,6 +487,13 @@ The same rules as Phase 1 apply. The source key (IF, BFD, DK, HB, UAP, Flik, SP,
 | 2:00 | Pull play into system: if the first look is covered, swing to flip the field | Endzone basics: vert stack, open-side cone, upfield dump | HN Excel Premium, Transitioning to your System; HN Flik, Endzone Offence |
 | 2:40 | 5-pull scrimmage (one team pulls five times in a row). Consequence: a broken pull play with no backup costs the line a sprint | 5-pull scrimmage | Flik Zone Concepts; Plan |
 
+**Harder / easier**
+
+- **Redzone continuous:** harder: a 15 m pitch; easier: a 25 m pitch.
+- **Endzone from 10 m:** harder: 3 out of 3; easier: start from 5 m.
+- **Spread reps:** harder: defenders poach wherever they like; easier: tell the defence where to poach.
+- **Fielding the pull:** harder: bladey pulls and a fast chase; easier: the coach throws a short pull.
+
 **Coaching notes**
 
 - Name a designated pull catcher for every pull play; it's a key job (HN Excel Premium, Dynamic Pull Plays).
@@ -451,9 +504,9 @@ The same rules as Phase 1 apply. The source key (IF, BFD, DK, HB, UAP, Flik, SP,
 
 **Learning points:** (1) Intensity is a choice you make every point. (2) Zone is not half effort. (3) Echo every call.
 
-**What to tell players**
+**Background (say two at most)**
 
-- **Squads:** announce them with individual conversations, not just a list. Everyone gets their trial feedback and a development focus, and the pitch still applies: everyone improves, in both squads.
+- **Squads:** announce them with individual conversations, not just a list. Everyone gets their trial feedback and a development focus, and the pitch still applies: everyone improves, in both squads. The development focus is the player's weakest skill test against their squad's median, and from week 25 they get time on it in every split session (the skill floor).
 - **Solent review:** use the four-number stats (no-turn goals, breaks, conversion rate) and the process goals rather than the results (HN Coach Corner, Base Metric Analysis; HN Amsterdam Conference).
 - **1s, the Bull zone (2-3-2):**
   - Two chases hold a middle force and stop easy resets.
@@ -491,8 +544,16 @@ The same rules as Phase 1 apply. The source key (IF, BFD, DK, HB, UAP, Flik, SP,
 | 2:00 | Zone with a CRUMBLE call: transition to match on the call, matching up deepest first | Disruptive poach: a defender plants in the open lane off the pull; the others cover | HN Bull Zone; HN Flik, Transitions; HN Flik, Disruptive Poaching |
 | 2:40 | Scrimmage, zone on every pull. Consequence: a huck conceded over the zone costs the wings and deeps a sprint | Scrimmage with poach bonus | Plan |
 
+**Harder / easier**
+
+- **Blocks Only:** harder: stall 6; easier: any touch counts.
+- **Trade-off drill:** harder: swap the values without warning; easier: one set of values per round.
+- **Asymmetric defence:** harder: a bigger pitch; easier: a smaller pitch.
+- **8-pull zone reps (1s):** harder: the offence runs a controller through the zone; easier: the offence may only swing.
+
 **Coaching notes**
 
+- Before week 25, the skill leads get their station lists (who has which focus), and the 2s captains get theirs.
 - Zone players should count the attackers in their area (BFD).
 - The wings need constant sideline and deep talk; build sideline calls into every zone rep (HN Bull Zone).
 - Weeks 24-25 are a two-week defence block for Mixed Tour 1, which is usually very windy, so defence is our goal for that event. Phase 3 week 25 continues with the Bull zone, the arrowhead, deep defence and pulls in wind.
@@ -511,7 +572,7 @@ By the time squads are announced, Phase 1's skills have been tested against live
 | Cutting under pressure | 15, 16, 21 | Ho cutting shapes; give-and-go footwork; timing continuation; 3H lateral cuts |
 | Defence | 17, 20, 24 | Taking away the first option; poaching, flash poaches and the handler roll; defensive intensity; the Bull zone (1s) |
 | Game day | 23 | Game-day warm-up; sideline buddies; fielding the pull; pull plays and endzone setup |
-| Selection | 18-20, 24 | Benchmarks re-run; graded trials; squads announced with individual feedback |
+| Selection | 18-20, 24 | Skill tests re-run; graded trials; squads announced with individual feedback |
 
 **Systems in place**
 
@@ -528,50 +589,58 @@ By the time squads are announced, Phase 1's skills have been tested against live
 
 **New vocabulary**
 
+Players use these out loud:
+
 | Term | Meaning |
 | --- | --- |
 | Two threats | You always need two places to get the disc, so your defender can only stop one (HB) |
-| Forbidden region | Behind the thrower on the trap sideline: a reset there solves nothing (HB) |
-| Square up | The thrower turns their shoulders to face the reset (HN) |
 | Swing | Any sideways pass that changes the point of attack (Flik) |
 | Jedi | A dump and swing that gains yards: every throw that loses yards is followed by a change of attack point (BFD) |
 | Power position | Catching facing downfield with no mark (Flik) |
+| Give-and-go (immediate, delayed, break-side) | Throw then cut to get it back, straight away, after a fake, or behind the mark (HN) |
+| Horizontal stack (ho) | Three handlers and four cutters spread across the field, 8-12 m from the disc (Flik) |
+| Dominator | Two or three handlers working the disc upfield with short passes and give-and-go while cutters clear (BFD; HB) |
+| Vertical stack (vert) | A handler, a dump and a stack down the middle, cutting in the lanes either side (Flik) |
+| Poach / flash | Leaving your player to cover a space / leaving just long enough to deny one throw (Flik) |
+| Bull zone | Herd's 2-3-2: two chases, a bull, two wings, a deep-deep and a short-deep (HN) |
+| CRUMBLE | The call to switch from the Bull zone to match; everyone echoes it (HN) |
+| Spread | Endzone call: three handlers run a dominator at the front of the endzone while the other four spread wide across the back; if the spread players' defenders poach, hit them (Kieran) |
+
+Coaches' reference (players pick these up through play; no need to teach them as words):
+
+| Term | Meaning |
+| --- | --- |
+| Forbidden region | Behind the thrower on the trap sideline: a reset there solves nothing (HB) |
+| Square up | The thrower turns their shoulders to face the reset (HN) |
 | Dish | A short pass returning the disc to a handler cutting upfield (Flik) |
 | 3H / upfield dump | A third handler at the front of the stack who resets by gaining yards (Flik) |
 | Undefended channel | The space a defender gives up when they cover the open side (Flik) |
-| Give-and-go (immediate, delayed, break-side) | Throw then cut to get it back, straight away, after a fake, or behind the mark (HN) |
 | Sockeye move | After an around break, the receiver charges and dishes back to the original thrower upfield (HN) |
 | Sealing the lane | Taking a legal position that blocks your defender from the next pass (Flik) |
-| Horizontal stack (ho) | Three handlers and four cutters spread across the field, 8-12 m from the disc (Flik) |
 | Active pair | The two ho cutters in front of the disc who are cutting now (Flik) |
 | Peppermills (Sanchez) | Two cutters running equal and opposite cuts, then taking each other's space (Flik) |
 | Loopa | An early ho cut that engages the defender then cuts back the other way (Flik) |
 | Banana | Both handlers go upline to open a big swing to the far side against a deep poach (Flik) |
 | Meat spot | The spot a third of the way in from each sideline where ho handlers want the disc (Flik) |
-| Dominator | Two or three handlers working the disc upfield with short passes and give-and-go while cutters clear (BFD; HB) |
-| Vertical stack (vert) | A handler, a dump and a stack down the middle, cutting in the lanes either side (Flik) |
 | Front / back of stack | The stack player nearest to / furthest from the disc (Flik) |
 | String | A pull play with the first and second cuts called in advance (HN) |
 | Sideline wrinkle / sideline power position | Resets that get the disc off the line and upfield at once (Flik) |
 | Chisel | A reset cut that steps backfield then goes upfield (HN Team Analysis) |
 | Shift call | The marker's call to slide behind the thrower and shut the dump at about stall 5 (HB) |
-| Poach / flash | Leaving your player to cover a space / leaving just long enough to deny one throw (Flik) |
 | Handler roll | The mark following the disc to the new thrower while the dump defender poaches the lane (HN) |
 | Buzz switch | Defenders swapping to stop a give-and-go, dump or dish (Flik) |
 | Last back | The deepest defender, who helps on deep cuts and directs the field (HN) |
 | Dead space | Within about 3 m of the disc, where standing kills the flow (HN) |
 | The 1 and the 2 | The pull fielder who just secures the pull, and the handler who centres it (HN) |
-| Bull zone | Herd's 2-3-2: two chases, a bull, two wings, a deep-deep and a short-deep (HN) |
-| CRUMBLE | The call to switch from the Bull zone to match; everyone echoes it (HN) |
 | Sideline buddy | A teammate on the sideline who watches and talks to one on-field player (BFD) |
 | Four-number stats | Score, O or D start, blocks and turnovers per point (HN) |
 | No-turn goal / break / conversion rate | Scoring without a turnover / scoring a point you started on defence / share of possessions scored (HN) |
 | 5-pull / 8-pull | Scrimmage format where one team pulls repeatedly so each line gets many reps of one role (Flik) |
-| Spread | Endzone call: three handlers run a dominator at the front of the endzone while the other four spread wide across the back; if the spread players' defenders poach, hit them (Kieran) |
 
 **Ready for Phase 3?**
 
 - [ ] Squads announced, with individual feedback delivered to every trialist
+- [ ] Every player has a development focus from their trial tests, and the skill leads have their station lists
 - [ ] Both squads have season and Tour 1 goals, including process goals
 - [ ] The 1s can run ho, dominator and vert from a call, and the Bull zone with CRUMBLE
 - [ ] The 2s run vert from the back, dump and swing, and poach and clog without prompting
