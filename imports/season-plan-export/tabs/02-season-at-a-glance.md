@@ -26,7 +26,6 @@ The whole 2027/28 plan on one page: the phases, the training blocks and themes f
 | --- | --- |
 | Before week 1 | Skill leads and the stats and video lead recruited; pathway criteria published |
 | Week 1 | Baseline skill tests; first one-to-ones and development focus (weeks 1-3); mentor pairs and home throwing log start |
-| Week 5 | Weekly clip quiz starts in the group chat |
 | Weeks 6, 10, 15, 22, 27, 32, 40, 45 | Mini-tests: two skill tests in 10 minutes |
 | Week 14 | Season priorities shared (C4, the pre-season meeting) |
 | Weeks 18-20 | Trials, with full skill tests at Trial 1 |
@@ -72,7 +71,7 @@ Ph = phase. Letters A-L are the training blocks. Dates are week commencing (Mond
 | 2 | 11 Oct | 1 | A | Pivots and fakes that look real (compass throwing, fake-fake-throw) | Resets against a trap; 3-handler game | Sideline dump and getting off the line |  |  |
 | 3 | 18 Oct | 1 | A | Catching: clap and crab catch, catching on the move (heads-on drill) | Handler rules: throw or fake forward, then dump at once | Look-forward-once-then-dump; every player handles | C1 How we learn (online) |  |
 | 4 | 25 Oct | 1 | B. Getting open | Acceleration, chop stop, change of direction (5-10-5, hockey stop) | The three cut families against a tight defender (five-cone drill) | V-cuts: away then under, under then away |  |  |
-| 5 | 1 Nov | 1 | B | Throwing to space and lead passes (Archery, lead-pass drill) | Vertical stack cutting from the back; continuation pairs | Vertical stack cutting from the back; clearing to the stack |  | Clip quiz starts |
+| 5 | 1 Nov | 1 | B | Throwing to space and lead passes (Archery, lead-pass drill) | Vertical stack cutting from the back; continuation pairs | Vertical stack cutting from the back; clearing to the stack |  |  |
 | 6 | 8 Nov | 1 | B | Clearing is part of cutting (clear-cut drill); active and inactive space | Vertical stack cutting from the front; horizontal stack spacing | Cut and clear in both lanes |  | Mini-test |
 | 7 | 15 Nov | 1 | C. Marking and footwork | Athletic marking base, shuffle, reach without shifting weight | Triangle mark and a hard-working force | One-way force; triangle mark basics | C2 Belonging (after training) |  |
 | 8 | 22 Nov | 1 | C | Defensive footwork: drop step, keeping margins, box of death | Back-shoulder positioning and buffering | Back-shoulder positioning on the open side |  |  |

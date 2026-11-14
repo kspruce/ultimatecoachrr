@@ -123,7 +123,7 @@ def test_parser_reads_the_real_export():
     assert [p['slug'] for p in data['pages']][:3] == ['season-plan', 'season-at-a-glance', 'weekly-plan']
     assert len(data['pages']) == 11
     ms = data['milestones']
-    assert len(ms) == 16
+    assert len(ms) == 15
     by_label = {m['when_label']: m for m in ms}
     trials = by_label['Weeks 18-20']
     assert (trials['start_week'], trials['end_week']) == (18, 20)
@@ -155,7 +155,7 @@ def test_unparseable_rows_are_reported_not_fatal(tmp_path):
 def test_dry_run_writes_nothing(app, herd):
     report = do_import(herd['team'], dry_run=True)
     assert counts() == [0, 0, 0, 0, 0]
-    assert report.counts == {'phases': 5, 'weeks': 51, 'session notes': 49, 'pages': 11, 'milestones': 16,
+    assert report.counts == {'phases': 5, 'weeks': 51, 'session notes': 49, 'pages': 11, 'milestones': 15,
                              'classroom sessions': 12}
     assert 'DRY RUN' in report.text()
 
@@ -183,7 +183,7 @@ def test_dry_run_on_an_existing_plan_changes_nothing(app, herd):
 @needs_export
 def test_import_is_idempotent_and_keeps_links_and_access(app, herd):
     first = do_import(herd['team'])
-    assert first.plan_created and counts() == [1, 5, 51, 11, 16]
+    assert first.plan_created and counts() == [1, 5, 51, 11, 15]
     plan = SeasonPlan.query.one()
     assert plan.season == '2027/28' and plan.team_organization_id == herd['team']
     assert TeamSettings.query.filter_by(team_id=herd['team']).one().season_plan_enabled is False
@@ -202,7 +202,7 @@ def test_import_is_idempotent_and_keeps_links_and_access(app, herd):
     second = do_import(herd['team'])
     assert not second.plan_created and second.removed == []
     db.session.expire_all()
-    assert counts() == [1, 5, 51, 11, 16]
+    assert counts() == [1, 5, 51, 11, 15]
     assert {w.week_number: w.id for w in SeasonWeek.query} == ids  # same rows, updated in place
     week = SeasonWeek.query.filter_by(week_number=5).one()
     assert week.session_plan_id == sp.id and week.notes == 'Bring cones'
@@ -218,7 +218,7 @@ def test_replace_wipes_and_reimports(app, herd):
     week.notes = 'Bring cones'
     db.session.commit()
     report = do_import(herd['team'], replace=True)
-    assert report.replaced and counts() == [1, 5, 51, 11, 16]
+    assert report.replaced and counts() == [1, 5, 51, 11, 15]
     assert SeasonWeek.query.filter_by(week_number=5).one().notes is None
 
 

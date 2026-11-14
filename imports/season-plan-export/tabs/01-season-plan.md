@@ -284,7 +284,7 @@ Every player takes four skill tests in full four times (October, Trial 1 in week
 
 **Process goals:** alongside outcome goals (Nationals, wins), every player and team sets goals they can hit several times a session. For example: check your shoulder 5-6 times a point, give sideline talk three times a point, make the opposition throw 10 passes before scoring. These give feedback every week (HN Amsterdam Conference, Process over Outcome).
 
-**Decision training:** every week from week 5, the stats and video lead posts a two-minute clip quiz in the group chat: one clip, three questions (the force, the open player, the best throw), with the answer and a short discussion two days later. After each event, every player gets two clips of themselves (one to keep, one to fix), used in their next check-in.
+**Player clips:** after each event, every player gets two clips of themselves (one to keep, one to fix), used in their next check-in.
 
 **Player reviews:** short one-to-ones at the start (weeks 1-3), when squads are announced (week 24), in mid-season (weeks 38-39) and at the end, plus a 10-minute check-in after Tour 1 (week 27). Bring the player's test results and two clips where possible. Mentor pairs check in monthly in between. Each player keeps a simple decision grid (situations where they turn it over, and what they'll try instead) and sets two personal goals, one of which is their development focus.
 
@@ -300,7 +300,7 @@ Two captains cannot coach 44 players well alone, so the plan adds a small leader
 | Internal guest coaches | One-off sessions or blocks on a specialism (e.g. marking, handling, pulling) | Masters players and friends of the club |
 | Skill leads (3-4) | Each owns an area (getting open, breaking the mark, catching and hucking, marking and 1v1 defence), runs that skill-floor station from week 25 and helps players set their development focus | Experienced 1s players, recruited before week 1 |
 | Warm-up and fitness lead | Warm-ups, home fitness sheet, skill tests and mini-tests | To recruit before week 1 |
-| Stats and video lead | Films games, keeps team and player stats, builds the clip library, runs the weekly clip quiz and cuts two clips per player after each event | To recruit before week 1 |
+| Stats and video lead | Films games, keeps team and player stats, builds the clip library and cuts two clips per player after each event | To recruit before week 1 |
 | Comms and kit | Posts sessions in advance, kit, socials | To recruit |
 
 **Sideline buddies:** at tournaments, players are paired (ideally similar roles) to coach each other from the sideline. Sideline talk is practised in training too, e.g. points where only players off the pitch may talk.
