@@ -38,6 +38,10 @@ def app():
         yield app
         db.session.remove()
         db.drop_all()
+        # Each test builds its own app, so close its connection pool now rather
+        # than waiting for garbage collection. Otherwise idle Postgres
+        # connections pile up until the server refuses new ones.
+        db.engine.dispose()
 
 
 @pytest.fixture
