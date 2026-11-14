@@ -24,6 +24,7 @@ from tests.test_teams import make_user
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HERD_PLAN = os.path.join(ROOT, 'imports', 'programmes', 'thundering-herd-2025-26')
+HERD_2027_28 = os.path.join(ROOT, 'imports', 'programmes', 'thundering-herd-2027-28')
 
 
 def make_player(team, name, user=None):
@@ -846,6 +847,40 @@ def test_herd_plan_imports_through_the_general_framework(app, clubs):
     again = runner.invoke(import_programme_command, [HERD_PLAN, '--team', 'herd', '--name', 'Again'])
     assert again.exit_code != 0 and 'Already imported' in again.output
     assert Programme.query.count() == 1
+
+
+def test_herd_2027_28_programme_follows_the_season_plan(app, clubs):
+    """The full-season programme: every track runs weeks 1-51, so programme
+    week N is season-plan week N, and the tests sit on the plan's test rounds."""
+    from commands import import_programme_command
+    result = app.test_cli_runner().invoke(import_programme_command, [
+        HERD_2027_28, '--team', 'herd', '--name', 'Herd S&C 2027/28', '--start', '2027-10-04'])
+    assert result.exit_code == 0, result.output
+    assert 'warning' not in result.output
+    programme = Programme.query.filter_by(team_organization_id=clubs['herd']).one()
+    draft = programme.draft
+    tracks = {t.name: t for t in draft.tracks}
+    assert {name: [w.number for w in t.weeks] for name, t in tracks.items()} == {
+        name: list(range(1, 52)) for name in ('Home strength', 'Gym', 'Throwing', 'Speed')}
+    errors, warnings = svc.validate(programme, draft)[:2]
+    assert errors == [] and warnings == []
+    # Deloads on event weeks, a peak in weeks 46-47, then a taper and a rest week
+    home = {w.number: w for w in tracks['Home strength'].weeks}
+    assert [n for n, w in home.items() if w.kind == 'deload' and 23 <= n <= 43] == [23, 26, 29, 30, 31, 37, 42, 43]
+    assert (home[47].kind, home[48].kind, home[49].kind, home[50].kind) == ('training', 'deload', 'deload', 'rest')
+    assert len(home[5].sessions) == 2 and all(s.requirement == 'required' for s in home[5].sessions)
+    # The third throwing session is the player's own development focus
+    focus = [s for s in tracks['Throwing'].weeks[20].sessions if s.requirement == 'alternative']
+    assert len(focus) == 4 and {s.alternative_group for s in focus} == {'focus'}
+    # Full test rounds in weeks 1, 18, 35 and 51; the trial sprint tests in week 18 only
+    weeks_of = {}
+    for m in draft.milestones:
+        for t in draft.tests:
+            if m.covers(t):
+                weeks_of.setdefault(t.name, []).append(m.week.number)
+    assert sorted(weeks_of['5-10-5 agility shuttle (filmed)']) == [1, 18, 35, 51]
+    assert weeks_of['50 m sprint'] == [18] and weeks_of['Arrowhead agility test'] == [18]
+    assert sorted(weeks_of['1v1 cutting test']) == [1, 6, 10, 15, 18, 22, 27, 32, 35, 40, 45, 51]
 
 
 def test_no_club_specific_logic_in_the_framework():

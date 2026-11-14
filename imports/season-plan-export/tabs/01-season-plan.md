@@ -232,7 +232,7 @@ We coach mainly through games and questions, in the spirit of Ian French's *Game
 
 ## Fitness without a track or gym
 
-Fitness comes mostly from inside sessions, through small-sided games and short, game-shaped running, plus a simple bodyweight programme players do at home.
+Fitness comes mostly from inside sessions, through small-sided games and short, game-shaped running, plus a home programme that needs no track and no gym: **Herd S&C 2027/28**, under Training > Programmes.
 
 Ultimate is mostly repeated short sprints: roughly 5-6 maximal sprints of 10-15 m per point, at 90-95% of maximum heart rate (BFD). Training should match that rather than long runs.
 
@@ -240,27 +240,43 @@ Ultimate is mostly repeated short sprints: roughly 5-6 maximal sprints of 10-15 
 | --- | --- | --- | --- |
 | Small-sided games (3v3 / 4v4, \~30 m pitch, stall 5, continuous) | Split sessions | 2-3 blocks of 4-5 min | 2 onwards |
 | Keeping margins (defender holds 2-3 m off a random runner) | Split sessions | 3 x 40 s on, 20 s off | 1 onwards |
-| Repeated sprints with cuts (10-30 m, 20-30 s rest) | Split sessions, or as fun consequences | 2-3 sets of 4-6 | 2 onwards, building up |
+| Repeated sprints with cuts (10-30 m, 20-30 s rest) | Split sessions, at the end of the 4v4 block, or as fun consequences | 1 set of 4 from week 21, 2 sets of 4 from week 32, 2-3 sets of 4-6 in weeks 45-46 | 2 onwards, building up |
 | Agility and footwork (ladder or cones, reaction drills) | Warm-ups | 5-10 min, low volume, full rest | All |
-| Bodyweight strength, landings, single-leg balance | At home, 2 x 20-30 min a week | Simple sheet with progressions | All |
-| Plyometrics | At home or warm-ups | Start \~40 contacts, build towards \~100 | 2-4 |
+| Bodyweight strength, landings, single-leg balance | At home: Home strength A and B, 2 x 20-30 min a week | Progressions change every 3-4 weeks; one short primer in event weeks | All |
+| Plyometrics | At home, at the start of Home strength A | \~40 contacts from week 14, \~60 by week 22, \~100 in weeks 40 and 46-47 | 2-5 |
+| Sprint top-up (optional) | At home or in the park, straight before Home strength A | 15-20 min in Phases 1-2; 3-4 flat-out sprints a week in season | All |
 
-**Timing:** general strength and base endurance in Phases 1-2; sprints, plyometrics and high-intensity games peak about 2-3 weeks before Nationals; then a 1-2 week taper. Hard leg sessions should not fall on consecutive days.
+**Timing:** general strength and base endurance in Phases 1-2; sprints, plyometrics and high-intensity games peak about 2-3 weeks before Nationals (weeks 46-47); then a 1-2 week taper (weeks 48-49). Hard leg sessions should not fall on consecutive days.
 
-**For players with gym access:** the Flik Level 2 programme in the notebook is already periodised: off-season 1-2, pre-season 1-2, in-season and peak. Each block has accessory and stability, strength and power, and speed sessions. There is also a bodyweight, mobilisation and trunk circuit for anyone without a gym (HN Level 2 Strength and Conditioning). Train for intensity, not volume; maximal efforts need full rest (HN Coach Corner, Roster Size and Tryouts).
+**The home programme.** It runs all season, and its week numbers are this plan's week numbers. It has four tracks:
+
+- **Home strength (everyone):** two sessions a week. Session A (legs and landings) is the hard leg day at home; session B (hips, hamstrings and trunk) is lighter. Phase 1 teaches the positions and held landings; jumps start in week 14.
+- **Gym (optional):** for players with access. It replaces the strength block of Home strength A, not the whole programme.
+- **Throwing:** the home routine in *Throwing outside training*.
+- **Speed (optional):** short, flat-out sprints with full rest. Sessions cover agility and repeated efforts but not progressive sprinting, and the trial tests include a 50 m sprint, so this track builds up to it from week 1 and keeps hamstrings used to top speed in season.
+
+**Rules that keep it sensible:**
+
+- Never do Home strength A, the gym or a speed session the day before training or an event. Leave a clear day between sessions A and B if you can.
+- Event weeks (Solent, Tours 1-3, Herdlodge, Regionals, both EUCS weekends) and Trial 1 are deloads: one 15-minute primer early in the week. The 2s repeat the last full week when only the 1s are playing.
+- Week 44 is recovery, weeks 45-47 are the peak, weeks 48-49 the taper, week 50 is rest. After Regionals the 2s have nothing to taper for, so in weeks 48-49 they repeat week 47.
+
+**For players with gym access:** the Gym track follows the block names of the Flik Level 2 programme in the notebook: off-season 1 (weeks 1-6) and 2 (weeks 7-11), pre-season 1 (weeks 14-20) and 2 (weeks 21-24), in-season (weeks 25-43) and peak (weeks 45-47). Each block has an accessory and stability session and a strength and power session; the Speed track is its speed session. The exercises carry over from last season's gym programme, so check them against the Flik sheets before publishing. The bodyweight, mobilisation and trunk circuit for anyone without a gym is now Home strength (HN Level 2 Strength and Conditioning). Train for intensity, not volume; maximal efforts need full rest (HN Coach Corner, Roster Size and Tryouts).
 
 ## Throwing outside training
 
 Training gives each player about 40 minutes of throwing a week, which isn't enough to build six confident break throwers. Every player follows a short home routine all season; the Christmas programme is part of it rather than a one-off.
 
-- **Dose:** three 15-minute sessions a week, about 100 throws each, with a partner where possible (your mentor pair) or alone against a wall or target.
+- **Dose:** three 15-minute sessions a week, about 100 throws each, with a partner where possible (your mentor pair) or alone against a wall or target. It is the Throwing track of the home programme.
+- **Two sessions follow the menu, the third is yours:** Throwing 1 and 2 follow the phase menu below. The third is one of four focus sessions (breaking the mark, getting open, catching and hucking, marking and 1v1 defence); each player does the one that matches their development focus.
 - **Menu by phase:**
   - Phase 1: balance and release (single-leg throwing, star throws, the 10-minute low-release session (GRUT)).
-  - Phase 2: breaks (Get 10 with a partner as the marker, half-pivot backhands, off-hand throws).
+  - Phase 2: breaks (Get 10 with a partner as the marker, half-pivot backhands, off-hand throws), and throwing tired.
+  - From week 23: wind, so it is trained before a windy Tour 1.
   - Phases 3-4: hucks and wind (box hucking, throwing into and with the wind; theory Cards 10 and 11).
   - Phase 5: quick releases at game speed ("hands before legs").
-- **Log it:** one line per session (date, throws, focus) in the club's shared log. Skill leads look at it before each mini-test.
-- **Players with a specific gap** follow the matching UAP module for four weeks.
+- **Log it:** one line per session (date, throws, focus) in the programme log; the throw count and any score go in the notes. Skill leads look at it before each mini-test.
+- **Players with a specific gap** follow the matching UAP module for four weeks and log it as their focus session.
 
 ## Measuring improvement
 
@@ -273,7 +289,7 @@ Every player takes four skill tests in full four times (October, Trial 1 in week
 | Getting open | 1v1 cutting test: from a stack spot 15 m from the thrower, the cutter has until stall 6 to get open against a defender starting on their back shoulder; 10 reps (5 under, 5 deep or away), count clean catches. Defenders are 1s players asked to play at full intensity | Getting open | Adapted from Win the Box (HN 10 Big Drills) and the cut families (UAP Cutting) |
 | Catching under pressure | 20 catches in a heads-on or overload drill; count clean catches | Keeping the disc | Hildo Bijl |
 
-**Athletic profile (recorded, not counted in the skill goal):** the 5-10-5 agility shuttle, filmed and timed (UAP changing direction module); at trials, also the 50 m sprint with splits and the arrowhead agility test.
+**Athletic profile (recorded, not counted in the skill goal):** the 5-10-5 agility shuttle, filmed and timed (UAP changing direction module); at trials, also the 50 m sprint with splits and the arrowhead agility test. The skill tests and the athletic profile are set up as tests in the home programme, on the weeks they are run, so players enter their own results and see their curve.
 
 **Mini-tests:** in weeks 6, 10, 15, 22, 27, 32, 40 and 45, run two tests in 10 minutes, usually Get 10 and the 1v1 cutting test (at the end of the warm-up until week 24, then at the start of the skill floor). Players log their own scores and see their curve.
 
