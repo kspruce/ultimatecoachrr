@@ -25,8 +25,8 @@ Each team has one headline outcome and a few process goals we control. The proce
 
 |  | Outcome goal | Process goals |
 | --- | --- | --- |
-| **1s** | Qualify for Nationals, September 2028 | Fewer turnovers per point than 2026/27; at least 6 confident break throwers on the roster (defined in *Measuring improvement*); every player improves on 3 of the 5 skill tests |
-| **2s** | Win more games than 2026/27, and enjoy it | Every 2s player handles in games; at least 2 players move up to the 1s during the season; every player improves on 3 of the 5 skill tests; every player leaves the August step-up camp with a plan for 2028/29 |
+| **1s** | Qualify for Nationals, September 2028 | Fewer turnovers per point than 2026/27; at least 6 confident break throwers on the roster (defined in *Measuring improvement*); every player improves on 3 of the 4 skill tests |
+| **2s** | Win more games than 2026/27, and enjoy it | Every 2s player handles in games; at least 2 players move up to the 1s during the season; every player improves on 3 of the 4 skill tests; every player leaves the August step-up camp with a plan for 2028/29 |
 | **Club** | Grow and keep players | Off-season sessions bring in new players; most 2026/27 players return for 2028/29; players rate enjoyment highly in the end-of-season survey |
 
 The skill tests are set out in *Measuring improvement*.
@@ -121,7 +121,7 @@ The 2s get the same coaching quality, attention and visibility as the 1s. These 
 2. **Same curriculum, same theme.** The 2s learn exactly what the 1s learn each week; only difficulty and numbers change.
 3. **Joint session time is shared fairly.** Mixed groups, Honeypass pairings and mixed 7v7 teams mean 2s players train with and against 1s players every week.
 4. **Everyone handles.** In 2s games and scrimmages, rules such as "last player to touch the disc picks up after a turnover" and Golden Arm make sure no one is only a cutter.
-5. **A clear pathway.** Criteria for moving up to the 1s are published at the start of the season. The proposed standard is the 1s squad's median on at least three of the five skill tests, plus the captains' judgement of game stats and attitude. Players can move up mid-season; 1s players can drop in to support the 2s at tournaments.
+5. **A clear pathway.** Criteria for moving up to the 1s are published at the start of the season. The proposed standard is the 1s squad's median on at least three of the four skill tests, plus the captains' judgement of game stats and attitude. Players can move up mid-season; 1s players can drop in to support the 2s at tournaments.
 6. **2s goals are celebrated.** 2s results, improvement scores and player awards are announced alongside the 1s in club updates and socials.
 7. **Their own tournament plan.** The 2s have a target event and game plans prepared in the same way as the 1s, not left until the week before.
 8. **Individual feedback for everyone.** Each 2s player gets the same mid-season and end-of-season review as a 1s player.
@@ -263,7 +263,7 @@ Training gives each player about 40 minutes of throwing a week, which isn't enou
 
 ## Measuring improvement
 
-Every player takes five skill tests in full four times (October, Trial 1 in week 18, week 35 and September), with short mini-tests in between. Each test matches one of last season's problem areas or the throwing base, so the pitch (everyone improves) has evidence behind it and each player knows what to work on.
+Every player takes four skill tests in full four times (October, Trial 1 in week 18, week 35 and September), with short mini-tests in between. Each test matches one of last season's problem areas or the throwing base, so the pitch (everyone improves) has evidence behind it and each player knows what to work on.
 
 | Skill test | Test | Problem area | Source |
 | --- | --- | --- | --- |
@@ -271,7 +271,6 @@ Every player takes five skill tests in full four times (October, Trial 1 in week
 | Breaking the mark | Get 10: 10 throws past a marker to a static receiver 10-15 m away; count completions | Breaking the mark | Flik Level 4 |
 | Getting open | 1v1 cutting test: from a stack spot 15 m from the thrower, the cutter has until stall 6 to get open against a defender starting on their back shoulder; 10 reps (5 under, 5 deep or away), count clean catches. Defenders are 1s players asked to play at full intensity | Getting open | Adapted from Win the Box (HN 10 Big Drills) and the cut families (UAP Cutting) |
 | Catching under pressure | 20 catches in a heads-on or overload drill; count clean catches | Keeping the disc | Hildo Bijl |
-| Reading the pitch | Decision quiz: 20 game screenshots or clips, each shown for 2 seconds: what's the force, who's open, would you huck? New pictures each round; done online in the test week | Seeing the field | HN Excel Premium, Game IQ |
 
 **Athletic profile (recorded, not counted in the skill goal):** the 5-10-5 agility shuttle, filmed and timed (UAP changing direction module); at trials, also the 50 m sprint with splits and the arrowhead agility test.
 
@@ -336,7 +335,7 @@ The Phase 1 skills sessions double as the club's shop window: open to any player
 
 - [ ] Confirm 2028 event dates as UKU and EUCS publish them.
 - [ ] Selection criteria for trials, published before the first trial.
-- [ ] The 2s-to-1s pathway criteria (proposed: the 1s median on three of the five skill tests), published in week 1.
+- [ ] The 2s-to-1s pathway criteria (proposed: the 1s median on three of the four skill tests), published in week 1.
 - [ ] Skill leads and the stats and video lead recruited before October.
 - [ ] Which internal guest coaches to ask, and which blocks they take.
 - [ ] How the 1s captains and 2s captains share planning each month.

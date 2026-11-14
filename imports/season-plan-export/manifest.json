@@ -9,7 +9,7 @@
    "title": "Season plan",
    "slug": "season-plan",
    "file": "tabs/01-season-plan.md",
-   "bytes": 36811
+   "bytes": 36569
   },
   {
    "order": 2,
@@ -37,14 +37,14 @@
    "title": "Phase 2 sessions",
    "slug": "phase-2-sessions",
    "file": "tabs/05-phase-2-sessions.md",
-   "bytes": 54295
+   "bytes": 54250
   },
   {
    "order": 6,
    "title": "Phase 3 sessions",
    "slug": "phase-3-sessions",
    "file": "tabs/06-phase-3-sessions.md",
-   "bytes": 50393
+   "bytes": 50347
   },
   {
    "order": 7,

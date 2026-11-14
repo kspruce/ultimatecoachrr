@@ -263,7 +263,7 @@ The same rules as Phase 1 apply. The source key (IF, BFD, DK, HB, UAP, Flik, SP,
 | --- | --- | --- | --- |
 | 0:00 | Welcome and briefing | Criteria, dates, how grading works, what happens after Trial 3 | HN Coach Corner, Tryouts |
 | 0:10 | Warm-up | Herd standard warm-up, led by a senior player | HN Practice Sessions |
-| 0:30 | Skill test stations | The October skill tests (hucking alley, Get 10, 1v1 cutting test, catching; the decision quiz goes out online this week) and the filmed 5-10-5, plus a 50 m sprint with 5/10/35 m splits and the arrowhead agility test for anyone new | Season plan, Measuring improvement; HN Testing |
+| 0:30 | Skill test stations | The October skill tests (hucking alley, Get 10, 1v1 cutting test, catching) and the filmed 5-10-5, plus a 50 m sprint with 5/10/35 m splits and the arrowhead agility test for anyone new | Season plan, Measuring improvement; HN Testing |
 | 1:10 | Water |  |  |
 | 1:20 | Asymmetric offence | 5v4 rotations; assessors grade decision-making and throwing | IF |
 | 1:50 | Variable stall count game | Stall 2 in a wing zone by each sideline, 10 elsewhere: offence must escape the sideline and defence must push them there | IF |

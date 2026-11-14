@@ -519,7 +519,7 @@ The rules from Phases 1 and 2 still apply: the source key and every-session rule
 | Time | Activity | How it runs | Source |
 | --- | --- | --- | --- |
 | 0:00 | Warm-up | Herd standard warm-up and 4v3 mini | HN Practice Sessions; Kieran |
-| 0:20 | Mid-season skill tests | The five skill tests for everyone (the decision quiz goes out online this week); players see their curve since October | Season plan, Measuring improvement |
+| 0:20 | Mid-season skill tests | The four skill tests for everyone; players see their curve since October | Season plan, Measuring improvement |
 | 0:50 | 1s v 2s with handicaps | For example: the 1s play stall 7 and must complete one break throw before scoring; the 2s start points with the disc | Plan |
 | 1:30 | Water |  |  |
 | 1:40 | Game-plan scrimmage | Mixed teams, a captain on each sideline; each team has two timeouts and must use them; line calls before each point | HN Coach Corner, Time Outs |

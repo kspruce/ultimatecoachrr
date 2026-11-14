@@ -174,7 +174,7 @@ No sessions. The captains collect the season's stats and send out the player sur
 | Time | Activity | How it runs | Source |
 | --- | --- | --- | --- |
 | 0:00 | Warm-up | Herd standard warm-up and 4v3 mini | HN Practice Sessions; Kieran |
-| 0:20 | Final skill tests | The same five tests as in October, at trials and in May; players see their own October-to-September change | Season plan, Measuring improvement |
+| 0:20 | Final skill tests | The same four tests as in October, at trials and in May; players see their own October-to-September change | Season plan, Measuring improvement |
 | 1:10 | Water |  |  |
 | 1:20 | Festive mixed games | Golden Arm, Honeypass, mixed 7v7 | IF; Kieran |
 | 2:20 | Club awards | Most improved in each squad, spirit award, and the club's own awards | Plan |
