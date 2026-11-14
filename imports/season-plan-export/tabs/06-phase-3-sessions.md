@@ -6,6 +6,8 @@ Session-by-session plans for the thirteen Event-build weeks (20 March to 18 June
 
 The rules from Phases 1 and 2 still apply: the source key and every-session rules (Phase 1 tab), the split-session shape with its 2:00 team-toolkit block (Phase 2 tab), and the 4v3 mini warm-up finisher. Squads are now picked, so splits are the 1s and 2s squads. The 2s may attend different events from the 1s; their captains slot their own event weeks into the same loop.
 
+**The skill floor:** from week 25, every full joint session has a 25-minute skill floor straight after the warm-up, in place of focused throwing (Season plan, Weekly structure). 1s and 2s players work side by side in groups of three, so they learn from each other. Where the joint session used to open with a theme activity, the blocks before the water break are shorter to make room. Event weeks are the only exception.
+
 **The event loop**
 
 - **Event week:** a light session, with throwing, pulls, set pieces walked through and short games. Finish early.
@@ -25,6 +27,7 @@ The rules from Phases 1 and 2 still apply: the source key and every-session rule
 | During | Spirit: tell the opposition you intend to play a great-spirited game; only make calls that matter; compliment great plays | HN Coach Corner, Practicing Spirit |
 | After each game | 5-minute after-action review: what did we intend, what happened, why, what will we keep, what will we change? Sometimes let the players run it without the captains. Check in on anyone who found it tough (The Culture Code) | HN Coach Corner, Preparing for Pressure |
 | End of event | Captains agree the top two fixes for next week | Plan |
+| After the event | The stats and video lead cuts two clips per player (one to keep, one to fix) and shares them privately; they're used in check-ins and one-to-ones | Plan |
 
 **Fix menu for review weeks**
 
@@ -48,7 +51,7 @@ The rules from Phases 1 and 2 still apply: the source key and every-session rule
 
 **Learning points:** (1) Make them throw one more pass: in wind, every extra throw is another chance to turn it over. (2) Zones live on talk: count the attackers in your area and echo every call. (3) Win the deep space: read the disc early and box out.
 
-**What to tell players**
+**Background (say two at most)**
 
 - **Defence is mitigation:** take away their first option and make them take the second and third. Most blocks come from frustration and fatigue, not highlight plays (HN Amsterdam Conference, Elite Defense Mental Shift).
 - **Zones tempt bad throws in wind:** Brute Squad used the wind to tempt long throws into crowded spaces and prioritised downfield cutters, forcing lateral passes. Fury came back from 10-1 down in a windy 2008 final with a zone (Flik Deep Dives, Brute Squad Zone Defence; Fury v Riot 2008).
@@ -73,9 +76,10 @@ The rules from Phases 1 and 2 still apply: the source key and every-session rule
 | Time | Activity | How it runs | Source |
 | --- | --- | --- | --- |
 | 0:00 | Warm-up | Herd standard warm-up and 4v3 mini | HN Practice Sessions; Kieran |
-| 0:20 | Updog | Two teams take turns on offence and defence: offence drop 0, catch 1; defence block 1, catch 2 | HN Practice Sessions 10 |
-| 0:40 | Boxing out and finding the body | 1v1 deep (theory Card 20). Offence keeps their body between the disc and the defender; defence runs to the cutter and touches them first, then goes for the disc. Three rounds: nobody jumps, offence jumps, both jump; swap roles. Finish with deep running, the defender staying goal-side | GRUT; HN Practice Sessions 10; HB 27.4, 27.5; Flik drill: Deep Defending |
-| 1:10 | Pulls and the pull chase in wind | Pullers practise bladey and rolling pulls upwind and downwind; the rest chase as a unit and call "central" or "sideline" | Flik Deep Dives, Brute Squad Pulls; HN Flik, Using the Wind |
+| 0:20 | Skill floor | Self-running groups of three built around mentor pairs, as many lanes as there are groups: 12 min on one partner's development focus, then 12 min on the other's; the third player defends or marks. Skill leads move between lanes | Season plan, Skill floor |
+| 0:45 | Updog | Two teams take turns on offence and defence: offence drop 0, catch 1; defence block 1, catch 2 | HN Practice Sessions 10 |
+| 1:00 | Boxing out and finding the body | 1v1 deep (theory Card 20). Offence keeps their body between the disc and the defender; defence runs to the cutter and touches them first, then goes for the disc. Three rounds: nobody jumps, offence jumps, both jump; swap roles. Finish with deep running, the defender staying goal-side | GRUT; HN Practice Sessions 10; HB 27.4, 27.5; Flik drill: Deep Defending |
+| 1:15 | Pulls and the pull chase in wind | Pullers practise bladey and rolling pulls upwind and downwind; the rest chase as a unit and call "central" or "sideline" | Flik Deep Dives, Brute Squad Pulls; HN Flik, Using the Wind |
 | 1:30 | Water |  |  |
 | 1:40 | Blocks Only, with a zone | 5v5. A turnover only counts if the defence touches the disc; the defence must start every point in a zone | IF |
 | 2:10 | Asymmetric defence | 5 defenders v 4 attackers on 30 x 25 m; the defence can score | IF |
@@ -92,7 +96,14 @@ The rules from Phases 1 and 2 still apply: the source key and every-session rule
 | 1:10 | 8-pull zone reps: captain calls Bull or arrowhead by the wind before each pull | 7v6: the defence poaches and clogs to cover the extra attacker | HN Flik Zone Concepts; HN Case Studies (Japan, Brute Squad) |
 | 1:40 | 4v4 continuous, stall 5 | 4v4 continuous, stall 7 | BFD S&C |
 | 2:00 | CRUMBLE and transitions: switch from zone to person on the call, deepest first; then zone v a simple wind offence | Basic Bull zone v vert; switch to person on CRUMBLE | HN Bull Zone; HN Flik, Transitions |
-| 2:40 | Scrimmage, zone on every pull. Consequence: a huck conceded over the zone costs the wings and deeps a sprint | Scrimmage with a poach bonus | Plan |
+| 2:40 | Scrimmage, zone on every pull. Consequence: a huck conceded over the zone by a wing or deep who was out of position costs them a sprint | Scrimmage with a poach bonus | Plan |
+
+**Harder / easier**
+
+- **Updog:** harder: higher, floatier throws contested by two; easier: shorter throws.
+- **Boxing out:** harder: both players jump from a running start; easier: nobody jumps.
+- **Blocks Only, with a zone:** harder: the offence may use any throw; easier: the offence must make five passes before going deep.
+- **Asymmetric defence:** harder: a bigger pitch; easier: a smaller pitch.
 
 **Coaching notes**
 
@@ -132,8 +143,9 @@ The rules from Phases 1 and 2 still apply: the source key and every-session rule
 
 **Learning points:** two set from the Tour 1 review, plus (3) Against a zone, swing the full width, drive the middle, and go around if it compresses. (4) Score from 10 m with the "Endzone" and "Spread" calls.
 
-**What to tell players**
+**Background (say two at most)**
 
+- **Check-ins:** every player gets a 10-minute check-in this week or next, with their two Tour 1 clips and their trial test results: is the development focus still the right one?
 - **The review:** share the stats (no-turn goals, breaks, conversion rate) and the two fixes. Attribute what went well to the whole group (HN Coach Corner, Base Metric Analysis and Fostering Team Identity).
 - **Through the zone, with a controller:** one handler gets every second pass. It's easier than it looks if you throw and go, and it makes the space in front of the disc dangerous, so defenders either get overloaded or squeeze in and open space on the wings (Flik Zone Offence 2).
 - **Crash the cup:** move into the space inside the cup for a short pass to reset the stall, gain yards or move defenders. If a crash isn't thrown to, get out, or you crowd the thrower (HN Flik, Crashing the Cup).
@@ -144,8 +156,9 @@ The rules from Phases 1 and 2 still apply: the source key and every-session rule
 | Time | Activity | How it runs | Source |
 | --- | --- | --- | --- |
 | 0:00 | Warm-up and review | Herd standard warm-up and 4v3 mini; 10 minutes on the Tour 1 stats and the two fixes | HN Practice Sessions; HN Coach Corner, Base Metric Analysis |
-| 0:30 | Retention refresher | The drill from the fix menu that matches the Tour 1 retention problem | Fix menu above |
-| 1:00 | Fix 1 | Drill, then a constrained game, from the fix menu | Fix menu above |
+| 0:30 | Skill floor | Self-running groups of three built around mentor pairs, as many lanes as there are groups: 12 min on one partner's development focus, then 12 min on the other's; the third player defends or marks. Skill leads move between lanes | Season plan, Skill floor |
+| 0:55 | Retention refresher | The drill from the fix menu that matches the Tour 1 retention problem | Fix menu above |
+| 1:10 | Fix 1 | Drill, then a constrained game, from the fix menu | Fix menu above |
 | 1:30 | Water |  |  |
 | 1:40 | Fix 2 | Drill, then a constrained game | Fix menu above |
 | 2:20 | Conditioned 7v7 | A rule that rewards the behaviour being fixed | Plan |
@@ -163,8 +176,16 @@ The rules from Phases 1 and 2 still apply: the source key and every-session rule
 | 2:00 | 3v2 mini (one perpetual defender), then 7v7 drives against zones that either congest the middle or spread out | Bucket and swing against a 2-3-2 | Flik Zone Offence 3 |
 | 2:40 | Endzone from 10 m: "Endzone" and "Spread", aiming to score 4 out of 5; then scrimmage with a zone on every pull and a named controller | Endzone: vert stack, open-side cone, upfield dump; then scrimmage with a zone on every pull | Flik Zone Offence 2; HB 26.4; Kieran; HN Flik, Endzone Offence |
 
+**Harder / easier**
+
+- **Fix blocks:** harder: use the levers in each fix-menu drill: lower stall, less space, an extra defender; easier: the opposite.
+- **El Rondo:** harder: an 8 m square with a cup of three; easier: a 12 m square with a cup of two.
+- **Mini 3v3 with a controller (1s):** harder: stall 5; easier: one passive defender.
+- **Endzone from 10 m:** harder: 5 out of 5; easier: 3 out of 5.
+
 **Coaching notes**
 
+- **Mini-test:** Get 10 and the 1v1 cutting test, 10 minutes at the start of the skill floor.
 - Fix-week rule: no more than two fixes, and back each one up in a conditioned game, or players revert (DK).
 - In El Rondo, if the cup is set up wrong, an option should be wide open; throwers should take it so the cup learns where the holes are (HB 31.2).
 
@@ -172,7 +193,7 @@ The rules from Phases 1 and 2 still apply: the source key and every-session rule
 
 **Learning points:** (1) Set up the huck first, with a swing or power position. (2) Huck to the break side, over the defender's shoulder, with OI. (3) Deep cutters wait for power position, start shallow, and look sideways rather than back.
 
-**What to tell players**
+**Background (say two at most)**
 
 - **Ring's deep game:**
   - Swing to the break side.
@@ -191,10 +212,11 @@ The rules from Phases 1 and 2 still apply: the source key and every-session rule
 | Time | Activity | How it runs | Source |
 | --- | --- | --- | --- |
 | 0:00 | Warm-up | Herd standard warm-up and 4v3 mini | HN Practice Sessions; Kieran |
-| 0:20 | Backhand huck technique | Theory Card 10: sideways step, rotational load, pulled not pushed, slightly IO, arm extended at release. Build up: wrist only, step, then full throw | GRUT; UAP Backhand hucks |
-| 0:30 | Forehand huck technique | Theory Card 11: snap the arm back after release; lateral, rotational and vertical loading; extend distance as it holds | GRUT |
-| 0:40 | Sprint technique | One of Hildo's eight sprint rules per 50 m rep | HB 27.3 |
-| 1:00 | Deep running drill | As week 25, with an in-cut option after 20-25 m | HB 27.4 |
+| 0:20 | Skill floor | Self-running groups of three built around mentor pairs, as many lanes as there are groups: 12 min on one partner's development focus, then 12 min on the other's; the third player defends or marks. Skill leads move between lanes | Season plan, Skill floor |
+| 0:45 | Backhand huck technique | Theory Card 10: sideways step, rotational load, pulled not pushed, slightly IO, arm extended at release. Build up: wrist only, step, then full throw | GRUT; UAP Backhand hucks |
+| 0:55 | Forehand huck technique | Theory Card 11: snap the arm back after release; lateral, rotational and vertical loading; extend distance as it holds | GRUT |
+| 1:05 | Sprint technique | One of Hildo's eight sprint rules per 50 m rep | HB 27.3 |
+| 1:15 | Deep running drill | As week 25, with an in-cut option after 20-25 m | HB 27.4 |
 | 1:30 | Water |  |  |
 | 1:40 | Long and short bonus points | 5v5 | IF |
 | 2:10 | Finish early, or a 7v7 if numbers are good |  |  |
@@ -211,6 +233,13 @@ The rules from Phases 1 and 2 still apply: the source key and every-session rule
 | 2:00 | Ho deep shots: isolate a cutter and run diagonal scoring cuts from the open side to the break-side back corner | Back of stack goes deep from vert | HN Deep Dives, Italy Mixed WUC 2024; HN Flik, Vertical Stack |
 | 2:40 | Scrimmage: a goal from a huck over 30 m scores 2 | Scrimmage | Plan |
 
+**Harder / easier**
+
+- **Huck technique:** harder: add a mark at 50%, then 100%; easier: shorter, wrist only.
+- **Deep running drill:** harder: the defender starts level; easier: a 2 m head start.
+- **Long and short bonus points:** harder: the long throw must be over 40 m; easier: over 20 m.
+- **Read-the-defender hucking (1s):** harder: the deep defender moves late; easier: the deep defender stays put.
+
 **Coaching notes**
 
 - Overthrowing beats underthrowing; practise at 110% of range (Flik L4 Lesson 4).
@@ -220,7 +249,7 @@ The rules from Phases 1 and 2 still apply: the source key and every-session rule
 
 **Purpose:** bonding, team values and season goals for the whole club. Midweek sessions that week are optional throwing only.
 
-**What to tell players**
+**Background (say two at most)**
 
 - **Why values:** the more strongly players identify with a team, the harder they work for it, the more they support each other, and the better they cope with pressure (HN Coach Corner, Team Identity).
 - **Relationships off the pitch matter:** Ranelagh credit their 2022 EUCF title to trust built off the field, mixing across cliques. One example: no "sorry" at training, because nobody is trying to make mistakes (HN Case Studies, Ranelagh 2022).
@@ -247,7 +276,7 @@ The rules from Phases 1 and 2 still apply: the source key and every-session rule
 
 **Learning points:** (1) Use the wind: low release upwind, high downwind, more spin. (2) In gusty wind, make bigger throws into bigger spaces, and fewer of them. (3) Back each other up.
 
-**What to tell players**
+**Background (say two at most)**
 
 - **Throwing in wind:** release low going upwind and high going downwind, with extra spin (DK 4.9).
 - **When the wind is unpredictable:**
@@ -266,9 +295,9 @@ The rules from Phases 1 and 2 still apply: the source key and every-session rule
 | Time | Activity | How it runs | Source |
 | --- | --- | --- | --- |
 | 0:00 | Warm-up | Herd standard warm-up and 4v3 mini | HN Practice Sessions; Kieran |
-| 0:20 | Throwing in all directions of wind | Rotate pairs so everyone throws upwind, downwind and across; upwind low, downwind high, OI hucks downwind | DK 4.9; HN Deep Dives, Firetails |
-| 0:40 | Line-trap game | 7v7: both teams play a zone with a chase and two tips in the lanes, adding a sideline trap | Flik Zone Concepts 6 |
-| 1:00 | Pulls in wind | Pullers practise upwind (low, extra IO), downwind (keep it in) and crosswind pulls; everyone else chases as a unit | HN Flik, Using the Wind |
+| 0:20 | Skill floor | Self-running groups of three built around mentor pairs, as many lanes as there are groups: 12 min on one partner's development focus, then 12 min on the other's; the third player defends or marks. Skill leads move between lanes. Run the lanes into, with and across the wind (low upwind, high downwind) | Season plan, Skill floor |
+| 0:45 | Line-trap game | 7v7: both teams play a zone with a chase and two tips in the lanes, adding a sideline trap | Flik Zone Concepts 6 |
+| 1:05 | Pulls in wind | Pullers practise upwind (low, extra IO), downwind (keep it in) and crosswind pulls; everyone else chases as a unit | HN Flik, Using the Wind |
 | 1:30 | Water |  |  |
 | 1:40 | Upwind-downwind 7v7 | Play to the wind: downwind points reward hucks to isolated cutters; upwind points reward patience | HN Deep Dives, Extreme Wind |
 | 2:20 | Conditioned 7v7 | A completed pass that a second receiver backed up scores a bonus | Plan |
@@ -286,6 +315,12 @@ The rules from Phases 1 and 2 still apply: the source key and every-session rule
 | 2:00 | Wind plan: which defence on which pull, upwind and downwind offences | Wind offence: vert, swing to set up downwind hucks | HN Deep Dives, Extreme Wind |
 | 2:40 | Scrimmage, arrowhead going downwind | Scrimmage | Plan |
 
+**Harder / easier**
+
+- **Line-trap game:** harder: stall 6; easier: offence 7v6.
+- **Pulls in wind:** harder: land in a 10 m target zone; easier: just land in bounds.
+- **Upwind-downwind 7v7:** harder: stall 6 on upwind points; easier: stall 10 on upwind points.
+
 **Coaching notes**
 
 - Zones aren't automatically best in wind; they often let teams throw passes they're comfortable with (HN Deep Dives, Extreme Wind, quoting Lou Burruss).
@@ -295,7 +330,7 @@ The rules from Phases 1 and 2 still apply: the source key and every-session rule
 
 **Purpose:** a light session built on pulling, then walk-throughs and Plans A and B for Tour 2.
 
-**What to tell players**
+**Background (say two at most)**
 
 - **The aim of a pull:** put the offence in the worst possible position. That means deep, with hang time so the defence is set, ideally near the back of the endzone or rolling out of the sideline. Only aim at the brick if you can't reach further (HN Flik, Pulling Strategy).
 - **Shapes:** OI turns down and stays controllable; IO flattens for hang time but can slide out; the double helix gets the most hang time but needs the best edge control. Throw diagonally across the pitch rather than out and back (HN Flik, Shapes of Pull).
@@ -324,7 +359,7 @@ The rules from Phases 1 and 2 still apply: the source key and every-session rule
 
 **Learning points:** one from the Tour 2 review, plus (2) the extended mark makes game marks feel easy, and (3) against poaches, move the disc between handlers and punish the space the poacher left.
 
-**What to tell players**
+**Background (say two at most)**
 
 - **Why the dominator beats poaches:** the cutters clear vertically, leaving lots of space for one-on-one handler play (BFD, Dominator).
 - **Poaches leave space somewhere:** a poach in the lane leaves a reset or a swing to the break side; dish into it and attack the space in front (HN Excel Premium, Transitioning to your System).
@@ -336,9 +371,9 @@ The rules from Phases 1 and 2 still apply: the source key and every-session rule
 | Time | Activity | How it runs | Source |
 | --- | --- | --- | --- |
 | 0:00 | Warm-up and review | 4v3 mini; 10 minutes on the Tour 2 stats | Kieran; HN Coach Corner, Base Metric Analysis |
-| 0:30 | Extended mark refresher | Two discs, stall 4, two pivots, no repeated throw | UAP Breaking the mark (Saul) |
-| 0:40 | Breakside flow (GRUT) | Refresher from week 15: break, swing, continue; or the same flow off the reset | GRUT |
-| 0:50 | Fix from the Tour 2 review | Drill, then a constrained game | Fix menu above |
+| 0:30 | Skill floor | Self-running groups of three built around mentor pairs, as many lanes as there are groups: 12 min on one partner's development focus, then 12 min on the other's; the third player defends or marks. Skill leads move between lanes | Season plan, Skill floor |
+| 0:55 | Breakside flow (GRUT) | Refresher from week 15: break, swing, continue; or the same flow off the reset | GRUT |
+| 1:05 | Fix from the Tour 2 review | Drill, then a constrained game | Fix menu above |
 | 1:30 | Water |  |  |
 | 1:40 | Break-throw bonus point | 5v5 | IF |
 | 2:20 | Conditioned 7v7 | Rewarding the Tour 2 fix | Plan |
@@ -356,11 +391,21 @@ The rules from Phases 1 and 2 still apply: the source key and every-session rule
 | 2:00 | Pull play into the dominator when the first look is poached | Give-and-go off the sideline | HN Excel Premium, Transitioning to your System; HN Practice Sessions 7 |
 | 2:40 | Scrimmage, defence poaches on every point | Scrimmage | Plan |
 
+**Harder / easier**
+
+- **Breakside flow (GRUT):** harder: live defence on both cutters; easier: a mark only.
+- **Break-throw bonus point:** harder: the break must lead to a continuation within two throws; easier: any break.
+- **Dominator against a poach (1s):** harder: two poachers; easier: the poacher is announced.
+
+**Coaching notes**
+
+- **Mini-test:** Get 10 and the 1v1 cutting test, 10 minutes at the start of the skill floor.
+
 ## Week 33 · 15 May · Switching on defence; Bull zone blocks (1s); poach and clog against stronger offences (2s)
 
 **Learning points:** (1) Switch only on a clear call, early and loud. (2) The defender who is beaten calls for help; the helper takes the cutter, and the beaten defender takes the helper's player. (3) Poaching is a team job: if one person poaches, everyone shifts.
 
-**What to tell players**
+**Background (say two at most)**
 
 - **When to switch:** switch on crossing cuts and picks, when your teammate is closer to your player's next space than you are. Call it early, use the player's name, and both defenders commit (HN Team Defence, Switching against cutters).
 - **Three rules for downfield switches:**
@@ -377,9 +422,10 @@ The rules from Phases 1 and 2 still apply: the source key and every-session rule
 | Time | Activity | How it runs | Source |
 | --- | --- | --- | --- |
 | 0:00 | Warm-up | Herd standard warm-up and 4v3 mini | HN Practice Sessions; Kieran |
-| 0:20 | Two-on-two with switching | Two cutters, two defenders. The cutters cross; the defenders call and switch | HB 28; HB 35 |
-| 0:40 | Random calls | The coach calls "switch", "poach" or "stay" mid-rep; defenders react immediately | HB 29.5 |
-| 1:00 | Help the helper game | 5v5. A block by a defender who wasn't marking the receiver scores double | IF |
+| 0:20 | Skill floor | Self-running groups of three built around mentor pairs, as many lanes as there are groups: 12 min on one partner's development focus, then 12 min on the other's; the third player defends or marks. Skill leads move between lanes | Season plan, Skill floor |
+| 0:45 | Two-on-two with switching | Two cutters, two defenders. The cutters cross; the defenders call and switch | HB 28; HB 35 |
+| 1:00 | Random calls | The coach calls "switch", "poach" or "stay" mid-rep; defenders react immediately | HB 29.5 |
+| 1:10 | Help the helper game | 5v5. A block by a defender who wasn't marking the receiver scores double | IF |
 | 1:30 | Water |  |  |
 | 1:40 | Conditioned 7v7 | Defence must make at least one called switch per point. Option: a non-verbal round, with switches signalled only by pointing and eye contact (The Inner Game of Ultimate Frisbee) | Plan |
 | 2:20 | Free game |  |  |
@@ -397,11 +443,18 @@ The rules from Phases 1 and 2 still apply: the source key and every-session rule
 | 2:00 | Switching from the Bull zone to person D on a call | Poaching as a team: everyone shifts when one person poaches | Kieran |
 | 2:40 | Scrimmage | Scrimmage | Plan |
 
+**Harder / easier**
+
+- **Two-on-two with switching:** harder: the cutters decide when to cross; easier: they cross on a whistle.
+- **Random calls:** harder: a call every 2 seconds; easier: one call per rep.
+- **Help the helper game:** harder: no talking; easier: help without a call is allowed.
+- **7v6 (2s):** harder: 7v5; easier: 6v6 with a poach bonus.
+
 ## Week 34 · 22 May · Tempo; zone offence over the top (1s); vert from the front (2s)
 
 **Learning points:** (1) Choose the pace on purpose: fast to beat a set defence, slow to reset the shape. (2) A hammer or blade over the cup is a planned throw, not a desperate one. (3) 2s: in a vert from the front, cutters start close to the disc and cut away.
 
-**What to tell players**
+**Background (say two at most)**
 
 - **Tempo:** a game with a shot clock teaches you to keep moving; a minimum time teaches patience. You want both (IF).
 - **When to throw over the zone:**
@@ -418,10 +471,10 @@ The rules from Phases 1 and 2 still apply: the source key and every-session rule
 | Time | Activity | How it runs | Source |
 | --- | --- | --- | --- |
 | 0:00 | Warm-up | Herd standard warm-up and 4v3 mini | HN Practice Sessions; Kieran |
-| 0:20 | Focused throwing: hammers, scoobers, blades | Pairs, then over a defender | HN Practice Sessions |
-| 0:40 | Shot clock game | 5v5: score within 30 seconds of pickup, or it's a turnover | IF |
-| 1:00 | Minimum-time game | 5v5: no score before 90 seconds of possession; anything earlier doesn't count | IF |
-| 1:20 | Target number of passes | 7v7: score in exactly the target number of passes for a bonus | IF |
+| 0:20 | Skill floor | Self-running groups of three built around mentor pairs, as many lanes as there are groups: 12 min on one partner's development focus, then 12 min on the other's; the third player defends or marks. Skill leads move between lanes | Season plan, Skill floor |
+| 0:45 | Shot clock game | 5v5: score within 30 seconds of pickup, or it's a turnover | IF |
+| 1:05 | Minimum-time game | 5v5: no score before 90 seconds of possession; anything earlier doesn't count | IF |
+| 1:25 | Target number of passes | 7v7: score in exactly the target number of passes for a bonus | IF |
 | 1:40 | Water |  |  |
 | 1:50 | Conditioned 7v7 | The coach calls "fast" or "slow" before each pull | Plan |
 | 2:30 | Free game |  |  |
@@ -439,13 +492,20 @@ The rules from Phases 1 and 2 still apply: the source key and every-session rule
 | 2:00 | Zone offence over the top v Bull zone | Scrimmage; offence alternates between vert from the back and vert from the front | Plan |
 | 2:40 | Scrimmage | Scrimmage | Plan |
 
-## Week 35 · 29 May · Benchmarks; 1s v 2s; game-plan scrimmage
+**Harder / easier**
 
-**Purpose:** check progress, and give both squads a real game against each other with handicaps that keep it close.
+- **Throwing over the cup:** harder: an active cup; easier: a static cup.
+- **Shot clock game:** harder: 20 seconds; easier: 45 seconds.
+- **Minimum-time game:** harder: 120 seconds at stall 6; easier: 60 seconds.
+- **3H against person D (2s):** harder: live defence on the handlers; easier: half pace.
 
-**What to tell players**
+## Week 35 · 29 May · Mid-season skill tests; 1s v 2s; game-plan scrimmage
 
-- **Benchmarks are optional and for you:** they show how you've improved since trials, not where you rank.
+**Purpose:** the mid-season skill tests for everyone, and a real game between the squads with handicaps that keep it close.
+
+**Background (say two at most)**
+
+- **The tests are for you:** they show how you've improved since trials, not where you rank. Agree any change of development focus with your skill lead.
 - **Timeouts have a job:** to stop a run, set up a play, or reset heads. Keep them short: one message, one play (HN Coach Corner, Time Outs).
 - **Line calls:** know your line, your role on the pull and the call before you walk on.
 
@@ -454,19 +514,19 @@ The rules from Phases 1 and 2 still apply: the source key and every-session rule
 | Time | Activity | How it runs | Source |
 | --- | --- | --- | --- |
 | 0:00 | Warm-up | Herd standard warm-up and 4v3 mini | HN Practice Sessions; Kieran |
-| 0:20 | Optional benchmarks | Repeat the trial throwing and running tests for anyone who wants them | Phase 2 trials |
+| 0:20 | Mid-season skill tests | The four skill tests for everyone; players see their curve since October | Season plan, Measuring improvement |
 | 0:50 | 1s v 2s with handicaps | For example: the 1s play stall 7 and must complete one break throw before scoring; the 2s start points with the disc | Plan |
 | 1:30 | Water |  |  |
 | 1:40 | Game-plan scrimmage | Mixed teams, a captain on each sideline; each team has two timeouts and must use them; line calls before each point | HN Coach Corner, Time Outs |
 | 2:40 | Debrief | What worked in the timeouts? | Plan |
 
-**Split sessions:** normal split; work on the weakest area from the benchmarks or the 1s v 2s game, using the fix menu above.
+**Split sessions:** normal split; work on the weakest team area from the 1s v 2s game, using the fix menu above. Players update their development focus from the new test results, ready for next week's skill floor.
 
 ## Week 36 · 5 Jun · Ready for Tour 3: retention refresher and game plans
 
 **Learning points:** (1) Only throw to open players. (2) Have a game plan for each opponent you know about. (3) Plan for things going wrong before they do.
 
-**What to tell players**
+**Background (say two at most)**
 
 - **Only throw to open players:** if in doubt, hold it and reset. Our turnover count is the number that matters most at Tour 3 (HB 39.2).
 - **Scouting:** for each known opponent, note their best players, their offence and defence, and what they do in wind (HN Case Studies, Mooncatchers scouting sheet).
@@ -478,13 +538,19 @@ The rules from Phases 1 and 2 still apply: the source key and every-session rule
 | Time | Activity | How it runs | Source |
 | --- | --- | --- | --- |
 | 0:00 | Warm-up | Herd standard warm-up and 4v3 mini | HN Practice Sessions; Kieran |
-| 0:20 | Retention game | 7v7. A throw to a player who wasn't open, even if caught, costs the team a sprint | HB 39.2 |
-| 0:50 | Pull plays and endzone refresher | Endzone and Spread calls | Phase 2 week 23 |
+| 0:20 | Skill floor | Self-running groups of three built around mentor pairs, as many lanes as there are groups: 12 min on one partner's development focus, then 12 min on the other's; the third player defends or marks. Skill leads move between lanes | Season plan, Skill floor |
+| 0:45 | Retention game | 7v7. A throw to a player who wasn't open, even if caught, costs the team a sprint | HB 39.2 |
+| 1:05 | Pull plays and endzone refresher | Endzone and Spread calls | Phase 2 week 23 |
 | 1:20 | Water |  |  |
 | 1:30 | "What if" scrimmage | The coach changes the score or conditions mid-game, for example "you're two breaks down, go" | HN Coach Corner, Preparing for Pressure |
 | 2:20 | Game plans by squad | Scouting notes; Plans A and B; lines | HN Case Studies, Mooncatchers 2024; BFD |
 
 **Split sessions:** walk-throughs of the Tour 3 game plans; each squad rehearses switching between Plan A and Plan B on a call.
+
+**Harder / easier**
+
+- **Retention game:** harder: stall 6; easier: 7v6.
+- **"What if" scrimmage:** harder: change the conditions twice a game; easier: once a game.
 
 ## Week 37 · 12 Jun · UKU Tour 3 (\~13-14 Jun)
 
@@ -513,7 +579,7 @@ There's no split session that week. Follow the event routine at Tour 3, then use
 | 32 | Dominator against poaches; give-and-go (2s) | HB 34.2 with a poacher; 3v3 possession |
 | 33 | Switching; Bull zone blocks; poach and clog (2s) | Two-on-two switching; random calls; Help the helper; 7v6 |
 | 34 | Tempo; zone offence over the top (1s); vert from the front (2s) | Shot clock and minimum-time games; throwing over the cup; 3H |
-| 35 | Benchmarks; 1s v 2s | Handicapped 1s v 2s; game-plan scrimmage with timeouts |
+| 35 | Mid-season skill tests; 1s v 2s | Handicapped 1s v 2s; game-plan scrimmage with timeouts |
 | 36 | Retention; Tour 3 game plans | Retention game; "what if" scrimmage; scouting |
 | 37 | Tour 3 | Event routine |
 
@@ -532,33 +598,40 @@ There's no split session that week. Follow the event routine at Tour 3, then use
 
 ### New vocabulary
 
+Players use these out loud:
+
 | Term | Meaning |
 | --- | --- |
 | Box out | Use your body to hold your space before the disc arrives |
+| Cup | The two or three zone defenders around the disc |
+| Arrowhead / wall | A zone with a wall of defenders in front of the disc to deny the middle |
+| Line trap | Trapping the disc on the sideline so the zone can close in |
+| Plan A / Plan B | Our starting game plan and the plan we switch to on a call |
+| Buzz switch | The nearest defender takes a cutter who has beaten their defender deep |
+| Hammer / scoober / blade | Over-the-top throws that beat a cup |
+| Team values | The 3-7 values the club agreed at Herdlodge, with the behaviours that show them |
+
+Coaches' reference (players pick these up through play; no need to teach them as words):
+
+| Term | Meaning |
+| --- | --- |
 | High point | Catch the disc at the highest point you can reach |
 | Controller | The zone offence handler in the middle of the pitch who moves the disc across |
 | Popper | A cutter working in the gaps in and behind the cup |
 | Crash | Popper cuts into the cup to break it from the inside |
-| Cup | The two or three zone defenders around the disc |
 | Wings | Zone defenders guarding the sidelines and the space behind the cup |
-| Arrowhead / wall | A zone with a wall of defenders in front of the disc to deny the middle |
 | Outflanked | When the offence gets the disc past the edge of the wall |
-| Line trap | Trapping the disc on the sideline so the zone can close in |
 | Chase | The defender who follows the disc in a line trap or arrowhead |
 | Tips | Defenders in the lanes in front of the trap |
 | High side / low side | The upwind and downwind sides of the pitch in a crosswind |
 | Roller pull | A pull that lands on its edge and rolls away from the receivers |
 | Hang time | How long the pull stays in the air before landing |
 | OI / IO / double helix | Pull shapes: OI turns down; IO flattens; double helix changes direction twice for hang time |
-| Plan A / Plan B | Our starting game plan and the plan we switch to on a call |
-| Buzz switch | The nearest defender takes a cutter who has beaten their defender deep |
 | Help the helper | Cover for a teammate who has been beaten |
 | Shot clock | A time limit on possession |
-| Hammer / scoober / blade | Over-the-top throws that beat a cup |
 | 3H | Vert from the front: three handlers, cutters start near the disc |
 | Offset lateral cut | A cut across the pitch at an angle away from the disc |
 | Upfield dump | A handler pass that moves the disc forward instead of backward |
-| Team values | The 3-7 values the club agreed at Herdlodge, with the behaviours that show them |
 | Spirit intention | Aim to give every opponent the best-spirited game they've played |
 
 ### Ready for Phase 4?
@@ -571,3 +644,4 @@ There's no split session that week. Follow the event routine at Tour 3, then use
 - [ ] Tour stats and film are reviewed after every event.
 - [ ] The club's values and season goals are written up and used in coaching language.
 - [ ] Tour 3 results set the priorities for Regionals.
+- [ ] The skill floor runs in every full joint session, and every player has had a post-Tour 1 check-in and the mid-season tests.

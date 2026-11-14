@@ -17,6 +17,8 @@ The joint session teaches the skill; the split session uses it straight away in 
 
 The 1s and 2s split themes in each week can run side by side on neighbouring pitches, so a coach can move between them.
 
+From week 25, every full joint session starts with the 25-minute skill floor in place of focused throwing (Season plan, Weekly structure), so the joint fundamentals below follow it.
+
 ## Phase 1: Foundations (Oct–Dec 2027)
 
 Technique comes first, in open sessions that welcome new players. Split tactics stay light and build the shared vocabulary each team will use all season.
@@ -34,7 +36,7 @@ Technique comes first, in open sessions that welcome new players. Split tactics 
 | 9 | 29 Nov | C | Reaction and reading the thrower (star drill, reactive shuffles) | Flat mark and switching marks on a call | Mark and downfield defence working together |
 | 10 | 6 Dec | D. Breaking the mark: technique | Wide and low releases (pool noodle, Get 10) | Extended-mark breaks into continuation | Around break to a lateral cut |
 | 11 | 13 Dec | D | Festive mixed tournament: Golden Arm, Honeypass, Pick 6 | Games | Games |
-| — | 20 Dec, 27 Dec | Break | Optional home programme: throwing to a target, the 10-minute low-release session (GRUT), bodyweight sheet |  |  |
+| — | 20 Dec, 27 Dec | Break | Home throwing routine continues: throwing to a target, the 10-minute low-release session (GRUT); bodyweight sheet |  |  |
 
 **Classroom sessions:** C1 How we learn: the Heckler and the Hero (week 3, online); C2 Belonging (week 7, after training); C3 Leaders, not stars (week 10, online, leaders). Details are in the Classroom sessions tab.
 
@@ -48,7 +50,7 @@ Skills now face a real defence, and both main offences and team-defence principl
 | 15 | 10 Jan | E. Breaking the mark under pressure | Threat positions and off-balance throws | Horizontal stack: breaks to the active pair (break-throw bonus point) | Break force game (a defender-free half) |
 | 16 | 17 Jan | E | One-crossover marking game, both sides of the disc | Dominator from the horizontal: give-and-go and early breaks | Inside break, then continuation |
 | 17 | 24 Jan | F. Reading the pitch | Scanning and finding the free player (asymmetric offence); dangerous spaces by disc position | Team defence: which spaces are dangerous, poaching the lanes | Team defence: poach and clog near the disc |
-| 18 | 31 Jan | Trial 1 | Benchmark tests and small-sided games (asymmetric offence, variable stall count) | Trial games | Trial games |
+| 18 | 31 Jan | Trial 1 | Skill tests and small-sided games (asymmetric offence, variable stall count) | Trial games | Trial games |
 | 19 | 7 Feb | Trial 2 | Breaking and reading games (Golden Arm, break-throw bonus) | Trial 7v7: vertical and horizontal stack | Trial 7v7 |
 | 20 | 14 Feb | Trial 3 | Defence games (Tag Prestall, Blocks Only) | Trial 7v7: full games | Trial 7v7: full games |
 | 21 | 21 Feb | G. Retention under pressure | Escaping the sideline (variable stall count) | Trap offence with 3 handlers; vertical stack from the front | Sideline power position and sideline wrinkle |
@@ -74,7 +76,7 @@ The playbook is built through a run of test events. Every event week is light; t
 | 32 | 8 May | J. Fix and deepen | Breaking the mark refresher (extended mark) | Dominator against poaching defences | Give-and-go (3v3 possession) |
 | 33 | 15 May | J | Communication and switching (Help the Helper) | Bull zone: blocks in congested spaces | Poach and clog against stronger offences |
 | 34 | 22 May | J | Tempo games (shot clock, target passes) | Zone offence going over: hammers and blades | Vertical stack cutting from the front |
-| 35 | 29 May | J | Optional benchmark check; 1s v 2s scrimmage with handicaps | Full game-plan scrimmage | Full game-plan scrimmage |
+| 35 | 29 May | J | Mid-season skill tests; 1s v 2s scrimmage with handicaps | Full game-plan scrimmage | Full game-plan scrimmage |
 | 36 | 5 Jun | K. Ready for Tour 3 | Retention refresher | Tour 3 game plans | Tour 3 game plans |
 | 37 | 12 Jun | UKU Tour 3 (\~13-14 Jun) | Light session | Walkthroughs | Walkthroughs |
 
@@ -97,16 +99,16 @@ Sessions get shorter and sharper, built around scouting and game plans for Regio
 
 ## Phase 5: Nationals (Aug – Sep 2028)
 
-A recovery week after back-to-back events, three weeks to rebuild and peak, then a taper. No new material.
+A recovery week after back-to-back events, three weeks to rebuild and peak, then a taper. No new material. For the 2s, weeks 45-48 are a step-up camp: individual development built on each player's test results, aimed at 2028/29.
 
 | Wk | w/c | Event | Joint | 1s split | 2s split |
 | --- | --- | --- | --- | --- | --- |
 | 44 | 31 Jul | Recovery | Optional throwing and social session | Rest | Rest |
-| 45 | 7 Aug | — | Fundamentals at game speed | Top fixes from Regionals | End-of-season games |
-| 46 | 14 Aug | — | High-intensity small-sided games | Nationals scouting cards and Plans A, B and C | End-of-season games and awards |
+| 45 | 7 Aug | — | Fundamentals at game speed | Top fixes from Regionals | Step-up camp 1: groups of three on each player's focus; mini-test |
+| 46 | 14 Aug | — | High-intensity small-sided games | Nationals scouting cards and Plans A, B and C | Step-up camp 2: 1v1 ladders; season review and awards |
 | 47 | 21 Aug | — | Peak intensity; fun competition | Full rehearsal against the 2s and guests | Rehearsal opponents for the 1s, playing the scouted looks |
-| 48 | 28 Aug | Taper | Light: throwing, set pieces | Walkthroughs, pulls, endzone reps | — |
+| 48 | 28 Aug | Taper | Light: throwing, set pieces | Walkthroughs, pulls, endzone reps | Step-up camp 3: final mini-test and a 2028/29 plan for each player |
 | 49 | 4 Sep | UKU Nationals (\~5-6 Sep); Euros stretch goal (\~9-11 Sep); week 50 (11 Sep) is rest | Light session early in the week | Walkthroughs | — |
-| 51 | 18 Sep | Review | Final benchmark tests and player survey | One-to-one reviews | One-to-one reviews |
+| 51 | 18 Sep | Review | Final skill tests and player survey | One-to-one reviews | One-to-one reviews |
 
 **Classroom sessions:** C11 Nationals mindset (week 46, online, 1s); C12 Season review: what we learned (week 51, at the season social).
