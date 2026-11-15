@@ -17,7 +17,7 @@ from app.models.team_signup_invite import TeamSignupInvite
 from app.forms.auth import LoginForm, UserForm
 from app.utils.email import email_configured, is_real_email, send_email
 from app.utils.password_reset import (COACH_LINK_SECONDS, EMAIL_LINK_SECONDS,
-                                      reset_url, user_for_reset_token)
+                                      emailed_reset_url, reset_url, user_for_reset_token)
 from app.utils.permissions import can_manage_account, can_manage_team_users, can_manage_user, grantable_roles
 from app.utils.team_filter import get_current_team_id
 
@@ -693,7 +693,7 @@ def forgot_password():
             user = (User.query.filter_by(username=identifier).first()
                     or User.query.filter(db.func.lower(User.email) == identifier.lower()).first())
         if user and is_real_email(user.email):
-            link = reset_url(user, EMAIL_LINK_SECONDS)
+            link = emailed_reset_url(user)
             send_email(
                 user.email, 'Reset your Ultimate Coach password',
                 f'Hi {user.username},\n\n'
