@@ -90,9 +90,9 @@ Each week has one theme, announced in advance, with no more than three learning 
 | --- | --- | --- | --- |
 | 0:00 | Warm-up | Dynamic plus reaction work | Same |
 | 0:20 | Throwing under pressure | Extended mark, off-balance throws | 3-person break drill, Get 10 |
-| 0:40 | Theme: game, drill, game | Harder constraints, even numbers | More overload (5v4), more reps per player |
+| 0:40 | Theme: game (20), one drill (20), the game again and harder (20) | Harder constraints, even numbers | More overload (5v4), more reps per player |
 | 1:40 | Small-sided conditioning games | 4v4 continuous, stall 5 | 4v4 continuous, stall 7 |
-| 2:00 | Team toolkit (from Phase 2) | Structures, set pieces, game-plan reps | Resets, endzone play, every player handles |
+| 2:00 | Team toolkit (from Phase 2): a short walk-through, then a game | Structures, set pieces, game-plan reps | Resets, endzone play, every player handles |
 | 2:40 | Scrimmage and recap | Points with fun consequences for the losing line | Same |
 
 Until squads are picked in March, split sessions run as two provisional groups based on last season's teams, and players can move between them. In Phase 1 they can also be split by skill level.
@@ -109,7 +109,7 @@ Until squads are picked in March, split sessions run as two provisional groups b
 - **Maximise reps:** groups of three, one lane each, a disc per group (two for the extended mark), and roles rotate after every rep, so nobody waits more than one rep. With about 40 players that's 13 lanes running at once.
 - **Groups run themselves:** each focus has a card with the setup, the scoring and the harder and easier options. Skill leads move between lanes, fix one thing per group and keep the scores honest; they don't run a station.
 - **Built around mentor pairs:** each group is a mentor pair (a 1s player with a 2s or newer player) plus one more. The first 12 minutes go on one partner's development focus, the next 12 on the other's, and the third player takes the defender or mark role.
-- **Scores feed the mini-tests:** players write their score in their log, and from week 25 the mini-tests run at the start of the skill floor.
+- **Scores feed the mini-tests:** players write their score in their log, and from week 25 the mini-tests are the first 20 minutes of the skill floor.
 - **Throwing still counts:** the skill floor replaces focused throwing, so the breaking-the-mark and hucking work, plus the home routine, carry the throwing volume.
 
 The week-by-week themes for both sessions are in Weekly plan.
@@ -121,7 +121,7 @@ The 2s get the same coaching quality, attention and visibility as the 1s. These 
 1. **The 2s' own two captains** run the 2s sessions and sit in captains' meetings with an equal voice. The 1s captains help them plan sessions and share material, without taking over the running.
 2. **Same curriculum, same theme.** The 2s learn exactly what the 1s learn each week; only difficulty and numbers change.
 3. **Joint session time is shared fairly.** Mixed groups, Honeypass pairings and mixed 7v7 teams mean 2s players train with and against 1s players every week.
-4. **Everyone handles.** In 2s games and scrimmages, rules such as "last player to touch the disc picks up after a turnover" and Golden Arm make sure no one is only a cutter.
+4. **Everyone handles.** In 2s games and scrimmages, rules such as "last player to touch the disc picks up after a turnover" and Golden Arm make sure no one is only a cutter. Every 2s scrimmage in the session tabs names one of three handling rules, and a sideliner keeps a handler tally at training and at events.
 5. **A clear pathway.** Criteria for moving up to the 1s are published at the start of the season. The proposed standard is the 1s squad's median on at least three of the four skill tests, plus the captains' judgement of game stats and attitude. Players can move up mid-season; 1s players can drop in to support the 2s at tournaments.
 6. **2s goals are celebrated.** 2s results, improvement scores and player awards are announced alongside the 1s in club updates and socials.
 7. **Their own tournament plan.** The 2s have a target event and game plans prepared in the same way as the 1s, not left until the week before.
@@ -285,13 +285,13 @@ Every player takes four skill tests in full four times (October, Trial 1 in week
 | Skill test | Test | Problem area | Source |
 | --- | --- | --- | --- |
 | Throwing range and accuracy | Hucking alley: 10 hucks into a 20 m-wide lane; count in and record distance | Throwing base | UAP backhand hucks module |
-| Breaking the mark | Get 10: 10 throws past a marker to a static receiver 10-15 m away; count completions | Breaking the mark | Flik Level 4 |
+| Breaking the mark | Get 10: 10 throws past a marker to a static receiver 10-15 m away, against each force; count completions on each side | Breaking the mark | Flik Level 4 |
 | Getting open | 1v1 cutting test: from a stack spot 15 m from the thrower, the cutter has until stall 6 to get open against a defender starting on their back shoulder; 10 reps (5 under, 5 deep or away), count clean catches. Defenders are 1s players asked to play at full intensity | Getting open | Adapted from Win the Box (HN 10 Big Drills) and the cut families (UAP Cutting) |
 | Catching under pressure | 20 catches in a heads-on or overload drill; count clean catches | Keeping the disc | Hildo Bijl |
 
 **Athletic profile (recorded, not counted in the skill goal):** the 5-10-5 agility shuttle, filmed and timed (UAP changing direction module); at trials, also the 50 m sprint with splits and the arrowhead agility test. The skill tests and the athletic profile are set up as tests in the home programme, on the weeks they are run, so players enter their own results and see their curve.
 
-**Mini-tests:** in weeks 6, 10, 15, 22, 27, 32, 40 and 45, run two tests in 10 minutes, usually Get 10 and the 1v1 cutting test (at the end of the warm-up until week 24, then at the start of the skill floor). Players log their own scores and see their curve.
+**Mini-tests:** in weeks 6, 10, 15, 22, 27, 32, 40 and 45, run two tests in 20 minutes: Get 10 and the 1v1 cutting test, in full. Until week 24 they take the focused-throwing slot (both tests are throwing under pressure); from week 25 they are the first 20 minutes of the skill floor. Players log their own scores and see their curve. The full protocols are at the top of the Phase 1 sessions tab.
 
 **Development focus:** after each full test round, every player agrees one development focus with a skill lead or captain, normally their weakest skill test against their squad's median. They spend the skill floor on it, and it shapes their home throwing.
 

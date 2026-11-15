@@ -37,6 +37,7 @@ Findings are ranked by how much they matter for the season goals. Each one says 
   The joint sessions sit at the top of the range. The splits, which are half of all training time, do not follow the principle at all.
 - **Goal it hurts:** Principle 2 (learn it in the game) and Principle 5 (fun). It also hurts retention of players: the 2s sessions are the most drill-heavy.
 - **Fix:** rebuild every split table on the plan's own shape: throwing under pressure (20), theme game (20), one drill (20), the game again and harder (20), 4v4 continuous (20), team toolkit as a short walk-through then a game (40), scrimmage (20). That gives about 50 drill minutes (28%). Swap the drill blocks in joint weeks 14 and 21 for games the club needs anyway.
+- **After the fix:** counted the same way, full joint sessions average 15-22% drills by phase (highest 33%) and full split sessions about 21% (highest 33%). Light walk-through sessions in event weeks are higher, as they should be.
 - **Who:** Part 3.
 
 ### 2. Full test rounds don't fit the time they are given
@@ -51,17 +52,22 @@ Findings are ranked by how much they matter for the season goals. Each one says 
 ### 3. Mini-tests and development-focus time are not in the timed tables
 
 - **Where:** weeks 6, 15, 22, 27, 32, 40 and 45 (mini-test is a line in the notes); week 10 (in the table, but 15 minutes at 1:15 for both tests and the drill); Season plan and Phase 2 intro ("at the end of the warm-up"), week 6 ("from the start of focused throwing").
-- **What's wrong:** the app builds sessions from the timed rows, so a mini-test that is only in the notes is not in the session a coach runs from. In weeks 15 and 22 the warm-up row is 20 minutes with no room for 10 more. From week 25 the mini-test "runs at the start of the skill floor", but the skill-floor row still says 12 minutes on each partner's focus, which no longer fits in 25. Week 45 has two mini-tests (joint and 2s split), and week 48 adds a "final mini-test" that is not one of the eight.
+- **What's wrong:**
+  - The app builds sessions from the timed rows, so a mini-test that is only in the notes is not in the session a coach runs from.
+  - "Two tests in 10 minutes" doesn't fit. In threes, Get 10 on both sides takes about 9 minutes and ten 1v1 cutting reps each take about 8, so the two tests need about 20 minutes for the whole club.
+  - In weeks 15 and 22 the warm-up row is 20 minutes with no room for a test. From week 25 the skill-floor row still gives 12 minutes to each partner's focus on top of the test.
+  - Week 45 has two mini-tests (joint and 2s split), and week 48 adds a "final mini-test" that is not one of the eight.
+  - Before the skill floor starts in week 25, nothing in a session table gives a player time on their development focus.
 - **Goal it hurts:** Principle 4; "progress is visible, not assumed".
-- **Fix:** give every mini-test its own timed row (10 minutes straight after the warm-up, with the next block shortened). From week 25, mini-test weeks run 10 minutes of test and 15 of skill floor on one partner's focus, and the other partner's the week after. Call the 2s' week 45 and 48 tests "camp tests" so the count of eight club mini-tests stays true.
-- **Who:** Part 3.
+- **Fix:** every mini-test has its own 20-minute row with both tests in full. Until week 24 it takes the focused-throwing slot (both tests are throwing under pressure, so no throwing is lost); from week 25 it is the first 20 minutes of the skill floor. In other weeks, the last five minutes of focused throwing belong to the mentor pair's development focus. The 2s' week 45 and 48 tests are called camp tests, so the count of eight club mini-tests stays true.
+- **Who:** Part 3. The change from 10 to 20 minutes is noted in Decision D10.
 
 ### 4. Getting open is taught once and never put under pressure
 
 - **Where:** Season plan, Skills curriculum ("Cutting under pressure"); Weekly plan, Phase 2; Phase 2 review table.
 - **What's wrong:** the curriculum promises "beating a tight defender; timing cuts to start before the thrower catches; clearing" in Phase 2. The Phase 2 joint themes are resets, breaking (two weeks), reading the pitch, three trials, retention (two weeks), game day and defence. The Phase 2 review credits cutting to weeks 15, 16 and 21, but those are 1s structures (ho shapes, give-and-go, 3H cuts). The 2s get no cutting under pressure at all. The only pressure on getting open before squads are picked is the trial test itself. Retention, by contrast, gets weeks 14, 21, 22, 27, 36 and 40.
 - **Goal it hurts:** the pitch (getting open is the first of last season's four failures); "every player improves on 3 of the 4 skill tests" (the 1v1 cutting test is one of them); the 2s' "win more games".
-- **Fix (made):** inside the existing themes, add a getting-open game against a tight defender to weeks 14, 16, 17 and 21 for both squads, and say so in the Phase 2 review. **Fix (needs a decision):** give getting open its own Phase 2 joint week by merging the two retention weeks.
+- **Fix (made):** inside the existing themes, both squads play "1v1 from the stack spot" (the trial test as a game, with a live mark on the thrower) in the splits of weeks 14, 16 and 21, and the Phase 2 review says so. **Fix (needs a decision):** give getting open its own Phase 2 joint week by merging the two retention weeks.
 - **Who:** Part 3 for the games; Decision D11 for the theme change.
 
 ### 5. "Every 2s player handles" is a goal without sessions or a measure

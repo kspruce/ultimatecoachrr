@@ -1,6 +1,6 @@
 # Classroom sessions
 
-A series of short off-pitch sessions, online or in person, that bring the ideas from *The Inner Game of Ultimate Frisbee*, *The Culture Code* and *The Captain Class* (plus the Rise Up talks, Flik and BFD) to the whole club. Each one is timed so the idea is used on the pitch the following week.
+A series of short off-pitch sessions, online or in person, that bring the ideas from *The Inner Game of Ultimate Frisbee*, *The Culture Code* and *The Captain Class* (plus the Rise Up talks, Flik and BFD) to the whole club. Each one is timed so the idea is used on the pitch that week or the next.
 
 ## How they run
 
@@ -42,7 +42,7 @@ A series of short off-pitch sessions, online or in person, that bring the ideas 
 | C11 | 46 | 14 Aug | Online | 1s | Nationals mindset | Inner Game; Captain Class |
 | C12 | 51 | 18 Sep | In person, at the season social | All | Season review: what we learned | Culture Code |
 
-The sessions sit in the quieter weeks: none in a tournament week, and none in the busy trial or taper weeks.
+The sessions sit in the quieter weeks: none in a UKU or EUCS tournament week, and none in the busy trial or taper weeks. C7 is part of the Herdlodge weekend.
 
 ## Phase 1: Foundations
 
@@ -138,7 +138,7 @@ The sessions sit in the quieter weeks: none in a tournament week, and none in th
 
 **Activity:** each group ranks the draft team priorities. Captains merge them and publish the final ranked list.
 
-**Commitment:** one personal process goal for the next month, shared with a buddy.
+**Commitment:** one personal process goal for the next month, shared with a buddy. Make it one that serves your development focus: for example, "three break attempts every game" if your focus is breaking the mark.
 
 **On the pitch:** the Phase 2 anchor (breaking the mark) is announced at the restart session.
 
@@ -164,7 +164,7 @@ The sessions sit in the quieter weeks: none in a tournament week, and none in th
 - Each player builds a 10-second pre-point routine: one breath, one cue word, one picture of a good rep.
 - Finish with a 5-minute guided visualisation of a trial game going well.
 
-**Commitment:** use the routine at every trial.
+**Commitment:** use the routine at every trial, starting with the skill tests at Trial 1.
 
 **On the pitch:** at trials, assessors note good decisions after mistakes, not just the mistakes.
 
@@ -182,6 +182,12 @@ The sessions sit in the quieter weeks: none in a tournament week, and none in th
 - **Candour, not brutal honesty;** bad news is delivered in person.
 - **Judge decisions against the realistic alternative,** not the outcome (*The Culture Code*; Rise Up, *Developing Great Defenders*).
 
+**Small-group questions:**
+
+- When did feedback last help you play better? What made it land?
+- What stops us saying what we really saw after a game?
+- Which of the five review questions do we usually skip?
+
 **Activity:** run a practice review on two Solent clips or the Solent stats. Then agree the squad's review routine for events: five minutes at the end of each day, and the full review at the following training.
 
 **Commitment:** at Tour 1, everyone brings one "keep" and one "change" to the debrief.
@@ -196,6 +202,12 @@ This is the values workshop already planned for the Saturday afternoon at Herdlo
 
 - **Purpose is built from a few clear priorities,** simple catchphrases and one behaviour that sets the bar, like Quinnipiac's "Forty for Forty" (*The Culture Code*).
 - **Identity is something you live,** not just a list of words (Rise Up, *Everybody In*).
+
+**Small-group questions:**
+
+- What should matter most to this club, whichever squad you play for?
+- What would a newcomer see or hear at training that showed it?
+- Which one behaviour, done by everyone, would set the bar?
 
 **Activity:**
 
@@ -244,6 +256,12 @@ All are from Flik's Deep Dives and Team Analysis.
 - Plans A, B and C, and the triggers for switching.
 - The one-word calls.
 
+**Small-group questions:**
+
+- What does this opponent want to do on offence, and what do they do when it's taken away?
+- Which of our plans gives them the most trouble, and what is our trigger to switch?
+- What would you want on a one-page card if you had ten seconds to read it on the sideline?
+
 **Activity:**
 
 - Scout one opponent clip together using the card template.
@@ -262,6 +280,12 @@ All are from Flik's Deep Dives and Team Analysis.
 - **Flow** comes when challenge matches skill, goals are clear and attention is in the present.
 - **Compete with heart:** top-level competitiveness and Spirit together (*The Inner Game of Ultimate Frisbee*).
 - **Great captains switch off negative emotions fast** and lift teams with wordless displays (*The Captain Class*).
+
+**Small-group questions:**
+
+- When were you last completely absorbed in a game? What was the score doing to your attention?
+- What does competing with heart look like on a contested call?
+- How do you want a teammate to treat you in the ten seconds after your mistake?
 
 **Activity:**
 
@@ -284,6 +308,12 @@ All are from Flik's Deep Dives and Team Analysis.
 - **The squad's catchphrase and bar-setting behaviour** from Herdlodge.
 - **Doggedness and emotional control** (*The Captain Class*).
 
+**Small-group questions:**
+
+- What do we want another team to say about playing us?
+- What is your role, and what does doing it well look like when we're two breaks down?
+- Which process goal can you hit on every point, whatever the score?
+
 **Activity:**
 
 - A guided visualisation of the Nationals game-day routine.
@@ -298,6 +328,12 @@ All are from Flik's Deep Dives and Team Analysis.
 **Goal:** celebrate, learn, and keep players for next season.
 
 **The idea:** an after-action review of the whole season, and overdoing the thank-yous (*The Culture Code*).
+
+**Small-group questions:**
+
+- Look at your own test curve from October to September. What changed most, and what made it change?
+- What did we intend this season, what happened, and why?
+- What should next season's plan keep, and what should it change?
 
 **Activity:**
 

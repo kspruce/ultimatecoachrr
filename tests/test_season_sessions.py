@@ -177,9 +177,12 @@ def test_build_from_the_real_plan(app, herd):
     comps = joint.components.order_by(SessionComponent.order).all()
     assert [c.title for c in comps][:3] == ['Welcome and the pitch', 'Warm-up', 'Baseline tests']
     assert comps[-1].title == 'Recap' and comps[-1].duration_minutes == 10  # runs to 13:00
-    # Event weeks without a table get nothing; the week links to its joint session
-    assert 'plan-2027/28-w37-joint' not in sessions
-    assert (37, 'no session table') in report.skipped
+    # Weeks without a table (the rest week) get nothing; the week links to its joint session
+    assert 'plan-2027/28-w50-joint' not in sessions
+    assert (50, 'no session table') in report.skipped
+    # Light event weeks have a table with its length in the label
+    light = sessions['plan-2027/28-w37-joint']
+    assert sum(c.duration_minutes for c in light.components) == 90
     week1 = SeasonWeek.query.filter_by(plan_id=plan.id, week_number=1).one()
     assert week1.session_plan_id == joint.id
     assert _plan(herd['team']).sessions_built_at is not None
