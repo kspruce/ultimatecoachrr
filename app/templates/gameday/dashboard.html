@@ -497,6 +497,11 @@
 {{ super() }}
 <script src="{{ url_for('static', filename='js/offline_queue.js') }}"></script>
 <script>
+  // Player names are typed by coaches: escape them before putting them in HTML
+  function escapeHtml(text) {
+    return String(text ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+  }
+
   // Tell OfflineQueue where to fetch a fresh CSRF token before replaying
   // requests that were queued while offline.  Must be called before any queued
   // requests are replayed (i.e. before DOMContentLoaded fires replay).
@@ -942,7 +947,7 @@ document.addEventListener('DOMContentLoaded', function() {
       return `#${jersey} ${label.textContent.replace(jersey, '').trim()}`;
     });
     const playersList = document.getElementById('template-players-list');
-    playersList.innerHTML = selectedPlayerNames.map(name => `<div>${name}</div>`).join('');
+    playersList.innerHTML = selectedPlayerNames.map(name => `<div>${escapeHtml(name)}</div>`).join('');
     document.getElementById('save-template').dataset.players = selectedPlayerIds.join(',');
   });
 
@@ -983,7 +988,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Populate player chips
     document.getElementById('active-players').innerHTML = selectedPlayers.map(p => 
-      `<span class="badge bg-primary me-1 mb-1 player-chip" data-player-id="${p.id}">#${p.jersey} ${p.name}</span>`
+      `<span class="badge bg-primary me-1 mb-1 player-chip" data-player-id="${p.id}">#${escapeHtml(p.jersey)} ${escapeHtml(p.name)}</span>`
     ).join('');
     
     // Create player buttons for events
@@ -1126,7 +1131,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const populateSelect = (selectId, players) => {
       const select = document.getElementById(selectId);
       select.innerHTML = `<option value="">Select player to ${selectId.includes('in') ? 'sub in' : 'sub out'}</option>`;
-      players.forEach(p => select.innerHTML += `<option value="${p.id}" data-gender="${p.gender}">#${p.jersey} ${p.name}</option>`);
+      players.forEach(p => select.innerHTML += `<option value="${escapeHtml(p.id)}" data-gender="${escapeHtml(p.gender)}">#${escapeHtml(p.jersey)} ${escapeHtml(p.name)}</option>`);
     };
     populateSelect('player-out', selectedPlayers);
     const availablePlayers = Array.from(document.querySelectorAll('.player-checkbox:not(:checked)')).map(cb => {
@@ -1171,7 +1176,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Update active player chips to reflect the new lineup
     document.getElementById('active-players').innerHTML = selectedPlayers.map(p =>
-      `<span class="badge bg-primary me-1 mb-1 player-chip" data-player-id="${p.id}">#${p.jersey} ${p.name}</span>`
+      `<span class="badge bg-primary me-1 mb-1 player-chip" data-player-id="${p.id}">#${escapeHtml(p.jersey)} ${escapeHtml(p.name)}</span>`
     ).join('');
 
     // Rebuild event player buttons so events are attributed to the correct players
@@ -1271,7 +1276,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (playersChanged) {
       selectedPlayers = snap.selectedPlayers;
       document.getElementById('active-players').innerHTML = selectedPlayers.map(p =>
-        `<span class="badge bg-primary me-1 mb-1 player-chip" data-player-id="${p.id}">#${p.jersey} ${p.name}</span>`
+        `<span class="badge bg-primary me-1 mb-1 player-chip" data-player-id="${p.id}">#${escapeHtml(p.jersey)} ${escapeHtml(p.name)}</span>`
       ).join('');
       const epb = document.getElementById('event-player-buttons');
       epb.innerHTML = '';

@@ -1,8 +1,9 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, IntegerField, DateField, TimeField, TextAreaField, SelectField, SubmitField, SelectMultipleField
-from wtforms.validators import DataRequired, Optional, NumberRange, URL
+from wtforms.validators import DataRequired, Optional, NumberRange, URL, ValidationError
 from app.models.tournament import Tournament
 from app.models.player import Player
+from app.utils.media_embed import is_web_url
 
 
 class GameForm(FlaskForm):
@@ -19,6 +20,11 @@ class GameForm(FlaskForm):
     # Blank: the tournament's squad, or the whole club
     squad_id = SelectField('Squad', choices=[('', 'Whole club')], validate_choice=False)
     submit = SubmitField('Submit')
+
+    def validate_youtube_link(self, field):
+        # URL() alone lets javascript://host/... through
+        if field.data and not is_web_url(field.data):
+            raise ValidationError('Use a web link starting with http:// or https://.')
 
     def __init__(self, *args, team_id=None, **kwargs):
         super(GameForm, self).__init__(*args, **kwargs)

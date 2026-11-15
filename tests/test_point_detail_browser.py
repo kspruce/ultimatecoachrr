@@ -78,3 +78,59 @@ def test_upright_phone_stands_the_pitch_up(app, team, live_server, browser, poin
     assert page.get_attribute('#pitch', 'viewBox') == '0 0 370 1000'
     # Nothing wider than the screen
     assert page.evaluate('document.documentElement.scrollWidth') <= 390
+
+
+NAME_XSS = '<img src=x onerror="window.__xss = (window.__xss || 0) + 1">'
+
+
+def test_game_day_shows_player_names_as_text(app, team, live_server, browser):
+    """Coaches name players. A name that's HTML must show as text on Game
+    Day (the line chips, the substitution picker, saving a line), not run
+    as script for the captain or admin recording the game."""
+    players = [Player(name=NAME_XSS if i == 1 else f'Player {i}', jersey_number=i,
+                      gender='male' if i <= 4 else 'female', active=True, team_organization_id=team.id)
+               for i in range(1, 8)]
+    game = Game(opponent='Opponent A', team_organization_id=team.id)
+    db.session.add_all(players + [game])
+    db.session.commit()
+    admin = make_user(team, 'gamedayadmin', role='admin')
+    game_id = game.id
+    page = logged_in_page(app, browser, live_server, admin, team)
+    page.goto(live_server + f'/gameday/game/{game_id}')
+    page.evaluate("""() => {
+        document.querySelectorAll('.player-checkbox').forEach(cb => { cb.checked = true; });
+        document.getElementById('save-line-btn').click();
+        const start = document.getElementById('start-point');
+        start.disabled = false;
+        start.click();
+        document.getElementById('substitution').click();
+    }""")
+    page.wait_for_timeout(500)  # a broken image's onerror fires after it fails to load
+    assert page.evaluate('window.__xss') is None
+    assert '<img src=x' in page.inner_text('#active-players')
+    assert '<img src=x' in page.inner_text('#template-players-list')
+
+
+def test_game_stats_tooltips_show_player_names_as_text(app, live_server, browser):
+    """The pass network's tooltips on a game's stats page (seen by every
+    member) show player names as text."""
+    from tests import stats_data
+    team = stats_data.build_team()
+    admin = stats_data.build_admin(team, 'statsadmin', superadmin=False)
+    players = stats_data.build_players(team, 14)
+    stats_data.record_season(app, team, admin, players, games_per_tournament=1, points_per_game=2)
+    for player in Player.query.filter_by(team_organization_id=team.id):
+        player.name = NAME_XSS
+    db.session.commit()
+    game_id = Game.query.filter_by(team_organization_id=team.id).first().id
+    admin, team = db.session.get(User, admin.id), db.session.get(TeamOrganization, team.id)
+    page = logged_in_page(app, browser, live_server, admin, team)
+    page.goto(live_server + f'/stats/game/{game_id}')
+    page.wait_for_selector('#player-connections circle', state='attached')
+    page.evaluate("""() => {
+        d3.selectAll('#player-connections circle').dispatch('mouseover');
+        d3.selectAll('#player-connections line').dispatch('mouseover');
+    }""")
+    page.wait_for_timeout(500)
+    assert page.evaluate('window.__xss') is None
+    assert '<img src=x' in page.inner_text('.d3-tooltip')

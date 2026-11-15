@@ -190,3 +190,58 @@ def test_remember_me_lasts_30_days():
     from datetime import timedelta
     from config import Config
     assert Config.REMEMBER_COOKIE_DURATION == timedelta(days=30)
+
+
+QUOTE_BREAK = "Herd'); window.__xss = 1; //"
+
+
+def test_names_in_inline_handlers_stay_strings(app):
+    """A name inside an onsubmit/oninput handler is JavaScript once the
+    browser decodes the attribute, so an HTML-escaped ' still ends the
+    string. Team names (set by team admins and by new clubs signing up, and
+    shown to the superadmin on Manage Teams), squad names and session
+    template names must reach those handlers as JSON strings."""
+    import html
+    import re
+    from datetime import date
+    from app.models.schedule import SessionTemplate
+    from app.models.season import Squad
+
+    team = stats_data.build_team(QUOTE_BREAK, 'quote-team')
+    admin = stats_data.build_admin(team, 'quote-admin', superadmin=False)
+    session = SessionPlan(title='Tuesday', date=date(2026, 6, 2), team_organization_id=team.id)
+    db.session.add_all([session, Squad(name=QUOTE_BREAK, team_organization_id=team.id),
+                        SessionTemplate(name=QUOTE_BREAK, blocks=[], team_organization_id=team.id)])
+    db.session.commit()
+    superadmin = stats_data.build_admin(stats_data.build_team('Site', 'site'), 'site-owner', superadmin=True)
+    client = stats_data.Client(app, admin.id, team.id)
+    pages = [(stats_data.Client(app, superadmin.id, team.id), '/teams/'),
+             (client, '/team/seasons/'), (client, f'/sessions/{session.id}/plan')]
+    handlers = []
+    for who, url in pages:
+        page = who.get(url).get_data(as_text=True)
+        found = [html.unescape(h) for h in re.findall(r'\son\w+="([^"]*)"', page) if '__xss' in html.unescape(h)]
+        assert found, url
+        handlers += found
+    for handler in handlers:
+        assert QUOTE_BREAK not in handler, handler
+
+
+JS_LINK = 'javascript://example.com/%0aalert(document.cookie)'
+
+
+def test_game_video_links_must_be_web_links(season):
+    """Game video links are printed as links on the games pages. WTForms'
+    URL() check lets javascript://host/%0a... through, and adding several
+    games at once didn't check the links at all."""
+    coach = season['coach']
+    coach.post('/games/add', data={'opponent': 'Single', 'date': '2026-06-01', 'tournament_id': '0',
+                                   'youtube_link': JS_LINK})
+    coach.post('/games/add_multiple', data={'opponent[]': ['Bulk', 'Bulk ok'], 'date[]': ['2026-06-02'] * 2,
+                                            'youtube_link[]': [JS_LINK, 'https://youtu.be/abc12345678']})
+    db.session.expire_all()
+    assert Game.query.filter_by(opponent='Single').first() is None or \
+        Game.query.filter_by(opponent='Single').first().youtube_link is None
+    assert Game.query.filter_by(opponent='Bulk').one().youtube_link is None
+    assert Game.query.filter_by(opponent='Bulk ok').one().youtube_link == 'https://youtu.be/abc12345678'
+    assert not Game.query.filter(Game.youtube_link.like('javascript%')).count()

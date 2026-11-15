@@ -130,7 +130,7 @@
         <summary><b>Templates</b></summary>
         {% for t in templates %}
         <form method="post" action="{{ url_for('training.delete_template', template_id=t.id) }}" class="d-flex justify-content-between align-items-center py-1"
-              onsubmit="return confirm('Delete the template {{ t.name|e }}?')">
+              onsubmit="return confirm({{ ('Delete the template ' ~ t.name ~ '?')|tojson|forceescape }})">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <span>{{ t.name }} <span class="tr-muted">{{ t.blocks|length }} blocks</span></span>
           <button class="btn btn-sm btn-link text-danger">Delete</button>

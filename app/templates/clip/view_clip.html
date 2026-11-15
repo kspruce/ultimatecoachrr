@@ -605,7 +605,7 @@
               {% endif %}
 
               {% if annotation.notes %}
-              <div class="ann-notes">{{ annotation.notes | safe }}</div>
+              <div class="ann-notes">{{ annotation.notes | rich_text }}</div>
               {% endif %}
 
               <div class="ann-meta-row">
