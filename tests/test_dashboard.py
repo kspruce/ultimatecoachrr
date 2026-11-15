@@ -17,6 +17,7 @@ from app.models.tournament_rsvp import TournamentRSVP
 from app.models.user import User
 from app.utils.season import ensure_seasons
 from tests import stats_data
+from tests.urls import session_path
 
 TODAY = date.today()
 
@@ -114,7 +115,7 @@ def test_coach_gets_needs_attention(club):
     assert f'/tournaments/{t.id}/nudge' in page
     assert 'Squad for Nationals not published' in page
     assert '1 game at Nationals has no players' in page
-    assert f'/sessions/{club["session"]}/nudge' in page
+    assert session_path(club["session"], '/nudge') in page
 
 
 def test_coach_sees_everything_is_done(club):
@@ -293,7 +294,7 @@ def test_game_debrief_is_saved_and_comes_back_when_planning(club):
     db.session.expire_all()
     assert db.session.get(Game, played_id).debrief_worked == 'Zone D'
 
-    assert 'End-zone sets' in club['coach'].get(f'/sessions/{club["session"]}/plan').get_data(as_text=True)
+    assert 'End-zone sets' in club['coach'].get(session_path(club["session"], '/plan')).get_data(as_text=True)
     home = _page(club['coach'])
     assert 'No debrief yet for vs Clapham' in home
     # A game outside a tournament shows in Coming up

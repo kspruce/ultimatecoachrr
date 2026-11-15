@@ -90,7 +90,7 @@ def test_quick_checkin_is_for_admins_and_this_team(season):
     outsider = Player(name='Outsider', team_organization_id=season['other'])
     db.session.add_all([session, outsider])
     db.session.commit()
-    url = f'/sessions/{session.id}/quick_checkin'
+    url = f'/sessions/s{session.number}/quick_checkin'
     season['player'].post(url, json={'player_id': season['player_id'], 'status': 'present'})
     assert season['coach'].post(url, json={'player_id': outsider.id, 'status': 'present'}).status_code == 404
     assert Attendance.query.count() == 0

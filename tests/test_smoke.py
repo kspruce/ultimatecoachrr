@@ -67,8 +67,8 @@ def test_session_pdf_download(app, client, monkeypatch):
     team_id = TeamOrganization.query.first().id
     db.session.add(SessionPlan(id=1, title='Split 2s', team_organization_id=team_id))
     db.session.commit()
-    assert b'Download PDF' in client.get('/sessions/1/detail').data
-    r = client.get('/sessions/1/export_pdf')
+    assert b'Download PDF' in client.get('/sessions/s1/detail').data
+    r = client.get('/sessions/s1/export_pdf')
     assert r.status_code == 200 and r.mimetype == 'application/pdf'
     assert r.data.startswith(b'%PDF') and 'Split 2s' in rendered['html']
     assert 'session_1_split-2s.pdf' in r.headers['Content-Disposition']

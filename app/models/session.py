@@ -1,6 +1,7 @@
 from app import db
-from datetime import datetime
-from sqlalchemy import Integer, ForeignKey
+from datetime import date, datetime
+from sqlalchemy import Integer, ForeignKey, event, func
+from sqlalchemy.orm import Session as OrmSession
 from sqlalchemy.orm import relationship
 import sqlalchemy as sa
 
@@ -15,6 +16,12 @@ session_plan_squad = db.Table(
 
 class SessionPlan(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    # This team's own count of sessions (1, 2, 3...): what appears in URLs.
+    # `id` counts every team's sessions together, so it is only for joins.
+    # Set automatically on insert (see number_new_sessions below). Deleting a
+    # session leaves a gap rather than renumbering the rest, though deleting
+    # the newest one frees its number for the next session.
+    number = db.Column(db.Integer, nullable=False)
     title = db.Column(db.String(100), nullable=False)
     date = db.Column(db.Date, nullable=True)
     start_time = db.Column(db.Time, nullable=True)
@@ -65,6 +72,8 @@ class SessionPlan(db.Model):
     __table_args__ = (
         db.UniqueConstraint('team_organization_id', 'external_id',
                             name='uq_session_plan_team_external_id'),
+        db.UniqueConstraint('team_organization_id', 'number',
+                            name='uq_session_plan_team_number'),
         db.Index('ix_session_plan_team_season', 'team_organization_id', 'season'),
     )
 
@@ -226,3 +235,27 @@ class SessionComponent(db.Model):
     
     def __repr__(self):
         return f'<SessionComponent {self.title}>'
+
+
+@event.listens_for(OrmSession, 'before_flush')
+def number_new_sessions(session, flush_context, instances):
+    """Give every new session the next number for its team.
+
+    Done once per flush, per team, so a batch of new sessions (a generated
+    schedule, a season import) gets consecutive numbers in date order rather
+    than all reading the same "latest" number.
+    """
+    new = [o for o in session.new if isinstance(o, SessionPlan)]
+    unnumbered = [o for o in new if o.number is None]
+    if not unnumbered:
+        return
+    with session.no_autoflush:
+        for team_id in {o.team_organization_id for o in unnumbered}:
+            latest = session.query(func.max(SessionPlan.number)).filter(
+                SessionPlan.team_organization_id == team_id).scalar() or 0
+            taken = [o.number for o in new if o.team_organization_id == team_id and o.number is not None]
+            latest = max([latest] + taken)
+            for o in sorted((o for o in unnumbered if o.team_organization_id == team_id),
+                            key=lambda o: o.date or date.max):
+                latest += 1
+                o.number = latest

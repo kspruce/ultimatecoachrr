@@ -8,6 +8,7 @@ from app import db
 from app.models.drill import SavedDrill, DrillDiagram
 from app.models.session import SessionPlan, SessionComponent
 from app.utils.season_import import import_season, SeasonImportError
+from tests.urls import session_path
 
 FIXTURES = os.path.join(os.path.dirname(__file__), 'fixtures')
 IMAGES = os.path.join(FIXTURES, 'season_images')
@@ -199,9 +200,9 @@ def test_logged_in_pages_show_season_fields(app, team, season):
             assert response.status_code == 200, url
             return response.get_data(as_text=True)
 
-    detail = get(f'/sessions/{plan_id}/detail')
+    detail = get(session_path(plan_id, '/detail'))
     assert 'Getting off the sideline' in detail and 'Reset cutter goes on stall 4.' in detail
-    printable = get(f'/sessions/{plan_id}/printable')
+    printable = get(session_path(plan_id, '/printable'))
     assert 'Run by:' in printable and 'Coach:' in printable and 'Sideline trap' in printable
 
     drill_page = get(f'/sessions/drills/{wrinkle_id}')

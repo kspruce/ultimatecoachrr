@@ -15,6 +15,7 @@ from app.models.onboarding import UserOnboarding
 from app.models.session import SessionPlan
 from app.models.user import User
 from tests import stats_data
+from tests.urls import session_path
 
 
 def make_user(team, username, role, player=None):
@@ -130,7 +131,7 @@ def test_notes_from_a_game_and_a_clip(app, club):
 
 def test_quick_capture_can_share(app, club):
     coach = login(app, club, 'coach')
-    r = coach.post(f"/sessions/{club['session']}/feedback/save",
+    r = coach.post(session_path(club['session'], '/feedback/save'),
                    json={'player_id': club['ann'], 'content': 'Sharp today', 'context_tag': 'Drill', 'shared': True})
     assert r.get_json()['success']
     assert PlayerFeedback.query.one().shared

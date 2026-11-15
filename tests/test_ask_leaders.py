@@ -17,6 +17,7 @@ from tests.test_discord import discord_calls  # noqa: F401
 from tests.test_leadership_hub import YOUTUBE, enable
 from tests.test_season_plan import NAV_PAGE, client, herd  # noqa: F401
 from tests.test_teams import make_user
+from tests.urls import session_path
 
 
 def things(team_id):
@@ -69,7 +70,7 @@ def test_the_button_is_on_every_kind_of_page(app, herd):
     player, coach = client(app, herd, 'player'), client(app, herd, 'coach')
     pages = {'clip': f"/clips/{ids['clip']}", 'play': f"/playbook/plays/{ids['play']}",
              'topic': f"/theory/topic/{ids['topic']}", 'drill': f"/sessions/drills/{ids['drill']}",
-             'session': f"/sessions/{ids['session']}/detail"}
+             'session': session_path(ids['session'], '/detail')}
     for kind, url in pages.items():
         page = player.get(url).get_data(as_text=True)
         assert f'/questions/ask?about={kind}:{ids[kind]}' in page and 'Ask the leaders' in page, kind
