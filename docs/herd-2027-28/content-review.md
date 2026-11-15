@@ -9,7 +9,7 @@ Work in progress. This file is the handover: it says what is done and what is ne
 | 1. Coverage and progression | Done |
 | 2. One language | Done |
 | 3. Timing (release calendar) | Done |
-| 4. Better drills | Half done: the plan's own notes are in; hand-written gaps are next |
+| 4. Better drills | Done |
 | 5. Handbook and guide | Not started |
 
 Baseline before any change: `python -m pytest tests -q` gave 834 passed, 20 skipped.
@@ -89,9 +89,20 @@ Every card's Release line was checked against the release calendar (they now agr
 
 **Calendar themes:** weeks 6, 18, 25, 35 and 36 reworded to match the Weekly plan.
 
-## Part 4: better drills (half done)
+## Part 4: better drills (done)
 
-Every drill now has a Serves line and the correct weeks. Harder, Easier and Ask lines from the session tabs are in. Still to write by hand in `enrich.py`: about 65 drills with no Harder or Easier, and about 75 with no Ask.
+All 232 drills (223 Herd, 9 GRUT) now have the same parts inside the existing `description` field. No JSON field was added.
+
+- **What it trains:** the opening sentence, as before.
+- **Serves:** the problem area and the phase, for example "Breaking the mark · Phase 1 (technique) and Phases 3-4 (in the team)". The phase comes from the weeks the sessions use the drill.
+- **How it runs** and **Coaching points**, with one to three **Ask** questions.
+- **1s and 2s**, where the plan runs them differently (123 drills). The other 109 are joint-session drills or ones both squads run the same way.
+- **Harder** and **Easier.**
+- **In the 2027/28 plan:** the weeks, recounted from the session tables. Several were out of date after the session rebuild.
+
+**Where the words came from:** the session tabs already had a "What the games push players to do" list and a "Harder / easier" list for many activities. Those lines were copied into the matching drill first. I wrote the rest (about 90 drills) in `imports/drills/tools/enrich.py`, using the cards' cues.
+
+**Focus areas** now use the pitch's names: Cutting became Getting open, Reading the pitch became Seeing the field, Retention became Keeping the disc, and Benchmarks became Skill tests.
 
 ## Tests changed
 
