@@ -67,6 +67,10 @@ def create_app(config_class=Config):
         sentry_sdk.init(dsn=app.config['SENTRY_DSN'], send_default_pii=False,
                         traces_sample_rate=0)
 
+    # `<sess:session_id>` in a route is a team's session number in the URL
+    from app.utils.session_urls import SessionRefConverter
+    app.url_map.converters['sess'] = SessionRefConverter
+
     # Initialize extensions
     db.init_app(app)
     migrate.init_app(app, db)

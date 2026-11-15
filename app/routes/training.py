@@ -215,7 +215,7 @@ def delete_schedule(schedule_id):
     return redirect(url_for('training.schedules_page'))
 
 
-@bp.route('/<int:session_id>/cancel', methods=['POST'])
+@bp.route('/<sess:session_id>/cancel', methods=['POST'])
 @login_required
 @coach_required
 def cancel(session_id):
@@ -231,7 +231,7 @@ def cancel(session_id):
     return redirect(_safe_next(request.form.get('next'), url_for('session.detail', session_id=session.id)))
 
 
-@bp.route('/<int:session_id>/restore', methods=['POST'])
+@bp.route('/<sess:session_id>/restore', methods=['POST'])
 @login_required
 @coach_required
 def restore(session_id):
@@ -297,8 +297,8 @@ def save_usual():
     return redirect(url_for('training.availability'))
 
 
-@bp.route('/<int:session_id>/answer', methods=['POST'])
-@bp.route('/<int:session_id>/answer/<int:player_id>', methods=['POST'])
+@bp.route('/<sess:session_id>/answer', methods=['POST'])
+@bp.route('/<sess:session_id>/answer/<int:player_id>', methods=['POST'])
 @login_required
 def answer(session_id, player_id=None):
     """Save one answer: a player's own, or (coaches) a player's."""
@@ -486,7 +486,7 @@ def import_page():
     return render_template('training/import.html', report=report)
 
 
-@bp.route('/<int:session_id>/nudge', methods=['POST'])
+@bp.route('/<sess:session_id>/nudge', methods=['POST'])
 @login_required
 @coach_required
 def nudge(session_id):
@@ -648,7 +648,7 @@ def _last_debrief(session):
             .order_by(Game.date.desc(), Game.id.desc()).first())
 
 
-@bp.route('/<int:session_id>/plan', methods=['GET', 'POST'])
+@bp.route('/<sess:session_id>/plan', methods=['GET', 'POST'])
 @login_required
 @coach_required
 def plan(session_id):
@@ -713,7 +713,7 @@ def _announce_plan(session):
         pass
 
 
-@bp.route('/<int:session_id>/blocks.json')
+@bp.route('/<sess:session_id>/blocks.json')
 @login_required
 @coach_required
 def blocks_json(session_id):
@@ -766,7 +766,7 @@ def delete_template(template_id):
 
 # ── Repeat a session, run it from a phone, and wrap it up afterwards ───────
 
-@bp.route('/<int:session_id>/repeat', methods=['POST'])
+@bp.route('/<sess:session_id>/repeat', methods=['POST'])
 @login_required
 @coach_required
 def repeat(session_id):
@@ -803,7 +803,7 @@ def repeat(session_id):
     return redirect(url_for('training.plan', session_id=copy.id))
 
 
-@bp.route('/<int:session_id>/run')
+@bp.route('/<sess:session_id>/run')
 @login_required
 @coach_required
 def run(session_id):
@@ -824,7 +824,7 @@ def run(session_id):
 WRAP_STATUSES = ('present', 'late', 'excused', 'absent')
 
 
-@bp.route('/<int:session_id>/wrap-up', methods=['GET', 'POST'])
+@bp.route('/<sess:session_id>/wrap-up', methods=['GET', 'POST'])
 @login_required
 @coach_required
 def wrap_up(session_id):

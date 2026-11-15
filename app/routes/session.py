@@ -17,6 +17,7 @@ from app.utils.utils import admin_required, coach_required
 from app.utils.season import scope_sessions
 from app.utils.editor_diagrams import save_editor_diagrams
 from app.utils.team_filter import can_access_team
+from app.utils.session_urls import number_for_legacy_id
 from app.forms.session import (
     SessionRSVPForm, SessionPlanForm, DrillForm, 
     SessionComponentForm, SessionFilterForm, AdminBulkRSVPForm,
@@ -30,6 +31,31 @@ from app.utils.rsvp import (
 csrf = CSRFProtect()
 
 bp = Blueprint('session', __name__, url_prefix='/sessions')
+
+
+# Links made before sessions were numbered per team use the session's id:
+# /sessions/173/plan. Send them to the new form (/sessions/s12/plan). The
+# guest link keeps the id (it has no signed-in team to count within).
+def _to_numbered(prefix, session_id, rest=''):
+    number = number_for_legacy_id(session_id)
+    if number is None:
+        abort(404)
+    target = f'/sessions/{prefix}s{number}{rest}'
+    if request.query_string:
+        target += '?' + request.query_string.decode()
+    return redirect(target, code=308)  # 308 keeps POSTs as POSTs
+
+
+@bp.route('/<int:legacy_id>/<path:rest>', methods=['GET', 'POST'])
+@login_required
+def legacy_session_url(legacy_id, rest):
+    return _to_numbered('', legacy_id, '/' + rest)
+
+
+@bp.route('/<any(edit,delete):action>/<int:legacy_id>', methods=['GET', 'POST'])
+@login_required
+def legacy_session_action_url(action, legacy_id):
+    return _to_numbered(action + '/', legacy_id)
 
 
 # Existing Session Routes
@@ -510,7 +536,7 @@ def get_drill(drill_id):
 
 
 # Session Component Routes
-@bp.route('/<int:session_id>/components')
+@bp.route('/<sess:session_id>/components')
 @login_required
 def components(session_id):
     session_plan = SessionPlan.query.filter_by(
@@ -524,7 +550,7 @@ def components(session_id):
     
     return render_template('session/components.html', session=session_plan, components=components)
 
-@bp.route('/<int:session_id>/add_component', methods=['GET', 'POST'])
+@bp.route('/<sess:session_id>/add_component', methods=['GET', 'POST'])
 @login_required
 @coach_required
 def add_component(session_id):
@@ -685,7 +711,7 @@ def delete_component(component_id):
     return redirect(url_for('session.detail', session_id=session_id))
 
 # Attendance Routes
-@bp.route('/<int:session_id>/attendance', methods=['GET', 'POST'])
+@bp.route('/<sess:session_id>/attendance', methods=['GET', 'POST'])
 @login_required
 @coach_required
 def attendance(session_id):
@@ -736,8 +762,8 @@ def _session_or_404(session_id):
         id=session_id, team_organization_id=get_current_team_id()).first_or_404()
 
 
-@bp.route('/<int:session_id>/rsvp', methods=['GET', 'POST'])
-@bp.route('/<int:session_id>/rsvp/<int:player_id>', methods=['GET', 'POST'])
+@bp.route('/<sess:session_id>/rsvp', methods=['GET', 'POST'])
+@bp.route('/<sess:session_id>/rsvp/<int:player_id>', methods=['GET', 'POST'])
 @login_required
 def rsvp(session_id, player_id=None):
     """A player's answer for one session; admins can answer for a player
@@ -772,7 +798,7 @@ def rsvp(session_id, player_id=None):
                            player=player if player_id is not None else None)
 
 
-@bp.route('/<int:session_id>/admin_rsvp', methods=['GET', 'POST'])
+@bp.route('/<sess:session_id>/admin_rsvp', methods=['GET', 'POST'])
 @login_required
 @admin_required
 def admin_rsvp(session_id):
@@ -805,7 +831,7 @@ def admin_rsvp(session_id):
                            rsvps_by_status=rsvps_by_status)
 
 
-@bp.route('/<int:session_id>/rsvps')
+@bp.route('/<sess:session_id>/rsvps')
 @login_required
 def rsvps(session_id):
     """Who is coming. Players see names, numbers or nothing, as the team
@@ -1109,7 +1135,7 @@ def clean_drill_elements(elements):
     return [el for el in elements if el.get('type') in valid_types]
 
 # Additional API Routes for Drill Management
-@bp.route('/<int:session_id>/detail')
+@bp.route('/<sess:session_id>/detail')
 @login_required
 def detail(session_id):
     """Show session details"""
@@ -1170,7 +1196,7 @@ def detail(session_id):
         show_plan=show_plan,
     )
 
-@bp.route('/edit/<int:session_id>', methods=['GET', 'POST'])
+@bp.route('/edit/<sess:session_id>', methods=['GET', 'POST'])
 @login_required
 @coach_required
 def edit_session(session_id):
@@ -1210,7 +1236,7 @@ def edit_session(session_id):
         title='Edit Session Plan'
     )
 
-@bp.route('/delete/<int:session_id>', methods=['POST'])
+@bp.route('/delete/<sess:session_id>', methods=['POST'])
 @login_required
 @coach_required
 def delete_session(session_id):
@@ -1370,7 +1396,7 @@ def before_request():
     if 'static' in request.path:
         current_app.logger.debug(f"Static file request: {request.path}")
 
-@bp.route('/<int:session_id>/export_pdf')
+@bp.route('/<sess:session_id>/export_pdf')
 @login_required
 def export_pdf(session_id):
     """Download the session plan as a PDF."""
@@ -1414,7 +1440,7 @@ def export_pdf(session_id):
     return send_file(BytesIO(pdf), mimetype='application/pdf', as_attachment=True,
                      download_name=f'session_{session_id}_{name}.pdf')
 
-@bp.route('/<int:session_id>/printable')
+@bp.route('/<sess:session_id>/printable')
 @login_required
 def printable_view(session_id):
     """Show printable view of session plan"""
@@ -1503,7 +1529,7 @@ def guest_view(session_id, share_token):
     )
 
 
-@bp.route('/<int:session_id>/generate-share-link')
+@bp.route('/<sess:session_id>/generate-share-link')
 @login_required
 @coach_required
 def generate_share_link(session_id):
@@ -1536,7 +1562,7 @@ def generate_share_link(session_id):
     })
 
 
-@bp.route('/<int:session_id>/revoke-share-link', methods=['POST'])
+@bp.route('/<sess:session_id>/revoke-share-link', methods=['POST'])
 @login_required
 @coach_required
 def revoke_share_link(session_id):
@@ -1557,7 +1583,7 @@ def revoke_share_link(session_id):
         'message': 'Share link has been revoked'
     })
     
-@bp.route('/<int:session_id>/quick_checkin', methods=['POST'])
+@bp.route('/<sess:session_id>/quick_checkin', methods=['POST'])
 @login_required
 @admin_required
 def quick_checkin(session_id):

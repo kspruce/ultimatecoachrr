@@ -104,13 +104,13 @@ def test_the_demo_login_cannot_change_anything(app, demo):
     client = _demo_client(app)
     session = SessionPlan.query.filter_by(team_organization_id=demo).first()
     title = session.title
-    r = client.post(f'/sessions/edit/{session.id}', data={'title': 'Hacked'})
+    r = client.post(f'/sessions/edit/s{session.number}', data={'title': 'Hacked'})
     assert r.status_code == 302
     client.post('/auth/account', data={'email': 'me@example.com'})
-    r = client.post(f'/sessions/{session.id}/rsvp', json={'status': 'attending'})
+    r = client.post(f'/sessions/s{session.number}/rsvp', json={'status': 'attending'})
     assert r.status_code == 403
     assert client.get('/discord/connect').status_code == 302
-    assert client.get(f'/sessions/{session.id}/generate-share-link').status_code == 302
+    assert client.get(f'/sessions/s{session.number}/generate-share-link').status_code == 302
     db.session.expire_all()
     assert db.session.get(SessionPlan, session.id).title == title
     assert db.session.get(SessionPlan, session.id).share_token is None

@@ -63,7 +63,7 @@
             <span class="av-cell na" aria-label="Cancelled"></span>
             {% else %}
             <button type="button" class="av-cell {% if a %}s-{{ a.status }}{% if a.usual %} usual{% endif %}{% elif p.id not in c.expected %}na{% endif %}"
-                    data-session="{{ s.id }}" data-player="{{ p.id }}" data-status="{{ a.status if a and not a.usual else '' }}"
+                    data-session="{{ s.id }}" data-ref="{{ s.number }}" data-player="{{ p.id }}" data-status="{{ a.status if a and not a.usual else '' }}"
                     title="{{ p.name }}, {{ s.date.strftime('%-d %b') }}: {{ a.label if a else ('not their squad' if p.id not in c.expected else 'no answer') }}{% if a and a.usual %} (usual){% endif %}{% if a and a.notes %} – {{ a.notes }}{% endif %}"
                     aria-label="{{ p.name }}, {{ s.date.strftime('%-d %b') }}: {{ a.label if a else 'no answer' }}">{{ short[a.status] if a else '' }}</button>
             {% endif %}
@@ -117,7 +117,7 @@
     cell.disabled = true;
     try {
       const response = await fetch(`{{ url_for('training.answer', session_id=0, player_id=0) }}`
-        .replace('/0/answer/0', `/${cell.dataset.session}/answer/${cell.dataset.player}`), {
+        .replace('/s0/answer/0', `/s${cell.dataset.ref}/answer/${cell.dataset.player}`), {
         method: 'POST',
         headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrf, 'Accept': 'application/json'},
         body: JSON.stringify({status: next || 'none'}),

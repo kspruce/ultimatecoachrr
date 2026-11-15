@@ -50,14 +50,14 @@
           <i class="bi bi-journal-bookmark"></i> Drills
         </button>
         {% if previous %}
-        <button class="btn btn-outline-primary" data-copy="{{ previous.id }}" title="{{ previous.title }}">
+        <button class="btn btn-outline-primary" data-copy="{{ previous.number }}" title="{{ previous.title }}">
           <i class="bi bi-files"></i> Copy {{ previous.date.strftime('%-d %b') if previous.date else 'last session' }}
         </button>
         {% endif %}
         <select id="pb-start-from" class="form-select" aria-label="Start from a template or another session">
           <option value="">Start from…</option>
           {% if templates %}<optgroup label="Templates">{% for t in templates %}<option value="t{{ t.id }}">{{ t.name }} ({{ t.total_minutes }} min)</option>{% endfor %}</optgroup>{% endif %}
-          {% if recent %}<optgroup label="Earlier sessions">{% for s in recent %}<option value="s{{ s.id }}">{{ s.date.strftime('%-d %b %Y') if s.date else '' }} · {{ s.title }}</option>{% endfor %}</optgroup>{% endif %}
+          {% if recent %}<optgroup label="Earlier sessions">{% for s in recent %}<option value="s{{ s.number }}">{{ s.date.strftime('%-d %b %Y') if s.date else '' }} · {{ s.title }}</option>{% endfor %}</optgroup>{% endif %}
         </select>
         <button id="pb-template" class="btn btn-outline-secondary" aria-label="Save as template"><i class="bi bi-bookmark-plus"></i><span class="pb-template-label"> Save as template</span></button>
       </div>

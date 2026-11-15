@@ -264,8 +264,8 @@
     changed();
   }
 
-  async function copySession(id) {
-    const response = await fetch(data.copyUrl.replace('/0/', `/${id}/`), {headers: {'Accept': 'application/json'}});
+  async function copySession(number) {
+    const response = await fetch(data.copyUrl.replace('/s0/', `/s${number}/`), {headers: {'Accept': 'application/json'}});
     if (!response.ok) { alert('Could not load that session.'); return; }
     useBlocks((await response.json()).blocks);
   }

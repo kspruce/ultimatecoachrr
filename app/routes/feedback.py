@@ -140,7 +140,7 @@ def hub():
 
 # ── Quick-capture page ───────────────────────────────────────────────────────
 
-@bp.route('/sessions/<int:session_id>/feedback/quick')
+@bp.route('/sessions/<sess:session_id>/feedback/quick')
 @login_required
 def quick_capture(session_id):
     _require_coach()
@@ -189,7 +189,7 @@ def quick_capture(session_id):
 
 # ── AJAX save endpoint ───────────────────────────────────────────────────────
 
-@bp.route('/sessions/<int:session_id>/feedback/save', methods=['POST'])
+@bp.route('/sessions/<sess:session_id>/feedback/save', methods=['POST'])
 @login_required
 def save_feedback(session_id):
     if not current_user.is_coach:

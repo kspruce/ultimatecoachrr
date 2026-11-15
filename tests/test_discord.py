@@ -135,7 +135,7 @@ def test_webhooks_post_without_buttons(app, club, week, discord_calls):
     assert notify.post(club['team'].id, messages.session_post(session))
     method, url, kwargs = discord_calls[-1]
     assert url == WEBHOOK and 'components' not in kwargs['json']
-    assert kwargs['json']['embeds'][0]['url'].endswith(f'/sessions/{session.id}/detail')
+    assert kwargs['json']['embeds'][0]['url'].endswith(f'/sessions/s{session.number}/detail')
 
 
 def test_the_bot_posts_with_buttons(app, bot, club, week, discord_calls):
