@@ -168,8 +168,8 @@ Findings are ranked by how much they matter for the season goals. Each one says 
   - **Ladder climb** and the **jam drill** are named as key games and never used.
   - **Honeypass** has two different rule sets: a bonus for a set pair (drill library, Season plan) and "keep a shape and pass through set zones" (week 6).
 - **Goal it hurts:** the promise that each area grows from technique to pressure to team use; "keeping the disc".
-- **Fix:** a Jedi lanes game (described in full) in week 36; a throw-tired set after the 4v4 block in Phase 2; role progressions in the week 38 Plan A walk-through; one set of Honeypass rules; drop Ladder climb and jam drill from the "key games" cell only if the captains agree (they stay for now).
-- **Who:** Part 3.
+- **Fix:** a Jedi lanes game (described in full in the Drills tab) in week 36; a throw-tired set after the 4v4 block in weeks 15 and 17; role progressions in the week 38 Plan A walk-through; one set of Honeypass rules. Ladder climb and the jam drill stay in the "key games" cell for now.
+- **Who:** Part 3. Removing the two unused games from the curriculum table is Decision D16.
 
 ### 17. The same game comes back unchanged
 
