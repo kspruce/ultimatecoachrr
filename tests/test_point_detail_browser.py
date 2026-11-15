@@ -109,3 +109,28 @@ def test_game_day_shows_player_names_as_text(app, team, live_server, browser):
     assert page.evaluate('window.__xss') is None
     assert '<img src=x' in page.inner_text('#active-players')
     assert '<img src=x' in page.inner_text('#template-players-list')
+
+
+def test_game_stats_tooltips_show_player_names_as_text(app, live_server, browser):
+    """The pass network's tooltips on a game's stats page (seen by every
+    member) show player names as text."""
+    from tests import stats_data
+    team = stats_data.build_team()
+    admin = stats_data.build_admin(team, 'statsadmin', superadmin=False)
+    players = stats_data.build_players(team, 14)
+    stats_data.record_season(app, team, admin, players, games_per_tournament=1, points_per_game=2)
+    for player in Player.query.filter_by(team_organization_id=team.id):
+        player.name = NAME_XSS
+    db.session.commit()
+    game_id = Game.query.filter_by(team_organization_id=team.id).first().id
+    admin, team = db.session.get(User, admin.id), db.session.get(TeamOrganization, team.id)
+    page = logged_in_page(app, browser, live_server, admin, team)
+    page.goto(live_server + f'/stats/game/{game_id}')
+    page.wait_for_selector('#player-connections circle', state='attached')
+    page.evaluate("""() => {
+        d3.selectAll('#player-connections circle').dispatch('mouseover');
+        d3.selectAll('#player-connections line').dispatch('mouseover');
+    }""")
+    page.wait_for_timeout(500)
+    assert page.evaluate('window.__xss') is None
+    assert '<img src=x' in page.inner_text('.d3-tooltip')
