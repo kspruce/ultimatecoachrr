@@ -6,6 +6,7 @@ from app.models.season import Squad
 from app.routes.session import plan_squad_for
 from tests import stats_data
 from tests.test_training import TODAY, club, login, make_user  # noqa: F401
+from tests.urls import sref
 
 
 def add(c, title, **data):
@@ -49,7 +50,7 @@ def test_ticked_squads_set_the_filter(app, club):
     assert everyone.squad == 'joint' and everyone.squads == []
 
     # Editing moves it to the other squad
-    r = c.post(f'/sessions/edit/{seconds.id}', data={
+    r = c.post(f'/sessions/edit/{sref(seconds.id)}', data={
         'title': 'Seconds night', 'date': TODAY.isoformat(), 'session_type': 'invited_training',
         'is_published': 'y', 'squads': [str(club['firsts'].id)]})
     assert r.status_code == 302
@@ -85,6 +86,6 @@ def test_a_club_without_squads_picks_joint_1s_or_2s(app):
     session = add(c, 'Firsts only', plan_squad='1s')
     assert session.squad == '1s' and session.squads == []
 
-    edit = c.get(f'/sessions/edit/{session.id}').get_data(as_text=True)
+    edit = c.get(f'/sessions/edit/{sref(session.id)}').get_data(as_text=True)
     assert '<option selected value="1s">' in edit
     assert 'Firsts only' in listed(c, '1s') and 'Firsts only' not in listed(c, 'joint')

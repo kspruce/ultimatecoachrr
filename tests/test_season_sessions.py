@@ -14,6 +14,7 @@ from app.utils.season_sessions import (
 )
 from tests import stats_data
 from tests.test_season_plan import client, do_import, enable, herd, needs_export  # noqa: F401
+from tests.urls import sref
 
 WEEK_MD = """**Learning points:** (1) Balance. (2) Use your pivot. (3) Two hands.
 
@@ -313,7 +314,7 @@ def test_sessions_page(app, herd):
     assert 'Up to date' in coach.get('/season-plan/sessions').get_data(as_text=True)
 
     # Built sessions say where to edit them, and the week lists them
-    detail = coach.get(f'/sessions/{joint.id}/detail').get_data(as_text=True)
+    detail = coach.get(f'/sessions/{sref(joint.id)}/detail').get_data(as_text=True)
     assert 'Built from the season plan' in detail and '/season-plan/week/1/edit' in detail
     week = coach.get('/season-plan/week/1').get_data(as_text=True)
     assert '1s session' in week and '2s session' in week
@@ -389,5 +390,5 @@ def test_herd_drill_library_fills_in_the_real_plan(app, herd):
 
     # The session page shows the drill's description when the activity has none
     enable(herd['team'])
-    page = client(app, herd, 'coach').get(f'/sessions/{c.session_id}/detail').get_data(as_text=True)
+    page = client(app, herd, 'coach').get(f'/sessions/{sref(c.session_id)}/detail').get_data(as_text=True)
     assert 'How it runs' in page and 'Linked Drill: Three-person break force' in page

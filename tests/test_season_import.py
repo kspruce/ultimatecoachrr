@@ -8,7 +8,7 @@ from app import db
 from app.models.drill import SavedDrill, DrillDiagram
 from app.models.session import SessionPlan, SessionComponent
 from app.utils.season_import import import_season, SeasonImportError
-from tests.urls import session_path
+from tests.urls import session_path, sref
 
 FIXTURES = os.path.join(os.path.dirname(__file__), 'fixtures')
 IMAGES = os.path.join(FIXTURES, 'season_images')
