@@ -32,7 +32,7 @@
             </form>
             {% if not (c.games or c.tournaments or c.sessions) %}
             <form method="post" action="{{ url_for('seasons.delete', season_id=s.id) }}" class="m-0"
-                  onsubmit="return confirm('Delete the {{ s.name }} season? Its roster goes too; players are kept.')">
+                  onsubmit="return confirm({{ ('Delete the ' ~ s.name ~ ' season? Its roster goes too; players are kept.')|tojson|forceescape }})">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button>
             </form>
@@ -69,7 +69,7 @@
           <button class="btn btn-sm btn-outline-secondary" type="submit">Rename</button>
         </form>
         <form method="post" action="{{ url_for('seasons.delete_squad', squad_id=sq.id) }}" class="m-0"
-              onsubmit="return confirm('Delete squad {{ sq.name }}? Its players, games and tournaments are kept, just without a squad.')">
+              onsubmit="return confirm({{ ('Delete squad ' ~ sq.name ~ '? Its players, games and tournaments are kept, just without a squad.')|tojson|forceescape }})">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button>
         </form>
