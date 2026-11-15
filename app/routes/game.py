@@ -18,6 +18,7 @@ from app.utils.tournament_rsvp import assign_default_players
 from app.models.scouting import scouting_for_game
 from app.utils.team_filter import get_current_team_id, team_player_ids
 from app.utils.point_flow import analysis_progress
+from app.utils.media_embed import is_web_url
 from app.utils.season import scope_games, scope_tournaments, team_squads, viewing_season, viewing_squad
 
 bp = Blueprint('game', __name__, url_prefix='/games')
@@ -482,7 +483,7 @@ def add_multiple():
                 date=day or (tournament.start_date if tournament else None),
                 start_time=start_time,
                 field=cell(fields, i)[:50] or None,
-                youtube_link=cell(links, i) or None,
+                youtube_link=cell(links, i) if is_web_url(cell(links, i)) else None,
                 notes=cell(notes, i) or None,
                 team_organization_id=team_id,
             )

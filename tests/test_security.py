@@ -225,3 +225,23 @@ def test_names_in_inline_handlers_stay_strings(app):
         handlers += found
     for handler in handlers:
         assert QUOTE_BREAK not in handler, handler
+
+
+JS_LINK = 'javascript://example.com/%0aalert(document.cookie)'
+
+
+def test_game_video_links_must_be_web_links(season):
+    """Game video links are printed as links on the games pages. WTForms'
+    URL() check lets javascript://host/%0a... through, and adding several
+    games at once didn't check the links at all."""
+    coach = season['coach']
+    coach.post('/games/add', data={'opponent': 'Single', 'date': '2026-06-01', 'tournament_id': '0',
+                                   'youtube_link': JS_LINK})
+    coach.post('/games/add_multiple', data={'opponent[]': ['Bulk', 'Bulk ok'], 'date[]': ['2026-06-02'] * 2,
+                                            'youtube_link[]': [JS_LINK, 'https://youtu.be/abc12345678']})
+    db.session.expire_all()
+    assert Game.query.filter_by(opponent='Single').first() is None or \
+        Game.query.filter_by(opponent='Single').first().youtube_link is None
+    assert Game.query.filter_by(opponent='Bulk').one().youtube_link is None
+    assert Game.query.filter_by(opponent='Bulk ok').one().youtube_link == 'https://youtu.be/abc12345678'
+    assert not Game.query.filter(Game.youtube_link.like('javascript%')).count()
