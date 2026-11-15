@@ -75,7 +75,7 @@ Each week lists three learning points, a timed joint session and both split sess
 - **Stability:** step into the throw with most of your weight on the non-pivot foot, stay upright, and don't need an extra step afterwards. Being off balance costs accuracy, and a lifted pivot foot is a travel. If someone leans forward, have them pivot at 90 degrees to the target and hold the non-throwing arm out for balance (DK 4.4, 4.8.4).
 - **Say:** "Step, flick, point." The arm traces a straight line to the target and finishes pointing at it, not above the shoulder (DK 4.3, 4.8).
 - **The pivot gives you 360 degrees of freedom:** step closer to the marker for quick flat throws, further away for wider arcs (BFD ch. 1).
-- **1s vocabulary:** dump = any pass behind the disc line; mac = upline cut from level with or above the disc; zip = vertical cut for a short throw on the move; dynamic dump = a dump caught on the closed side that flows quickly to the break side. Call them out loud. "The time spent training these fundamentals will never be enough" (BFD 1.2).
+- **1s vocabulary:** dump = any pass behind the disc line; mac = upline cut from level with or above the disc; zip = vertical cut for a short throw on the move; dynamic dump = a dump caught on the break side that starts quick flow there. Call them out loud. "The time spent training these fundamentals will never be enough" (BFD 1.2).
 - **2s: the Five Frisbee Habits:** sprint your cuts; cut up and down, not across; check behind you when you go deep; look for the dump by stall 5; only throw to people who are free. "It is never a bad idea to use the dump" (DK 6.11).
 - **Rules for experienced players with newcomers:** no Ds on newcomers, throw to them, don't poach, no stall (DK welcome session).
 - **Ask:** "What challenges does a thrower face getting space to throw? Can the defender stop everything? Which pivot foot gets more range?" (Flik)
@@ -589,7 +589,7 @@ Each week lists three learning points, a timed joint session and both split sess
 - **Say:** "Low, fast feet, head up, pick your spot" (UAP Defensive footwork, Matthews).
 - **Don't turn your hips or back:** the attacker will attack your shoulder to turn your hips. Run progressively: sidestep, then crossover, then sprint (DK).
 - **Defence is about space:** compress receivers into the area you want, disrupt their easiest sprint path, and close the passing lane rather than chasing (BFD).
-- **Defensive priorities:** the team agrees an order of spaces to protect. Flik suggests newer teams protect the open under first, then deep, then break (Flik L4 Lesson 6). Our back-shoulder match D protects deep first and concedes the under, so tell the 2s which order they're using.
+- **Defensive priorities:** the team agrees an order of spaces to protect. Flik suggests newer teams protect the open under first, then deep, then break (Flik L4 Lesson 6). Our back-shoulder person D protects deep first and concedes the under, so tell the 2s which order they're using.
 - **Buffering:** keep the "string from belly button to belly button" (Flik L4 Lesson 6).
 - **Keeping margins:** "do this every training at high intensity and players will be in great shape for D" (HB Tr 22).
 - **Ask:** "Why is it important to use footwork to maintain your defensive priorities?" (Flik L4 Lesson 8). "What happens when people get away from the team objective? How does a team build trust in its system?" (Flik L2 Lesson 8)
@@ -619,7 +619,7 @@ Each week lists three learning points, a timed joint session and both split sess
 | 1:20 | Space Invaders, 4v4: the defence scores by where the offence catches: block, turn or stall 3; break 2; deep 1; open under 0 | Back-shoulder game, 4v4: an under conceded costs nothing; a deep catch scores 2 for the offence; a block or stall scores 2 for the defence | Flik; Plan |
 | 1:40 | Small-sided games: 4v4 continuous, stall 5 | 4v4 continuous, stall 7 | BFD S&C |
 | 2:00 | 2v2 deep space: the defence must stop the deep first, then the under; then Blocks Only, 5v5 | Zig-zag and tunnel drills (10 min); then Blocks Only, 5v5, where any touch by the defence counts | Plan; DK 8.23, 8.24; IF |
-| 2:30 | Scrimmage, consequence: a defender beaten deep from the wrong shoulder (not on the deep, open-side shoulder) does a 20 m sprint; beaten from the right position costs nothing | Scrimmage, match D; Last touch picks up | Plan; DK 7.9 |
+| 2:30 | Scrimmage, consequence: a defender beaten deep from the wrong shoulder (not on the deep, open-side shoulder) does a 20 m sprint; beaten from the right position costs nothing | Scrimmage, person D; Last touch picks up | Plan; DK 7.9 |
 | 2:55 | Recap | Recap |  |
 
 **What the games push players to do**
@@ -899,7 +899,7 @@ Coaches' reference (players pick these up through play; no need to teach them as
 
 | Term | Meaning |
 | --- | --- |
-| Dynamic dump | A dump caught on the closed side that flows quickly to the break side (BFD) |
+| Dynamic dump | A dump caught on the break side that starts quick flow there (BFD) |
 | Home position | Both hands on the disc, lined up with your centre: where every pivot and fake starts (HN) |
 | Shimmy | A fake of the first few inches of a pivot (HN) |
 | Half pivot | Releasing before the non-pivot foot lands (HB) |

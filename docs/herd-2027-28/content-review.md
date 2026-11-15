@@ -7,7 +7,7 @@ Work in progress. This file is the handover: it says what is done and what is ne
 | Part | State |
 | --- | --- |
 | 1. Coverage and progression | Done |
-| 2. One language | Not started |
+| 2. One language | Done |
 | 3. Timing (release calendar) | Not started |
 | 4. Better drills | Half done: the plan's own notes are in; hand-written gaps are next |
 | 5. Handbook and guide | Not started |
@@ -23,7 +23,7 @@ python imports/drills/tools/build_drills.py imports/drills/tools            # re
 python imports/drills/tools/build_drills.py imports/drills/tools --write    # write the files
 ```
 
-- `newdrills.py`: the new library entries (`NEW`) and the plan cells renamed so they link to a drill (`RENAMES`).
+- `newdrills.py`: the new library entries (`NEW`), used only the first time an entry is added (after that, edit the JSON or `enrich.py`), and the plan cells renamed so they link to a drill (`RENAMES`).
 - `enrich.py`: hand-written harder, easier, 1s and 2s, and Ask lines for drills the plan's notes don't cover (`ENRICH`, keyed by drill title).
 - `build_drills.py`: adds the new entries, then for every drill writes the Serves line (problem area and phase), the weeks the plan really uses it, and the harder, easier and Ask lines it finds in the session tabs' notes. It is safe to run again.
 
@@ -59,6 +59,22 @@ The report lists drills still missing a Harder, Easier or Ask section (`no_harde
 - **Nothing cut or merged.** The follow-up cards (8, 13, 16, 25, 28, 38) repeat their parent cards on purpose.
 - **Looked at and left:** "throwing tired and quick release after the catch" (Phase 2 throwing base) has no card of its own. Cards 8, 26 and 32 cover quick releases, and weeks 14 and 22 already have two new cards each.
 
+## Part 2: one language (done)
+
+**Terms fixed**
+
+| Was | Now | Where |
+| --- | --- | --- |
+| "match defence", "match D", "switch to match" | person defence, person D | Card 31; Season plan (CRUMBLE); Phase 1 and 2 sessions |
+| "benchmark", "benchmarks", "benchmark tests" | skill tests (or "the hucking alley test") | Cards 10 and 14, the release calendar, two drills, the Drills tab, three handbook pages |
+| "closed side" | break side | Card 22; Phase 1 and 2 sessions. The glossary still gives "closed side" as another name |
+| Dynamic dump "caught on the closed side that flows to the break side" | "caught on the break side that starts quick flow there" (the Season plan's wording) | Card 1; Phase 1 sessions, twice |
+| Problem areas named three ways | The pitch's four names: getting open, seeing the field, breaking the mark, keeping the disc | Card release lines ("2028 priority: ..."); the drill library's focus areas; the Season plan's curriculum rows now read "Getting open (cutting under pressure)", "Seeing the field (reading the pitch)", "Keeping the disc (retention)" |
+
+**Glossary:** 32 entries added for words the cards and drills use without explaining: disc line; active, inactive and ready space; negative and positive; dynamic dump; Jedi; threat position; mac; zip; cut families; peppermill; bucket, controller and crash; "Endzone" and "Spread"; triangle, flat and extended mark; force middle; back shoulder; heads-up D; Bull zone; arrowhead; CRUMBLE; buzz switch; the four problem areas; skill tests and mini-tests; development focus; skill floor; mentor pair; skill lead; sideline buddy; 4v3 mini; 5-pull and 8-pull; the three handling rules; Plans A, B and C. "Dump or reset" now matches Card 1 ("any pass behind the disc line").
+
+**Left alone:** "field" and "pitch" are both used everywhere (the pitch itself says "seeing the field"), and "horo", "ho" and "horizontal stack" are all in the glossary.
+
 ## Part 4: better drills (half done)
 
 Every drill now has a Serves line and the correct weeks. Harder, Easier and Ask lines from the session tabs are in. Still to write by hand in `enrich.py`: about 65 drills with no Harder or Easier, and about 75 with no Ask.
@@ -68,6 +84,8 @@ Every drill now has a Serves line and the correct weeks. Harder, Easier and Ask 
 - `tests/test_theory_import.py`: the cards file now has 51 cards, so the expected card numbers per section, the counts (52 became 54, which includes the three notes) and the last card in Compete were updated.
 
 ## Needs a coach's decision
+
+- The Season plan's curriculum rows now lead with the pitch's names for the problem areas. The pitch, Goals and Principles are untouched. Say if you would rather keep the old row names.
 
 - Card 50 goes out in week 6. If you want it before the October tests, a week 1 or 2 card has to move, because those weeks already have two.
 
