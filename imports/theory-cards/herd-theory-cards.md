@@ -7,6 +7,7 @@ Each card is one idea a player can read in three minutes, posted the week it is 
 - **Release:** post the card on Discord a day or two before the session in the week listed. The Release calendar lists the cards week by week, with no more than two new cards in any week. Anything about this season in particular (a 2028 priority, a squad number) sits on the Release line, so the rest of the card can be reused next year.
 - **At training** says where the idea is coached. **On your own** is one thing a player can do alone before the session. **Check yourself** is one or two questions; the answers are in the card.
 - **Next level** is one extra idea for experienced and elite players. Everyone else can skip it.
+- **Cards 50 and 51** were added after the first 49, so they sit in their sections out of number order.
 - **Follow-up cards** (Cards 8, 13, 16, 25, 28 and 38) collect the extra detail for experienced players and go out later in the season. They have no Next level of their own.
 - **Diagram** lines say what to draw. Pull the figure from the Ultimate Coach Figures folder or sketch a new one.
 - **Source** names where the card is adapted from, so you can check the detail. The codes (HN, BFD, DK and so on) are explained at the end of the Glossary.
@@ -25,7 +26,7 @@ What to post each week. New cards go out a day or two before that week’s sessi
 | 3 | Catching | 5 Catching · 21 The handler’s job | — |
 | 4 | Acceleration and change of direction | 14 The first three steps · 15 Getting open | — |
 | 5 | Throwing to space; vert stack from the back | 6 Throw to space · 35 Vert stack | — |
-| 6 | Clearing and space; vert stack from the front | 17 Clearing and space | 35 Vert stack |
+| 6 | Clearing and space; vert stack from the front; first mini-test | 17 Clearing and space · 50 Your tests and your focus | 35 Vert stack |
 | 7 | Marking base | 27 Our marks | — |
 | 8 | Defensive footwork | 29 Defensive footwork | — |
 | 9 | Reading the thrower; flat mark | 30 Reading the thrower · 47 Sideline talk | 27 Our marks |
@@ -36,16 +37,16 @@ What to post each week. New cards go out a day or two before that week’s sessi
 | 14 | Restart: resets under a live mark | 22 Resets · 45 Process over outcome | 21 The handler’s job |
 | 15 | Breaking the mark under pressure; horo stack | 36 Horo stack and dominator | 7 Breaking the mark |
 | 16 | Beating a good mark; the dominator | 23 Beating a good mark · 26 Give-and-go and the dish | 36 Horo stack and dominator |
-| 17 | Reading the pitch; team defence | 18 Reading the pitch · 46 Performing under pressure | — |
-| 18 | Trial 1: benchmarks and small-sided games | — | 14 The first three steps · 46 Performing under pressure |
+| 17 | Reading the pitch; team defence | 18 Reading the pitch · 46 Performing under pressure | 50 Your tests and your focus |
+| 18 | Trial 1: skill tests and small-sided games | — | 14 The first three steps · 46 Performing under pressure |
 | 19 | Trial 2: breaking and reading | 44 Good throw vs good decision | — |
 | 20 | Trial 3: defence and full games | 31 Downfield D | — |
-| 21 | Escaping the sideline | 24 Getting off the sideline | — |
+| 21 | Escaping the sideline | 24 Getting off the sideline · 12 Throwing in the wind | — |
 | 22 | Quick disc processing and transitions | 32 Transition · 48 Tournament day | 26 Give-and-go and the dish · 35 Vert stack · 36 Horo stack and dominator · 44 Good throw vs good decision |
 | 23 | Solent warm-up: game day, pull plays and the endzone | 37 Pulls and pull plays · 39 Endzone and Spread | 47 Sideline talk |
 | 24 | Defence for Tour 1; squads announced | 33 Poach and clog · 40 Bull zone | — |
-| 25 | Defence and zones in the wind; aerial contests | 20 Winning the deep ball · 41 Arrowhead | 40 Bull zone |
-| 26 | UKU Tour 1 | 12 Throwing in the wind | 48 Tournament day |
+| 25 | Defence and zones in the wind; aerial contests; the skill floor starts | 20 Winning the deep ball · 41 Arrowhead | 12 Throwing in the wind · 40 Bull zone · 50 Your tests and your focus |
+| 26 | UKU Tour 1 | — | 12 Throwing in the wind · 48 Tournament day |
 | 27 | Tour 1 fixes; zone offence; endzone | 42 Zone offence | 39 Endzone and Spread |
 | 28 | Hucking to space and deep cutting | 9 The huck · 19 Deep cutting | 10 The backhand huck · 11 The forehand huck |
 | 29 | Herdlodge | — | — |
@@ -53,9 +54,9 @@ What to post each week. New cards go out a day or two before that week’s sessi
 | 31 | Pulling and the pull chase; UKU Tour 2 | 38 Pulling technique | 37 Pulls and pull plays · 48 Tournament day |
 | 32 | Breaking the mark refresher; dominator against poaches | 8 Breaking the mark 2 | 7 Breaking the mark · 26 Give-and-go and the dish |
 | 33 | Switching on defence | 34 Switching · 43 Force middle and marking options | 33 Poach and clog · 40 Bull zone |
-| 34 | Tempo; zone offence over the top | — | 42 Zone offence |
-| 35 | Benchmarks; 1s v 2s scrimmage | 16 More ways to get open | — |
-| 36 | Retention refresher; Tour 3 game plans | 25 Late-stall escapes | — |
+| 34 | Tempo; zone offence over the top | 51 Tempo | 42 Zone offence |
+| 35 | Mid-season skill tests; 1s v 2s scrimmage | 16 More ways to get open | 50 Your tests and your focus |
+| 36 | Retention refresher (Jedi lanes game); Tour 3 game plans | 25 Late-stall escapes | 22 Resets |
 | 37 | UKU Tour 3 | — | 48 Tournament day |
 | 38 | Tour 3 review; scouting | 49 Scouting and game plans | — |
 | 39 | Marking and switching marks; defence plans | 28 Marking 2 | 27 Our marks · 41 Arrowhead · 43 Force middle and marking options |
@@ -81,18 +82,24 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 | Trap | A force towards the nearby sideline, which leaves the thrower only a narrow strip of open side. |
 | Point of attack | Where the disc is. Changing it means moving the disc across the pitch, so we attack from a new angle. |
 | Upfield and downfield | Towards the endzone we are attacking. The backfield is the space behind the disc. |
+| Disc line | An imaginary line across the pitch through the disc. |
+| Active, inactive and ready space | Where we are attacking, where we are not, and where we wait to set up. Card 17. |
 
 **Throws**
 
 | Word | Means |
 | --- | --- |
 | Huck | A long throw. |
-| Dump or reset | A short pass, usually backwards, that restarts the stall count. |
+| Dump or reset | Any pass behind the disc line. It restarts the stall count. The player who sets up to receive it is also called the dump or the reset. |
+| Negative and positive | Where the reset sets up: negative is behind the disc (about 45°) on the open side; positive is ahead of it (about 30°) on the break side. Card 22. |
+| Dynamic dump | A dump caught on the break side that starts quick flow there. |
+| Jedi | A dump and swing that gains yards: every throw that loses yards is followed by a change in the point of attack. |
 | Swing | A pass across the pitch, usually between handlers. |
 | Dish | A very short, soft pass to a teammate running past. |
 | IO (inside-out) | A throw that starts across your body and curves back out towards your throwing side. |
 | OI (outside-in) | A throw that starts wide on your throwing side and curves back in. |
 | Around | A break throw that goes wide, round the marker. |
+| Threat position | Setting up on the catch as if you are about to make a specific throw, so the marker has to choose. Card 23. |
 | Hammer, scoober, blade | Throws that go over defenders. The hammer and scoober fly upside down; a blade is thrown on a steep edge. |
 | Point block | The marker blocking the throw as it is released. |
 
@@ -106,6 +113,9 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 | Under | A cut back towards the disc. |
 | Away or deep | A cut away from the disc, towards the endzone we are attacking. |
 | Upline | A handler’s cut from behind or level with the disc, running upfield past the thrower. |
+| Mac | An upline cut in front of the disc, starting at or above the disc line. |
+| Zip | A vertical cut for a short throw on the move. |
+| Cut families | The three ways to get separation: explosion, commitment and shoulder. Card 15. |
 | Power position | Catching the disc while you are moving upfield with your marker trailing, so you can throw before the mark is set. |
 | Clear | Leaving a space after your cut so that a teammate can use it. |
 | Continuation | The next cut after a completed pass, timed so the disc keeps moving. |
@@ -113,19 +123,32 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 | Vert | The vertical stack: cutters line up down the middle of the pitch. Card 35. |
 | Horo or ho | The horizontal stack: cutters spread across the pitch. Card 36. |
 | Dominator | Two or three handlers working the disc upfield with give-and-goes. Card 36. |
+| Peppermill | In the horo, the two cutters in front of the disc cut equal and opposite, then take each other’s space. Card 36. |
+| Bucket, controller, crash | Zone offence words. The bucket is four handlers across the full width; the controller gets every second pass; to crash is to move into the space inside the cup for a short pass. Card 42. |
+| “Endzone” and “Spread” | Our two calls near the endzone. Card 39. |
 
 **Defence**
 
 | Word | Means |
 | --- | --- |
 | Mark or marker | The defender on the thrower. |
-| Person D | Each defender guards one player. |
+| Triangle mark | Our default mark: hand takes the shown throw, body the around, shoulder the inside. Card 27. |
+| Flat mark | The mark we switch to on a call: shoulders and hips parallel to the endzone. Card 27. |
+| Extended mark | A marker reaching as far as they can, used in training to make breaking harder. |
+| Force middle | Marks force the thrower towards the middle of the pitch. Card 43. |
+| Person D | Person defence: each defender guards one player. Some teams call it match defence. |
+| Back shoulder | Where a downfield defender stands: on the cutter’s deep, open-side shoulder. Card 31. |
+| Heads-up D | Stealing a look at the pitch while you guard your player. Card 31. |
 | Zone | Defenders guard areas of the pitch, not players. Cards 40 and 41. |
+| Bull zone | Herd’s 2-3-2 zone. Card 40. |
+| Arrowhead | Our zone for a strong crosswind: a wall in front of the disc, with a line trap on the sideline. Card 41. |
+| CRUMBLE | The call to switch from the Bull zone to person defence. Everyone echoes it. |
 | Cup | In a zone, the defenders around the thrower who block the forward throws. |
 | Buffer | The gap a defender keeps between themselves and their cutter. |
 | Poach | Leaving your player to defend a space or a throw. Card 33. |
 | Clog | Standing in a throwing lane to block it. |
 | Switch | Two defenders swapping players. Card 34. |
+| Buzz switch | The nearest defender takes a cutter who has beaten their defender deep. Card 34. |
 
 **Games and the club**
 
@@ -134,6 +157,17 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 | 1s and 2s | Herd’s first and second teams. |
 | Joint and split sessions | In a joint session both squads train together. In a split session the 1s and 2s train separately. |
 | C1 to C12 | The classroom sessions. |
+| The four problem areas | What let us down last season: getting open, seeing the field, breaking the mark and keeping the disc. Cutting under pressure, reading the pitch and retention are the skills that fix the first, second and fourth. |
+| Skill tests and mini-tests | The four tests every player does four times a season, and the short version (Get 10 and the 1v1 cutting test) every four to six weeks. Card 50. |
+| Development focus | The one skill you are working on, agreed after each full test round. Card 50. |
+| Skill floor | From week 25, the 25 minutes after the warm-up in joint sessions, spent in threes on each player’s development focus. Card 50. |
+| Mentor pair | A 1s player paired with a 2s or newer player for the season. |
+| Skill lead | An experienced player who owns one skill area and helps you set your development focus. |
+| Sideline buddy | Your partner on the sideline at a tournament. Card 47. |
+| 4v3 mini | The club’s warm-up finisher: four attackers against three defenders, one possession each. |
+| 5-pull and 8-pull | Scrimmage formats where one team pulls five or eight times in a row. |
+| Last touch picks up, Golden Arm rotation, Three new handlers | The three rules that make sure everyone handles in 2s scrimmages. |
+| Plans A, B and C | Our game plans for an opponent, each with a one-word call. Card 49. |
 | O-line and D-line | The players who start points on offence, and those who start on defence. |
 | Hold and break | A hold is a goal by the team that started the point on offence. A break is a goal by the team that started on defence. (A break throw is something else: see Break side.) |
 | Universe point | The deciding point, when the next goal wins. |
@@ -143,7 +177,7 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 | Code | Source |
 | --- | --- |
-| HN | The Herd OneNote coaching notebook (section and page given) |
+| HN | The Herd OneNote coaching notebook (section and page given). “HN Amsterdam Conference” is the set of talks the season plan calls Rise Up and the handbook calls Amsterdam talks |
 | BFD | Bologna Flying Disc, *Elite Coaching Program* |
 | DK | *DK’s Bible*, the Mythago Training Manual |
 | HB | Hildo Bijl, *Ultimate Trainer’s Manual* |
@@ -167,10 +201,11 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 | Call | Means |
 | --- | --- |
 | Dump | Any pass behind the disc |
-| Mac | Upline cut from level with or above the disc |
+| Mac | Upline cut in front of the disc, starting at or above the disc line |
 | Zip | Vertical cut for a short throw on the move |
-| Dynamic dump | Dump caught on the closed side that flows straight to the break side |
+| Dynamic dump | Dump caught on the break side that starts quick flow there |
 | Negative / positive | Reset set behind the disc (about 45°) on the open side / ahead (about 30°) on the break side |
+| Jedi | Dump and swing that gains yards: every throw that loses yards is followed by a change in the point of attack |
 
 **Coaching cue:** “It is never a bad idea to use the dump.”
 
@@ -238,6 +273,40 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 **Source:** The Inner Game of Ultimate Frisbee (Adams); HN Coach Corner (Getting out of your head; Zone of Proximal Development).
 
+## Card 50 · Your tests and your focus: measure it, pick one thing
+
+**Release:** week 6, before the first mini-test; re-shared in week 17 before the Trial 1 tests, in week 25 when the skill floor starts, and in week 35. 2028 season: every player improves on 3 of the 4 skill tests.
+
+**Why it matters.** Herd is a place where everyone gets better, and the tests are how you see it. They compare you with yourself in October, not with anyone else. Your results tell you the one thing to work on next.
+
+**Three key points**
+
+1. **Four skill tests, four times.** Everyone does them in October, at Trial 1 (week 18), in week 35 and in September.
+
+| Skill test | What you do | What it measures |
+| --- | --- | --- |
+| Hucking alley | 10 hucks into a 20 m-wide lane | The throwing base |
+| Get 10 | 10 throws past a marker, against each force | Breaking the mark |
+| 1v1 cutting test | 10 cuts against a back-shoulder defender, open before stall 6 | Getting open |
+| Catching under pressure | 20 catches at full speed | Keeping the disc |
+
+2. **Mini-tests in between.** Every four to six weeks, Get 10 and the 1v1 cutting test take 20 minutes of a joint session. Enter your own scores under Tests in the home programme and watch your curve.
+3. **One development focus.** After each full round you agree one focus with a skill lead or captain, normally your weakest test against your squad’s middle score. It decides your third home throwing session each week and what you do on the skill floor.
+
+**Coaching cue:** “Your curve, not today’s number.”
+
+**Diagram:** one player’s four test scores as four lines across the season, with the development focus marked on the lowest line.
+
+**At training:** week 6 joint session, the first mini-test, in the focused-throwing slot. From week 25, every full joint session starts with the skill floor: 25 minutes in a group of three built around your mentor pair, 12 minutes on each partner’s focus, with roles rotating after every rep.
+
+**On your own:** look up your October scores. Write down your development focus and the score you want at the next mini-test, and tell your mentor partner.
+
+**Check yourself:** What are the four skill tests? What decides your development focus?
+
+**Next level:** track a game number as well. From filmed games you get your turnovers per touch and your completed breaks. A confident break thrower scores 8 or more on Get 10 on both sides and completes 80% of break throws in filmed games.
+
+**Source:** Season plan (Measuring improvement; Weekly structure, The skill floor; Throwing outside training); Phase 1 sessions (test protocols).
+
 # Throw and catch
 
 ## Card 4 · Grip, pivot and fakes: be a threat on every catch
@@ -256,7 +325,7 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 **Diagram:** a thrower and marker from above, showing the pivot’s reach to each side and the break-side space behind the marker.
 
-**At training:** week 2 joint session, compass throwing and fake-fake-throw. The split sessions use the 3-handler game.
+**At training:** week 2 joint session, compass throwing and fake-fake-throw, then Gauntlet and Front Force Only. In the split sessions the 1s play the 3-handler game and the 2s the sideline-start game.
 
 **On your own:** 20 pivots in front of a mirror or window: home position, step, fake, back to home. No extra step, and every fake should look like a throw.
 
@@ -298,7 +367,7 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 **Release:** week 5
 
-**Why it matters.** Retention starts here. A receiver running into space is easier to hit and harder to defend than a receiver standing still.
+**Why it matters.** Keeping the disc starts here. A receiver running into space is easier to hit and harder to defend than a receiver standing still.
 
 **Three key points**
 
@@ -310,7 +379,7 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 **Diagram:** a cutter’s path with the disc landing ahead of them, marked “throw here”, and a ghost receiver at the release point marked “not here”.
 
-**At training:** week 5 joint session, the lead-pass drill, then Space Hopper and Golden Hand.
+**At training:** week 5 joint session, Under-to-away lead passes, then Space Hopper, Archery and Golden Hand.
 
 **On your own:** 30 throws at a tree or goalpost from 15 m. Drive the disc through the target with a full follow-through rather than guiding it: accuracy comes from spin.
 
@@ -338,7 +407,7 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 **Diagram:** a thrower and triangle mark from above, with the IO break at about 75° into the break side and the around break past the marker’s foot.
 
-**At training:** week 10 joint session, wide-release pairs, the cone-width ladder, low releases, then Get 10 with no throws above the marker’s arm. Finish with Classic Breakmark, the Herd classic.
+**At training:** week 10 joint session, wide and low releases (stepping out past a cone, then under a pool noodle), the Break Force Game, then Get 10 in the mini-test. Finish with the Break-Throw Bonus Point game.
 
 **On your own:** the 10-minute low-release session (linked under Drills), or 20 wide and 20 low releases on each side, holding every finish for two seconds.
 
@@ -390,7 +459,7 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 **Diagram:** the IO → flat → OI flight path, landing on the break side ahead of the cutter.
 
-**At training:** week 28 joint session, hucking shapes and deep-space games. Score with Archery: +2 caught in stride, +1 overthrown, 0 if the cutter has to wait.
+**At training:** week 28 joint session, huck technique, then the Box hucking challenge: 1 for a huck that lands in the box, 2 if the runner catches it in stride. Then Long and short bonus points.
 
 **On your own:** the hucking alley: 10 hucks into a 20 m lane, counting how many land in. Then throw a few at 110% of your range.
 
@@ -418,7 +487,7 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 **Diagram:** a thrower from above: sideways step, shoulders turned away at the load, then the arm fully extended towards the target at release.
 
-**At training:** week 28 joint session, backhand huck technique, building up from wrist only to step to full throw. Check progress on the hucking alley benchmark.
+**At training:** week 28 joint session, backhand huck technique, building up from wrist only to step to full throw. Check progress on the hucking alley test.
 
 **On your own:** over the break, 20 backhand hucks with a partner or into an empty field: five wrist only, five adding the step, ten full. Film one from the side and check that your shoulders turn away.
 
@@ -460,7 +529,7 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 ## Card 12 · Throwing in the wind
 
-**Release:** week 26, before a usually windy Tour 1; re-shared in week 30
+**Release:** week 21, so it is read before wind goes into home throwing (week 23) and the week 25 session; re-shared in weeks 25, 26 and 30
 
 **Why it matters.** UK tournaments are often windy. In wind, every extra throw is another chance to turn it over, so the team that adapts its throws and its plan wins the breaks.
 
@@ -474,7 +543,7 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 **Diagram:** a pitch with a wind arrow, labelling the upwind “high side” and the downwind “low side”, with a low release going upwind and a high release going downwind.
 
-**At training:** week 25 joint session, pulls in wind. Week 30 joint session, throwing in all directions and upwind–downwind games.
+**At training:** week 25, pulls in wind in the joint session and throwing in the wind in pairs in the split sessions. Week 30 joint session, the skill floor run into, with and across the wind, then upwind–downwind 7v7.
 
 **On your own:** on the next windy day, throw 20 upwind and 20 downwind with a partner. Add spin until the disc stops wobbling.
 
@@ -514,7 +583,7 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 ## Card 14 · The first three steps: accelerate, stop, change direction
 
-**Release:** week 4; re-shared in week 18 for the benchmark. 2028 priority: cutting under pressure, a weak point last season.
+**Release:** week 4; re-shared in week 18 for the skill tests. 2028 priority: getting open under pressure, a weak point last season.
 
 **Why it matters.** Cutting under pressure is mostly won in the first few steps. Without a track or gym, this footwork is our speed work.
 
@@ -528,7 +597,7 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 **Diagram:** the 5-10-5 shuttle and a Hollywood square (Z, C and X patterns on a 7 m square), with the chop points marked.
 
-**At training:** week 4 joint session, 5-10-5 and hockey stops, then ladders and Hollywood squares. Keep the volume low and rest fully: this is speed, not fitness. Your 5-10-5 is filmed in week 1 and again at the February benchmark (week 18), so you can compare the two.
+**At training:** week 4 joint session, the chop stop progression (chop stop, hockey stop, a 5-10 lateral), then Box of death and Shortened Stall Tag. Keep the volume low and rest fully: this is speed, not fitness. Your 5-10-5 is filmed in week 1 and again at Trial 1 (week 18), so you can compare the two.
 
 **On your own:** three times this week: five 10 m starts from a lean, then five chop stops on each foot. Walk back between reps.
 
@@ -546,7 +615,7 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 **Three key points**
 
-1. **Commit to the cut.** Two or three steps fake the thrower; five or six steps fake the defender. A half-cut is worse than no cut.
+1. **Three cut families.** Explosion: change speed to press an advantage you already have. Commitment: drive until the defender commits their hips, then go the other way. Shoulder: attack the defender’s shoulder and read which way they turn. Whichever you pick, commit: five or six steps fake the defender, two or three only fake the thrower.
 2. **Get their hips turned.** Drive hard one way until the defender commits their hips, then attack the space behind them. Charge them first and they’ll step back and overcommit.
 3. **You choose when the race starts.** Start when you’re close to your defender and already moving. Set up from a jog so you can watch where they’re overcommitting, then be decisive.
 
@@ -554,11 +623,11 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 **Diagram:** three cut shapes side by side: away-then-under, under-then-away, and the double move (away, fake under, away).
 
-**At training:** week 4 split session, the five-cone drill for the three cut families. Then in week 5, 1v1 “name your cut”, where the cutter calls the cut first and still has to win.
+**At training:** week 4 split session. The 1s play 1v1 “name your cut”, where the cutter calls the cut first and still has to win, then the five-cone drill and the cut families with a defender. The 2s play away-then-under 1v1, then zig-zag cuts.
 
 **On your own:** watch one point of any game and follow a single cutter. Count the steps they take before each change of direction: was it enough to turn the defender’s hips?
 
-**Check yourself:** How many steps does it take to fake a defender? When do you start the race?
+**Check yourself:** What are the three cut families? How many steps does it take to fake a defender?
 
 **Next level:** against faster or stronger defenders, win the race to a shoulder and seal the lane with your body. Afterwards, ask your defender when they were off balance. Card 16 has more ways to get open.
 
@@ -616,7 +685,7 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 ## Card 18 · Reading the pitch: read, process, move
 
-**Release:** week 17. 2028 priority: reading the pitch, a weak point last season.
+**Release:** week 17. 2028 priority: seeing the field, a weak point last season.
 
 **Why it matters.** The best players don’t see more than you; they look earlier and know what to look for.
 
@@ -656,7 +725,7 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 **Diagram:** the L cut: a lateral cut to the break side at 60–70% pace, a plant, then a vertical strike deep, with the huck landing in stride.
 
-**At training:** week 28 joint session, deep-space games. Practise deep-cut timing with the Dishy Huck drill.
+**At training:** week 28 joint session, the deep running drill. In the split sessions the 1s play the Deep-shot game and Dishy Huck, and the 2s practise deep-cut timing with a dish.
 
 **On your own:** watch three hucks in any game. Where was the cutter when the thrower caught the disc? Did they start shallow?
 
@@ -728,14 +797,14 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 ## Card 22 · Resets: negative on the open side, positive on the break side
 
-**Release:** week 14. 2028 priority: retention. Resets were the base of that work last season.
+**Release:** week 14; re-shared in week 36 for the Jedi lanes game. 2028 priority: keeping the disc. Resets were the base of that work last season.
 
 **Why it matters.** A good reset doesn’t just lower the stall count; it gives the offence a new angle to attack from.
 
 **Three key points**
 
 1. **Set up by side.** On the open side, set negative: behind the disc at about 45°. On the break side, set positive: ahead of the disc at about 30°.
-2. **Two threats.** A dump on the closed (break) side threatens across the field and upfield. A dump on the open side threatens a short pass backwards and upfield. Always keep at least two.
+2. **Two threats.** A dump on the break side threatens across the field and upfield. A dump on the open side threatens a short pass backwards and upfield. Always keep at least two.
 3. **Dump and swing.** The thrower squares up to the reset. The reset steps upfield to commit their defender, then comes back into the backfield away from the sideline. Swing cutters go late, not early.
 
 **Coaching cue:** “It is never a bad idea to use the dump.”
@@ -782,7 +851,7 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 ## Card 24 · Getting off the sideline
 
-**Release:** week 21; re-shared in week 40. 2028 priority: retention on the sideline, where we lost too many discs last season.
+**Release:** week 21; re-shared in week 40. 2028 priority: keeping the disc on the sideline, where we lost too many last season.
 
 **Why it matters.** The sideline is where defences trap us: they force towards the line, so the only open throws are down a narrow strip. Getting it off early, before the defence settles, is the difference between a reset and a turnover.
 
@@ -796,7 +865,7 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 **Diagram:** a trapped thrower on the sideline, with the four reset spots marked from worst to best.
 
-**At training:** week 21 joint session, the variable stall count game for escaping the sideline. Split sessions practise sideline power position and the sideline wrinkle.
+**At training:** week 21 joint session, throws against a trap, the Variable Stall Count game and the Double-team trap game. In the split sessions the 1s play the Sideline trap game and the 2s the sideline wrinkle and the Sideline-start game.
 
 **On your own:** sketch a trapped thrower and mark the four reset spots from worst to best. Then check your sketch against the card.
 
@@ -822,7 +891,7 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 **Diagram:** a trapped thrower with the two late escapes: the upline cut that turns 3 m past the thrower and runs away, and the 2 m dip in front of the disc.
 
-**At training:** week 36 joint session, the retention refresher. Then week 40, the variable stall count game and the escape game.
+**At training:** week 36 joint session, the Jedi lanes game. Then week 40, the Variable Stall Count game, the Retention game and the Escape game.
 
 **On your own:** walk both escapes with a cone as the thrower: upline, turn 3 m past it and run away; then the 2 m dip. Ten of each, until the footwork is automatic.
 
@@ -876,7 +945,7 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 **Diagram:** the triangle mark from above: marker’s body, hand and shoulder against the shown throw, around and inside break, with the four lanes marked.
 
-**At training:** week 7 joint session, Herd’s Forcing the Disc session, then 3-person marking: before each set the thrower names their favourite throw and the mark takes it away; the thrower rates the mark’s intensity 1–3. In week 16, the one-crossover marking game. Refresher in week 39.
+**At training:** week 7 joint session, Marking with intensity: the thrower names their favourite throw and the mark takes it away; the thrower rates the mark’s intensity 1–3. Then the marking base from Herd’s Forcing the Disc session, and the Triangle mark game. In week 16, the one-crossover marking game. Refresher in week 39.
 
 **On your own:** three sets of 30 seconds in the marking base, shuffling side to side and reaching without shifting your weight. Stay on your toes the whole time.
 
@@ -968,7 +1037,7 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 **Release:** week 20, the defence trial
 
-**Why it matters.** Our match defence protects the deep space first. A huck scores in one throw; an under cut only gains a few metres and still has to beat the next defender.
+**Why it matters.** Our person defence protects the deep space first. A huck scores in one throw; an under cut only gains a few metres and still has to beat the next defender.
 
 **Three key points**
 
@@ -1034,7 +1103,7 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 **Diagram:** a vert stack with one defender flashing into the open-side lane and the others shifting to cover.
 
-**At training:** week 17 split sessions, team defence: which spaces are dangerous, and poaching the lanes. The 2s practise poach and clog near the disc.
+**At training:** week 17 split sessions, team defence: which spaces are dangerous, and poaching the lanes. The 2s practise poach and clog near the disc. In week 24 the 2s play 7v6 and the disruptive poach, and in week 33 they poach as a team.
 
 **On your own:** watch one point of game film and follow a defender who isn’t near the disc. Pause each time you would leave your player, and ask the three questions.
 
@@ -1088,7 +1157,7 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 **Diagram:** two vert stacks side by side: cutting from the back (deep player cuts under, next clears) and from the front (3H lateral cut opening the middle channel).
 
-**At training:** week 5 split sessions, vert from the back with continuation pairs. Week 6, vert from the front. Week 22, the 2s run vert in full.
+**At training:** week 5 split sessions, the Vert stack game from the back. Week 6, the 1s play vert from the front and the 2s the Cut-and-clear game. Week 22, the 2s run vert in full.
 
 **On your own:** set out coins as a vert stack, a thrower and a dump. Move the disc to each sideline in turn and reset the stack each time.
 
@@ -1190,7 +1259,7 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 **Diagram:** two endzone set-ups: “Endzone” as a vert stack, and “Spread” with three handlers at the front and four receivers wide across the back.
 
-**At training:** week 23 split sessions, endzone basics. Week 27, Endzone and Spread after the Tour 1 review.
+**At training:** week 23 joint session, endzone set-up and play, with “Spread” reps. Week 27 split sessions, Endzone from 10 m.
 
 **On your own:** set out coins for both calls, “Endzone” and “Spread”. Say where you go if you’re the first, the fourth and the sixth player to arrive.
 
@@ -1302,7 +1371,7 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 **Diagram:** a pitch in force middle with the marks pointing inward from both sideline positions and downfield defenders clogging the centre.
 
-**At training:** 1s split sessions from week 33: the jam-the-middle drill (two handlers and a stack on the middle line; the force is called on every throw) and the anti-huck drill (handler, mark and cutter). Week 39 joint session: the mark-call drill, for the marking calls.
+**At training:** these are 1s options, not a block in the session tables. From week 33 the captains call one of them in a split-session scrimmage when an opponent calls for it. Week 39 joint session: the mark-call drill, for switching marks on a call.
 
 **On your own:** watch one opponent on film and decide which of the three looks you’d call against them, and why.
 
@@ -1471,3 +1540,29 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 **Next level:** scout in pairs so you get two opinions on the same game. Then train how to escape the situations the opponent creates, not just how to recognise them.
 
 **Source:** HN Case Studies (CUSB 2019; Mooncatchers scouting sheet); BFD (Game plans); HN Coach Corner (Base Metric Analysis).
+
+## Card 51 · Tempo: choose the pace on purpose
+
+**Release:** week 34, with the tempo games
+
+**Why it matters.** Some possessions need speed and some need patience. Teams that only have one pace are easy to defend. Choosing the pace, by the defence in front of you and by the score, is part of seeing the field.
+
+**Three key points**
+
+1. **Fast beats a defence that isn’t set.** After a turnover, a swing or a break, move the disc before the defence is balanced. Catch, look, throw.
+2. **Slow resets our shape.** When the defence is set and nothing is on, keep the disc, use the dump and let the cutters set up again. Keeping it without going backwards is a skill.
+3. **Decide before the pull.** One word, “fast” or “slow”, so all seven play the same possession. The score and the wind decide: a break up and going downwind is different from universe point going upwind.
+
+**Coaching cue:** “Pick the pace.”
+
+**Diagram:** two possessions side by side on a timeline. Fast: four passes in ten seconds after a turnover. Slow: a dump, a swing and a reset before the cutters go.
+
+**At training:** week 34 joint session. The Shot clock game: score within 30 seconds or lose the disc. The Minimum-time game: no score before 90 seconds. Target number of passes: a bonus for scoring in exactly the target. Then 7v7 with “fast” or “slow” called before each pull.
+
+**On your own:** watch three possessions of any game. For each one, say whether the team played fast or slow, and whether that suited the defence in front of them.
+
+**Check yourself:** When do you play fast? What do you do when the defence is set and nothing is on?
+
+**Next level:** manage the game, not just the possession. Know the score, the cap and the wind before every point, and which of them changes what a good throw is. A timeout is a tempo tool too: Card 48 covers when to use one.
+
+**Source:** Phase 3 sessions, week 34 (Tempo; Shot clock game, Minimum-time game and Target number of passes, after Ian French, *Games for Coaching Ultimate Frisbee*); Season plan (Skills curriculum, Seeing the field).

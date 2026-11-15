@@ -28,11 +28,13 @@ building (or rebuilding) the season plan's sessions, so the sessions link to
 the drills:
 
 - `grut-drills.json`: the 9 GRUT drills the season plan uses (four more GRUT
-  videos are theory cards 41-44).
-- `herd-drills.json`: about 90 drills and games the 2027/28 sessions use (the
+  videos are theory cards 10, 11, 20 and 27).
+- `herd-drills.json`: about 220 drills and games the 2027/28 sessions use (the
   Ian French games, the club staples such as the 4v3 mini and 4v4 continuous,
   and the split-session drills), each with what it's for, how it runs,
-  coaching points, set-up, numbers and the weeks it's used. The split-session
+  coaching points and questions, harder and easier versions, the 1s and 2s
+  versions where they differ, the problem area and phase it serves, set-up,
+  numbers and the weeks it's used. `imports/drills/tools/` rebuilds both files. The split-session
   tables have no "How it runs" column, so this is where most of their
   activities get their details. Drills the plan only summarises say to check
   the full version in their source.

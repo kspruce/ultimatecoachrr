@@ -52,7 +52,7 @@ The same rules as Phase 1 apply. The source key (IF, BFD, DK, HB, UAP, Flik, SP,
 **Background (say two at most)**
 
 - **The new phase:** everything from the autumn now meets a live defender. Trials start in four weeks and use the games we already play.
-- **Two threats:** "Whenever you're trying to get rid of your defender in an Ultimate match, you always need to have (at least) two threats." A dump on the closed side threatens across the field and upfield; a dump on the open side threatens a short pass backwards and upfield (HB 25.1, 25.4).
+- **Two threats:** "Whenever you're trying to get rid of your defender in an Ultimate match, you always need to have (at least) two threats." A dump on the break side threatens across the field and upfield; a dump on the open side threatens a short pass backwards and upfield (HB 25.1, 25.4).
 - **The forbidden region:** catching behind the thrower on the trap sideline solves nothing; use it only as a last resort to reset the stall (HB 25.3).
 - **Dump and swing:** the thrower squares up to the reset; the reset takes a step upfield to commit the defender, then comes back into the backfield away from the sideline. Swing cutters go late rather than early (HN Handler Offense, Dump Swing).
 - **1s rule:** every throw that loses yards must be followed by a change of the point of attack (BFD, Jedi).
@@ -510,7 +510,7 @@ The same rules as Phase 1 apply. The source key (IF, BFD, DK, HB, UAP, Flik, SP,
 | 1:00 | Peppermills: open-side under, then peppermill flow | Positioning the vertical stack as the disc swings and moves downfield; then string: the first and second cuts are called, so continuation knows who to look for | SP Horizontal Stack 2 and 4; SP Vertical Stack; HN Excel Premium |
 | 1:20 | Banana play against a deep poach, 7v7: the defence plays a deep poach every point, and a goal that came from the big swing scores 2 | Fast-break game, 4v4: the coach's whistle is a turnover and the closest player picks up; a goal within 10 seconds of the whistle scores 2 | HN Flik, Banana; HN Coach Corner, Fast Break Principles |
 | 1:40 | 4v4 continuous, stall 5; then 4 x 20 m sprints with a cut, 30 s rest | 4v4 continuous, stall 7; then 4 x 20 m sprints with a cut, 30 s rest | BFD S&C |
-| 2:00 | Ho and dominator in full: 5-pull ho, with the dominator called whenever the disc stalls in the middle | Vert in full: 5-pull; Three new handlers | SP Horizontal Stack 8; Flik; Plan |
+| 2:00 | 5-pull: ho and dominator in full, with the dominator called whenever the disc stalls in the middle | 5-pull: vert in full; Three new handlers | SP Horizontal Stack 8; Flik; Plan |
 | 2:40 | Scrimmage with whistle turnovers. Consequence: a slow pick-up costs the line a sprint | Scrimmage with whistle turnovers; Last touch picks up | Plan; DK 7.9 |
 
 **What the games push players to do**
@@ -574,7 +574,7 @@ The same rules as Phase 1 apply. The source key (IF, BFD, DK, HB, UAP, Flik, SP,
 | 0:00 | Warm-up | Warm-up | HN Practice Sessions |
 | 0:20 | Fielding the pull: "1" and "2" reps against a chasing defender | The same | HN Handler Situations |
 | 0:40 | Ho pull play, walked then live: the two central cutters slash to the break side, and the break-side cutter attacks the cleared space or bounces back for a 7-cut | Vert pull play, walked then live: the rest of the stack clears to the sidelines so the front of stack can cut deep | HN Excel Premium, Dynamic Pull Plays |
-| 1:00 | Pull-play 5-pull: the defence knows the play is coming; a goal within eight passes scores 2 | Pull-play 5-pull in vert: a goal within eight passes scores 2; Three new handlers | Flik Zone Concepts; HN Excel Premium, Dynamic Pull Plays |
+| 1:00 | 5-pull, pull plays: the defence knows the play is coming; a goal within eight passes scores 2 | 5-pull in vert, pull plays: a goal within eight passes scores 2; Three new handlers | Flik Zone Concepts; HN Excel Premium, Dynamic Pull Plays |
 | 1:20 | Windmill under, then windmill away (5 min walk-through), then 5-pull with the play called in the huddle | String (5 min walk-through): first and second cuts called; then 5-pull with the play called in the huddle | SP Horizontal Stack 6; SP Vertical Stack |
 | 1:40 | 4v4 continuous, stall 5 | 4v4 continuous, stall 7 | BFD S&C |
 | 2:00 | Pull play into system: 7v7 from a pull where the defence takes away the first look on purpose; if it's covered, swing to flip the field | Endzone basics (10 min): vert stack, open-side cone, upfield dump; then Redzone Continuous on a 20 m pitch | HN Excel Premium, Transitioning to your System; HN Flik, Endzone Offence; IF |
@@ -586,7 +586,7 @@ The same rules as Phase 1 apply. The source key (IF, BFD, DK, HB, UAP, Flik, SP,
 - **Endzone from 10 m and Spread reps (joint):** score 4 out of 5, with the defence told to poach in Spread. The count makes conversion the measure, and the poach teaches the handlers to hit the spread receiver. Ask: "Where did the poach come from, and who did it leave?"
 - **Three-Team Transitions with sideline buddies (joint):** every on-field player has a buddy talking to them. The sideline's talk is practised at game speed.
 - **Tournament-format 7v7 (joint):** timed games, called lines and the four-number sheet. It rehearses the day, not a skill.
-- **Pull-play 5-pull (both):** the defence knows what is coming and a quick goal scores 2. The play has to work on timing, and the line has to have a backup. Ask: "What was the backup, and who started it?"
+- **5-pull, pull plays (both):** the defence knows what is coming and a quick goal scores 2. The play has to work on timing, and the line has to have a backup. Ask: "What was the backup, and who started it?"
 - **Pull play into system (1s):** the defence takes the first look away on purpose. The offence practises the swing that flips the field.
 - **Redzone Continuous (2s):** the joint game again, in vert, with the 2s' endzone basics.
 
@@ -596,7 +596,7 @@ The same rules as Phase 1 apply. The source key (IF, BFD, DK, HB, UAP, Flik, SP,
 - **Endzone from 10 m:** harder: 3 out of 3; easier: start from 5 m.
 - **Spread reps:** harder: defenders poach wherever they like; easier: tell the defence where to poach.
 - **Fielding the pull:** harder: bladey pulls and a fast chase; easier: the coach throws a short pull.
-- **Pull-play 5-pull:** harder: the defence may poach the first look; easier: no bonus, walk the first pull.
+- **5-pull, pull plays:** harder: the defence may poach the first look; easier: no bonus, walk the first pull.
 
 **Coaching notes**
 
@@ -617,9 +617,9 @@ The same rules as Phase 1 apply. The source key (IF, BFD, DK, HB, UAP, Flik, SP,
   - The bull shuts down the middle.
   - Wings stop shots over the top.
   - The deep-deep and short-deep stop hucks.
-  - "CRUMBLE" switches to match; echo it (HN Bull Zone).
+  - "CRUMBLE" switches to person defence; echo it (HN Bull Zone).
 - **Zone intensity:** zone is not half effort: running hard, attacking the disc and holding position all the time (HN Flik Zone Concepts).
-- **Switching to match:** pick up the deepest offensive players first; when in doubt, leave the thrower unmarked (HN Flik, Transitions).
+- **Switching to person defence:** pick up the deepest offensive players first; when in doubt, leave the thrower unmarked (HN Flik, Transitions).
 - **2s, person defence intensity:** take away the first option, poach and clog near the disc, and make the opposition throw one more pass (HN Amsterdam Conference, Elite Defense; HN Flik, Disruptive Poaching).
 
 **Joint session**
@@ -646,7 +646,7 @@ The same rules as Phase 1 apply. The source key (IF, BFD, DK, HB, UAP, Flik, SP,
 | 1:00 | 8-pull zone reps: the same team defends repeatedly so players learn one role at a time; the defence scores a point for every swing that gains no yards | 7v6: the defence must poach and clog to cover the extra attacker; it scores for a stall, a block, or a turnover within eight passes | HN Flik Zone Concepts; HN Coach Corner, Planning Practices |
 | 1:20 | 8-pull zone reps, harder: the offence may run a controller through the middle | 7v6, harder: 7v5 for three points, then back to 7v6 | HN Flik Zone Concepts |
 | 1:40 | 4v4 continuous, stall 5; then 4 x 20 m sprints with a cut, 30 s rest | 4v4 continuous, stall 7; then 4 x 20 m sprints with a cut, 30 s rest | BFD S&C |
-| 2:00 | Zone with a CRUMBLE call (5 min walk-through): transition to match on the call, matching up deepest first; then 7v7 where the captain calls CRUMBLE at any moment | Disruptive poach (5 min walk-through): a defender plants in the open lane off the pull and the others cover; then 7v7 from pulls with a planned poach | HN Bull Zone; HN Flik, Transitions; HN Flik, Disruptive Poaching |
+| 2:00 | Zone with a CRUMBLE call (5 min walk-through): transition to person defence on the call, matching up deepest first; then 7v7 where the captain calls CRUMBLE at any moment | Disruptive poach (5 min walk-through): a defender plants in the open lane off the pull and the others cover; then 7v7 from pulls with a planned poach | HN Bull Zone; HN Flik, Transitions; HN Flik, Disruptive Poaching |
 | 2:40 | Scrimmage, zone on every pull. Consequence: a huck conceded over the zone by a wing or deep who was out of position costs them a sprint | Scrimmage with poach bonus; Last touch picks up when the 2s win the disc | Plan; DK 7.9 |
 
 **What the games push players to do**
@@ -719,7 +719,7 @@ Players use these out loud:
 | Vertical stack (vert) | A handler, a dump and a stack down the middle, cutting in the lanes either side (Flik) |
 | Poach / flash | Leaving your player to cover a space / leaving just long enough to deny one throw (Flik) |
 | Bull zone | Herd's 2-3-2: two chases, a bull, two wings, a deep-deep and a short-deep (HN) |
-| CRUMBLE | The call to switch from the Bull zone to match; everyone echoes it (HN) |
+| CRUMBLE | The call to switch from the Bull zone to person defence; everyone echoes it (HN) |
 | Spread | Endzone call: three handlers run a dominator at the front of the endzone while the other four spread wide across the back; if the spread players' defenders poach, hit them (Kieran) |
 
 Coaches' reference (players pick these up through play; no need to teach them as words):
