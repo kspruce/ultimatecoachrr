@@ -49,7 +49,7 @@ def test_ticked_squads_set_the_filter(app, club):
     assert everyone.squad == 'joint' and everyone.squads == []
 
     # Editing moves it to the other squad
-    r = c.post(f'/sessions/edit/{seconds.id}', data={
+    r = c.post(f'/sessions/edit/s{db.session.get(SessionPlan, seconds.id).number}', data={
         'title': 'Seconds night', 'date': TODAY.isoformat(), 'session_type': 'invited_training',
         'is_published': 'y', 'squads': [str(club['firsts'].id)]})
     assert r.status_code == 302
@@ -85,6 +85,6 @@ def test_a_club_without_squads_picks_joint_1s_or_2s(app):
     session = add(c, 'Firsts only', plan_squad='1s')
     assert session.squad == '1s' and session.squads == []
 
-    edit = c.get(f'/sessions/edit/{session.id}').get_data(as_text=True)
+    edit = c.get(f'/sessions/edit/s{db.session.get(SessionPlan, session.id).number}').get_data(as_text=True)
     assert '<option selected value="1s">' in edit
     assert 'Firsts only' in listed(c, '1s') and 'Firsts only' not in listed(c, 'joint')

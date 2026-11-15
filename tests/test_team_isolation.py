@@ -20,6 +20,7 @@ from app.models.tournament import Tournament
 from app.models.tournament_rsvp import TournamentRSVP
 from app.models.user import User
 from tests import stats_data
+from tests.urls import session_path
 
 
 def make_user(team, username, role):
@@ -97,7 +98,7 @@ def test_filter_dropdowns_only_list_your_team(app, teams):
     assert 'Herd secret tour' not in page(c, '/scouting/')
     sessions = page(c, '/sessions/')
     assert 'Other focus' in sessions and 'Herd secret focus' not in sessions
-    component = page(c, f"/sessions/{teams['other_session']}/add_component")
+    component = page(c, session_path(teams['other_session'], "/add_component"))
     assert 'Other play' in component and 'Herd secret play' not in component
 
 
@@ -139,9 +140,10 @@ def test_selections_drop_another_teams_players(app, teams):
 
 
 def test_quick_checkin_is_for_your_own_session_and_players(app, teams):
-    url = f"/sessions/{teams['other_session']}/quick_checkin"
+    url = session_path(teams['other_session'], "/quick_checkin")
     c = client(app, teams)
     assert c.post(url, json={'player_id': teams['herd_player'], 'status': 'present'}).status_code == 404
+    # Another team's session id (its number could match one of this team's)
     assert c.post(f"/sessions/{teams['herd_session']}/quick_checkin",
                   json={'player_id': teams['other_player'], 'status': 'present'}).status_code == 404
     assert Attendance.query.count() == 0

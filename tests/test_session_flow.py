@@ -10,6 +10,7 @@ from app.models.onboarding import UserOnboarding
 from app.models.session import Attendance, SessionComponent, SessionPlan, SessionRSVP
 from app.models.user import User
 from tests import stats_data
+from tests.urls import session_path
 
 TODAY = date.today()
 
@@ -52,10 +53,10 @@ def club(app):
 
 
 def test_repeat_copies_the_session_a_week_on(club):
-    r = club['coach'].post(f'/sessions/{club["session"]}/repeat')
+    r = club['coach'].post(session_path(club["session"], '/repeat'))
     assert r.status_code == 302
     copy = SessionPlan.query.filter(SessionPlan.id != club['session']).one()
-    assert f'/sessions/{copy.id}/plan' in r.headers['Location']
+    assert session_path(copy.id, '/plan') in r.headers['Location']
     assert copy.title == 'Zone offence' and copy.date == TODAY + timedelta(days=6)
     assert copy.location == 'Sportpark' and copy.start_time == time(19, 30)
     assert not copy.is_published
@@ -67,7 +68,7 @@ def test_repeat_copies_the_session_a_week_on(club):
 
 
 def test_run_mode_shows_the_blocks(club):
-    r = club['coach'].get(f'/sessions/{club["session"]}/run')
+    r = club['coach'].get(session_path(club["session"], '/run'))
     assert r.status_code == 200
     page = r.get_data(as_text=True)
     assert 'Cup drill' in page and 'Watch the wings' in page and 'session_run.js' in page
@@ -75,9 +76,9 @@ def test_run_mode_shows_the_blocks(club):
 
 def test_wrap_up_saves_register_notes_and_review(club):
     first, second, third = club['players']
-    page = club['coach'].get(f'/sessions/{club["session"]}/wrap-up').get_data(as_text=True)
+    page = club['coach'].get(session_path(club["session"], '/wrap-up')).get_data(as_text=True)
     assert 'Who came?' in page and 'How did it go?' in page
-    r = club['coach'].post(f'/sessions/{club["session"]}/wrap-up', data={
+    r = club['coach'].post(session_path(club["session"], '/wrap-up'), data={
         f'p{first}': 'present', f'p{second}': 'absent', f'p{third}': '',
         f'note{first}': 'Great reset throws', f'share{first}': '1', f'note{second}': '  ',
         'review_notes': 'Cup was too flat. Repeat next week.'})
@@ -88,14 +89,14 @@ def test_wrap_up_saves_register_notes_and_review(club):
         (first, 'Great reset throws', True, club['session'])
     assert db.session.get(SessionPlan, club['session']).review_notes == 'Cup was too flat. Repeat next week.'
     # The coaches see how it went; players don't
-    assert 'Cup was too flat' in club['coach'].get(f'/sessions/{club["session"]}/detail').get_data(as_text=True)
-    assert 'Cup was too flat' not in club['player'].get(f'/sessions/{club["session"]}/detail').get_data(as_text=True)
+    assert 'Cup was too flat' in club['coach'].get(session_path(club["session"], '/detail')).get_data(as_text=True)
+    assert 'Cup was too flat' not in club['player'].get(session_path(club["session"], '/detail')).get_data(as_text=True)
 
 
 def test_players_cannot_repeat_run_or_wrap_up(club):
     for path in ('run', 'wrap-up'):
-        assert club['player'].get(f'/sessions/{club["session"]}/{path}').status_code == 302
-    assert club['player'].post(f'/sessions/{club["session"]}/repeat').status_code == 302
+        assert club['player'].get(session_path(club["session"], f'/{path}')).status_code == 302
+    assert club['player'].post(session_path(club["session"], '/repeat')).status_code == 302
     assert SessionPlan.query.count() == 1
 
 

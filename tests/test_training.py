@@ -19,6 +19,7 @@ from app.models.team_settings import TeamSettings
 from app.models.user import User
 from app.utils import reminders, rsvp, schedules
 from tests import stats_data
+from tests.urls import session_path
 
 TODAY = date.today()
 
@@ -231,19 +232,19 @@ def test_players_see_their_squads_dates_and_answer_in_one_tap(app, club, week):
     assert 'Saturday' in page and '1s midweek' in page and '2s midweek' not in page
 
     session = week['wed'].sessions.order_by(SessionPlan.date).first()
-    r = c.post(f'/sessions/{session.id}/answer', data={'status': 'maybe'}, headers={'Accept': 'application/json'})
+    r = c.post(session_path(session.id, '/answer'), data={'status': 'maybe'}, headers={'Accept': 'application/json'})
     assert r.get_json()['ok'] and r.get_json()['status'] == 'maybe'
     assert SessionRSVP.query.one().status == 'maybe'
     # Without JavaScript the form still works
-    r = c.post(f'/sessions/{session.id}/answer', data={'status': 'attending', 'next': '/sessions/availability'})
+    r = c.post(session_path(session.id, '/answer'), data={'status': 'attending', 'next': '/sessions/availability'})
     assert r.status_code == 302 and r.location.endswith('/sessions/availability')
     assert SessionRSVP.query.one().status == 'attending'
     # ...and never sends you off the site
-    r = c.post(f'/sessions/{session.id}/answer', data={'status': 'attending', 'next': '//evil.example'})
+    r = c.post(session_path(session.id, '/answer'), data={'status': 'attending', 'next': '//evil.example'})
     assert 'evil' not in r.location
     # Players answer only for themselves
     other = club['bea']
-    assert c.post(f'/sessions/{session.id}/answer/{other.id}', data={'status': 'no'}).status_code == 403
+    assert c.post(session_path(session.id, f'/answer/{other.id}'), data={'status': 'no'}).status_code == 403
 
 
 def test_usual_answers_page(app, club, week):
@@ -268,7 +269,7 @@ def test_cancelled_sessions_cant_be_answered(app, club, week):
     session = week['sat'].sessions.first()
     schedules.cancel(session, 'Pitch closed')
     db.session.commit()
-    r = login(app, club, 'ann').post(f'/sessions/{session.id}/answer', data={'status': 'yes'},
+    r = login(app, club, 'ann').post(session_path(session.id, '/answer'), data={'status': 'yes'},
                                      headers={'Accept': 'application/json'})
     assert r.status_code == 400 and SessionRSVP.query.count() == 0
 
@@ -277,7 +278,7 @@ def test_session_page_shows_answer_buttons_and_counts(app, club, week):
     session = week['sat'].sessions.first()
     rsvp.set_rsvp(session, club['bea'], 'yes')
     db.session.commit()
-    page = login(app, club, 'ann').get(f'/sessions/{session.id}/detail').get_data(as_text=True)
+    page = login(app, club, 'ann').get(session_path(session.id, '/detail')).get_data(as_text=True)
     assert 'Are you coming?' in page and '1 yes' in page
 
 
@@ -294,9 +295,9 @@ def test_grid_shows_everyone_and_coaches_can_set_cells(app, club, week):
 
     session = week['tue'].sessions.first()
     bea = club['bea']
-    r = c.post(f'/sessions/{session.id}/answer/{bea.id}', json={'status': 'attending'})
+    r = c.post(session_path(session.id, f'/answer/{bea.id}'), json={'status': 'attending'})
     assert r.get_json()['ok'] and SessionRSVP.query.filter_by(player_id=bea.id).one().status == 'attending'
-    r = c.post(f'/sessions/{session.id}/answer/{bea.id}', json={'status': 'none'})
+    r = c.post(session_path(session.id, f'/answer/{bea.id}'), json={'status': 'none'})
     assert SessionRSVP.query.filter_by(player_id=bea.id).count() == 0
     # Players don't get the grid
     assert login(app, club, 'ann').get('/sessions/availability/grid').status_code == 302
@@ -337,18 +338,18 @@ def test_coaches_choose_what_players_see(app, club, week):
     rsvp.set_rsvp(session, club['bea'], 'yes')
     db.session.commit()
     ann = login(app, club, 'ann')
-    assert club['bea'].name in ann.get(f'/sessions/{session.id}/rsvps').get_data(as_text=True)
+    assert club['bea'].name in ann.get(session_path(session.id, '/rsvps')).get_data(as_text=True)
 
     coach = login(app, club, 'coach')
     coach.post('/sessions/settings', data={'attendee_visibility': 'counts', 'plan_when': 'now',
                                            'reminders_enabled': 'on', 'reminder_days': '5'})
-    page = ann.get(f'/sessions/{session.id}/rsvps').get_data(as_text=True)
+    page = ann.get(session_path(session.id, '/rsvps')).get_data(as_text=True)
     assert club['bea'].name not in page and 'pill-attending' in page
 
     coach.post('/sessions/settings', data={'attendee_visibility': 'hidden', 'plan_when': 'now', 'reminder_days': '5'})
-    assert ann.get(f'/sessions/{session.id}/rsvps').status_code == 302
+    assert ann.get(session_path(session.id, '/rsvps')).status_code == 302
     # Coaches still see names
-    assert club['bea'].name in coach.get(f'/sessions/{session.id}/rsvps').get_data(as_text=True)
+    assert club['bea'].name in coach.get(session_path(session.id, '/rsvps')).get_data(as_text=True)
     settings = TeamSettings.query.filter_by(team_id=club['team'].id).one()
     assert (settings.reminders_enabled, settings.reminder_days) == (False, 5)
 
@@ -363,22 +364,22 @@ def test_plans_are_hidden_until_published(app, club):
                                     component_type='drill', team_organization_id=team_id))
     db.session.commit()
     ann, coach = login(app, club, 'ann'), login(app, club, 'coach')
-    assert 'Secret drill' not in ann.get(f'/sessions/{session.id}/detail').get_data(as_text=True)
-    assert ann.get(f'/sessions/{session.id}/printable').status_code == 302
-    assert 'Secret drill' not in ann.get(f'/sessions/{session.id}/components').get_data(as_text=True)
-    assert 'Secret drill' in coach.get(f'/sessions/{session.id}/detail').get_data(as_text=True)
-    assert 'Secret drill' in coach.get(f'/sessions/{session.id}/components').get_data(as_text=True)
+    assert 'Secret drill' not in ann.get(session_path(session.id, '/detail')).get_data(as_text=True)
+    assert ann.get(session_path(session.id, '/printable')).status_code == 302
+    assert 'Secret drill' not in ann.get(session_path(session.id, '/components')).get_data(as_text=True)
+    assert 'Secret drill' in coach.get(session_path(session.id, '/detail')).get_data(as_text=True)
+    assert 'Secret drill' in coach.get(session_path(session.id, '/components')).get_data(as_text=True)
 
     session.is_published = True
     settings = TeamSettings.query.filter_by(team_id=team_id).first() or TeamSettings(team_id=team_id)
     settings.plan_visible_days = 2
     db.session.add(settings)
     db.session.commit()
-    assert 'Secret drill' not in ann.get(f'/sessions/{session.id}/detail').get_data(as_text=True)
+    assert 'Secret drill' not in ann.get(session_path(session.id, '/detail')).get_data(as_text=True)
     settings.plan_visible_days = 7
     db.session.commit()
-    assert 'Secret drill' in ann.get(f'/sessions/{session.id}/detail').get_data(as_text=True)
-    assert 'Secret drill' in ann.get(f'/sessions/{session.id}/components').get_data(as_text=True)
+    assert 'Secret drill' in ann.get(session_path(session.id, '/detail')).get_data(as_text=True)
+    assert 'Secret drill' in ann.get(session_path(session.id, '/components')).get_data(as_text=True)
 
 
 # ── The session builder ────────────────────────────────────────────────────
@@ -392,10 +393,10 @@ def test_builder_saves_blocks_in_place(app, club, week):
     db.session.commit()
     session = week['sat'].sessions.first()
     c = login(app, club, 'coach')
-    assert 'Who&#39;s coming' in c.get(f'/sessions/{session.id}/plan').get_data(as_text=True) or \
-        "Who's coming" in c.get(f'/sessions/{session.id}/plan').get_data(as_text=True)
+    assert 'Who&#39;s coming' in c.get(session_path(session.id, '/plan')).get_data(as_text=True) or \
+        "Who's coming" in c.get(session_path(session.id, '/plan')).get_data(as_text=True)
 
-    r = c.post(f'/sessions/{session.id}/plan', json={'blocks': [
+    r = c.post(session_path(session.id, '/plan'), json={'blocks': [
         {'title': 'Warm-up', 'component_type': 'warmup', 'duration_minutes': 15},
         {'title': 'Hucks', 'component_type': 'drill', 'duration_minutes': '20', 'drill_id': drill.id},
         {'title': 'Sneaky', 'component_type': 'nonsense', 'drill_id': foreign.id},
@@ -406,22 +407,22 @@ def test_builder_saves_blocks_in_place(app, club, week):
     assert (hucks['drill_id'], sneaky['drill_id'], sneaky['component_type']) == (drill.id, None, 'drill')
 
     # Reorder and drop one: kept blocks keep their ids
-    r = c.post(f'/sessions/{session.id}/plan', json={'blocks': [
+    r = c.post(session_path(session.id, '/plan'), json={'blocks': [
         {**hucks, 'title': 'Hucks!'}, warm]})
     ids = [b['id'] for b in r.get_json()['blocks']]
     assert ids == [hucks['id'], warm['id']]
     assert [c.title for c in session.components.order_by(SessionComponent.order)] == ['Hucks!', 'Warm-up']
-    assert c.post(f'/sessions/{session.id}/plan', json={'blocks': [{'title': ''}]}).status_code == 400
+    assert c.post(session_path(session.id, '/plan'), json={'blocks': [{'title': ''}]}).status_code == 400
     db.session.expire_all()
     assert db.session.get(SessionPlan, session.id).is_published
 
     # Templates and copying
     r = c.post('/sessions/templates', json={'name': 'Standard', 'blocks': r.get_json()['blocks']})
     assert r.get_json()['ok'] and SessionTemplate.query.one().blocks[0]['title'] == 'Hucks!'
-    copy = c.get(f'/sessions/{session.id}/blocks.json').get_json()
+    copy = c.get(session_path(session.id, '/blocks.json')).get_json()
     assert [b['title'] for b in copy['blocks']] == ['Hucks!', 'Warm-up'] and copy['blocks'][0]['id'] is None
     # Players can't use it
-    assert login(app, club, 'ann').post(f'/sessions/{session.id}/plan', json={'blocks': []}).status_code == 302
+    assert login(app, club, 'ann').post(session_path(session.id, '/plan'), json={'blocks': []}).status_code == 302
 
 
 def test_builder_offers_last_weeks_plan(app, club, week):
@@ -430,7 +431,7 @@ def test_builder_offers_last_weeks_plan(app, club, week):
                                     team_organization_id=club['team'].id))
     first.date = TODAY - timedelta(days=7)
     db.session.commit()
-    page = login(app, club, 'coach').get(f'/sessions/{second.id}/plan').get_data(as_text=True)
+    page = login(app, club, 'coach').get(session_path(second.id, '/plan')).get_data(as_text=True)
     assert f'data-copy="{first.id}"' in page
 
 
@@ -443,12 +444,12 @@ def test_register_starts_from_the_yes_answers(app, club, week):
     rsvp.set_rsvp(session, other, 'no')
     db.session.commit()
     c = login(app, club, 'coach')
-    page = c.get(f'/sessions/{session.id}/attendance').get_data(as_text=True)
+    page = c.get(session_path(session.id, '/attendance')).get_data(as_text=True)
     assert 'starts as present' in page
     assert f'name="p{ann.id}" value="present" data-player="{ann.id}" checked' in page
     assert f'name="p{other.id}" value="present" data-player="{other.id}" checked' not in page
 
-    c.post(f'/sessions/{session.id}/attendance', data={f'p{ann.id}': 'late', f'p{other.id}': '',
+    c.post(session_path(session.id, '/attendance'), data={f'p{ann.id}': 'late', f'p{other.id}': '',
                                                          f"p{club['bea'].id}": 'present'})
     assert {(a.player_id, a.status) for a in Attendance.query} == {(ann.id, 'late'), (club['bea'].id, 'present')}
 
@@ -497,7 +498,7 @@ def test_maybes_and_no_answers_get_one_reminder(app, club, week, email):
 
 def test_coach_can_nudge_one_session(app, club, week, email):
     session = week['wed'].sessions.order_by(SessionPlan.date).first()
-    r = login(app, club, 'coach').post(f'/sessions/{session.id}/nudge')
+    r = login(app, club, 'coach').post(session_path(session.id, '/nudge'))
     assert r.status_code == 302
     assert [m['To'] for m in email] == ['ann@example.com']
 
@@ -507,11 +508,11 @@ def test_cancelling_tells_the_players_who_were_coming(app, club, week, email):
     rsvp.set_rsvp(session, club['ann'], 'yes')
     rsvp.set_rsvp(session, club['bea'], 'no')
     db.session.commit()
-    login(app, club, 'coach').post(f'/sessions/{session.id}/cancel', data={'reason': 'Waterlogged'})
+    login(app, club, 'coach').post(session_path(session.id, '/cancel'), data={'reason': 'Waterlogged'})
     db.session.expire_all()
     assert db.session.get(SessionPlan, session.id).cancel_reason == 'Waterlogged'
     assert [m['To'] for m in email] == ['ann@example.com']
-    login(app, club, 'coach').post(f'/sessions/{session.id}/restore')
+    login(app, club, 'coach').post(session_path(session.id, '/restore'))
     db.session.expire_all()
     assert not db.session.get(SessionPlan, session.id).is_cancelled
 
