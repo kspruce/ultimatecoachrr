@@ -1,6 +1,6 @@
 """The opt-in email telling coaches what's waiting on them
 (app/utils/coach_summary.py)."""
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 
 import pytest
 
@@ -13,7 +13,9 @@ from tests import stats_data
 from tests.test_onboarding import login, make_user
 
 TODAY = date.today()
-NOW = datetime.utcnow()
+# A fixed time of day, so 'later the same day' never spills into tomorrow
+# whatever the wall clock says when the suite runs
+NOW = datetime.combine(TODAY, time(12, 0))
 
 
 @pytest.fixture
@@ -57,7 +59,8 @@ def test_something_new_is_sent_and_marked(app, herd):
     db.session.add(Game(opponent='Clapham', date=TODAY - timedelta(days=2), our_score=0, their_score=0,
                         team_organization_id=herd['team']))
     db.session.commit()
-    assert coach_summary.send_due(TODAY, NOW + timedelta(hours=2)) == 0  # one a day at most
+    later_today = NOW.replace(hour=23, minute=59)
+    assert coach_summary.send_due(TODAY, later_today) == 0  # one a day at most
     assert coach_summary.send_due(TODAY, NOW + timedelta(days=1)) == 1
     assert '2 played games have no score' in sent(app)[-1].get_content()
 
