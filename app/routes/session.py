@@ -517,11 +517,14 @@ def components(session_id):
         id=session_id,
         team_organization_id=get_current_team_id()
     ).first_or_404()
-    
+    if not plan_visible(session_plan, current_user):
+        flash("Your coaches haven't shared this plan yet.", 'info')
+        return redirect(url_for('session.detail', session_id=session_id))
+
     components = session_plan.components.filter_by(
         team_organization_id=get_current_team_id()
     ).order_by(SessionComponent.order).all()
-    
+
     return render_template('session/components.html', session=session_plan, components=components)
 
 @bp.route('/<int:session_id>/add_component', methods=['GET', 'POST'])

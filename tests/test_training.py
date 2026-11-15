@@ -365,7 +365,9 @@ def test_plans_are_hidden_until_published(app, club):
     ann, coach = login(app, club, 'ann'), login(app, club, 'coach')
     assert 'Secret drill' not in ann.get(f'/sessions/{session.id}/detail').get_data(as_text=True)
     assert ann.get(f'/sessions/{session.id}/printable').status_code == 302
+    assert 'Secret drill' not in ann.get(f'/sessions/{session.id}/components').get_data(as_text=True)
     assert 'Secret drill' in coach.get(f'/sessions/{session.id}/detail').get_data(as_text=True)
+    assert 'Secret drill' in coach.get(f'/sessions/{session.id}/components').get_data(as_text=True)
 
     session.is_published = True
     settings = TeamSettings.query.filter_by(team_id=team_id).first() or TeamSettings(team_id=team_id)
@@ -376,6 +378,7 @@ def test_plans_are_hidden_until_published(app, club):
     settings.plan_visible_days = 7
     db.session.commit()
     assert 'Secret drill' in ann.get(f'/sessions/{session.id}/detail').get_data(as_text=True)
+    assert 'Secret drill' in ann.get(f'/sessions/{session.id}/components').get_data(as_text=True)
 
 
 # ── The session builder ────────────────────────────────────────────────────
