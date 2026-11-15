@@ -198,6 +198,7 @@ The 1s play the 2s and guests, who play the scouted opponents' looks. For the 2s
 | 0:40 | Pulls, then endzone and Spread reps | Focus games: one pitch for each focus area, as in week 45 | HN Flik, Training Pulling; Phase 2 week 23; Plan |
 | 1:00 | Finish: the 1s' session is 60 minutes this week | Small-sided games at stall 6, Golden Arm rotation, while players come off in turn for the next row | Plan; IF |
 | 1:20 |  | 2028/29 plans: each player writes theirs with a 2s captain: one development focus, one home throwing routine, and the pathway numbers they're aiming for | Season plan, The 2s |
+
 - **No conditioning.** Sleep, food and water matter more this week than extra training.
 - **Tell players:** feeling a bit flat early in a taper is normal; the legs come back by the weekend.
 
