@@ -51,7 +51,7 @@ def test_no_two_routes_share_a_url(app):
 def test_removed_pages_are_gone(app, client):
     assert client.get('/team/debug').status_code == 404
     assert 'session.rsvp' == next(r.endpoint for r in app.url_map.iter_rules()
-                                  if r.rule == '/sessions/<int:session_id>/rsvp')
+                                  if r.rule == '/sessions/<sess:session_id>/rsvp')
 
 
 def test_session_pdf_download(app, client, monkeypatch):

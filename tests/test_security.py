@@ -10,6 +10,7 @@ from app.models.session import Attendance, SessionPlan, SessionRSVP
 from app.models.tournament import Tournament
 from app.models.user import User
 from tests import stats_data
+from tests.urls import session_path
 
 XSS = '<img src=x onerror=alert(1)>'
 
@@ -216,7 +217,7 @@ def test_names_in_inline_handlers_stay_strings(app):
     superadmin = stats_data.build_admin(stats_data.build_team('Site', 'site'), 'site-owner', superadmin=True)
     client = stats_data.Client(app, admin.id, team.id)
     pages = [(stats_data.Client(app, superadmin.id, team.id), '/teams/'),
-             (client, '/team/seasons/'), (client, f'/sessions/{session.id}/plan')]
+             (client, '/team/seasons/'), (client, session_path(session.id, '/plan'))]
     handlers = []
     for who, url in pages:
         page = who.get(url).get_data(as_text=True)

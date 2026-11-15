@@ -19,6 +19,7 @@ from app.models.theory import TheorySection, TheoryTopic
 from tests import stats_data
 from tests.test_teams import make_user
 from tests.test_theory import fresh, text, welcomed
+from tests.urls import session_path
 
 
 @pytest.fixture
@@ -343,7 +344,7 @@ def test_session_plans_keep_their_plays(app, club):
     db.session.add(session)
     db.session.commit()
     c = client(app, club, 'coach')
-    r = c.post(f'/sessions/{session.id}/add_component', data={
+    r = c.post(session_path(session.id, '/add_component'), data={
         'title': 'Hammer reps', 'order': 1, 'component_type': 'drill', 'drill_id': 0,
         'plays': [club['Hammer']]})
     assert r.status_code == 302, text(r)
