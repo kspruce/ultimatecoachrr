@@ -7,6 +7,7 @@ Each card is one idea a player can read in three minutes, posted the week it is 
 - **Release:** post the card on Discord a day or two before the session in the week listed. The Release calendar lists the cards week by week, with no more than two new cards in any week. Anything about this season in particular (a 2028 priority, a squad number) sits on the Release line, so the rest of the card can be reused next year.
 - **At training** says where the idea is coached. **On your own** is one thing a player can do alone before the session. **Check yourself** is one or two questions; the answers are in the card.
 - **Next level** is one extra idea for experienced and elite players. Everyone else can skip it.
+- **Cards 50 and 51** were added after the first 49, so they sit in their sections out of number order.
 - **Follow-up cards** (Cards 8, 13, 16, 25, 28 and 38) collect the extra detail for experienced players and go out later in the season. They have no Next level of their own.
 - **Diagram** lines say what to draw. Pull the figure from the Ultimate Coach Figures folder or sketch a new one.
 - **Source** names where the card is adapted from, so you can check the detail. The codes (HN, BFD, DK and so on) are explained at the end of the Glossary.
@@ -167,10 +168,11 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 | Call | Means |
 | --- | --- |
 | Dump | Any pass behind the disc |
-| Mac | Upline cut from level with or above the disc |
+| Mac | Upline cut in front of the disc, starting at or above the disc line |
 | Zip | Vertical cut for a short throw on the move |
-| Dynamic dump | Dump caught on the closed side that flows straight to the break side |
+| Dynamic dump | Dump caught on the break side that starts quick flow there |
 | Negative / positive | Reset set behind the disc (about 45°) on the open side / ahead (about 30°) on the break side |
+| Jedi | Dump and swing that gains yards: every throw that loses yards is followed by a change in the point of attack |
 
 **Coaching cue:** “It is never a bad idea to use the dump.”
 
@@ -237,6 +239,40 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 **Next level:** train in your zone of proximal development. If every rep goes perfectly, make it harder; if every rep fails, make it easier. Mistakes on some reps mean you’re learning.
 
 **Source:** The Inner Game of Ultimate Frisbee (Adams); HN Coach Corner (Getting out of your head; Zone of Proximal Development).
+
+## Card 50 · Your tests and your focus: measure it, pick one thing
+
+**Release:** week 6, before the first mini-test; re-shared in week 17 before the Trial 1 tests, in week 25 when the skill floor starts, and in week 35. 2028 season: every player improves on 3 of the 4 skill tests.
+
+**Why it matters.** Herd is a place where everyone gets better, and the tests are how you see it. They compare you with yourself in October, not with anyone else. Your results tell you the one thing to work on next.
+
+**Three key points**
+
+1. **Four skill tests, four times.** Everyone does them in October, at Trial 1 (week 18), in week 35 and in September.
+
+| Skill test | What you do | What it measures |
+| --- | --- | --- |
+| Hucking alley | 10 hucks into a 20 m-wide lane | The throwing base |
+| Get 10 | 10 throws past a marker, against each force | Breaking the mark |
+| 1v1 cutting test | 10 cuts against a back-shoulder defender, open before stall 6 | Getting open |
+| Catching under pressure | 20 catches at full speed | Keeping the disc |
+
+2. **Mini-tests in between.** Every four to six weeks, Get 10 and the 1v1 cutting test take 20 minutes of a joint session. Enter your own scores under Tests in the home programme and watch your curve.
+3. **One development focus.** After each full round you agree one focus with a skill lead or captain, normally your weakest test against your squad’s middle score. It decides your third home throwing session each week and what you do on the skill floor.
+
+**Coaching cue:** “Your curve, not today’s number.”
+
+**Diagram:** one player’s four test scores as four lines across the season, with the development focus marked on the lowest line.
+
+**At training:** week 6 joint session, the first mini-test. From week 25, every full joint session starts with the skill floor: 25 minutes in a group of three built around your mentor pair, 12 minutes on each partner’s focus, with roles rotating after every rep.
+
+**On your own:** look up your October scores. Write down your development focus and the score you want at the next mini-test, and tell your mentor partner.
+
+**Check yourself:** What are the four skill tests? What decides your development focus?
+
+**Next level:** track a game number as well. From filmed games you get your turnovers per touch and your completed breaks. A confident break thrower scores 8 or more on Get 10 on both sides and completes 80% of break throws in filmed games.
+
+**Source:** Season plan (Measuring improvement; Weekly structure, The skill floor; Throwing outside training); Phase 1 sessions (test protocols).
 
 # Throw and catch
 
@@ -546,7 +582,7 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 **Three key points**
 
-1. **Commit to the cut.** Two or three steps fake the thrower; five or six steps fake the defender. A half-cut is worse than no cut.
+1. **Three cut families.** Explosion: change speed to press an advantage you already have. Commitment: drive until the defender commits their hips, then go the other way. Shoulder: attack the defender’s shoulder and read which way they turn. Whichever you pick, commit: five or six steps fake the defender, two or three only fake the thrower.
 2. **Get their hips turned.** Drive hard one way until the defender commits their hips, then attack the space behind them. Charge them first and they’ll step back and overcommit.
 3. **You choose when the race starts.** Start when you’re close to your defender and already moving. Set up from a jog so you can watch where they’re overcommitting, then be decisive.
 
@@ -558,7 +594,7 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 **On your own:** watch one point of any game and follow a single cutter. Count the steps they take before each change of direction: was it enough to turn the defender’s hips?
 
-**Check yourself:** How many steps does it take to fake a defender? When do you start the race?
+**Check yourself:** What are the three cut families? How many steps does it take to fake a defender?
 
 **Next level:** against faster or stronger defenders, win the race to a shoulder and seal the lane with your body. Afterwards, ask your defender when they were off balance. Card 16 has more ways to get open.
 
@@ -1471,3 +1507,29 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 **Next level:** scout in pairs so you get two opinions on the same game. Then train how to escape the situations the opponent creates, not just how to recognise them.
 
 **Source:** HN Case Studies (CUSB 2019; Mooncatchers scouting sheet); BFD (Game plans); HN Coach Corner (Base Metric Analysis).
+
+## Card 51 · Tempo: choose the pace on purpose
+
+**Release:** week 34, with the tempo games
+
+**Why it matters.** Some possessions need speed and some need patience. Teams that only have one pace are easy to defend. Choosing the pace, by the defence in front of you and by the score, is part of seeing the field.
+
+**Three key points**
+
+1. **Fast beats a defence that isn’t set.** After a turnover, a swing or a break, move the disc before the defence is balanced. Catch, look, throw.
+2. **Slow resets our shape.** When the defence is set and nothing is on, keep the disc, use the dump and let the cutters set up again. Keeping it without going backwards is a skill.
+3. **Decide before the pull.** One word, “fast” or “slow”, so all seven play the same possession. The score and the wind decide: a break up and going downwind is different from universe point going upwind.
+
+**Coaching cue:** “Pick the pace.”
+
+**Diagram:** two possessions side by side on a timeline. Fast: four passes in ten seconds after a turnover. Slow: a dump, a swing and a reset before the cutters go.
+
+**At training:** week 34 joint session. The Shot clock game: score within 30 seconds or lose the disc. The Minimum-time game: no score before 90 seconds. Target number of passes: a bonus for scoring in exactly the target. Then 7v7 with “fast” or “slow” called before each pull.
+
+**On your own:** watch three possessions of any game. For each one, say whether the team played fast or slow, and whether that suited the defence in front of them.
+
+**Check yourself:** When do you play fast? What do you do when the defence is set and nothing is on?
+
+**Next level:** manage the game, not just the possession. Know the score, the cap and the wind before every point, and which of them changes what a good throw is. A timeout is a tempo tool too: Card 48 covers when to use one.
+
+**Source:** Phase 3 sessions, week 34 (Tempo; Shot clock game, Minimum-time game and Target number of passes, after Ian French, *Games for Coaching Ultimate Frisbee*); Season plan (Skills curriculum, Reading the pitch).

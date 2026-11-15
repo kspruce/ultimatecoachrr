@@ -6,7 +6,7 @@ Work in progress. This file is the handover: it says what is done and what is ne
 
 | Part | State |
 | --- | --- |
-| 1. Coverage and progression | Drill library done. Cards: next |
+| 1. Coverage and progression | Done |
 | 2. One language | Not started |
 | 3. Timing (release calendar) | Not started |
 | 4. Better drills | Half done: the plan's own notes are in; hand-written gaps are next |
@@ -50,14 +50,14 @@ The report lists drills still missing a Harder, Easier or Ask section (`no_harde
 - **Every library drill is now used** by a session table except 70-pass, which says it is the Phase 1 home throwing set and an option for focused throwing.
 - **Still not linked, on purpose:** 113 activities that are meetings, briefings, walk-throughs of game plans, review fixes chosen on the day, and the step-up camp blocks.
 
-### Cards (next)
+### Cards (done)
 
-Planned:
-
-- New Card 50, "Your tests and your development focus" (skill tests, mini-tests, development focus, skill floor, mentor pairs). No card covers Principle 4.
-- New Card 51, "Tempo and game management", for week 34. The plan teaches tempo and no card covers it.
-- Card 15: name the three cut families (explosion, commitment, shoulder), which the plan and the five-cone drill use.
-- Card 1: add Jedi to the call table, to match the plan's shared vocabulary.
+- **New Card 50, "Your tests and your focus"** (Start here, week 6). No card covered Principle 4 (everyone is measured on improvement): the four skill tests, the mini-tests, the development focus, the skill floor and mentor pairs. It goes out before the first mini-test because weeks 1 to 5 already have two new cards each.
+- **New Card 51, "Tempo: choose the pace on purpose"** (Compete, week 34). The plan teaches tempo in week 34 and game management in Phases 3-4, and no card covered either. Week 34 had no new card.
+- **Card 15** now names the three cut families (explosion, commitment, shoulder) in the plan's words. The plan, the five-cone drill and the card's own "At training" line use them, but the card never said what they were.
+- **Card 1** call table: Jedi added, and Mac and Dynamic dump reworded to match the plan's shared vocabulary. The old Dynamic dump line said "caught on the closed side that flows to the break side", which are the same side.
+- **Nothing cut or merged.** The follow-up cards (8, 13, 16, 25, 28, 38) repeat their parent cards on purpose.
+- **Looked at and left:** "throwing tired and quick release after the catch" (Phase 2 throwing base) has no card of its own. Cards 8, 26 and 32 cover quick releases, and weeks 14 and 22 already have two new cards each.
 
 ## Part 4: better drills (half done)
 
@@ -65,8 +65,10 @@ Every drill now has a Serves line and the correct weeks. Harder, Easier and Ask 
 
 ## Tests changed
 
-None yet.
+- `tests/test_theory_import.py`: the cards file now has 51 cards, so the expected card numbers per section, the counts (52 became 54, which includes the three notes) and the last card in Compete were updated.
 
 ## Needs a coach's decision
+
+- Card 50 goes out in week 6. If you want it before the October tests, a week 1 or 2 card has to move, because those weeks already have two.
 
 - Drills marked "The plan gives this in outline" need their full version checked against the source (the OneNote notebook and the Flik, DK and Hildo material are not in the repo).
