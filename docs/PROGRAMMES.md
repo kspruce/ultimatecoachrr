@@ -165,6 +165,37 @@ then check and publish it under Training > Programmes. The plan document
 doesn't name the three tests, so `tests.csv` uses 10 m sprint, 30 m sprint
 and 5-10-5 pro-agility: edit them in the builder (or the CSV) to match.
 
+## Thundering Herd 2027/28
+
+`imports/programmes/thundering-herd-2027-28/` is the full-season S&C
+programme that goes with the 2027/28 season plan. Every track runs weeks
+1-51 and programme week N is season-plan week N, so start it on the plan's
+first Monday:
+
+```
+flask import-programme imports/programmes/thundering-herd-2027-28 --team <slug> --name "Herd S&C 2027/28" --start 2027-10-04
+```
+
+Then link it to each phase of the plan (Edit plan > Phases), so every week
+of the plan shows that week's sessions.
+
+| Track | Who | A week |
+| --- | --- | --- |
+| Home strength | Everyone | Session A (legs and landings) and session B (hips, hamstrings and trunk), 20-25 minutes each. Jumps start in week 14 at about 40 contacts and reach about 100 in weeks 40 and 46-47 |
+| Gym | Optional | An accessory and stability session and a strength and power session, in the blocks the plan cites: off-season 1-2, pre-season 1-2, in-season, peak |
+| Throwing | Everyone | Two 15-minute sessions from the phase menu, plus one of four focus sessions (alternatives in the group `focus`) matching the player's development focus |
+| Speed | Optional | One short sprint session: 15-20 minutes before the season, three or four sprints a week in season |
+
+Event weeks and Trial 1 are deload weeks, weeks 45-47 are the peak, 48-49
+the taper and week 50 is rest. `tests.csv` holds the plan's four skill
+tests (Get 10 as two tests, one per force) and the athletic profile, with
+baselines and retests on the plan's full test rounds (weeks 1, 18, 35, 51)
+and mini-test weeks; the 50 m sprint, its splits and the arrowhead agility
+test are at Trial 1 (week 18) only.
+
+`build_programme.py` in the same folder wrote the two CSV files and can
+rebuild them after a change to a progression.
+
 ## Not built (deliberately)
 
 No public template library or marketplace (sharing is between clubs on

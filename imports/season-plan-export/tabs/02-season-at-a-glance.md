@@ -26,7 +26,7 @@ The whole 2027/28 plan on one page: the phases, the training blocks and themes f
 | --- | --- |
 | Before week 1 | Skill leads and the stats and video lead recruited; pathway criteria published |
 | Week 1 | Baseline skill tests; first one-to-ones and development focus (weeks 1-3); mentor pairs and home throwing log start |
-| Weeks 6, 10, 15, 22, 27, 32, 40, 45 | Mini-tests: two skill tests in 10 minutes |
+| Weeks 6, 10, 15, 22, 27, 32, 40, 45 | Mini-tests: two skill tests in 20 minutes |
 | Week 14 | Season priorities shared (C4, the pre-season meeting) |
 | Weeks 18-20 | Trials, with full skill tests at Trial 1 |
 | Week 24 | Squads announced; each player's development focus agreed |
@@ -36,7 +36,7 @@ The whole 2027/28 plan on one page: the phases, the training blocks and themes f
 | Week 35 | Mid-season skill tests for everyone |
 | Weeks 38-39 | Mid-season one-to-ones for every player |
 | Week 40 | O- and D-lines set; scouting cards due |
-| Weeks 45-48 | 2s step-up camp |
+| Weeks 45-48 | 2s step-up camp: four sessions, with camp tests in weeks 45 and 48 |
 | After every event | Four-number stats, after-action review, top two fixes, two clips per player |
 | Week 51 | Final skill tests, player survey, one-to-ones, awards, captains' review |
 
@@ -101,7 +101,7 @@ Ph = phase. Letters A-L are the training blocks. Dates are week commencing (Mond
 | 33 | 15 May | 3 | J | Communication and switching (Help the Helper) | Bull zone: blocks in congested spaces | Poach and clog against stronger offences |  |  |
 | 34 | 22 May | 3 | J | Tempo games (shot clock, target passes) | Zone offence going over: hammers and blades | Vertical stack cutting from the front | C8 Film session (online, by squad) |  |
 | 35 | 29 May | 3 | J | Mid-season skill tests; 1s v 2s scrimmage with handicaps | Full game-plan scrimmage | Full game-plan scrimmage |  | Mid-season skill tests |
-| 36 | 5 Jun | 3 | K. Ready for Tour 3 | Retention refresher | Tour 3 game plans | Tour 3 game plans |  |  |
+| 36 | 5 Jun | 3 | K. Ready for Tour 3 | Retention refresher (Jedi lanes game) | Tour 3 game plans | Tour 3 game plans |  |  |
 | 37 | 12 Jun | 3 | UKU Tour 3 (\~13-14 Jun) | Light session | Walkthroughs | Walkthroughs |  | Event review |
 | 38 | 19 Jun | 4 | L. Regionals prep | Breaking and cutting from the Tour 3 review; short-stall games | Regionals scouting; offence Plan A and B | Tour 3 review; Regionals process goals | C9 Scouting and game plans (online, by squad) | Mid-season one-to-ones begin |
 | 39 | 26 Jun | 4 | L | Marking and switching between marks | Defence plans and triggers: person D, Bull zone, arrowhead; defence after a timeout | Arrowhead in full |  | Mid-season one-to-ones |
@@ -110,10 +110,10 @@ Ph = phase. Letters A-L are the training blocks. Dates are week commencing (Mond
 | 42 | 17 Jul | 4 | UKU Regionals (\~18-19 Jul) | Light session | Walkthroughs and pulls | Walkthroughs |  | Event review |
 | 43 | 24 Jul | 4 | EUCS Summer Tour (\~25-26 Jul, 1s) | Light recovery session | Regionals review; walkthroughs | No event: optional throwing and social |  |  |
 | 44 | 31 Jul | 5 | Recovery | Optional throwing and social session | Rest | Rest |  | Captains review Regionals and EUCS |
-| 45 | 7 Aug | 5 | Rebuild | Fundamentals at game speed | Top fixes from Regionals | Step-up camp 1: groups of three on each player's focus; mini-test |  | Mini-test; 2s step-up camp starts |
+| 45 | 7 Aug | 5 | Rebuild | Fundamentals at game speed | Top fixes from Regionals | Step-up camp 1: camp test; groups of three and games on each player's focus |  | Mini-test; 2s step-up camp starts |
 | 46 | 14 Aug | 5 | Peak | High-intensity small-sided games | Nationals scouting cards and Plans A, B and C | Step-up camp 2: 1v1 ladders; season review and awards | C11 Nationals mindset (online, 1s) | Euros travel confirmed (if in contention) |
-| 47 | 21 Aug | 5 | Peak | Peak intensity; fun competition | Full rehearsal against the 2s and guests | Rehearsal opponents for the 1s, playing the scouted looks |  |  |
-| 48 | 28 Aug | 5 | Taper | Light: throwing, set pieces | Walkthroughs, pulls, endzone reps | Step-up camp 3: final mini-test and a 2028/29 plan for each player |  |  |
+| 47 | 21 Aug | 5 | Peak | Peak intensity; fun competition | Full rehearsal against the 2s and guests | Step-up camp 3: rehearsal opponents for the 1s, each player with an observer |  |  |
+| 48 | 28 Aug | 5 | Taper | Light: throwing, set pieces | Walkthroughs, pulls, endzone reps | Step-up camp 4: camp test and a 2028/29 plan for each player |  |  |
 | 49 | 4 Sep | 5 | UKU Nationals (\~5-6 Sep); Euros (\~9-11 Sep) | Light session early in the week | Walkthroughs | — |  | Event review |
 | 50 | 11 Sep | 5 | Rest | — | — | — |  | Season stats collected; player survey sent |
 | 51 | 18 Sep | 5 | Review | Final skill tests and player survey | One-to-one reviews | One-to-one reviews | C12 Season review (at the social) | Final skill tests; one-to-ones; awards |

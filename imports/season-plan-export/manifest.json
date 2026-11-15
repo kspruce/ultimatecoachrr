@@ -9,63 +9,63 @@
    "title": "Season plan",
    "slug": "season-plan",
    "file": "tabs/01-season-plan.md",
-   "bytes": 37261
+   "bytes": 40417
   },
   {
    "order": 2,
    "title": "Season at a glance",
    "slug": "season-at-a-glance",
    "file": "tabs/02-season-at-a-glance.md",
-   "bytes": 15856
+   "bytes": 15948
   },
   {
    "order": 3,
    "title": "Weekly plan",
    "slug": "weekly-plan",
    "file": "tabs/03-weekly-plan.md",
-   "bytes": 12588
+   "bytes": 12672
   },
   {
    "order": 4,
    "title": "Phase 1 sessions",
    "slug": "phase-1-sessions",
    "file": "tabs/04-phase-1-sessions.md",
-   "bytes": 66987
+   "bytes": 93486
   },
   {
    "order": 5,
    "title": "Phase 2 sessions",
    "slug": "phase-2-sessions",
    "file": "tabs/05-phase-2-sessions.md",
-   "bytes": 54262
+   "bytes": 77932
   },
   {
    "order": 6,
    "title": "Phase 3 sessions",
    "slug": "phase-3-sessions",
    "file": "tabs/06-phase-3-sessions.md",
-   "bytes": 50659
+   "bytes": 75009
   },
   {
    "order": 7,
    "title": "Phase 4 sessions",
    "slug": "phase-4-sessions",
    "file": "tabs/07-phase-4-sessions.md",
-   "bytes": 19749
+   "bytes": 28847
   },
   {
    "order": 8,
    "title": "Phase 5 sessions",
    "slug": "phase-5-sessions",
    "file": "tabs/08-phase-5-sessions.md",
-   "bytes": 15028
+   "bytes": 22270
   },
   {
    "order": 9,
    "title": "Drills by phase and source",
    "slug": "drills-by-phase-and-source",
    "file": "tabs/09-drills-by-phase-and-source.md",
-   "bytes": 19679
+   "bytes": 36076
   },
   {
    "order": 10,
@@ -79,7 +79,7 @@
    "title": "Classroom sessions",
    "slug": "classroom-sessions",
    "file": "tabs/11-classroom-sessions.md",
-   "bytes": 15315
+   "bytes": 17033
   }
  ]
 }

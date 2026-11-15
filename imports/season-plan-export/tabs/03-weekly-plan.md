@@ -62,7 +62,7 @@ Skills now face a real defence, and both main offences and team-defence principl
 
 ## Phase 3: Early season (mid Mar – mid Jun 2028)
 
-The playbook is built through a run of test events. Every event week is light; the week after each event fixes its top two problems.
+The playbook is built through a run of test events. Every event week is light, including week 30 for the 1s; the week after each event fixes its top two problems.
 
 | Wk | w/c | Block / event | Joint: fundamental | 1s split: tactic | 2s split: tactic |
 | --- | --- | --- | --- | --- | --- |
@@ -77,7 +77,7 @@ The playbook is built through a run of test events. Every event week is light; t
 | 33 | 15 May | J | Communication and switching (Help the Helper) | Bull zone: blocks in congested spaces | Poach and clog against stronger offences |
 | 34 | 22 May | J | Tempo games (shot clock, target passes) | Zone offence going over: hammers and blades | Vertical stack cutting from the front |
 | 35 | 29 May | J | Mid-season skill tests; 1s v 2s scrimmage with handicaps | Full game-plan scrimmage | Full game-plan scrimmage |
-| 36 | 5 Jun | K. Ready for Tour 3 | Retention refresher | Tour 3 game plans | Tour 3 game plans |
+| 36 | 5 Jun | K. Ready for Tour 3 | Retention refresher (Jedi lanes game) | Tour 3 game plans | Tour 3 game plans |
 | 37 | 12 Jun | UKU Tour 3 (\~13-14 Jun) | Light session | Walkthroughs | Walkthroughs |
 
 **Classroom sessions:** C6 How we review: after-action reviews (week 25, by squad); C7 Purpose: values, a catchphrase and a bar-setting behaviour (week 29, at Herdlodge); C8 Watching the best: film session (week 34, online, by squad).
@@ -99,15 +99,15 @@ Sessions get shorter and sharper, built around scouting and game plans for Regio
 
 ## Phase 5: Nationals (Aug – Sep 2028)
 
-A recovery week after back-to-back events, three weeks to rebuild and peak, then a taper. No new material. For the 2s, weeks 45-48 are a step-up camp: individual development built on each player's test results, aimed at 2028/29.
+A recovery week after back-to-back events, three weeks to rebuild and peak, then a taper. No new material. For the 2s, weeks 45-48 are a four-session step-up camp: individual development built on each player's test results, aimed at 2028/29.
 
 | Wk | w/c | Event | Joint | 1s split | 2s split |
 | --- | --- | --- | --- | --- | --- |
 | 44 | 31 Jul | Recovery | Optional throwing and social session | Rest | Rest |
-| 45 | 7 Aug | — | Fundamentals at game speed | Top fixes from Regionals | Step-up camp 1: groups of three on each player's focus; mini-test |
+| 45 | 7 Aug | — | Fundamentals at game speed | Top fixes from Regionals | Step-up camp 1: camp test; groups of three and games on each player's focus |
 | 46 | 14 Aug | — | High-intensity small-sided games | Nationals scouting cards and Plans A, B and C | Step-up camp 2: 1v1 ladders; season review and awards |
-| 47 | 21 Aug | — | Peak intensity; fun competition | Full rehearsal against the 2s and guests | Rehearsal opponents for the 1s, playing the scouted looks |
-| 48 | 28 Aug | Taper | Light: throwing, set pieces | Walkthroughs, pulls, endzone reps | Step-up camp 3: final mini-test and a 2028/29 plan for each player |
+| 47 | 21 Aug | — | Peak intensity; fun competition | Full rehearsal against the 2s and guests | Step-up camp 3: rehearsal opponents for the 1s, each player with an observer |
+| 48 | 28 Aug | Taper | Light: throwing, set pieces | Walkthroughs, pulls, endzone reps | Step-up camp 4: camp test and a 2028/29 plan for each player |
 | 49 | 4 Sep | UKU Nationals (\~5-6 Sep); Euros stretch goal (\~9-11 Sep); week 50 (11 Sep) is rest | Light session early in the week | Walkthroughs | — |
 | 51 | 18 Sep | Review | Final skill tests and player survey | One-to-one reviews | One-to-one reviews |
 
