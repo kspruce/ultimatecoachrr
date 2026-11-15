@@ -90,7 +90,7 @@ The rules from Phases 1 and 2 still apply: the source key and every-session rule
 | 0:20 | Skill floor | Self-running groups of three built around mentor pairs, as many lanes as there are groups: 12 min on one partner's development focus, then 12 min on the other's; the third player defends or marks. Skill leads move between lanes. Run the lanes into, with and across the wind: Tour 1 is next weekend | Season plan, Skill floor |
 | 0:45 | Updog | Two teams take turns on offence and defence: offence drop 0, catch 1; defence block 1, catch 2 | HN Practice Sessions 10 |
 | 1:00 | Boxing out and finding the body | 1v1 deep (theory Card 20). Offence keeps their body between the disc and the defender; defence runs to the cutter and touches them first, then goes for the disc. Three rounds: nobody jumps, offence jumps, both jump; swap roles. Finish with deep running, the defender staying goal-side | GRUT; HN Practice Sessions 10; HB 27.4, 27.5; Flik drill: Deep Defending |
-| 1:15 | Pulls and the pull chase in wind | Pullers practise bladey and rolling pulls upwind and downwind; the rest chase as a unit and call "central" or "sideline" | Flik Deep Dives, Brute Squad Pulls; HN Flik, Using the Wind |
+| 1:15 | Pulls in wind and the pull chase | Pullers practise bladey and rolling pulls upwind and downwind; the rest chase as a unit and call "central" or "sideline" | Flik Deep Dives, Brute Squad Pulls; HN Flik, Using the Wind |
 | 1:30 | Water |  |  |
 | 1:40 | Blocks Only, with a zone | 5v5. A turnover only counts if the defence touches the disc; the defence must start every point in a zone | IF |
 | 2:10 | Asymmetric defence | 5 defenders v 4 attackers on 30 x 25 m; the defence can score | IF |
@@ -104,8 +104,8 @@ The rules from Phases 1 and 2 still apply: the source key and every-session rule
 | 0:00 | Warm-up | Warm-up | HN Practice Sessions |
 | 0:20 | Throwing in the wind, in pairs: low release upwind, high downwind, extra spin (10 min); then the Bull zone refresh, walked: roles, counting attackers, the movement on swings, sideline talk (10 min) | Throwing in the wind, in pairs: low release upwind, high downwind, extra spin (10 min); then keeping margins, 3 x 40 s (10 min) | DK 4.9; HN Bull Zone; HB 22.3 |
 | 0:40 | 8-pull zone reps in the Bull zone: the defence scores a point for every swing that gains no yards and 2 for a turnover on a throw into the wind | 7v6: the defence poaches and clogs to cover the extra attacker; in wind it scores double for a turnover within five passes | HN Flik Zone Concepts; HN Case Studies (Japan, Brute Squad) |
-| 1:00 | Arrowhead walk-through: wall in front, chase, line trap with two tips; don't get outflanked | Basic Bull zone walk-through: two chases and a bull, wings back | HN Flik, Arrow Head; Flik Zone Concepts 6; HN Bull Zone |
-| 1:20 | 8-pull zone reps: the captain calls Bull or arrowhead by the wind before each pull | Basic Bull zone, 8-pull: the same line defends eight pulls, set up as upwind points | HN Flik Zone Concepts; HN Bull Zone |
+| 1:00 | Arrowhead walk-through: wall in front, chase, line trap with two tips; don't get outflanked | Bull zone walk-through, basic version: two chases and a bull, wings back | HN Flik, Arrow Head; Flik Zone Concepts 6; HN Bull Zone |
+| 1:20 | 8-pull zone reps: the captain calls Bull or arrowhead by the wind before each pull | 8-pull zone reps in the basic Bull zone: the same line defends eight pulls, set up as upwind points | HN Flik Zone Concepts; HN Bull Zone |
 | 1:40 | 4v4 continuous, stall 5; then 4 x 20 m sprints with a cut, 30 s rest | 4v4 continuous, stall 7; then 4 x 20 m sprints with a cut, 30 s rest | BFD S&C |
 | 2:00 | CRUMBLE and transitions, 7v7: switch from zone to person on the call, deepest first; then zone v a simple wind offence | Basic Bull zone v vert, 7v7: switch to person on CRUMBLE; on offence, Three new handlers | HN Bull Zone; HN Flik, Transitions |
 | 2:40 | Scrimmage, zone on every pull. Consequence: a huck conceded over the zone by a wing or deep who was out of position costs them a sprint | Scrimmage with a poach bonus; Last touch picks up | Plan; DK 7.9 |
@@ -118,7 +118,7 @@ The rules from Phases 1 and 2 still apply: the source key and every-session rule
 - **Conditioned 7v7 (joint):** a bonus for a turnover within the offence's first five passes, and for any stall-out. It rewards making them throw one more pass.
 - **8-pull zone reps (1s):** a point for every swing that gains nothing, 2 for a turnover into the wind. The score tells the zone what it is for: lots of swings and a bad upwind throw. Ask: "How many attackers were in your area just then?"
 - **7v6 in wind (2s):** a player short, with double points for an early turnover. In wind, clogging the lanes near the disc is enough to force the hard throw. Ask: "Which throw did we leave them? Was it the one into the wind?"
-- **Basic Bull zone, 8-pull (2s):** the same line defends eight pulls, so each player holds one role long enough to learn it.
+- **8-pull zone reps in the basic Bull zone (2s):** the same line defends eight pulls, so each player holds one role long enough to learn it.
 
 **Harder / easier**
 
@@ -126,7 +126,7 @@ The rules from Phases 1 and 2 still apply: the source key and every-session rule
 - **Boxing out:** harder: both players jump from a running start; easier: nobody jumps.
 - **Blocks Only, with a zone:** harder: the offence may use any throw; easier: the offence must make five passes before going deep.
 - **Asymmetric defence:** harder: a bigger pitch; easier: a smaller pitch.
-- **Basic Bull zone, 8-pull (2s):** harder: the offence may throw over the top; easier: the offence may only swing and crash.
+- **8-pull zone reps in the basic Bull zone (2s):** harder: the offence may throw over the top; easier: the offence may only swing and crash.
 
 **Coaching notes**
 
@@ -158,7 +158,7 @@ The rules from Phases 1 and 2 still apply: the source key and every-session rule
 
 | Time | 1s | 2s (suggested) | Source |
 | --- | --- | --- | --- |
-| 0:00 | Throwing in pairs and the 4v3 mini | Throwing in pairs and the 4v3 mini | Kieran |
+| 0:00 | 4v3 mini, after throwing in pairs | 4v3 mini, after throwing in pairs | Kieran |
 | 0:15 | Defence walk-through: pull coverage, Bull or arrowhead by the wind, CRUMBLE | Defence walk-through: pull coverage, poach and clog, the basic Bull zone for upwind points | Phase 2 week 24; week 25 |
 | 0:35 | Pull plays at half pace: the ho slash and windmill plays, and the dominator call | Pull plays at half pace: string and the vert deep-cut play; "Endzone" from 10 m | Phase 2 week 23 |
 | 0:50 | Lines, roles and the defensive goals for the weekend | Lines and roles: the three handlers for each O point are named now, so every player is on the handler tally by the end of the weekend | Plan |
@@ -203,7 +203,7 @@ The rules from Phases 1 and 2 still apply: the source key and every-session rule
 | Time | 1s | 2s (suggested) | Source |
 | --- | --- | --- | --- |
 | 0:00 | Warm-up | Warm-up | HN Practice Sessions |
-| 0:20 | Bucket swings: the full width and back, then races; then pop passes in and out of a small space | Bucket swings: the full width and back, then races between two buckets | Flik Zone Offence 1, 2 |
+| 0:20 | Bucket and swing: the full width and back, then races; then pop passes in and out of a small space | Bucket and swing: the full width and back, then races between two buckets | Flik Zone Offence 1, 2 |
 | 0:40 | El Rondo: four throwers on a 10 m square against a three-player cup; a turnover sends the culprit into the cup | El Rondo on a 12 m square against a cup of two | HB 31.2 |
 | 1:00 | Controller walk-through, then crashing the cup: a popper crashes for a short pass and gets out if it isn't thrown | The 2s' top fix from Tour 1: the matching drill from the fix menu | Flik Zone Offence 2; HN Flik, Crashing the Cup; Fix menu above |
 | 1:20 | Mini 3v3 with a controller who must get every second pass | The 2s' top fix as a game: the matching game from the fix menu, 5v4 | Flik Zone Offence 2; Fix menu above |
@@ -273,7 +273,7 @@ The rules from Phases 1 and 2 still apply: the source key and every-session rule
 | 0:20 | Move the Mark: hucking against a stationary mark at 50%, 70%, then 100% | Box hucking drill: count the hucks landing in the box, each thrower against their own last score | HN Excel Premium; UAP Backhand hucks |
 | 0:40 | Deep-shot game, 5v5 on a long, half-width pitch: a goal from a huck over 30 m caught in stride scores 3; any other goal scores 1 | Deep-shot game, 5v4 on a long, half-width pitch: a goal from a huck over 25 m scores 3; any other goal scores 1 | Plan; IF |
 | 1:00 | Read-the-defender hucking (GRUT): the thrower on the sideline reads which cone the deep defender is on and picks the huck; then the upline is live | Deep cut timing with a dish: wait for power position, start shallow, then be decisive | GRUT; HN Next Gen 10 |
-| 1:20 | Dishy Huck, 3v3: handler, dish and deep cutter against three defenders; a huck caught in stride scores 2, a stop scores 1 for the defence | Vert deep-cut pull play, 5-pull: the stack clears so the front of stack can go deep; a goal within five passes scores 2 | HN 10 Big Drills; HN Excel Premium, Dynamic Pull Plays |
+| 1:20 | Dishy Huck, 3v3: handler, dish and deep cutter against three defenders; a huck caught in stride scores 2, a stop scores 1 for the defence | Vert pull play, 5-pull: the stack clears so the front of stack can go deep; a goal within five passes scores 2 | HN 10 Big Drills; HN Excel Premium, Dynamic Pull Plays |
 | 1:40 | 4v4 continuous, stall 5: two blocks only this week | 4v4 continuous, stall 7: two blocks only this week | BFD S&C |
 | 2:00 | Ho deep shots (10 min walk-through): isolate a cutter and run diagonal scoring cuts from the open side to the break-side back corner; then 7v7 in ho | Back of stack goes deep from vert (10 min walk-through); then 7v7 in vert; Three new handlers | HN Deep Dives, Italy Mixed WUC 2024; HN Flik, Vertical Stack |
 | 2:40 | Scrimmage: a goal from a huck over 30 m scores 2 | Scrimmage: a goal from a huck over 30 m scores 2; Last touch picks up | Plan; DK 7.9 |
@@ -284,7 +284,7 @@ The rules from Phases 1 and 2 still apply: the source key and every-session rule
 - **Long and short bonus points (joint):** a bonus for a possession with one long and one very short throw. The huck has to be set up, by a swing or a dish into power position. Ask: "What set the huck up?"
 - **Deep-shot game (both):** a huck caught in stride scores 3 on a long, narrow pitch. The pitch shape gives deep cutters room and takes the lazy swing away, so throwers look long when the cutter is isolated and hold when they aren't. Ask: "When was the deep shot on? What told you?"
 - **Dishy Huck, 3v3 (1s):** dish to power position, then huck before the mark sets. The stop scores for the defence, so the cutter has to start shallow and time it.
-- **Vert deep-cut pull play (2s):** five pulls, and a goal inside five passes scores 2. The 2s practise one deep look and its backup.
+- **Vert pull play, 5-pull (2s):** five pulls, and a goal inside five passes scores 2. The 2s practise one deep look and its backup.
 
 **Harder / easier**
 
@@ -367,10 +367,10 @@ The rules from Phases 1 and 2 still apply: the source key and every-session rule
 | Time | 1s | 2s (suggested) | Source |
 | --- | --- | --- | --- |
 | 0:00 | Warm-up | Warm-up | HN Practice Sessions |
-| 0:20 | Hucking shapes into and with the wind, in pairs | Low upwind throws and high downwind throws, in pairs | HN Excel Premium; DK 4.9 |
+| 0:20 | Throwing in the wind: hucking shapes into and with the wind, in pairs | Throwing in the wind: low upwind throws and high downwind throws, in pairs | HN Excel Premium; DK 4.9 |
 | 0:40 | Arrowhead walk-through: the wall in front and the chaser; then the line trap | Upwind-downwind game, 5v5: an upwind goal scores 3 and a downwind goal 1 | HN Flik, Arrow Head; Flik Zone Concepts 6; HN Deep Dives, Extreme Wind |
 | 1:00 | 5-pull against the arrowhead at walk-through pace: the offence may only swing and crash | Safe vert in wind (walk-through): short stack, big under cuts, backing up | Flik Zone Concepts 6; HN Deep Dives |
-| 1:20 | Wind plan: which defence on which pull, the upwind and downwind offences, the toss | Arrowhead as a preview, 5-pull: the 2s attack a walking arrowhead, then defend in it for three pulls | HN Deep Dives, Extreme Wind; Flik Zone Concepts 6 |
+| 1:20 | Wind plan: which defence on which pull, the upwind and downwind offences, the toss | 5-pull against the arrowhead, as a preview: the 2s attack a walking arrowhead, then defend in it for three pulls | HN Deep Dives, Extreme Wind; Flik Zone Concepts 6 |
 | 1:40 | EUCS briefing: lines, process goals and the "what if" plan. No conditioning and no scrimmage: EUCS is this weekend | Wind scrimmage in vert: swing to set up downwind hucks; a catch that a teammate backed up scores a bonus; Last touch picks up | HN Case Studies, Mooncatchers 2024; HN Deep Dives, Extreme Wind; DK 7.9 |
 
 **What the games push players to do**
@@ -425,7 +425,7 @@ The rules from Phases 1 and 2 still apply: the source key and every-session rule
 
 | Time | 1s | 2s (suggested) | Source |
 | --- | --- | --- | --- |
-| 0:00 | EUCS Spring review (10 min): the four numbers and the top two fixes; one of them goes into Plan B for Tour 2. Then throwing in pairs | Throwing in pairs and the 4v3 mini | HN Coach Corner, Base Metric Analysis; Kieran |
+| 0:00 | EUCS Spring review (10 min): the four numbers and the top two fixes; one of them goes into Plan B for Tour 2. Then throwing in pairs | 4v3 mini, after throwing in pairs | HN Coach Corner, Base Metric Analysis; Kieran |
 | 0:15 | Walk-throughs: defence plan, pull plays, "Endzone" and "Spread" | Walk-throughs: pull coverage, poach and clog, the basic Bull zone; string and the deep-cut pull play; "Endzone" | Phase 2 weeks 23-24; week 25 |
 | 0:40 | Plan A to Plan B on a call: 5-pull at half pace, the captain calling the switch mid-point | Plan A (vert from the back) at half pace, 5-pull | BFD, Game plans; Flik |
 | 0:55 | Lines and roles | Lines and roles: the three handlers for each O point are named now | Plan |
@@ -467,7 +467,7 @@ The rules from Phases 1 and 2 still apply: the source key and every-session rule
 | Time | 1s | 2s (suggested) | Source |
 | --- | --- | --- | --- |
 | 0:00 | Warm-up | Warm-up | HN Practice Sessions |
-| 0:20 | Quick throwing | Throwing in pairs with three fast steps after every throw (towards, left, right, away) | HB 34.1; HN Practice Sessions 7 |
+| 0:20 | Quick throwing | Throw-and-go pairs: three fast steps after every throw (towards, left, right, away) | HB 34.1; HN Practice Sessions 7 |
 | 0:40 | 7v7 with a planned poach in the lane off every pull; the offence runs the dominator to beat it, and a goal scores 2 if the poacher's player touched the disc | 3v3 possession: 10 passes scores a point, and every third throw must go to a new player | HN Flik, Disruptive Poaching; HN Practice Sessions 7 |
 | 1:00 | Dominator drill with a poaching defender added | Box give-and-go: three players, four cones, move to the free cone after every throw | HB 34.2; HN Practice Sessions 7 |
 | 1:20 | Dominator 3v3 with a fourth defender poaching: a 15 m gain by give-and-go scores as a goal, and a pass to the player the poacher left scores a bonus | Give-and-go off the sideline, 3v3: the disc starts on the line and the thrower must cut upfield for the return; a give-and-go that gains 10 m scores a point | BFD, Dominator; HN Practice Sessions 7 |
@@ -630,7 +630,7 @@ The rules from Phases 1 and 2 still apply: the source key and every-session rule
 | Time | Activity | How it runs | Source |
 | --- | --- | --- | --- |
 | 0:00 | Warm-up | Herd standard warm-up and 4v3 mini | HN Practice Sessions; Kieran |
-| 0:20 | Mid-season skill tests | Five stations of 12 minutes, groups of about 8, with 5 minutes for changeovers: the hucking alley; Get 10 (both forces); the 1v1 cutting test; heads-on catching; the filmed 5-10-5. Protocols are in the Phase 1 tab | Season plan, Measuring improvement |
+| 0:20 | Skill test stations: mid-season round | Five stations of 12 minutes, groups of about 8, with 5 minutes for changeovers: the hucking alley; Get 10 (both forces); the 1v1 cutting test; heads-on catching; the filmed 5-10-5. Protocols are in the Phase 1 tab | Season plan, Measuring improvement |
 | 1:25 | Water and scores | Players enter their scores and look at their curve since October and the trials | Season plan, Measuring improvement |
 | 1:35 | 1s v 2s with handicaps | For example: the 1s play stall 7 and must complete one break throw before scoring; the 2s start points with the disc | Plan |
 | 2:15 | Game-plan scrimmage | Mixed teams, a captain on each sideline; each team has two timeouts and must use them; line calls before each point | HN Coach Corner, Time Outs |

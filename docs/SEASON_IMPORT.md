@@ -29,7 +29,7 @@ the drills:
 
 - `grut-drills.json`: the 9 GRUT drills the season plan uses (four more GRUT
   videos are theory cards 41-44).
-- `herd-drills.json`: about 90 drills and games the 2027/28 sessions use (the
+- `herd-drills.json`: about 220 drills and games the 2027/28 sessions use (the
   Ian French games, the club staples such as the 4v3 mini and 4v4 continuous,
   and the split-session drills), each with what it's for, how it runs,
   coaching points, set-up, numbers and the weeks it's used. The split-session

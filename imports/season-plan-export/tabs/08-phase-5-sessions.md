@@ -193,7 +193,7 @@ The 1s play the 2s and guests, who play the scouted opponents' looks. For the 2s
 
 | Time | 1s | 2s (suggested) | Source |
 | --- | --- | --- | --- |
-| 0:00 | Throwing in pairs and the 4v3 mini | Warm-up and the 4v3 mini | Kieran |
+| 0:00 | 4v3 mini, after throwing in pairs | Warm-up and the 4v3 mini | Kieran |
 | 0:20 | Walk-throughs of Plans A, B and C | Step-up camp 4. Camp test: the two skill tests nearest each player's focus, entered against weeks 35 and 45 | BFD, Game plans; Season plan, Measuring improvement |
 | 0:40 | Pulls, then endzone and Spread reps | Focus games: one pitch for each focus area, as in week 45 | HN Flik, Training Pulling; Phase 2 week 23; Plan |
 | 1:00 | Finish: the 1s' session is 60 minutes this week | Small-sided games at stall 6, Golden Arm rotation, while players come off in turn for the next row | Plan; IF |
@@ -235,7 +235,7 @@ No sessions. The captains collect the season's stats and send out the player sur
 | Time | Activity | How it runs | Source |
 | --- | --- | --- | --- |
 | 0:00 | Warm-up | Herd standard warm-up and 4v3 mini | HN Practice Sessions; Kieran |
-| 0:20 | Final skill tests | Five stations of 12 minutes, with 5 minutes for changeovers: the same four skill tests as in October, at trials and in May, plus the filmed 5-10-5. Protocols are in the Phase 1 tab | Season plan, Measuring improvement |
+| 0:20 | Skill test stations: final round | Five stations of 12 minutes, with 5 minutes for changeovers: the same four skill tests as in October, at trials and in May, plus the filmed 5-10-5. Protocols are in the Phase 1 tab | Season plan, Measuring improvement |
 | 1:25 | Water and scores | Players enter their scores and look at their own October-to-September change | Season plan, Measuring improvement |
 | 1:35 | Nationals review | 10 minutes: the four numbers, and three things to keep for next season | HN Coach Corner, Base Metric Analysis |
 | 1:45 | Festive mixed games | Golden Arm, Honeypass, mixed 7v7 | IF; Kieran |

@@ -159,7 +159,7 @@ Each week lists three learning points, a timed joint session and both split sess
 | 0:00 | Warm-up | Three-part warm-up | HB App. A.3 |
 | 0:20 | Compass throwing and finger-calling | Pairs: throw to N, E, S, W off the pivot; partner holds up fingers which the thrower calls mid-pivot. Last 5 minutes: mentor pairs work on each partner's development focus | DK 9.2, 8.27 |
 | 0:40 | Gauntlet | 2v2 in a channel, stall 4; offence must pivot to break the mark to progress | IF |
-| 1:00 | Slow pivots, then fake-fake-throw | Pivot foot on a line: pivot slowly over 2-3 s keeping your centre of mass over the pivot foot, pause and fake, then speed up (HN Next Gen 10, Pivoting to Break the Mark); then in threes with a passive mark; then two fakes before every throw, marker bites on good fakes and calls them out | DK 8.5; UAP Forehand wk 1 |
+| 1:00 | Fake-fake-throw, after slow pivots | Pivot foot on a line: pivot slowly over 2-3 s keeping your centre of mass over the pivot foot, pause and fake, then speed up (HN Next Gen 10, Pivoting to Break the Mark); then in threes with a passive mark; then two fakes before every throw, marker bites on good fakes and calls them out | DK 8.5; UAP Forehand wk 1 |
 | 1:15 | Threat position | Receiver catches on the run and lands facing upfield, pivots once to the break side | BFD ch. 1 |
 | 1:30 | Water |  |  |
 | 1:40 | Front Force Only | 5v5: the mark forces straight up (no around, no inside), so throwers must pivot and fake to beat it | IF |
@@ -319,7 +319,7 @@ Each week lists three learning points, a timed joint session and both split sess
 | 0:20 | Throwing under pressure: hold the disc to stall 4, then throw past a live mark | Fake-fake-throw under a passive mark at stall 7: two fakes before every throw; the mark calls which fake moved them | Plan; DK 8.5 |
 | 0:40 | 1v1 "name your cut": the cutter calls the cut before running it, then wins anyway; first to five clean catches | Away-then-under 1v1: from 15 m the cutter drives away for five or six steps, then comes under; the defender starts a step off; first to five clean catches | Flik L4 Lesson 3; Wiggins; Flik L2 Lesson 5 |
 | 1:00 | Five-cone cutting: the three cut families walked, then at speed | Zig-zag cuts: a chop stop at each cone and five or six hard steps between them | UAP Cutting (Raynor) wk 1; DK 8.13 |
-| 1:20 | Cut families with a defender: in-out, out-in and lateral, 2v2 so the thrower has a mark; the defence scores for a stall at 6 | Marked cutting, 2v2: away to open under, then under to away, at stall 8; the defence scores for a stall | UAP Cutting wk 2; SP; DK 8.15 |
+| 1:20 | Cut families with a defender: in-out, out-in and lateral, 2v2 so the thrower has a mark; the defence scores for a stall at 6 | Cut families with a defender, 2v2: away to open under, then under to away, at stall 8; the defence scores for a stall | UAP Cutting wk 2; SP; DK 8.15 |
 | 1:40 | Small-sided games: 4v4 continuous, stall 5 | 4v4 continuous, stall 7 | BFD S&C |
 | 2:00 | Shortened Stall Tag, stall 4: 4v4 with person defence; work through the five ways to get open (rush, jab, drive, wait, seal) | Shortened Stall Tag, stall 6: 5v4; use three of the five ways to get open (rush, jab, drive) | IF; Flik L4 Lesson 3; Wiggins |
 | 2:30 | Scrimmage, consequence: losing team does a 5-10-5 | Scrimmage at stall 8, Golden Arm rotation | Plan; IF |
@@ -465,7 +465,7 @@ Each week lists three learning points, a timed joint session and both split sess
 | Time | 1s group | 2s group (suggested) | Source |
 | --- | --- | --- | --- |
 | 0:00 | Warm-up | Warm-up | HB App. A.3 |
-| 0:20 | Throwing under pressure: the H cut drill with a live mark on the thrower | H cut drill at half pace with a passive mark, stall 7 | DK 9.21 |
+| 0:20 | Throwing under pressure: the H cut drill with a live mark on the thrower | Throwing under pressure: the H cut drill at half pace with a passive mark, stall 7 | DK 9.21 |
 | 0:40 | Ho game with 3 lives, 5v5: each team has three turnovers before the point ends, and two cutters in the same lane costs a life | Static-start game, 5v4: every possession restarts with the stack set; two cutters in the same lane is a turnover | DK 7.10; Plan |
 | 1:00 | Zipper: away, under, then up-and-under; then ho spacing walked through (the two in front of the disc cut, the rest stay wide) | Triangle cutting, then team triangle cutting | SP; SP "Horizontal stack 1"; Flik L3 Lesson 4 |
 | 1:20 | Vert from the front, 5v5: the front of the stack cuts first and clears wide; a goal only counts if the scorer cleared at least once in the possession | Cut-and-clear game, 5v5: a cutter who isn't thrown to must clear to the break side before anyone else cuts | SP; Flik L3 Lesson 5; Plan |
@@ -528,7 +528,7 @@ Each week lists three learning points, a timed joint session and both split sess
 | 0:00 | Warm-up | Fast feet and replacement hops added to the usual warm-up | UAP Marking (Wiseman) |
 | 0:20 | Marking with intensity | 3-person drill (thrower, mark, receiver): the thrower names their favourite throw and the mark takes it away, one side at a time; the thrower rates the mark's intensity 1-3 (theory Card 27). Last 5 minutes: mentor pairs work on each partner's development focus | GRUT; Flik |
 | 0:40 | Tag Prestall | Game where the mark must tag the thrower's shoulder before stalling | IF |
-| 1:00 | Base hold, hop into base, 5 m side shuffle with pause and reach; marker movement with hands clasped, ten touches then swap (Herd's own version: HN Practice Sessions 3, Forcing the disc) | Progression from static to moving | UAP Marking wk 1; Flik L4 Lesson 7 |
+| 1:00 | Marking base: base hold, hop into base, 5 m side shuffle with pause and reach; marker movement with hands clasped, ten touches then swap (Herd's own version: HN Practice Sessions 3, Forcing the disc) | Progression from static to moving | UAP Marking wk 1; Flik L4 Lesson 7 |
 | 1:15 | Four-person break force, then break force elimination | Marks lose a life for each break given up | DK 8.22, 9.20 |
 | 1:30 | Water |  |  |
 | 1:40 | Triangle mark game | 5v5: mark in a triangle, defence scores for a stall or a point block | Plan |
@@ -542,7 +542,7 @@ Each week lists three learning points, a timed joint session and both split sess
 | 0:00 | Warm-up | Warm-up | HB App. A.3 |
 | 0:20 | Triangle marking progression: zero-pivot drill, one-pivot drill, then the full triangle drill; a win for the mark is any throw that doesn't hit the cutter in stride (HN Point of Attack) | Marker movement one way, then the 3-person drill modified: the mark holds a one-way force for five throws, then rotates | UAP Marking wk 4; Flik L2 Lesson 7 |
 | 0:40 | One-crossover marking game: the thrower may cross their body once; best of five, then swap | Piggy in the middle: two throwers 8 m apart, the mark between them holds a one-way force; swap after 10 throws, and the mark scores for every throw kept to the forced side | Wiggins; DK 8.9 |
-| 1:00 | Triangle mark and hard force: walk through, then live in fours | Triangle forcing in fours: the thrower looks at A for 4 s, then B for 3 s; the mark forces about five times then swaps (HN Practice Sessions 3) | Plan; HN Practice Sessions 3 |
+| 1:00 | Triangle forcing in fours: walk the triangle mark and a hard force through, then live | Triangle forcing in fours: the thrower looks at A for 4 s, then B for 3 s; the mark forces about five times then swaps (HN Practice Sessions 3) | Plan; HN Practice Sessions 3 |
 | 1:20 | Triangle mark game, 4v4: the defence scores for a stall, a point block, or a possession with no break thrown | Tram-line game: 5v5 on a narrow pitch so the force is easy to hold; the defence scores for a stall-out or a block | Plan; Flik |
 | 1:40 | Small-sided games: 4v4 continuous, stall 5 | 4v4 continuous, stall 7 | BFD S&C |
 | 2:00 | BFD feedback exercise: 5 x 1 min, marker and thrower give each other one point to fix; then Tag Prestall, 5v5 at stall 6 | Tag Prestall, 5v5 at stall 8: the mark tags the thrower's shoulder before starting the stall | BFD; IF |
@@ -613,7 +613,7 @@ Each week lists three learning points, a timed joint session and both split sess
 | Time | 1s group | 2s group (suggested) | Source |
 | --- | --- | --- | --- |
 | 0:00 | Warm-up | Warm-up | HB App. A.3 |
-| 0:20 | Throwing under pressure, stall 4: pivot before every throw; the mark scores for a throw kept to the open side | Throwing under a mark at stall 6: pivot before every throw | Plan |
+| 0:20 | Throwing under pressure, stall 4: pivot before every throw; the mark scores for a throw kept to the open side | Throwing under pressure, stall 6: pivot before every throw | Plan |
 | 0:40 | Win the Box: 2 O v 1 D; the offence wins by catching in the box or reaching the cushion cone first (HN 10 Big Drills) | 2v2 deep space: the defence must stop the deep first, then the under; stall 8 | HN 10 Big Drills; Plan |
 | 1:00 | Buffering: jog then full pace, keeping the "string from belly button to belly button"; then the diamond drill | Mirror defending, then defending square | Flik L4 Lesson 6; UAP Defence wk 3; Flik L2 Lesson 8 |
 | 1:20 | Space Invaders, 4v4: the defence scores by where the offence catches: block, turn or stall 3; break 2; deep 1; open under 0 | Back-shoulder game, 4v4: an under conceded costs nothing; a deep catch scores 2 for the offence; a block or stall scores 2 for the defence | Flik; Plan |
@@ -689,7 +689,7 @@ Each week lists three learning points, a timed joint session and both split sess
 | 0:00 | Warm-up | Warm-up | HB App. A.3 |
 | 0:20 | True mark v 45-degree flat mark shuffles | Reaction pairs: mirror drill, then the mark reacts to the thrower's fakes for 30 s | UAP Marking wk 2; BFD |
 | 0:40 | Mark-call game, 4v4: a caller on the sideline shouts "triangle" or "flat" during each possession; the defence scores if the mark has changed within a second, and for a stall or block | Mark and downfield D together: 2v2 with a mark; the defence scores for a stall at 8 or a throw into the downfield defender | Plan; BFD |
-| 1:00 | Flat mark (BFD): walk through, then the Best Breakmark drill: the handler receives a short pass and moves, so the mark sets up in the chaos of the first seconds; the dishing player calls travels (HN Point of Attack) | Defending the line and Hollywood squares | BFD; HN Point of Attack; Flik L4 Lesson 8 |
+| 1:00 | Flat mark (BFD): walk through, then the Best Breakmark drill: the handler receives a short pass and moves, so the mark sets up in the chaos of the first seconds; the dishing player calls travels (HN Point of Attack) | Hollywood squares, then defending the line | BFD; HN Point of Attack; Flik L4 Lesson 8 |
 | 1:20 | Mark-call game, harder: 5v5, and the call can come twice in a possession | Tram-line game, 5v5 on a narrow pitch with a one-way force: a defensive score only counts if the sideline called "up", "break" or "strike" on the throw | Plan; Flik |
 | 1:40 | Small-sided games: 4v4 continuous, stall 5 | 4v4 continuous, stall 7 | BFD S&C |
 | 2:00 | BFD feedback exercise: 5 x 1 min; then Three-Team Transitions with the mark called per point | BFD feedback exercise: 5 x 1 min; then Three-Team Transitions with sideline calls only | BFD; IF |

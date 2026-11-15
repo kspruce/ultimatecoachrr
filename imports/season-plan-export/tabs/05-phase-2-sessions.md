@@ -510,7 +510,7 @@ The same rules as Phase 1 apply. The source key (IF, BFD, DK, HB, UAP, Flik, SP,
 | 1:00 | Peppermills: open-side under, then peppermill flow | Positioning the vertical stack as the disc swings and moves downfield; then string: the first and second cuts are called, so continuation knows who to look for | SP Horizontal Stack 2 and 4; SP Vertical Stack; HN Excel Premium |
 | 1:20 | Banana play against a deep poach, 7v7: the defence plays a deep poach every point, and a goal that came from the big swing scores 2 | Fast-break game, 4v4: the coach's whistle is a turnover and the closest player picks up; a goal within 10 seconds of the whistle scores 2 | HN Flik, Banana; HN Coach Corner, Fast Break Principles |
 | 1:40 | 4v4 continuous, stall 5; then 4 x 20 m sprints with a cut, 30 s rest | 4v4 continuous, stall 7; then 4 x 20 m sprints with a cut, 30 s rest | BFD S&C |
-| 2:00 | Ho and dominator in full: 5-pull ho, with the dominator called whenever the disc stalls in the middle | Vert in full: 5-pull; Three new handlers | SP Horizontal Stack 8; Flik; Plan |
+| 2:00 | 5-pull: ho and dominator in full, with the dominator called whenever the disc stalls in the middle | 5-pull: vert in full; Three new handlers | SP Horizontal Stack 8; Flik; Plan |
 | 2:40 | Scrimmage with whistle turnovers. Consequence: a slow pick-up costs the line a sprint | Scrimmage with whistle turnovers; Last touch picks up | Plan; DK 7.9 |
 
 **What the games push players to do**
@@ -574,7 +574,7 @@ The same rules as Phase 1 apply. The source key (IF, BFD, DK, HB, UAP, Flik, SP,
 | 0:00 | Warm-up | Warm-up | HN Practice Sessions |
 | 0:20 | Fielding the pull: "1" and "2" reps against a chasing defender | The same | HN Handler Situations |
 | 0:40 | Ho pull play, walked then live: the two central cutters slash to the break side, and the break-side cutter attacks the cleared space or bounces back for a 7-cut | Vert pull play, walked then live: the rest of the stack clears to the sidelines so the front of stack can cut deep | HN Excel Premium, Dynamic Pull Plays |
-| 1:00 | Pull-play 5-pull: the defence knows the play is coming; a goal within eight passes scores 2 | Pull-play 5-pull in vert: a goal within eight passes scores 2; Three new handlers | Flik Zone Concepts; HN Excel Premium, Dynamic Pull Plays |
+| 1:00 | 5-pull, pull plays: the defence knows the play is coming; a goal within eight passes scores 2 | 5-pull in vert, pull plays: a goal within eight passes scores 2; Three new handlers | Flik Zone Concepts; HN Excel Premium, Dynamic Pull Plays |
 | 1:20 | Windmill under, then windmill away (5 min walk-through), then 5-pull with the play called in the huddle | String (5 min walk-through): first and second cuts called; then 5-pull with the play called in the huddle | SP Horizontal Stack 6; SP Vertical Stack |
 | 1:40 | 4v4 continuous, stall 5 | 4v4 continuous, stall 7 | BFD S&C |
 | 2:00 | Pull play into system: 7v7 from a pull where the defence takes away the first look on purpose; if it's covered, swing to flip the field | Endzone basics (10 min): vert stack, open-side cone, upfield dump; then Redzone Continuous on a 20 m pitch | HN Excel Premium, Transitioning to your System; HN Flik, Endzone Offence; IF |
@@ -586,7 +586,7 @@ The same rules as Phase 1 apply. The source key (IF, BFD, DK, HB, UAP, Flik, SP,
 - **Endzone from 10 m and Spread reps (joint):** score 4 out of 5, with the defence told to poach in Spread. The count makes conversion the measure, and the poach teaches the handlers to hit the spread receiver. Ask: "Where did the poach come from, and who did it leave?"
 - **Three-Team Transitions with sideline buddies (joint):** every on-field player has a buddy talking to them. The sideline's talk is practised at game speed.
 - **Tournament-format 7v7 (joint):** timed games, called lines and the four-number sheet. It rehearses the day, not a skill.
-- **Pull-play 5-pull (both):** the defence knows what is coming and a quick goal scores 2. The play has to work on timing, and the line has to have a backup. Ask: "What was the backup, and who started it?"
+- **5-pull, pull plays (both):** the defence knows what is coming and a quick goal scores 2. The play has to work on timing, and the line has to have a backup. Ask: "What was the backup, and who started it?"
 - **Pull play into system (1s):** the defence takes the first look away on purpose. The offence practises the swing that flips the field.
 - **Redzone Continuous (2s):** the joint game again, in vert, with the 2s' endzone basics.
 
@@ -596,7 +596,7 @@ The same rules as Phase 1 apply. The source key (IF, BFD, DK, HB, UAP, Flik, SP,
 - **Endzone from 10 m:** harder: 3 out of 3; easier: start from 5 m.
 - **Spread reps:** harder: defenders poach wherever they like; easier: tell the defence where to poach.
 - **Fielding the pull:** harder: bladey pulls and a fast chase; easier: the coach throws a short pull.
-- **Pull-play 5-pull:** harder: the defence may poach the first look; easier: no bonus, walk the first pull.
+- **5-pull, pull plays:** harder: the defence may poach the first look; easier: no bonus, walk the first pull.
 
 **Coaching notes**
 
