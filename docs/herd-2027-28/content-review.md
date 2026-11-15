@@ -8,7 +8,7 @@ Work in progress. This file is the handover: it says what is done and what is ne
 | --- | --- |
 | 1. Coverage and progression | Done |
 | 2. One language | Done |
-| 3. Timing (release calendar) | Not started |
+| 3. Timing (release calendar) | Done |
 | 4. Better drills | Half done: the plan's own notes are in; hand-written gaps are next |
 | 5. Handbook and guide | Not started |
 
@@ -75,6 +75,20 @@ The report lists drills still missing a Harder, Easier or Ask section (`no_harde
 
 **Left alone:** "field" and "pitch" are both used everywhere (the pitch itself says "seeing the field"), and "horo", "ho" and "horizontal stack" are all in the glossary.
 
+## Part 3: timing (done)
+
+Every card's Release line was checked against the release calendar (they now agree for all 51 cards) and against the week the rebuilt sessions teach it. No week has more than two new cards.
+
+**Release weeks changed**
+
+- **Card 12, Throwing in the wind: week 26 to week 21.** Wind is trained in week 25 and goes into home throwing from week 23, so week 26 (Tour 1 itself) was after the teaching. Weeks 22 to 25 already have two new cards each. Re-shared in weeks 25, 26 and 30.
+- **Card 50** goes out in week 6 and is re-shared in weeks 17, 25 and 35. **Card 51** goes out in week 34.
+- **Card 22, Resets,** is re-shared in week 36, when the Jedi lanes game is played.
+
+**"At training" lines rewritten to match the rebuilt sessions:** Cards 4, 5 (unchanged, checked), 6, 7, 9, 12, 14, 15, 19, 24, 25, 27, 33, 35, 39 and 43. Examples: Card 14 sent players to "ladders and Hollywood squares" in week 4, which the session no longer has; Card 15 put 1v1 "name your cut" in week 5 when it is in week 4; Card 6 named a lead-pass drill the joint session has replaced with the GRUT one.
+
+**Calendar themes:** weeks 6, 18, 25, 35 and 36 reworded to match the Weekly plan.
+
 ## Part 4: better drills (half done)
 
 Every drill now has a Serves line and the correct weeks. Harder, Easier and Ask lines from the session tabs are in. Still to write by hand in `enrich.py`: about 65 drills with no Harder or Easier, and about 75 with no Ask.
@@ -84,6 +98,8 @@ Every drill now has a Serves line and the correct weeks. Harder, Easier and Ask 
 - `tests/test_theory_import.py`: the cards file now has 51 cards, so the expected card numbers per section, the counts (52 became 54, which includes the three notes) and the last card in Compete were updated.
 
 ## Needs a coach's decision
+
+- **Card 43 (force middle, anti-huck force, no-hammer mark) is not taught in any session.** The card used to name two drills in the 1s' week 33 split that the session tables don't have. It now says these are 1s options the captains call in a scrimmage. Either add a 20-minute block to a 1s split (week 33 or 39), or accept it as reading only.
 
 - The Season plan's curriculum rows now lead with the pitch's names for the problem areas. The pitch, Goals and Principles are untouched. Say if you would rather keep the old row names.
 

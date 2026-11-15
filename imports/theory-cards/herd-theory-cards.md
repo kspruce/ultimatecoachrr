@@ -26,7 +26,7 @@ What to post each week. New cards go out a day or two before that week’s sessi
 | 3 | Catching | 5 Catching · 21 The handler’s job | — |
 | 4 | Acceleration and change of direction | 14 The first three steps · 15 Getting open | — |
 | 5 | Throwing to space; vert stack from the back | 6 Throw to space · 35 Vert stack | — |
-| 6 | Clearing and space; vert stack from the front | 17 Clearing and space | 35 Vert stack |
+| 6 | Clearing and space; vert stack from the front; first mini-test | 17 Clearing and space · 50 Your tests and your focus | 35 Vert stack |
 | 7 | Marking base | 27 Our marks | — |
 | 8 | Defensive footwork | 29 Defensive footwork | — |
 | 9 | Reading the thrower; flat mark | 30 Reading the thrower · 47 Sideline talk | 27 Our marks |
@@ -37,16 +37,16 @@ What to post each week. New cards go out a day or two before that week’s sessi
 | 14 | Restart: resets under a live mark | 22 Resets · 45 Process over outcome | 21 The handler’s job |
 | 15 | Breaking the mark under pressure; horo stack | 36 Horo stack and dominator | 7 Breaking the mark |
 | 16 | Beating a good mark; the dominator | 23 Beating a good mark · 26 Give-and-go and the dish | 36 Horo stack and dominator |
-| 17 | Reading the pitch; team defence | 18 Reading the pitch · 46 Performing under pressure | — |
+| 17 | Reading the pitch; team defence | 18 Reading the pitch · 46 Performing under pressure | 50 Your tests and your focus |
 | 18 | Trial 1: skill tests and small-sided games | — | 14 The first three steps · 46 Performing under pressure |
 | 19 | Trial 2: breaking and reading | 44 Good throw vs good decision | — |
 | 20 | Trial 3: defence and full games | 31 Downfield D | — |
-| 21 | Escaping the sideline | 24 Getting off the sideline | — |
+| 21 | Escaping the sideline | 24 Getting off the sideline · 12 Throwing in the wind | — |
 | 22 | Quick disc processing and transitions | 32 Transition · 48 Tournament day | 26 Give-and-go and the dish · 35 Vert stack · 36 Horo stack and dominator · 44 Good throw vs good decision |
 | 23 | Solent warm-up: game day, pull plays and the endzone | 37 Pulls and pull plays · 39 Endzone and Spread | 47 Sideline talk |
 | 24 | Defence for Tour 1; squads announced | 33 Poach and clog · 40 Bull zone | — |
-| 25 | Defence and zones in the wind; aerial contests | 20 Winning the deep ball · 41 Arrowhead | 40 Bull zone |
-| 26 | UKU Tour 1 | 12 Throwing in the wind | 48 Tournament day |
+| 25 | Defence and zones in the wind; aerial contests; the skill floor starts | 20 Winning the deep ball · 41 Arrowhead | 12 Throwing in the wind · 40 Bull zone · 50 Your tests and your focus |
+| 26 | UKU Tour 1 | — | 12 Throwing in the wind · 48 Tournament day |
 | 27 | Tour 1 fixes; zone offence; endzone | 42 Zone offence | 39 Endzone and Spread |
 | 28 | Hucking to space and deep cutting | 9 The huck · 19 Deep cutting | 10 The backhand huck · 11 The forehand huck |
 | 29 | Herdlodge | — | — |
@@ -54,9 +54,9 @@ What to post each week. New cards go out a day or two before that week’s sessi
 | 31 | Pulling and the pull chase; UKU Tour 2 | 38 Pulling technique | 37 Pulls and pull plays · 48 Tournament day |
 | 32 | Breaking the mark refresher; dominator against poaches | 8 Breaking the mark 2 | 7 Breaking the mark · 26 Give-and-go and the dish |
 | 33 | Switching on defence | 34 Switching · 43 Force middle and marking options | 33 Poach and clog · 40 Bull zone |
-| 34 | Tempo; zone offence over the top | — | 42 Zone offence |
-| 35 | Mid-season skill tests; 1s v 2s scrimmage | 16 More ways to get open | — |
-| 36 | Retention refresher; Tour 3 game plans | 25 Late-stall escapes | — |
+| 34 | Tempo; zone offence over the top | 51 Tempo | 42 Zone offence |
+| 35 | Mid-season skill tests; 1s v 2s scrimmage | 16 More ways to get open | 50 Your tests and your focus |
+| 36 | Retention refresher (Jedi lanes game); Tour 3 game plans | 25 Late-stall escapes | 22 Resets |
 | 37 | UKU Tour 3 | — | 48 Tournament day |
 | 38 | Tour 3 review; scouting | 49 Scouting and game plans | — |
 | 39 | Marking and switching marks; defence plans | 28 Marking 2 | 27 Our marks · 41 Arrowhead · 43 Force middle and marking options |
@@ -297,7 +297,7 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 **Diagram:** one player’s four test scores as four lines across the season, with the development focus marked on the lowest line.
 
-**At training:** week 6 joint session, the first mini-test. From week 25, every full joint session starts with the skill floor: 25 minutes in a group of three built around your mentor pair, 12 minutes on each partner’s focus, with roles rotating after every rep.
+**At training:** week 6 joint session, the first mini-test, in the focused-throwing slot. From week 25, every full joint session starts with the skill floor: 25 minutes in a group of three built around your mentor pair, 12 minutes on each partner’s focus, with roles rotating after every rep.
 
 **On your own:** look up your October scores. Write down your development focus and the score you want at the next mini-test, and tell your mentor partner.
 
@@ -325,7 +325,7 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 **Diagram:** a thrower and marker from above, showing the pivot’s reach to each side and the break-side space behind the marker.
 
-**At training:** week 2 joint session, compass throwing and fake-fake-throw. The split sessions use the 3-handler game.
+**At training:** week 2 joint session, compass throwing and fake-fake-throw, then Gauntlet and Front Force Only. In the split sessions the 1s play the 3-handler game and the 2s the sideline-start game.
 
 **On your own:** 20 pivots in front of a mirror or window: home position, step, fake, back to home. No extra step, and every fake should look like a throw.
 
@@ -379,7 +379,7 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 **Diagram:** a cutter’s path with the disc landing ahead of them, marked “throw here”, and a ghost receiver at the release point marked “not here”.
 
-**At training:** week 5 joint session, the lead-pass drill, then Space Hopper and Golden Hand.
+**At training:** week 5 joint session, Under-to-away lead passes, then Space Hopper, Archery and Golden Hand.
 
 **On your own:** 30 throws at a tree or goalpost from 15 m. Drive the disc through the target with a full follow-through rather than guiding it: accuracy comes from spin.
 
@@ -407,7 +407,7 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 **Diagram:** a thrower and triangle mark from above, with the IO break at about 75° into the break side and the around break past the marker’s foot.
 
-**At training:** week 10 joint session, wide-release pairs, the cone-width ladder, low releases, then Get 10 with no throws above the marker’s arm. Finish with Classic Breakmark, the Herd classic.
+**At training:** week 10 joint session, wide and low releases (stepping out past a cone, then under a pool noodle), the Break Force Game, then Get 10 in the mini-test. Finish with the Break-Throw Bonus Point game.
 
 **On your own:** the 10-minute low-release session (linked under Drills), or 20 wide and 20 low releases on each side, holding every finish for two seconds.
 
@@ -459,7 +459,7 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 **Diagram:** the IO → flat → OI flight path, landing on the break side ahead of the cutter.
 
-**At training:** week 28 joint session, hucking shapes and deep-space games. Score with Archery: +2 caught in stride, +1 overthrown, 0 if the cutter has to wait.
+**At training:** week 28 joint session, huck technique, then the Box hucking challenge: 1 for a huck that lands in the box, 2 if the runner catches it in stride. Then Long and short bonus points.
 
 **On your own:** the hucking alley: 10 hucks into a 20 m lane, counting how many land in. Then throw a few at 110% of your range.
 
@@ -529,7 +529,7 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 ## Card 12 · Throwing in the wind
 
-**Release:** week 26, before a usually windy Tour 1; re-shared in week 30
+**Release:** week 21, so it is read before wind goes into home throwing (week 23) and the week 25 session; re-shared in weeks 25, 26 and 30
 
 **Why it matters.** UK tournaments are often windy. In wind, every extra throw is another chance to turn it over, so the team that adapts its throws and its plan wins the breaks.
 
@@ -543,7 +543,7 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 **Diagram:** a pitch with a wind arrow, labelling the upwind “high side” and the downwind “low side”, with a low release going upwind and a high release going downwind.
 
-**At training:** week 25 joint session, pulls in wind. Week 30 joint session, throwing in all directions and upwind–downwind games.
+**At training:** week 25, pulls in wind in the joint session and throwing in the wind in pairs in the split sessions. Week 30 joint session, the skill floor run into, with and across the wind, then upwind–downwind 7v7.
 
 **On your own:** on the next windy day, throw 20 upwind and 20 downwind with a partner. Add spin until the disc stops wobbling.
 
@@ -597,7 +597,7 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 **Diagram:** the 5-10-5 shuttle and a Hollywood square (Z, C and X patterns on a 7 m square), with the chop points marked.
 
-**At training:** week 4 joint session, 5-10-5 and hockey stops, then ladders and Hollywood squares. Keep the volume low and rest fully: this is speed, not fitness. Your 5-10-5 is filmed in week 1 and again at Trial 1 (week 18), so you can compare the two.
+**At training:** week 4 joint session, the chop stop progression (chop stop, hockey stop, a 5-10 lateral), then Box of death and Shortened Stall Tag. Keep the volume low and rest fully: this is speed, not fitness. Your 5-10-5 is filmed in week 1 and again at Trial 1 (week 18), so you can compare the two.
 
 **On your own:** three times this week: five 10 m starts from a lean, then five chop stops on each foot. Walk back between reps.
 
@@ -623,7 +623,7 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 **Diagram:** three cut shapes side by side: away-then-under, under-then-away, and the double move (away, fake under, away).
 
-**At training:** week 4 split session, the five-cone drill for the three cut families. Then in week 5, 1v1 “name your cut”, where the cutter calls the cut first and still has to win.
+**At training:** week 4 split session. The 1s play 1v1 “name your cut”, where the cutter calls the cut first and still has to win, then the five-cone drill and the cut families with a defender. The 2s play away-then-under 1v1, then zig-zag cuts.
 
 **On your own:** watch one point of any game and follow a single cutter. Count the steps they take before each change of direction: was it enough to turn the defender’s hips?
 
@@ -725,7 +725,7 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 **Diagram:** the L cut: a lateral cut to the break side at 60–70% pace, a plant, then a vertical strike deep, with the huck landing in stride.
 
-**At training:** week 28 joint session, deep-space games. Practise deep-cut timing with the Dishy Huck drill.
+**At training:** week 28 joint session, the deep running drill. In the split sessions the 1s play the Deep-shot game and Dishy Huck, and the 2s practise deep-cut timing with a dish.
 
 **On your own:** watch three hucks in any game. Where was the cutter when the thrower caught the disc? Did they start shallow?
 
@@ -797,7 +797,7 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 ## Card 22 · Resets: negative on the open side, positive on the break side
 
-**Release:** week 14. 2028 priority: keeping the disc. Resets were the base of that work last season.
+**Release:** week 14; re-shared in week 36 for the Jedi lanes game. 2028 priority: keeping the disc. Resets were the base of that work last season.
 
 **Why it matters.** A good reset doesn’t just lower the stall count; it gives the offence a new angle to attack from.
 
@@ -865,7 +865,7 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 **Diagram:** a trapped thrower on the sideline, with the four reset spots marked from worst to best.
 
-**At training:** week 21 joint session, the variable stall count game for escaping the sideline. Split sessions practise sideline power position and the sideline wrinkle.
+**At training:** week 21 joint session, throws against a trap, the Variable Stall Count game and the Double-team trap game. In the split sessions the 1s play the Sideline trap game and the 2s the sideline wrinkle and the Sideline-start game.
 
 **On your own:** sketch a trapped thrower and mark the four reset spots from worst to best. Then check your sketch against the card.
 
@@ -891,7 +891,7 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 **Diagram:** a trapped thrower with the two late escapes: the upline cut that turns 3 m past the thrower and runs away, and the 2 m dip in front of the disc.
 
-**At training:** week 36 joint session, the retention refresher. Then week 40, the variable stall count game and the escape game.
+**At training:** week 36 joint session, the Jedi lanes game. Then week 40, the Variable Stall Count game, the Retention game and the Escape game.
 
 **On your own:** walk both escapes with a cone as the thrower: upline, turn 3 m past it and run away; then the 2 m dip. Ten of each, until the footwork is automatic.
 
@@ -945,7 +945,7 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 **Diagram:** the triangle mark from above: marker’s body, hand and shoulder against the shown throw, around and inside break, with the four lanes marked.
 
-**At training:** week 7 joint session, Herd’s Forcing the Disc session, then 3-person marking: before each set the thrower names their favourite throw and the mark takes it away; the thrower rates the mark’s intensity 1–3. In week 16, the one-crossover marking game. Refresher in week 39.
+**At training:** week 7 joint session, Marking with intensity: the thrower names their favourite throw and the mark takes it away; the thrower rates the mark’s intensity 1–3. Then the marking base from Herd’s Forcing the Disc session, and the Triangle mark game. In week 16, the one-crossover marking game. Refresher in week 39.
 
 **On your own:** three sets of 30 seconds in the marking base, shuffling side to side and reaching without shifting your weight. Stay on your toes the whole time.
 
@@ -1103,7 +1103,7 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 **Diagram:** a vert stack with one defender flashing into the open-side lane and the others shifting to cover.
 
-**At training:** week 17 split sessions, team defence: which spaces are dangerous, and poaching the lanes. The 2s practise poach and clog near the disc.
+**At training:** week 17 split sessions, team defence: which spaces are dangerous, and poaching the lanes. The 2s practise poach and clog near the disc. In week 24 the 2s play 7v6 and the disruptive poach, and in week 33 they poach as a team.
 
 **On your own:** watch one point of game film and follow a defender who isn’t near the disc. Pause each time you would leave your player, and ask the three questions.
 
@@ -1157,7 +1157,7 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 **Diagram:** two vert stacks side by side: cutting from the back (deep player cuts under, next clears) and from the front (3H lateral cut opening the middle channel).
 
-**At training:** week 5 split sessions, vert from the back with continuation pairs. Week 6, vert from the front. Week 22, the 2s run vert in full.
+**At training:** week 5 split sessions, the Vert stack game from the back. Week 6, the 1s play vert from the front and the 2s the Cut-and-clear game. Week 22, the 2s run vert in full.
 
 **On your own:** set out coins as a vert stack, a thrower and a dump. Move the disc to each sideline in turn and reset the stack each time.
 
@@ -1259,7 +1259,7 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 **Diagram:** two endzone set-ups: “Endzone” as a vert stack, and “Spread” with three handlers at the front and four receivers wide across the back.
 
-**At training:** week 23 split sessions, endzone basics. Week 27, Endzone and Spread after the Tour 1 review.
+**At training:** week 23 joint session, endzone set-up and play, with “Spread” reps. Week 27 split sessions, Endzone from 10 m.
 
 **On your own:** set out coins for both calls, “Endzone” and “Spread”. Say where you go if you’re the first, the fourth and the sixth player to arrive.
 
@@ -1371,7 +1371,7 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 **Diagram:** a pitch in force middle with the marks pointing inward from both sideline positions and downfield defenders clogging the centre.
 
-**At training:** 1s split sessions from week 33: the jam-the-middle drill (two handlers and a stack on the middle line; the force is called on every throw) and the anti-huck drill (handler, mark and cutter). Week 39 joint session: the mark-call drill, for the marking calls.
+**At training:** these are 1s options, not a block in the session tables. From week 33 the captains call one of them in a split-session scrimmage when an opponent calls for it. Week 39 joint session: the mark-call drill, for switching marks on a call.
 
 **On your own:** watch one opponent on film and decide which of the three looks you’d call against them, and why.
 

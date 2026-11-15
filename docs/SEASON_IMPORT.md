@@ -28,7 +28,7 @@ building (or rebuilding) the season plan's sessions, so the sessions link to
 the drills:
 
 - `grut-drills.json`: the 9 GRUT drills the season plan uses (four more GRUT
-  videos are theory cards 41-44).
+  videos are theory cards 10, 11, 20 and 27).
 - `herd-drills.json`: about 220 drills and games the 2027/28 sessions use (the
   Ian French games, the club staples such as the 4v3 mini and 4v4 continuous,
   and the split-session drills), each with what it's for, how it runs,
