@@ -5,6 +5,7 @@ from app.models.annotation import AnnotationTag
 from app.models.player import Player
 from app.utils.team_filter import get_current_team_id
 from flask_login import current_user
+from app import clean_rich_text
 
 
 class AnnotationForm(FlaskForm):
@@ -59,7 +60,8 @@ class AnnotationForm(FlaskForm):
         validators=[Optional()]
     )
     
-    notes = TextAreaField('Notes', validators=[Optional()])  # stores HTML from Quill editor
+    # HTML from the Quill editor, cleaned whether it's posted or loaded for editing
+    notes = TextAreaField('Notes', validators=[Optional()], filters=[clean_rich_text])
     tags = SelectMultipleField('Tags', coerce=int, validators=[Optional()])
     players = SelectMultipleField('Players Involved', coerce=int, validators=[Optional()])
     is_key_moment = BooleanField('Mark as Key Moment')
