@@ -1,18 +1,8 @@
 # Herd 2027/28: content review (cards, drills, handbook)
 
-Work in progress. This file is the handover: it says what is done and what is next, so any session can carry on from the branch.
+The cards, the drill library, the handbook and the captains' and coaches' guide were checked against the 2027/28 season plan as it stands after the session rebuild. All five parts are done. The plan's pitch, Goals and Principles were not changed.
 
-## Status
-
-| Part | State |
-| --- | --- |
-| 1. Coverage and progression | Done |
-| 2. One language | Done |
-| 3. Timing (release calendar) | Done |
-| 4. Better drills | Done |
-| 5. Handbook and guide | Not started |
-
-Baseline before any change: `python -m pytest tests -q` gave 834 passed, 20 skipped.
+Tests: `python -m pytest tests -q` gave 834 passed, 20 skipped before any change. The result after the last change is in the chat summary.
 
 ## How the drill files are built
 
@@ -104,11 +94,37 @@ All 232 drills (223 Herd, 9 GRUT) now have the same parts inside the existing `d
 
 **Focus areas** now use the pitch's names: Cutting became Getting open, Reading the pitch became Seeing the field, Retention became Keeping the disc, and Benchmarks became Skill tests.
 
+## Part 5: handbook and guide (done)
+
+**Contradictions fixed**
+
+| Where | It said | The plan says | Now |
+| --- | --- | --- | --- |
+| Handbook, Coaching throws | Focused throwing is in every joint session | The skill floor takes its slot from week 25 | Says so |
+| Handbook, Every player matters | One-to-ones in weeks 38-39 and week 51 | Also weeks 1-3, week 24 and a check-in in week 27 | Lists all five |
+| Handbook, Preparing for pressure | The "what if" scrimmage is week 47 | Weeks 36, 41 and 47 | Lists all three |
+| Handbook, Breaking the mark (Amsterdam) | Technique is weeks 10-11 | Week 11 is the festive tournament | Week 10, weeks 15-16 and the week 32 refresher |
+| Handbook, How we coach | Joint sessions follow game, drill, game | Split sessions do too since the rebuild | Says both |
+| Guide, Lessons from the elite | Timeouts are week 35 | Week 35 is the skill tests; timeouts are weeks 39 and 40 | Weeks 39 and 40 |
+| Guide, How to give feedback | "Use the four steps above" under a list of five | The handbook keeps four steps plus the game celebration | "Steps 1 to 4 in drills, step 5 for games" |
+
+**One name for the conference talks:** the guide and the classroom tab say "Rise Up", the handbook says "Amsterdam talks" and the cards say "HN Amsterdam Conference". The guide's opening and the cards' source key now say these are the same talks. The 26 citations themselves were left as they are.
+
+**Pointers instead of repetition:** the guide now opens with a short list of which handbook pages go with each of its four parts, what is only in the guide (the Herd anchors by phase, the game-plan checklist, the phrasebook) and what is only in the handbook (session planning, drill design, coaching throws, the mental-game pages, Safe play). Two handbook pages (How we coach, An army of dump defenders) point back to the guide.
+
+**Checked and found to agree:** the strategic anchors by phase; the elite-defence targets (95%, 50%, 20%); trials in weeks 18-20 with one assessor per attribute; squads announced in week 24; C2, C3 and C7 weeks; Herdlodge in week 29; the wind week.
+
+**Where they still overlap:** Leadership without an ego, A balancing act, Everybody in, Tactics are tools and the three-book summaries are told in both. I left both versions, because the guide is one page for captains to read once and the handbook is the reference. Cutting either is a coach's call.
+
 ## Tests changed
 
 - `tests/test_theory_import.py`: the cards file now has 51 cards, so the expected card numbers per section, the counts (52 became 54, which includes the three notes) and the last card in Compete were updated.
 
 ## Needs a coach's decision
+
+- **Overlap between the guide and the handbook** (above): keep both, or cut the guide's parts 1 and 4 down to pointers.
+- **"Rise Up" or "Amsterdam talks":** pick one name and I can change the 26 citations.
+- **Quick release and throwing tired** (Phase 2 throwing base) has no card of its own; say if you want one, and which week 14 or 22 card should move to make room.
 
 - **Card 43 (force middle, anti-huck force, no-hammer mark) is not taught in any session.** The card used to name two drills in the 1s' week 33 split that the session tables don't have. It now says these are 1s options the captains call in a scrimmage. Either add a 20-minute block to a 1s split (week 33 or 39), or accept it as reading only.
 

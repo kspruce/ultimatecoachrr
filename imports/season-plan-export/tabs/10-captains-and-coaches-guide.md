@@ -1,6 +1,14 @@
 # Captains' and coaches' guide
 
-For the 1s and 2s captains and the club's guest coaches. It covers three things: how to captain and lead, how to think tactically about the season and about games, and how to talk to players so sessions feel good and people improve. It draws mainly on the Rise Up conference talks (Amsterdam), the Flik Deep Dives and Team Analysis, and the BFD manual, plus Flik's Coach Corner and Case Studies and the other coaching resources. Read it alongside the Leadership section of the Season plan.
+For the 1s and 2s captains and the club's guest coaches. It covers three things: how to captain and lead, how to think tactically about the season and about games, and how to talk to players so sessions feel good and people improve. It draws mainly on the Rise Up conference talks (Amsterdam), the Flik Deep Dives and Team Analysis, and the BFD manual, plus Flik's Coach Corner and Case Studies and the other coaching resources. Read it alongside the Leadership section of the Season plan. "Rise Up" here means the Amsterdam coaching conference talks; the handbook files them under Amsterdam talks, and the theory cards cite them as HN Amsterdam Conference.
+
+**This guide and the leadership handbook.** The guide is the short version, tied to this season's weeks. The leadership handbook on the site is the long version, one idea to a page. Where they cover the same ground, the guide gives the Herd decision and the handbook gives the reasoning:
+
+- **Part 1, captaining and leading:** handbook pages What great captains do, Leaders people follow, Sharing the load, Leadership without an ego, A balancing act, Make it, break it, Who we are, Living it every week and Everybody in.
+- **Part 2, tactics and the season:** Tactics are tools, An army of dump defenders, Planning the season, Squad size and playing time, Fair trials, Four-number stats, Timeouts, Better decisions and Elite defence: the mental shift. The case studies have the full stories behind the "Lessons from the elite" table.
+- **Part 3, talking to players:** Fun is the foundation (autonomy, competence, relatedness), How we coach, Feedback that sticks, Freedom to fail, Confidence, Nerves and focus, Every player matters and Talking on the field.
+- **Part 4, the three books:** What great captains do, Who we are and Getting out of your head.
+- **Only in this guide:** the Herd anchors by phase, the game-plan checklist and the phrasebook. **Only in the handbook:** session planning, drill design, coaching throws, the mental-game pages and Safe play.
 
 **The short version**
 
@@ -180,7 +188,7 @@ Then write Plans A, B and C. Show the team only short highlights of opponent foo
 | Isolate, then go deep | Ring of Fire threatened the break side so defenders had to choose between stopping continuation and being beaten deep. Australia U24 and Canada built pull plays to isolate cutters | Hucking week (28); pull plays |
 | Take what the defence gives | USA U24 recycled the disc patiently in wind and rain. Toro adjusted to poaches by using the full width. Revolution cut for the cutter, not the disc. Rhino scored on the front cone. Against poaches, make sure more than one player is a real option | Dominator against poaches (week 32); Spread call |
 | Use the wind | Molly Brown v Phoenix: more deep cuts downwind, bigger throws into bigger spaces, slower tempo, back each other up. Firetails chose defence at the toss to chase an early break | Wind week (30) |
-| Timeouts | Don't call a timeout straight after a block: press the shaken O-line instead. A timeout is a catch-up tool for the team behind (EUC finals 2023) | Timeouts (week 35) |
+| Timeouts | Don't call a timeout straight after a block: press the shaken O-line instead. A timeout is a catch-up tool for the team behind (EUC finals 2023) | Defence after a timeout (week 39); out-of-timeout game (week 40) |
 | Tiny margins | One missed conversion at 14-11 left Belgium 7th instead of in the semis; Japan finished 2nd (Belgium v Japan QF) | Process goals; reset routine |
 
 ## 3. Talking to players: coaching for good vibes
@@ -212,7 +220,7 @@ From Flik's *Effective Feedback* (The Art of Coaching Ultimate):
 4. **Encourage the change:** "I want to see those step-outs for the next two minutes."
 5. **When they do it in a game, lose your mind.** Nothing locks in learning like seeing the coach get excited.
 
-DK suggests a "feedback sandwich" (positive, fix, positive), but Coyle found that the best cultures separate the two: big, clear bursts of praise on their own, and corrections as a two-way conversation that starts by asking if the player wants feedback. Use the four steps above for quick technical fixes in drills, and keep bigger feedback for a one-to-one. Experienced players should give feedback between points too (DK; The Culture Code).
+DK suggests a "feedback sandwich" (positive, fix, positive), but Coyle found that the best cultures separate the two: big, clear bursts of praise on their own, and corrections as a two-way conversation that starts by asking if the player wants feedback. Use steps 1 to 4 for quick technical fixes in drills, keep step 5 for games, and keep bigger feedback for a one-to-one. Experienced players should give feedback between points too (DK; The Culture Code).
 
 **Be specific.** "Nice" teaches nothing; "great job cutting early when the disc reached the sideline" does. Link praise to the team's values (Flik, Leadership).
 

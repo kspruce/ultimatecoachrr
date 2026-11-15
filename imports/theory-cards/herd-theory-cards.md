@@ -177,7 +177,7 @@ The words these cards use, in one place. If a card uses a word you don’t know,
 
 | Code | Source |
 | --- | --- |
-| HN | The Herd OneNote coaching notebook (section and page given) |
+| HN | The Herd OneNote coaching notebook (section and page given). “HN Amsterdam Conference” is the set of talks the season plan calls Rise Up and the handbook calls Amsterdam talks |
 | BFD | Bologna Flying Disc, *Elite Coaching Program* |
 | DK | *DK’s Bible*, the Mythago Training Manual |
 | HB | Hildo Bijl, *Ultimate Trainer’s Manual* |

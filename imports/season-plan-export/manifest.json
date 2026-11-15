@@ -9,7 +9,7 @@
    "title": "Season plan",
    "slug": "season-plan",
    "file": "tabs/01-season-plan.md",
-   "bytes": 40417
+   "bytes": 40479
   },
   {
    "order": 2,
@@ -30,21 +30,21 @@
    "title": "Phase 1 sessions",
    "slug": "phase-1-sessions",
    "file": "tabs/04-phase-1-sessions.md",
-   "bytes": 93486
+   "bytes": 93553
   },
   {
    "order": 5,
    "title": "Phase 2 sessions",
    "slug": "phase-2-sessions",
    "file": "tabs/05-phase-2-sessions.md",
-   "bytes": 77932
+   "bytes": 77972
   },
   {
    "order": 6,
    "title": "Phase 3 sessions",
    "slug": "phase-3-sessions",
    "file": "tabs/06-phase-3-sessions.md",
-   "bytes": 75009
+   "bytes": 75127
   },
   {
    "order": 7,
@@ -58,21 +58,21 @@
    "title": "Phase 5 sessions",
    "slug": "phase-5-sessions",
    "file": "tabs/08-phase-5-sessions.md",
-   "bytes": 22270
+   "bytes": 22284
   },
   {
    "order": 9,
    "title": "Drills by phase and source",
    "slug": "drills-by-phase-and-source",
    "file": "tabs/09-drills-by-phase-and-source.md",
-   "bytes": 36076
+   "bytes": 36060
   },
   {
    "order": 10,
    "title": "Captains' and coaches' guide",
    "slug": "captains-and-coaches-guide",
    "file": "tabs/10-captains-and-coaches-guide.md",
-   "bytes": 31154
+   "bytes": 32745
   },
   {
    "order": 11,
