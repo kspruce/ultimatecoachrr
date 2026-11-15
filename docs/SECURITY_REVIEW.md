@@ -65,6 +65,69 @@ Also covered by tests (`tests/test_security.py`, `tests/test_accounts.py`).
 | Privacy policy at /privacy | Linked from the footer and sign-up pages. Set `SITE_OPERATOR`, `PRIVACY_CONTACT_EMAIL` and `BACKUP_RETENTION_DAYS`; services are listed only when they're switched on |
 | "Remember me" lasts 30 days | Was Flask-Login's default of a year |
 
+## Fourth round (November 2026)
+
+A pass over what the first reviews didn't cover and what's been added
+since: season plans, programmes and starter programmes, the drill library
+and editor, Ask leaders, the Leadership hub and handbook, Discord buttons,
+clip sharing, PDF exports and onboarding. The suite was green at the start
+(834 passed, 20 skipped).
+
+**How it was checked**
+
+- A write probe. Two fully used teams (`tests/rich_data.py`, every feature
+  switched on). Every route that changes data (about 290) was posted to by
+  Alpha's plain player with Alpha's ids, then by Bravo's team admin with
+  Alpha's ids, and the whole database was compared before and after each
+  request. The only changes were the ones players are meant to make
+  (answering RSVPs, asking the leaders, their own onboarding and calendar
+  link).
+- A read probe. Bravo's admin opened every page and JSON endpoint with
+  Alpha's ids. None showed any of Alpha's data. (As a check that the probe
+  works, Alpha's own player saw Alpha's data on 66 of them.)
+- Every write route without a role decorator read by hand: playbook,
+  theory, programmes, season plans, handbook, Leadership hub, Ask leaders,
+  fitness, goals.
+- Every place text reaches the page unescaped: `|safe`, `Markup`,
+  `innerHTML` and d3's `.html()` in templates and scripts, names inside
+  inline `onsubmit`/`oninput` handlers, and stored links printed in `href`.
+- Uploads, share links, Discord, the sign-in flows, requests the server
+  makes, CSRF, config and dependencies.
+
+**Fixed**
+
+| Issue | Who could exploit it | Fix |
+|---|---|---|
+| Clip annotation notes (rich text from the editor) were printed with `\|safe`, and the edit page loaded them into the editor as HTML, so a note could run script | Any player, against coaches and admins who open the clip or edit the note | Notes are cleaned with `nh3` when saved and when loaded for editing; the clip page also cleans notes saved before this (`rich_text` filter) |
+| The password reset email built its link from the request's host, and `ProxyFix` trusts `X-Forwarded-Host`, so a forged header could put a working reset token in a link to another site | Anyone who knows a username or email, if the host's proxy passes that header through (couldn't be checked from here) | The emailed link uses `BASE_URL`, like the site's other emails |
+| Game Day put player names into `innerHTML` (line chips, substitution picker, save-line dialog) | A coach, against the captains and admins recording a game | Names are escaped first |
+| The pass-network tooltips on a game's stats page used player names as HTML | A coach, against anyone on the team who hovers | Names are escaped first |
+| Names inside inline handlers: the browser decodes `&#39;` back to `'` before running the handler, so a name could end the string. The team name in Manage Teams' delete box, squad names and session template names | A team admin or anyone signing up a new club, against the superadmin; a coach, against admins | Passed as JSON strings (`\|tojson\|forceescape`) |
+| `/sessions/<id>/components` listed a session's blocks before the coaches had shared the plan | Any player on the team | Same check as the detail page and PDF |
+| Game video links: WTForms' `URL()` accepts `javascript://host/%0a...`, and adding several games at once didn't check links at all | A stat taker or coach. The links open in a new tab, which stops Chromium running them, so this is a safety net | Only http(s) links are kept |
+
+Tests: `tests/test_clips.py`, `tests/test_accounts.py`,
+`tests/test_training.py`, `tests/test_security.py`, and
+`tests/test_point_detail_browser.py` for the two in-browser fixes (they
+run in CI, which installs Chromium). Each fails on the old code.
+
+**Left to decide**
+
+1. **Players can claim any unlinked player profile on their team**
+   (`/auth/link_player`). Once linked, they see that profile's shared
+   feedback, goals, reviews and fitness results. Invite links already link
+   the right person; you could take the self-service picker away, or have
+   a coach approve the link.
+2. **Spreadsheet formulas in CSV exports.** Annotation titles and other
+   text people type go into CSV exports as they are, so a cell starting
+   with `=` runs as a formula when a coach opens the file in Excel. Putting
+   a `'` in front of such cells would stop it, but changes what the export
+   holds.
+3. **The script part of the Content-Security-Policy is still report-only.**
+   Enforcing it would have blunted several of the issues above. Inline
+   scripts and handlers need `'unsafe-inline'` for now; moving them into
+   files would let the policy block injected script.
+
 ## Still to do before selling access
 
 1. **Check Railway's database backups.** These are set on the Postgres
@@ -78,6 +141,10 @@ Also covered by tests (`tests/test_security.py`, `tests/test_accounts.py`).
 3. **Billing** (on hold): use a hosted checkout such as Stripe Checkout.
 4. **Rate limits across restarts**: set `RATELIMIT_STORAGE_URI` to Redis if
    you add one.
+5. **Check `BASE_URL` in Railway's Variables is the live site's address.**
+   Password reset emails now take their links from it (as Discord posts
+   and the other emails already did). Without it they use the old default
+   in `config.py`.
 
 ## Checked and fine
 
