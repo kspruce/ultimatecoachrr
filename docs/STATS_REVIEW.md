@@ -50,7 +50,7 @@ situation comes up, so each row also says what drives it.
 | 5 | **Player page headline** (Goals, Assists, Blocks, Turnovers) | Full-stat points only, next to a Points tile that counts every point; the box score lower down counted every point. | — | Now the season box score (every point), matching the Points tile. |
 | 6 | **"Forced Turnovers"** (player page, Defensive tab) | Showed blocks + forced turnovers. | — | Now **Takeaways**: blocks + forced turnovers + Callahans, as in the printable report and dashboard. |
 | 7 | **Team completion** (dashboard headline, team page, team radar, team trend) | Drops weren't counted at all, so they never lowered it. | 90.9% → **89.1%** | Drops ÷ passes. |
-| 8 | **Drop rate** (player page, focus areas) and **team catch rate** | Pickups counted as receptions, and passes caught just before a goal (retyped as assists) didn't. | team drop rate 2.20% → 2.17%; one player 11.1% → 9.1% | Pickups and assists per player. |
+| 8 | **Drop rate** (player page, focus areas) and **team catch rate** | Pickups counted as receptions or catches (the player catch rate never did), and passes caught just before a goal (retyped as assists) didn't count for drop rate. Agreed with the club: a pickup isn't a catch. | team drop rate 2.20% → 2.17%; team catch rate 98.3% → 97.8%; one player's drop rate 11.1% → 9.1% | Pickups and assists per player. |
 | 9 | **Throwaways, turnovers, completion, turnovers per touch** (every page) | A throwaway recorded as the first play of a point (pull picked up, no pickup tapped) had no stored throw, so it was missing everywhere except the turnover log. | none in the test data | One turnover per such point. |
 | 10 | **Hucks, hucks per point** (player page, team metrics, CSV) | Any throw over 20 m in any direction, so a long swing backwards was a huck; huck completion % already used 20 m+ long and 15 m+ upfield. | team hucks per point 0.80 → 0.79 | Long cross-field and backwards throws. |
 | 11 | **Per-point rates** (everywhere) | A point with only a substitution recorded counted as a full-stat point with no plays. | none in the test data | One extra point in the divisor per such point. |
@@ -67,7 +67,11 @@ include forced turnovers); the team and game pages' O/D-line conversion
 rates are hold % and break % (relabelled so they aren't confused with the
 base metrics' conversion rate).
 
-### A test changed
+### Tests changed
+
+`tests/test_throw_consistency.py::test_catch_rate_and_turnovers_forced`
+expected the team catch rate to count two pickups as catches (5 of 6). It
+now expects passes only (3 caught of 4 = 75%), with the sums in a comment.
 
 `tests/test_stats_dashboard.py::test_plus_minus_is_the_same_everywhere`
 checked +/- = goals + assists + blocks − turnovers with Callahans left out.
@@ -198,9 +202,9 @@ Plan Measures** card (`app/stats/measures.py`) unless noted.
 | Plan stat | Status | Where / how |
 | --- | --- | --- |
 | Turnovers per point | **Already there** | Dashboard headline; also per point we had the disc (new, base metrics). |
-| Completion rate | **Already there, fixed** (✘ 7) | Team completion counts drops as incomplete passes. |
+| Completion rate | **Already there, fixed** (✘ 7) | Both shown, as agreed with the club: team completion (a drop is an incomplete pass) and throwing completion (a drop is the receiver's turnover). |
 | Breaks thrown | **Already there**, completed breaks **added** | Break throws tried and completed, team and player. Needs each point's force recorded (`Point.force_direction`); the card says how many throws had one. |
-| Discs received by opponents by zone (break / reset / open) | **Needs new recording** | The stat taker records only the opponent's turnovers, not their passes. Recording each opponent completion with its start and end (as ours are) would give it: the break / open side from the force, and a reset as a dump or swing (`throw_kind`). |
+| Discs received by opponents by zone (break / reset / open) | **Added** | As agreed with the club: our turnovers, by the throw we lost the disc on (break side, reset = dump or swing, open side; stalls apart) and where they picked it up (depth zone). Break and open side need the point's force. (Where the opponent catches their own passes would need their passes recorded, which the stat taker doesn't do.) |
 | Offensive yardage | **Added** | Team metres upfield on completed passes (and per point); per player yards thrown and caught (player table on the card, CSVs). |
 | Turnovers per touch, throwaways and drops separately | **Added** (touches were already there) | Throwaways, drops and all turnovers per 10 touches, per player. |
 | Completed breaks (per player) | **Added** | Player table on the card, CSVs. |
@@ -225,7 +229,8 @@ recorded; nothing extra is needed.
 
 ## Still open
 
-- Opponents' passes (above) are the one plan stat that needs new recording.
+- Every plan stat can now be worked out from what's recorded. Where opponents
+  catch their own passes would need their passes recorded.
 - The player page runs one set of queries per game for the game history
   (about 400 queries for a 24-game season). It isn't a regression, but it's
   the next place to batch if the page gets slow.

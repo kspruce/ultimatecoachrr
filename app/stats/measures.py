@@ -25,9 +25,15 @@ where it was only taken live.
 from app.models.gameday import GameDayEvent
 from app.stats.formulas import OUR_TURNS, REGAINS, get_point_starting_possession, point_has_result, point_we_scored
 from app.stats import turnovers as turnover_stats
+from app.stats.throwing import DEPTH_ZONES, depth_zone, is_break_throw, throw_kind
 from app.utils.team_filter import get_current_team_id
 
 GAMEDAY_TURNS = ('throwaway', 'drop', 'stall')
+# Our touches: the disc is in this player's hands (as point_replay.TOUCHES)
+TOUCHES = ('catch', 'pickup', 'assist', 'hockey_assist')
+TURNOVER_KINDS = [('break', 'Break-side throw'), ('reset', 'Reset (dump or swing)'),
+                  ('open', 'Open-side throw'), ('unknown', 'Throw, side not known'),
+                  ('stall', 'Stall')]
 GAMEDAY_REGAINS = ('block', 'callahan')
 
 
@@ -122,4 +128,63 @@ def team_measures(data, game_ids):
         'sided_throws': sum(1 for t in throws if t['side'] is not None),
         'yards': yards,
         'yards_per_point': yards / len(analysed) if analysed else None,
+        'turnovers_by_zone': turnovers_by_zone(data, game_ids),
     }
+
+
+def _turnover_kind(start, end, force):
+    """'reset' (a dump or swing), 'break' or 'open' for the throw we lost the
+    disc on, or 'unknown' without both ends or a force."""
+    if start is None or None in start or None in end:
+        return 'unknown'
+    if throw_kind(*start, *end) == 'dump_swing':
+        return 'reset'
+    side = is_break_throw(*start, *end, force)
+    return 'unknown' if side is None else ('break' if side else 'open')
+
+
+def turnovers_by_zone(data, game_ids):
+    """Our turnovers (full-stat points), by the kind of throw we lost the
+    disc on (break side, reset, open side; stalls apart) and where the
+    opponent picked it up (the depth zone where the throwaway landed, the
+    pass was dropped or the stall happened).
+
+    A throwaway is the thrower's throw; a drop is the pass the receiver
+    dropped, from whoever had the disc before."""
+    zones = [key for key, _, _, _ in DEPTH_ZONES]
+    rows = {key: {'key': key, 'label': label, 'turnovers': 0, 'zones': dict.fromkeys(zones, 0)}
+            for key, label in TURNOVER_KINDS}
+    throws = {t['throwing_event_id']: t for t in data.throws if t['turnover']}
+    for pid in data.analysed:
+        if data.game_of_point[pid].id not in game_ids:
+            continue
+        force = data.points[pid].force_direction
+        holder = None
+        for e in data.events_by_point[pid]:
+            if e.event_type in TOUCHES:
+                holder = e
+            elif e.event_type in ('throwaway', 'drop', 'stall') and not e.is_opponent:
+                end = (e.field_position_x, e.field_position_y)
+                if e.event_type == 'stall':
+                    kind = 'stall'
+                elif e.event_type == 'throwaway':
+                    t = throws.get(e.id)
+                    kind = _turnover_kind((t['x_start'], t['y_start']) if t else None, end, force)
+                else:
+                    start = (holder.field_position_x, holder.field_position_y) if holder else None
+                    kind = _turnover_kind(start, end, force)
+                row = rows[kind]
+                row['turnovers'] += 1
+                zone = depth_zone(e.field_position_x)
+                if zone:
+                    row['zones'][zone] += 1
+                holder = None
+            elif e.event_type != 'substitution':
+                holder = None
+    total = sum(r['turnovers'] for r in rows.values())
+    out = []
+    for key, _ in TURNOVER_KINDS:
+        r = rows[key]
+        out.append({**r, 'share': _rate(r['turnovers'], total)})
+    return {'rows': out, 'turnovers': total,
+            'zone_labels': [label for _, label, _, _ in DEPTH_ZONES], 'zone_keys': zones}

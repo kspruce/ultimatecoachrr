@@ -241,9 +241,25 @@
                         Yardage is metres gained upfield on completed passes (backwards passes count against it).
                         A break throw needs the point's force recorded: {{ m.sided_throws }} throws had one.
                         {% if m.gameday_points %}{{ m.gameday_points }} of the base-metric points come from the Game Day record.{% endif %}
-                        Where opponents receive the disc by zone (break, reset or open) needs their passes recorded, which the stat taker doesn't do.
                         <a href="{{ url_for('stats_dashboard.ratings', _anchor='counting') }}">How the stats are counted</a>.
                     </p>
+                    {% set tz = m.turnovers_by_zone %}
+                    {% if tz.turnovers %}
+                    <h6 class="text-muted text-uppercase small mb-1">Where they got the disc from us
+                        <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="Our turnovers (points with full stats) by the throw we lost it on, and where they picked the disc up: where a throwaway landed, a pass was dropped or we were stalled. A reset is a dump or swing; break and open side need the point's force."></i></h6>
+                    <div class="table-responsive">
+                    <table class="table table-sm mb-3" id="turnovers-by-zone">
+                        <thead><tr><th>Lost on</th><th class="text-end">Turnovers</th><th class="text-end">Share</th>
+                            {% for label in tz.zone_labels %}<th class="text-end d-none d-md-table-cell">{{ label }}</th>{% endfor %}</tr></thead>
+                        <tbody>
+                        {% for row in tz.rows if row.turnovers or row.key in ('break', 'reset', 'open') %}
+                            <tr><td>{{ row.label }}</td><td class="text-end">{{ row.turnovers }}</td><td class="text-end">{{ tm.pct(row.share) }}</td>
+                                {% for key in tz.zone_keys %}<td class="text-end d-none d-md-table-cell">{{ row.zones[key] or '' }}</td>{% endfor %}</tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                    </div>
+                    {% endif %}
                     {% if plan_players %}
                     <h6 class="text-muted text-uppercase small mb-1">Each player (points with full stats)</h6>
                     <div class="table-responsive">

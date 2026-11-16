@@ -773,3 +773,37 @@ def test_no_throws_is_no_completion_rate_not_zero(app):
     row = page[page.index('Completion Rate <i'):]
     row = row[:row.index('</tr>')]
     assert '0.0%' not in row and '–' in row
+
+
+def test_turnovers_by_the_throw_we_lost_it_on(app):
+    """Three O points, all forced forehand (the break side is a throw 3 m+
+    towards smaller y), each ending in a turnover and their goal.
+
+    1. A has it at 30 m and throws it away backwards, landing at (26, 10):
+       4 m back, so a reset (dump or swing). They pick it up in our own third.
+    2. A has it at 30 m and is stalled: a stall, in our own third.
+    3. A to B at 50 m; B's pass to C at (60, 12) is dropped: 10 m up and 6 m
+       to the left, so a break-side throw, dropped in the middle third.
+
+    3 turnovers: break 1 (33%, middle third), reset 1 (33%, own third),
+    open 0, stall 1 (33%, own third).
+    """
+    from app.stats import measures, turnovers
+    w = WorkedGame(app)
+    w.point('O', [('catch', 'A', 30, 18), ('throwaway', 'A', 26, 10), ('scored_on', 'opp', 0, 18)])
+    w.point('O', [('catch', 'A', 30, 18), ('stall', 'A', 30, 18), ('scored_on', 'opp', 0, 18)])
+    w.point('O', [('catch', 'A', 30, 18), ('catch', 'B', 50, 18), ('drop', 'C', 60, 12),
+                  ('scored_on', 'opp', 0, 18)])
+    ctx = w.context()
+    try:
+        tz = measures.turnovers_by_zone(turnovers.ThrowingData(w.games()), {w.game_id})
+    finally:
+        ctx.pop()
+    rows = {r['key']: r for r in tz['rows']}
+    assert tz['turnovers'] == 3
+    assert rows['break']['turnovers'] == 1 and rows['break']['zones']['middle_third'] == 1
+    assert rows['reset']['turnovers'] == 1 and rows['reset']['zones']['own_third'] == 1
+    assert rows['open']['turnovers'] == 0
+    assert rows['stall']['turnovers'] == 1 and rows['stall']['zones']['own_third'] == 1
+    assert rows['break']['share'] == pytest.approx(100 / 3)
+    assert 'Where they got the disc from us' in w.client.get('/stats/team').get_data(as_text=True)
