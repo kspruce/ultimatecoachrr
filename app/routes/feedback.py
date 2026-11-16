@@ -13,6 +13,7 @@ from app.models.player import Player
 from app.models.feedback import FeedbackReply, PlayerFeedback, PlayerFocus, PlayerGoal, PlayerReview
 from app.models.tournament import Tournament
 from app.utils import feedback as fbu
+from app.utils import self_assessment as sau
 from app.models.clip import Clip
 from app.models.game import Game
 from app.utils.team_filter import get_current_team_id, team_row_or_404
@@ -64,7 +65,8 @@ def unseen_count(user):
                        FeedbackReply.from_player.is_(False), FeedbackReply.seen_at.is_(None)).count())
     focus = PlayerFocus.query.filter_by(player_id=player.id, active=True, seen_at=None).count()
     reviews = PlayerReview.query.filter_by(player_id=player.id, shared=True, seen_at=None).count()
-    return notes + replies + focus + reviews
+    from app.utils.self_assessment import pending_requests
+    return notes + replies + focus + reviews + len(pending_requests(player))
 
 
 @bp.app_context_processor
@@ -131,6 +133,7 @@ def hub():
         'feedback/hub.html',
         follow_count=len(fbu.follow_ups(players)),
         reply_count=sum(fbu.unread_replies(team_id).values()),
+        new_check_ins=sau.unseen_by_coaches(team_id),
         recent_sessions=recent_sessions,
         players=players,
         player_counts=player_counts,
@@ -353,7 +356,9 @@ def mine():
     return render_template('feedback/mine.html', player=player, entries=entries, new_ids=new_ids,
                            new_reply_ids=new_reply_ids, focus=focus, new_focus=new_focus,
                            reviews=fbu.player_reviews(player.id, shared_only=True),
-                           focus_history=fbu.focus_history(player.id))
+                           focus_history=fbu.focus_history(player.id),
+                           check_in_requests=sau.pending_requests(player),
+                           check_ins=sau.player_check_ins(player.id, limit=5))
 
 
 def _mark_seen(replies):

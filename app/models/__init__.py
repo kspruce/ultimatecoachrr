@@ -64,6 +64,7 @@ from app.models.site_settings import SiteSettings
 
 # Coach feedback
 from app.models.feedback import PlayerFeedback, FeedbackReply, PlayerFocus, PlayerGoal, PlayerReview
+from app.models.self_assessment import RubricItem, CheckInRequest, SelfAssessment, SelfAssessmentScore
 
 # Training programmes (any club's off-season plans, built on the website)
 from app.models.programme import (
@@ -113,6 +114,7 @@ __all__ = [
     'SiteSettings',
     # Coach feedback
     'PlayerFeedback', 'FeedbackReply', 'PlayerFocus', 'PlayerGoal', 'PlayerReview',
+    'RubricItem', 'CheckInRequest', 'SelfAssessment', 'SelfAssessmentScore',
     # Training programmes
     'Programme', 'ProgrammeVersion', 'ProgrammeTrack', 'ProgrammeWeek', 'ProgrammeSession',
     'ProgrammeExercise', 'PerformanceTest', 'ProgrammeMilestone', 'ProgrammeEnrolment', 'SessionLog',

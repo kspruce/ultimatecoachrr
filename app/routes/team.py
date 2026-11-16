@@ -564,9 +564,12 @@ def development_for(player):
     from app.models.feedback import PlayerGoal
     from app.utils import feedback as fbu
     if not (current_user.is_coach or current_user.is_admin or current_user.owns_player(player)):
-        return {'goals_active': [], 'goals_done': [], 'reviews': [], 'goal_horizons': PlayerGoal.HORIZONS}
+        return {'goals_active': [], 'goals_done': [], 'reviews': [], 'goal_horizons': PlayerGoal.HORIZONS,
+                'check_ins': []}
+    from app.utils.self_assessment import player_check_ins
     active, done = fbu.player_goals(player.id)
     return {'goals_active': active, 'goals_done': done, 'goal_horizons': PlayerGoal.HORIZONS,
+            'check_ins': player_check_ins(player.id, limit=6),
             'reviews': fbu.player_reviews(player.id, shared_only=not current_user.is_coach)}
 
 

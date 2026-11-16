@@ -311,6 +311,10 @@ def create_app(config_class=Config):
     from app.routes.feedback import bp as feedback_bp
     app.register_blueprint(feedback_bp)
 
+    # Player check-ins (self-assessment rubric)
+    from app.routes.self_assessment import bp as checkin_bp
+    app.register_blueprint(checkin_bp)
+
     # Getting-started guide
     from app.routes.onboarding import bp as onboarding_bp
     app.register_blueprint(onboarding_bp)
