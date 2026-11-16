@@ -593,3 +593,12 @@ def test_season_plan_throwing_measures(possession_game):
         assert s['touches'] == h['touches'], k
         assert s['turnovers_per_10_touches'] == (pytest.approx(h['turnovers_per_10'])
                                                  if h['turnovers_per_10'] is not None else None), k
+
+
+def test_the_counting_rules_are_on_the_stats_pages(possession_game):
+    w = possession_game
+    page = w.client.get('/stats/ratings').get_data(as_text=True)
+    assert 'id="counting"' in page and 'A Callahan is a goal and a block' in page
+    assert 'stopped by the cap' in page
+    assert '#counting' in w.client.get('/stats/').get_data(as_text=True)
+    assert '#counting' in w.client.get('/stats/team').get_data(as_text=True)

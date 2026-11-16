@@ -239,6 +239,7 @@
                         A break throw needs the point's force recorded: {{ m.sided_throws }} throws had one.
                         {% if m.gameday_points %}{{ m.gameday_points }} of the base-metric points come from the Game Day record.{% endif %}
                         Where opponents receive the disc by zone (break, reset or open) needs their passes recorded, which the stat taker doesn't do.
+                        <a href="{{ url_for('stats_dashboard.ratings', _anchor='counting') }}">How the stats are counted</a>.
                     </p>
                     {% if plan_players %}
                     <h6 class="text-muted text-uppercase small mb-1">Each player (points with full stats)</h6>
