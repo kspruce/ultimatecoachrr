@@ -899,10 +899,11 @@ def numbers():
     and which are free. Coaches confirm new players' picks here."""
     from app.utils import numbers as shirt
     team_id = get_current_team_id()
-    held = shirt.holders(team_id)
+    held, held_back = shirt.holders(team_id), shirt.reserved(team_id)
     return render_template('team/numbers.html', title='Shirt numbers', numbers=shirt.NUMBERS, held=held,
+                           reserved=held_back,
                            provisional=shirt.provisional(team_id) if current_user.is_coach else [],
-                           free_count=sum(1 for n in shirt.NUMBERS if n not in held))
+                           free_count=sum(1 for n in shirt.NUMBERS if n not in held and n not in held_back))
 
 
 @bp.route('/numbers/<int:player_id>/confirm', methods=['POST'])
@@ -914,3 +915,89 @@ def confirm_number(player_id):
     db.session.commit()
     flash(f'#{player.jersey_number} confirmed for {player.name}.', 'success')
     return redirect(url_for('team.numbers'))
+
+
+@bp.route('/numbers/edit', methods=['GET', 'POST'])
+@login_required
+@coach_required
+def edit_numbers():
+    """Every active player's number on one page, for entering the squad's
+    record. A clash (or a reserved number) saves nothing."""
+    from app.utils import numbers as shirt
+    team_id = get_current_team_id()
+    players = (Player.query.filter_by(team_organization_id=team_id, active=True)
+               .order_by(Player.name).all())
+    held_back = shirt.reserved(team_id)
+    values, errors = {}, []
+    if request.method == 'POST':
+        chosen = {}
+        for player in players:
+            raw = (request.form.get(f'number_{player.id}') or '').strip()
+            values[player.id] = raw
+            if f'number_{player.id}' not in request.form:
+                chosen[player.id] = player.jersey_number  # not on the form: left as it is
+            elif not raw:
+                chosen[player.id] = None
+            elif not raw.isdigit() or int(raw) not in shirt.NUMBERS:
+                errors.append(f'{player.name}: "{raw}" isn\'t a number from 0 to 99.')
+            else:
+                chosen[player.id] = int(raw)
+        by_number = {}
+        for player in players:
+            n = chosen.get(player.id)
+            if n is not None:
+                by_number.setdefault(n, []).append(player.name)
+        errors += [f'{n} is given to {" and ".join(names)}.' for n, names in sorted(by_number.items())
+                   if len(names) > 1]
+        errors += [f'{n} is reserved ({held_back[n].note or "no note"}). Release it first.'
+                   for n in sorted(by_number) if n in held_back
+                   and any(p.jersey_number != n for p in players if chosen.get(p.id) == n)]
+        if not errors:
+            changed = 0
+            for player in players:
+                n = chosen.get(player.id)
+                if n != player.jersey_number or (n is not None and player.number_provisional):
+                    shirt.set_number(player, n)
+                    changed += 1
+            db.session.commit()
+            flash(f'Numbers saved ({changed} changed).', 'success')
+            return redirect(url_for('team.numbers'))
+        for e in errors:
+            flash(e, 'danger')
+    return render_template('team/numbers_edit.html', title='Set shirt numbers', players=players,
+                           values=values, reserved=held_back), (400 if errors else 200)
+
+
+@bp.route('/numbers/reserve', methods=['POST'])
+@login_required
+@coach_required
+def reserve_number():
+    from app.models.player import ReservedNumber
+    from app.utils import numbers as shirt
+    team_id = get_current_team_id()
+    raw = (request.form.get('number') or '').strip()
+    note = (request.form.get('note') or '').strip()[:200] or None
+    if not raw.isdigit() or int(raw) not in shirt.NUMBERS:
+        flash('Reserve a number from 0 to 99.', 'danger')
+    elif int(raw) in shirt.reserved(team_id):
+        flash(f'{raw} is already reserved.', 'warning')
+    elif int(raw) in shirt.holders(team_id):
+        flash(f'{raw} is worn by {shirt.holders(team_id)[int(raw)].name}.', 'warning')
+    else:
+        db.session.add(ReservedNumber(team_organization_id=team_id, number=int(raw), note=note,
+                                      created_by=current_user.id))
+        db.session.commit()
+        flash(f'{raw} reserved.', 'success')
+    return redirect(url_for('team.numbers', _anchor='reserved'))
+
+
+@bp.route('/numbers/reserve/<int:reservation_id>/release', methods=['POST'])
+@login_required
+@coach_required
+def release_number(reservation_id):
+    from app.models.player import ReservedNumber
+    row = ReservedNumber.query.filter_by(id=reservation_id, team_organization_id=get_current_team_id()).first_or_404()
+    db.session.delete(row)
+    db.session.commit()
+    flash(f'{row.number} is free again.', 'success')
+    return redirect(url_for('team.numbers', _anchor='reserved'))

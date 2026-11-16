@@ -217,3 +217,50 @@ def test_a_coach_given_number_is_not_offered_again(app, herd):
     assert 'name="jersey_number"' not in page and '#12' in page
     app.test_client().post(f'/auth/invite/accept/{token}', data=_account('40'))
     assert _number(player_id) == (12, False)
+
+
+def test_captains_and_coaches_set_everyones_number_at_once(app, herd):
+    """The record of the squad's numbers can be entered on one page; a
+    clash saves nothing and says which number."""
+    from app.models.player import Player
+    ana, ben, cat = herd['players']
+    coach = login(app, herd['coach'])
+    page = coach.get('/team/numbers/edit').get_data(as_text=True)
+    assert f'name="number_{ana}"' in page and f'name="number_{cat}"' in page
+
+    coach.post('/team/numbers/edit', data={f'number_{ana}': '10', f'number_{ben}': '10', f'number_{cat}': '0'})
+    assert [_number(p)[0] for p in (ana, ben, cat)] == [1, 2, 3]  # 10 twice: nothing saved
+
+    db.session.get(Player, ben).number_provisional = True
+    db.session.commit()
+    coach.post('/team/numbers/edit', data={f'number_{ana}': '10', f'number_{ben}': '2', f'number_{cat}': ''})
+    assert [_number(p) for p in (ana, ben, cat)] == [(10, False), (2, False), (None, False)]
+
+    team = db.session.get(TeamOrganization, herd['team'])
+    player = make_user(team, 'herd-player', welcomed=True)
+    login(app, player).post('/team/numbers/edit', data={f'number_{ana}': '50'})
+    assert _number(ana)[0] == 10
+    assert '10' in login(app, player).get('/team/numbers').get_data(as_text=True)  # everyone can look
+
+
+def test_reserved_numbers_are_not_offered_to_new_players(app, herd):
+    from app.models.player import ReservedNumber
+    coach = login(app, herd['coach'])
+    coach.post('/team/numbers/reserve', data={'number': '23', 'note': 'Alex, back in January'})
+    coach.post('/team/numbers/reserve', data={'number': '1', 'note': 'Taken already'})  # worn: refused
+    assert [(r.number, r.note) for r in ReservedNumber.query.all()] == [(23, 'Alex, back in January')]
+    assert 'Alex, back in January' in coach.get('/team/numbers').get_data(as_text=True)
+
+    player_id, token = _newbie(herd)
+    visitor = app.test_client()
+    assert '<option value="23">' not in visitor.get(f'/auth/invite/accept/{token}').get_data(as_text=True)
+    visitor.post(f'/auth/invite/accept/{token}', data=_account('23'))
+    assert User.query.filter_by(username='newbie').first() is None
+
+    # Giving it to someone on the edit page is refused too, until it's released
+    ana = herd['players'][0]
+    coach.post('/team/numbers/edit', data={f'number_{ana}': '23'})
+    assert _number(ana)[0] == 1
+    reservation = ReservedNumber.query.one()
+    coach.post(f'/team/numbers/reserve/{reservation.id}/release')
+    assert ReservedNumber.query.count() == 0

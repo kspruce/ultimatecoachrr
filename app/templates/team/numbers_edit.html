@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-4" style="max-width:720px">
+  <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
+    <div>
+      <h2 class="fw-bold mb-1">Set shirt numbers</h2>
+      <p class="text-muted mb-0">Every active player, 0 to 99. Leave a box empty for no number. Saving confirms any picks new players made.</p>
+    </div>
+    <a href="{{ url_for('team.numbers') }}" class="btn btn-outline-secondary btn-sm">Back to numbers</a>
+  </div>
+  {% if reserved %}
+  <p class="small text-muted">Reserved: {% for n, r in reserved|dictsort %}{{ n }}{% if r.note %} ({{ r.note }}){% endif %}{{ ', ' if not loop.last }}{% endfor %}.</p>
+  {% endif %}
+  <form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="card shadow-sm">
+      <div class="card-body p-0">
+        <table class="table mb-0 align-middle">
+          <thead class="table-light"><tr><th>Player</th><th style="width:8rem">Number</th></tr></thead>
+          <tbody>
+          {% for p in players %}
+            <tr>
+              <td><label for="number_{{ p.id }}">{{ p.name }}</label>
+                {% if p.number_provisional %}<span class="badge bg-warning text-dark ms-1">Provisional</span>{% endif %}</td>
+              <td><input type="number" min="0" max="99" inputmode="numeric" class="form-control form-control-sm"
+                         id="number_{{ p.id }}" name="number_{{ p.id }}"
+                         value="{{ values[p.id] if p.id in values else (p.jersey_number if p.jersey_number is not none else '') }}"></td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="mt-3"><button class="btn btn-primary">Save numbers</button></div>
+  </form>
+</div>
+{% endblock %}

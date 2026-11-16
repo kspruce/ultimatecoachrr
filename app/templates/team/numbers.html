@@ -6,7 +6,10 @@
       <h2 class="fw-bold mb-1">Shirt numbers</h2>
       <p class="text-muted mb-0">One player per number across the club, 1s and 2s alike. {{ free_count }} of 100 free.</p>
     </div>
-    <a href="{{ url_for('team.index') }}" class="btn btn-outline-secondary btn-sm">Back to the roster</a>
+    <div class="d-flex gap-2">
+      {% if current_user.is_coach %}<a href="{{ url_for('team.edit_numbers') }}" class="btn btn-primary btn-sm">Set numbers</a>{% endif %}
+      <a href="{{ url_for('team.index') }}" class="btn btn-outline-secondary btn-sm">Back to the roster</a>
+    </div>
   </div>
 
   {% if provisional %}
@@ -36,20 +39,53 @@
     .num-cell { border:1px solid var(--uc-gray-200, #ddd); border-radius:8px; padding:.35rem .5rem; min-height:3.4rem; }
     .num-cell.free { border-style:dashed; color:var(--bs-success); }
     .num-cell .num { font-weight:700; }
+    .num-cell.reserved { background:var(--uc-gray-100, #f1f1f1); color:var(--uc-gray-600, #666); }
   </style>
   <div class="num-grid">
     {% for n in numbers %}
-    {% set p = held.get(n) %}
-    <div class="num-cell {{ '' if p else 'free' }}">
+    {% set p = held.get(n) %}{% set r = reserved.get(n) %}
+    <div class="num-cell {{ '' if p else ('reserved' if r else 'free') }}">
       <div class="num">{{ n }}</div>
       {% if p %}
       <div class="small text-truncate" title="{{ p.name }}">{{ p.name }}</div>
       {% if p.number_provisional %}<span class="badge bg-warning text-dark">Provisional</span>{% endif %}
+      {% elif r %}
+      <div class="small text-truncate" title="{{ r.note or 'Reserved' }}">Reserved{% if r.note %}: {{ r.note }}{% endif %}</div>
       {% else %}
       <div class="small">Free</div>
       {% endif %}
     </div>
     {% endfor %}
   </div>
+
+  {% if current_user.is_coach %}
+  <div class="card shadow-sm mt-4" id="reserved">
+    <div class="card-body">
+      <h6 class="fw-bold mb-1">Reserved numbers</h6>
+      <p class="text-muted small">Hold a number for someone not on the site yet, or retire one. New players aren't offered it.</p>
+      {% for n, r in reserved|dictsort %}
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 py-2 border-top">
+        <div><strong>{{ n }}</strong>{% if r.note %} · {{ r.note }}{% endif %}</div>
+        <form method="POST" action="{{ url_for('team.release_number', reservation_id=r.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-sm btn-outline-secondary">Release</button>
+        </form>
+      </div>
+      {% endfor %}
+      <form method="POST" action="{{ url_for('team.reserve_number') }}" class="row g-2 align-items-end mt-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="col-4 col-sm-2">
+          <label class="form-label small mb-1" for="reserve-number">Number</label>
+          <input type="number" min="0" max="99" inputmode="numeric" class="form-control form-control-sm" id="reserve-number" name="number" required>
+        </div>
+        <div class="col-8 col-sm-7">
+          <label class="form-label small mb-1" for="reserve-note">Note</label>
+          <input type="text" maxlength="200" class="form-control form-control-sm" id="reserve-note" name="note" placeholder="e.g. Alex, back in January; retired">
+        </div>
+        <div class="col-12 col-sm-3"><button class="btn btn-sm btn-primary w-100">Reserve</button></div>
+      </form>
+    </div>
+  </div>
+  {% endif %}
 </div>
 {% endblock %}
