@@ -395,6 +395,10 @@ def delete_player(player_id):
         
         name = player.name
 
+        # Requests to be linked to this profile go with it
+        from app.models.link_request import PlayerLinkRequest
+        PlayerLinkRequest.query.filter_by(player_id=player_id).delete()
+
         # Delete player_point_stats
         db.session.execute(
             text("DELETE FROM player_point_stats WHERE player_id = :player_id AND team_organization_id = :team_id"),

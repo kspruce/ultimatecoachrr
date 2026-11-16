@@ -1,5 +1,5 @@
 from datetime import datetime
-from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, jsonify, session, g
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, jsonify, session, g, abort
 from urllib.parse import urlparse
 from flask_login import login_user, logout_user, current_user, login_required
 import logging
@@ -351,7 +351,15 @@ def users():
         email_enabled=email_configured(),
         member_status=onboarding.member_status(users),
         roster_signup=onboarding.roster_signup(current_team.id) if current_team else None,
+        link_requests=_link_requests(current_team.id) if current_team and current_team.id == get_current_team_id()
+        else [],
     )
+
+
+def _link_requests(team_id):
+    from app.models.link_request import PlayerLinkRequest
+    return (PlayerLinkRequest.query.filter_by(team_organization_id=team_id)
+            .order_by(PlayerLinkRequest.created_at).all())
 
 
 @bp.route('/users/add', methods=['GET', 'POST'])
@@ -798,11 +806,16 @@ def profile():
 @bp.route('/link_player', methods=['GET', 'POST'])
 @login_required
 def link_player():
+    """Pick your player profile. Coaches (and above) link straight away;
+    anyone else sends a request a coach approves, so nobody can take over
+    a teammate's unlinked profile and read its feedback, goals and fitness."""
+    from app.models.link_request import PlayerLinkRequest
 
     team_id = get_current_team_id()
     available_players = Player.query.filter(
         (Player.user_id == None) | (Player.user_id == current_user.id)
     ).filter_by(active=True, team_organization_id=team_id).order_by(Player.name).all()
+    pending = PlayerLinkRequest.query.filter_by(team_organization_id=team_id, user_id=current_user.id).first()
 
     if request.method == 'POST':
         player_id = request.form.get('player_id', type=int)
@@ -817,20 +830,77 @@ def link_player():
             flash('Invalid player selected.', 'danger')
             return redirect(url_for('auth.link_player'))
 
-        # Unlink previous (first, as a user has one player per team)
-        if current_user.player and current_user.player.id != player_id:
-            current_user.player.user_account = None
-            db.session.flush()
+        if not current_user.is_coach and player.user_id != current_user.id:
+            if pending is None:
+                pending = PlayerLinkRequest(team_organization_id=team_id, user_id=current_user.id)
+                db.session.add(pending)
+            pending.player_id = player.id
+            pending.created_at = datetime.utcnow()
+            db.session.commit()
+            flash(f'Asked your coaches to link you to {player.name}. It shows on your profile once '
+                  'they approve it.', 'success')
+            return redirect(url_for('auth.link_player'))
 
-        # Link new
-        player.user_account = current_user._get_current_object()
-
+        _link_account_to_player(current_user._get_current_object(), player)
+        if pending is not None:
+            db.session.delete(pending)
         db.session.commit()
 
         flash(f'Linked to player {player.name}.', 'success')
         return redirect(url_for('auth.profile'))
 
-    return render_template('auth/link_player.html', players=available_players)
+    return render_template('auth/link_player.html', players=available_players, pending=pending)
+
+
+def _link_account_to_player(user, player):
+    """Link `user` to `player` (an unlinked profile on the team), unlinking
+    their current profile on that team first: one player per team."""
+    current = user.player_for(player.team_organization_id)
+    if current is not None and current.id != player.id:
+        current.user_account = None
+        db.session.flush()
+    player.user_account = user
+
+
+@bp.route('/link_player/cancel', methods=['POST'])
+@login_required
+def cancel_link_request():
+    from app.models.link_request import PlayerLinkRequest
+    PlayerLinkRequest.query.filter_by(team_organization_id=get_current_team_id(),
+                                      user_id=current_user.id).delete()
+    db.session.commit()
+    flash('Request cancelled.', 'info')
+    return redirect(url_for('auth.link_player'))
+
+
+@bp.route('/link-requests/<int:request_id>/<any(approve,decline):action>', methods=['POST'])
+@login_required
+def answer_link_request(request_id, action):
+    """A coach approves (links the account to the profile) or declines a
+    player's request."""
+    from app.models.link_request import PlayerLinkRequest
+
+    team_id = get_current_team_id()
+    link = PlayerLinkRequest.query.filter_by(id=request_id, team_organization_id=team_id).first_or_404()
+    if not can_manage_team_users(team_id):
+        abort(403)
+    user, player = link.user, link.player
+    back = redirect(url_for('auth.users', _anchor='link-requests'))
+    db.session.delete(link)
+    if action == 'decline':
+        db.session.commit()
+        flash(f"Declined {user.username}'s request to be linked to {player.name}.", 'info')
+        return back
+    if (player.team_organization_id != team_id or not player.active
+            or player.user_id not in (None, user.id) or not user.is_member_of(team_id)):
+        db.session.commit()
+        flash(f"Couldn't link {user.username} to {player.name}: the profile is linked to someone else, "
+              'or they are no longer on the team. The request is closed.', 'warning')
+        return back
+    _link_account_to_player(user, player)
+    db.session.commit()
+    flash(f'{user.username} is now linked to {player.name}.', 'success')
+    return back
 
 
 # ─────────────────────────────────────────────────────────────

@@ -9,7 +9,24 @@
         </div>
 
         <div class="card-body">
+            {% if pending %}
+            <div class="alert alert-info d-flex justify-content-between align-items-center gap-3 flex-wrap">
+                <div>
+                    <strong>Waiting for a coach</strong> to link you to {{ pending.player.name }}.
+                    Asked {{ pending.created_at.strftime('%-d %b') }}.
+                </div>
+                <form method="POST" action="{{ url_for('auth.cancel_link_request') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="btn btn-sm btn-outline-secondary">Cancel request</button>
+                </form>
+            </div>
+            {% endif %}
+
             {% if players %}
+            {% if not current_user.is_coach %}
+            <p class="text-muted">Pick your name. A coach checks it's you before your account is linked,
+                so your feedback, goals and fitness stay private.</p>
+            {% endif %}
             <form method="POST">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
@@ -19,14 +36,17 @@
                         <option value="">Choose player...</option>
                         {% for player in players %}
                         <option value="{{ player.id }}"
-                            {% if current_user.player and current_user.player.id == player.id %}selected{% endif %}>
+                            {% if pending and pending.player_id == player.id %}selected
+                            {% elif not pending and current_user.player and current_user.player.id == player.id %}selected{% endif %}>
                             {{ player.name }}
                         </option>
                         {% endfor %}
                     </select>
                 </div>
 
-                <button class="btn btn-primary">Link Player</button>
+                <button class="btn btn-primary">
+                    {% if current_user.is_coach %}Link Player{% elif pending %}Change request{% else %}Ask to be linked{% endif %}
+                </button>
             </form>
             {% else %}
                 <div class="alert alert-info">

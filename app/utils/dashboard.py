@@ -377,6 +377,17 @@ def needs_attention(team_id, today, coming, settings=None, roster_signup=None):
 
     items += after_the_event(team_id, today, coming, settings)
 
+    from app.models.link_request import PlayerLinkRequest
+    asks = (PlayerLinkRequest.query.filter_by(team_organization_id=team_id)
+            .order_by(PlayerLinkRequest.created_at).all())
+    if asks:
+        n = len(asks)
+        items.append({'icon': 'bi-person-check', 'url': url_for('auth.users', _anchor='link-requests'),
+                      'title': f'{n} player{"s" if n != 1 else ""} asked to be linked to {"their" if n != 1 else "a"} profile',
+                      'detail': ', '.join(f'{a.user.username} as {a.player.name}' for a in asks[:3])
+                      + ('…' if n > 3 else ''),
+                      'action': None, 'action_label': None})
+
     if roster_signup and roster_signup.get('waiting'):
         waiting = roster_signup['waiting']
         names = ', '.join(p.name for p in waiting[:4]) + (f' and {len(waiting) - 4} more' if len(waiting) > 4 else '')
