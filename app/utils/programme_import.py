@@ -48,6 +48,27 @@ LOG_FIELD_BY_LABEL = {label.lower(): k for k, label in LOG_FIELDS}
 
 MAX_ROWS = 5000
 
+# The database column each sheet column is saved in, for its length limit.
+# Postgres refuses longer text (SQLite doesn't check), so the import would
+# fail part-way; it's reported by row instead.
+PROGRAMME_COLUMN_FIELDS = {
+    'track': ProgrammeTrack.name, 'week_title': ProgrammeWeek.title, 'session': ProgrammeSession.title,
+    'session_type': ProgrammeSession.custom_type, 'alternative_group': ProgrammeSession.alternative_group,
+    'session_video': ProgrammeSession.video_url, 'exercise': ProgrammeExercise.name,
+    'block': ProgrammeExercise.block, 'sets': ProgrammeExercise.sets, 'reps': ProgrammeExercise.reps,
+    'rest': ProgrammeExercise.rest, 'intensity': ProgrammeExercise.intensity, 'tempo': ProgrammeExercise.tempo,
+    'exercise_video': ProgrammeExercise.video_url,
+}
+TEST_COLUMN_FIELDS = {'test': PerformanceTest.name, 'unit': PerformanceTest.unit}
+
+
+def _too_long(record, fields, row, problems):
+    for col, field in fields.items():
+        limit = field.property.columns[0].type.length
+        value = record.get(col) or ''
+        if limit and len(value) > limit:
+            problems.error(row, f'{col} is {len(value)} characters long; it can be at most {limit}.')
+
 
 class Problems:
     def __init__(self):
@@ -93,7 +114,7 @@ def rows_to_csv(rows):
     return out.getvalue()
 
 
-def _records(rows, known, required, problems, what):
+def _records(rows, known, required, problems, what, fields=None):
     """[(row number, {column: value})] with headers normalised; reports
     missing and unknown columns."""
     rows = [r for r in rows if any((c or '').strip() for c in r)]
@@ -116,6 +137,7 @@ def _records(rows, known, required, problems, what):
         for col, value in zip(header, row):
             if col in known:
                 record[col] = (value or '').strip()
+        _too_long(record, fields or {}, i, problems)
         out.append((i, record))
     return out
 
@@ -191,7 +213,8 @@ def _log_fields(value, row, problems):
 def parse(programme_rows, test_rows=None):
     """What an import would create, plus the problems found."""
     problems = Problems()
-    records = _records(programme_rows, PROGRAMME_COLUMNS, REQUIRED_COLUMNS, problems, 'programme')
+    records = _records(programme_rows, PROGRAMME_COLUMNS, REQUIRED_COLUMNS, problems, 'programme',
+                       PROGRAMME_COLUMN_FIELDS)
     tracks = {}
     order = []
     last = {'track': None, 'week': None, 'session': None}
@@ -326,7 +349,7 @@ def parse(programme_rows, test_rows=None):
 
 
 def _parse_tests(rows, tracks, problems):
-    records = _records(rows, TEST_COLUMNS, TEST_REQUIRED, problems, 'tests')
+    records = _records(rows, TEST_COLUMNS, TEST_REQUIRED, problems, 'tests', TEST_COLUMN_FIELDS)
     by_track = {t['name'].lower(): t for t in tracks}
     tests, milestones = [], {}
     seen = set()
