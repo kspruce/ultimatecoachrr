@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{# Coaches: nudge the team to check in, and see what the team says about itself. #}
+{% block title %}Player check-ins{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/theory.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/feedback__checkin.css') }}?v=1">
+{% endblock %}
+
+{% macro cell(v) %}{% if v %}<td class="sc sc-{{ v|round|int }}">{{ v }}</td>{% else %}<td class="sc text-muted">–</td>{% endif %}{% endmacro %}
+
+{% block content %}
+<div class="container th-page" style="max-width:960px">
+  <nav class="th-crumbs" aria-label="Breadcrumb"><a href="{{ url_for('feedback.hub') }}">Player Feedback</a></nav>
+  <div class="th-head">
+    <div><h1>Player check-ins</h1><p>Players rate themselves on offence, cutting, handling, defence and mental &amp; spirit, and add notes. You see every one.</p></div>
+    <a href="{{ url_for('checkin.rubric') }}" class="btn btn-outline-secondary th-btn flex-shrink-0"><i class="bi bi-ui-checks"></i>Edit rubric</a>
+  </div>
+
+  {# Nudge #}
+  <details class="th-form-card" {% if not requests %}open{% endif %}>
+    <summary class="fw-bold" style="cursor:pointer"><i class="bi bi-bell me-2"></i>Nudge the team to check in</summary>
+    <form method="POST" action="{{ url_for('checkin.nudge') }}" class="mt-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="row g-2">
+        <div class="col-sm-6">
+          <label class="form-label small" for="nudge-title">Name</label>
+          <input id="nudge-title" name="title" class="form-control" maxlength="120" required placeholder="e.g. After Nationals, November check-in, Mid-season">
+        </div>
+        <div class="col-sm-6">
+          <label class="form-label small" for="nudge-about">About</label>
+          <select id="nudge-about" name="about" class="form-select">
+            <option value="">Generally, lately</option>
+            {% if tournaments %}<optgroup label="Tournaments">{% for t in tournaments %}<option value="t:{{ t.id }}">{{ t.name }}</option>{% endfor %}</optgroup>{% endif %}
+            {% if sessions %}<optgroup label="Training">{% for s in sessions %}<option value="s:{{ s.id }}">{{ s.title }} ({{ s.date.strftime('%-d %b') }})</option>{% endfor %}</optgroup>{% endif %}
+          </select>
+        </div>
+        <div class="col-12">
+          <label class="form-label small" for="nudge-message">Message (optional)</label>
+          <input id="nudge-message" name="message" class="form-control" maxlength="1000" placeholder="e.g. Be honest: this is for picking what we train next">
+        </div>
+      </div>
+      <div class="d-flex flex-wrap align-items-center gap-3 mt-3">
+        {% if discord_ready %}<div class="form-check mb-0"><input class="form-check-input" type="checkbox" name="discord" value="1" id="nudge-discord" checked><label class="form-check-label small" for="nudge-discord">Also post in Discord</label></div>{% endif %}
+        <span class="small text-muted">Players see it on My Feedback for {{ 30 }} days or until you close it.</span>
+        <button class="btn btn-primary th-btn ms-auto"><i class="bi bi-send"></i>Send nudge</button>
+      </div>
+    </form>
+  </details>
+
+  {# Filters: nudges and time #}
+  <div class="th-chips d-flex flex-wrap gap-2 my-3">
+    <a class="th-chip {% if not req and not days %}active{% endif %}" href="{{ url_for('checkin.team') }}">All time</a>
+    {% for d, l in [(30, 'Last 30 days'), (90, 'Last 90 days'), (365, 'Last year')] %}
+    <a class="th-chip {% if days == d and not req %}active{% endif %}" href="{{ url_for('checkin.team', days=d) }}">{{ l }}</a>
+    {% endfor %}
+  </div>
+
+  {% if requests %}
+  <div class="th-label mt-0">Nudges</div>
+  <div class="th-list mb-3">
+    {% for r in requests %}
+    <div class="th-row">
+      <i class="bi {{ 'bi-bell-fill' if r.is_open(now) else 'bi-bell-slash' }}" aria-hidden="true"></i>
+      <a class="th-row-text text-decoration-none" href="{{ url_for('checkin.team', request=r.id) }}">
+        <div class="th-row-title">{{ r.title }}{% if req and req.id == r.id %} <span class="th-badge read">Showing</span>{% endif %}</div>
+        <div class="th-row-sub">{{ r.created_at.strftime('%-d %b %Y') }} · {{ answered[r.id] }}/{{ active_players }} answered{% if not r.is_open(now) %} · closed{% endif %}</div>
+      </a>
+      {% if r.closed_at or r.is_open(now) %}
+      <form method="POST" action="{{ url_for('checkin.close_nudge', request_id=r.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-sm btn-outline-secondary">{{ 'Reopen' if r.closed_at else 'Close' }}</button>
+      </form>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if req and waiting %}
+  <div class="alert alert-light border small">
+    <b>Not answered "{{ req.title }}" yet ({{ waiting|length }}):</b>
+    {% for p in waiting %}<a href="{{ url_for('team.player_detail', player_id=p.id, _anchor='development') }}">{{ p.name }}</a>{{ ', ' if not loop.last }}{% endfor %}
+  </div>
+  {% endif %}
+
+  {% if count %}
+  <div class="th-label mt-0">Lowest-rated across the team <span class="text-muted" style="text-transform:none;letter-spacing:0">· {{ count }} check-in{{ 's' if count != 1 }}{% if req %} for {{ req.title }}{% endif %}</span></div>
+  <div class="th-form-card">
+    <div class="ci-bars">
+      {% for item, avg, n in item_rows[:8] %}
+      <div class="ci-bar-row" style="grid-template-columns: 1fr 6rem 3.2rem">
+        <span class="small">{{ item.text }} <span class="text-muted">· {{ item.section_label }}</span></span>
+        <span class="ci-bar" role="img" aria-label="{{ avg }} out of 4 from {{ n }}"><span style="width:{{ (avg / 4 * 100)|round|int }}%"></span></span>
+        <span class="ci-bar-val">{{ avg }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% if item_rows|length > 8 %}
+    <details class="mt-2"><summary class="small" style="cursor:pointer;color:var(--club-ink)">All {{ item_rows|length }} statements</summary>
+      <div class="ci-bars mt-2">
+      {% for item, avg, n in item_rows[8:] %}
+      <div class="ci-bar-row" style="grid-template-columns: 1fr 6rem 3.2rem">
+        <span class="small">{{ item.text }} <span class="text-muted">· {{ item.section_label }}</span></span>
+        <span class="ci-bar"><span style="width:{{ (avg / 4 * 100)|round|int }}%"></span></span>
+        <span class="ci-bar-val">{{ avg }}</span>
+      </div>
+      {% endfor %}
+      </div>
+    </details>
+    {% endif %}
+    <div class="small text-muted mt-2">Average out of 4 (Rarely 1 · Always 4). Low across the squad is a good pick for what to drill next.</div>
+  </div>
+
+  <div class="th-label">By player <span class="text-muted" style="text-transform:none;letter-spacing:0">· their latest{% if req %} for {{ req.title }}{% endif %}</span></div>
+  <div class="th-list ci-table-wrap mb-3">
+    <table class="ci-table">
+      <thead><tr><th>Player</th><th>When</th>{% for s, l in sections %}<th class="text-center">{{ l }}</th>{% endfor %}</tr></thead>
+      <tbody>
+      {% for p, latest, avgs in player_rows if latest %}
+      <tr>
+        <td><a href="{{ url_for('checkin.view', check_in_id=latest.id) }}">{{ p.name }}</a>{% if not latest.seen_by_coach_at %} <span class="badge bg-success">New</span>{% endif %}</td>
+        <td class="text-muted">{{ latest.created_at.strftime('%-d %b') }}</td>
+        {% for s, l in sections %}{{ cell(avgs.get(s)) }}{% endfor %}
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="th-list th-empty py-4 text-center">No check-ins {{ 'for this yet' if req else 'yet' }}. Send a nudge, or players can fill one in any time from My Feedback.</div>
+  {% endif %}
+
+  {% if recent and not req %}
+  <div class="th-label">Latest</div>
+  <div class="th-list mb-4">
+    {% for a in recent %}
+    <a class="th-row" href="{{ url_for('checkin.view', check_in_id=a.id) }}">
+      <i class="bi bi-clipboard-check" aria-hidden="true"></i>
+      <div class="th-row-text"><div class="th-row-title">{{ a.player.name }} · {{ a.label }}</div>
+        <div class="th-row-sub">{{ a.created_at.strftime('%-d %b %Y') }}{% if a.focus_item %} · focus: {{ a.focus_item.text|truncate(60) }}{% endif %}{% if a.notes %} · with notes{% endif %}</div></div>
+      {% if not a.seen_by_coach_at %}<span class="th-badge read">New</span>{% endif %}
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

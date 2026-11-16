@@ -313,6 +313,27 @@
     {% else %}{{ empty('No reviews yet.') }}{% endif %}
     {% endif %}
 
+    {# Check-ins: the player's own self-assessment (coaches always see them) #}
+    {% if check_ins or is_me %}
+    <div class="th-label d-flex justify-content-between align-items-center">
+      <span>Check-ins</span>
+      {% if is_me %}<a href="{{ url_for('checkin.new') }}" style="text-transform:none;letter-spacing:0">How did I go?</a>{% endif %}
+    </div>
+    {% if check_ins %}
+    <div class="th-list pp-section">
+      {% for a in check_ins %}
+      {% set avgs = a.section_averages() %}
+      <a class="th-row" href="{{ url_for('checkin.view', check_in_id=a.id) }}">
+        <i class="bi bi-clipboard-check" aria-hidden="true"></i>
+        <div class="th-row-text"><div class="th-row-title">{{ a.label }}</div>
+          <div class="th-row-sub">{{ a.created_at.strftime('%-d %b %Y') }}{% for key, label in [('offence', 'O'), ('cutting', 'Cut'), ('handling', 'Hdl'), ('defence', 'D'), ('mental', 'Mind')] if key in avgs %} · {{ label }} {{ avgs[key] }}{% endfor %}</div></div>
+        {% if current_user.is_coach and not is_me and not a.seen_by_coach_at %}<span class="th-badge read">New</span>{% endif %}
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}{{ empty('No check-ins yet: rate yourself in about a minute.') }}{% endif %}
+    {% endif %}
+
     <div class="th-label d-flex justify-content-between align-items-center">
       <span>Coach Feedback</span>
       {% if current_user.is_coach %}<a href="{{ url_for('feedback.player_feedback', player_id=player.id) }}" style="text-transform:none;letter-spacing:0">All notes</a>

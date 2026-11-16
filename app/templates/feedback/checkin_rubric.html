@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{# Coaches edit the team's rubric statements: reword, hide, add, reorder. #}
+{% block title %}Check-in rubric{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/theory.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/feedback__checkin.css') }}?v=1">
+{% endblock %}
+
+{% block content %}
+<div class="container th-page" style="max-width:820px">
+  <nav class="th-crumbs" aria-label="Breadcrumb"><a href="{{ url_for('checkin.team') }}">Check-ins</a></nav>
+  <div class="th-head"><div>
+    <h1>Check-in rubric</h1>
+    <p>The statements players rate themselves on: Rarely, Sometimes, Mostly or Always. Write them as things a player did ("I cleared out fast"), so they're easy to answer honestly. Untick one to hide it; old check-ins keep it. Hide every statement in a section to drop the section.</p>
+  </div></div>
+
+  <form method="POST" class="th-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {# Enter in a text box saves (rather than pressing the first move button) #}
+    <button type="submit" tabindex="-1" aria-hidden="true" style="position:absolute;left:-9999px">Save</button>
+    {% for section, label, items in sections %}
+    <div class="th-form-card" id="sec-{{ section }}">
+      <div class="fw-bold mb-2">{{ label }} <span class="text-muted small fw-normal">· {{ items|selectattr('active')|list|length }} showing</span></div>
+      {% for item in items %}
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <input class="form-check-input flex-shrink-0 m-0" type="checkbox" name="active-{{ item.id }}" value="1" id="active-{{ item.id }}" {% if item.active %}checked{% endif %} title="Showing">
+        <label class="visually-hidden" for="active-{{ item.id }}">Show "{{ item.text }}"</label>
+        <input class="form-control form-control-sm {% if not item.active %}text-muted{% endif %}" name="text-{{ item.id }}" value="{{ item.text }}" maxlength="200" aria-label="Statement">
+        <button class="th-icon-btn sm" name="move" value="{{ item.id }}:up" {% if loop.first %}disabled{% endif %} aria-label="Move up"><i class="bi bi-arrow-up"></i></button>
+        <button class="th-icon-btn sm" name="move" value="{{ item.id }}:down" {% if loop.last %}disabled{% endif %} aria-label="Move down"><i class="bi bi-arrow-down"></i></button>
+      </div>
+      {% endfor %}
+      <div class="d-flex align-items-center gap-2 mt-2">
+        <i class="bi bi-plus-circle flex-shrink-0" style="color:var(--club-ink)" aria-hidden="true"></i>
+        <input class="form-control form-control-sm" name="new-{{ section }}" maxlength="200" placeholder="Add a statement to {{ label }}" aria-label="New statement for {{ label }}">
+      </div>
+    </div>
+    {% endfor %}
+    <div class="th-actionbar">
+      <a href="{{ url_for('checkin.team') }}" class="btn btn-link px-2">Back</a>
+      <span class="grow"></span>
+      <button type="submit" class="btn btn-primary th-btn px-4"><i class="bi bi-check-lg"></i>Save rubric</button>
+    </div>
+  </form>
+
+  <form method="POST" action="{{ url_for('checkin.restore_rubric') }}" class="mt-3 mb-4" data-confirm="Bring back any base statements you've hidden or reworded? Your own statements stay.">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="btn btn-link btn-sm px-0"><i class="bi bi-arrow-counterclockwise me-1"></i>Bring back the base statements</button>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/theory.js') }}"></script>
+{% endblock %}

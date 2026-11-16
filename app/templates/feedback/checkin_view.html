@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{# One check-in: section averages (against the one before), each answer, the starred focus and notes. #}
+{% block title %}{{ check_in.label }} · {{ check_in.player.name }}{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/theory.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/feedback__checkin.css') }}?v=1">
+{% endblock %}
+
+{% block content %}
+<div class="container th-page" style="max-width:760px">
+  <nav class="th-crumbs" aria-label="Breadcrumb">
+    {% if is_own %}<a href="{{ url_for('feedback.mine') }}">My Feedback</a>
+    {% else %}<a href="{{ url_for('checkin.team') }}">Check-ins</a> · <a href="{{ url_for('team.player_detail', player_id=check_in.player_id, _anchor='development') }}">{{ check_in.player.name }}</a>{% endif %}
+  </nav>
+  <div class="th-head">
+    <div>
+      <h1>{{ check_in.label }}</h1>
+      <p>{{ check_in.player.name }} · {{ check_in.created_at.strftime('%-d %b %Y') }}{% if check_in.tournament and check_in.label != check_in.tournament.name %} · {{ check_in.tournament.name }}{% elif check_in.session and check_in.label != check_in.session.title %} · {{ check_in.session.title }}{% endif %}</p>
+    </div>
+    <div class="dropdown flex-shrink-0">
+      <button class="th-icon-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Check-in options"><i class="bi bi-three-dots"></i></button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        {% if is_own %}<li><a class="dropdown-item" href="{{ url_for('checkin.edit', check_in_id=check_in.id) }}"><i class="bi bi-pencil me-2"></i>Edit</a></li>{% endif %}
+        <li><form method="POST" action="{{ url_for('checkin.delete', check_in_id=check_in.id) }}" data-confirm="Delete this check-in?">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="dropdown-item text-danger"><i class="bi bi-trash me-2"></i>Delete</button></form></li>
+      </ul>
+    </div>
+  </div>
+
+  {% if averages %}
+  <div class="th-form-card">
+    <div class="ci-bars">
+      {% for section, label in section_list if section in averages %}
+      {% set avg = averages[section] %}
+      <div class="ci-bar-row">
+        <span>{{ label }}</span>
+        <span class="ci-bar" role="img" aria-label="{{ label }}: {{ avg }} out of 4"><span style="width:{{ (avg / 4 * 100)|round|int }}%"></span></span>
+        <span class="ci-bar-val">{{ avg }}{% if section in earlier %}{% set d = (avg - earlier[section])|round(1) %}{% if d > 0 %}<span class="ci-delta up" title="Since the last check-in">+{{ d }}</span>{% elif d < 0 %}<span class="ci-delta down" title="Since the last check-in">{{ d }}</span>{% endif %}{% endif %}</span>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="small text-muted mt-2">Out of 4: Rarely 1 · Sometimes 2 · Mostly 3 · Always 4{% if earlier %}. Change is since the check-in before.{% endif %}</div>
+  </div>
+  {% endif %}
+
+  {% if check_in.focus_item %}
+  <div class="th-label mt-0">Focus next time</div>
+  <div class="th-form-card"><i class="bi bi-star-fill me-2" style="color:var(--warn)"></i><b>{{ check_in.focus_item.text }}</b> <span class="text-muted small">· {{ check_in.focus_item.section_label }}</span></div>
+  {% endif %}
+
+  {% if check_in.notes %}
+  <div class="th-label mt-0">Notes</div>
+  <div class="th-form-card ci-notes">{{ check_in.notes }}</div>
+  {% endif %}
+
+  {% for section, label, items in sections if items %}
+  <div class="th-label mt-0">{{ label }}</div>
+  <div class="th-list mb-3">
+    {% for item in items %}
+    <div class="th-row" style="min-height:0">
+      <div class="th-row-text"><div class="small">{{ item.text }}</div></div>
+      <span class="ci-answer sc-{{ scores[item.id] }}">{{ scale[scores[item.id]] }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+
+  {% if not averages and not check_in.notes %}<div class="th-list th-empty py-3">Nothing filled in.</div>{% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/theory.js') }}"></script>
+{% endblock %}

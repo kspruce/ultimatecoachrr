@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{# A player's check-in: tap how often for each statement, star one to focus on, add notes. #}
+{% block title %}{{ 'Edit check-in' if check_in and check_in.id else 'Check-in' }}{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/theory.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/feedback__checkin.css') }}?v=1">
+{% endblock %}
+
+{% block content %}
+<div class="container th-page" style="max-width:760px">
+  <nav class="th-crumbs" aria-label="Breadcrumb"><a href="{{ url_for('feedback.mine') }}">My Feedback</a></nav>
+  <div class="th-head"><div>
+    <h1>{{ req.title if req else 'How did I go?' }}</h1>
+    <p>{% if req and req.message %}{{ req.message }}<br>{% endif %}Tap what fits, skip what didn't come up. About a minute. Your coaches see this.</p>
+  </div></div>
+
+  <form method="POST" class="th-form" id="checkin-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% if req %}<input type="hidden" name="request" value="{{ req.id }}">{% endif %}
+
+    {% if not req %}
+    <div class="th-form-card">
+      <label class="form-label" for="about">What's it about?</label>
+      {% set cur = ('t:' ~ check_in.tournament_id) if check_in and check_in.tournament_id else ('s:' ~ check_in.session_id) if check_in and check_in.session_id else 'none' %}
+      <select id="about" name="about" class="form-select">
+        <option value="none" {% if cur == 'none' %}selected{% endif %}>Generally, lately</option>
+        {% if tournaments %}<optgroup label="Tournaments">{% for t in tournaments %}<option value="t:{{ t.id }}" {% if cur == 't:' ~ t.id %}selected{% endif %}>{{ t.name }}</option>{% endfor %}</optgroup>{% endif %}
+        {% if sessions %}<optgroup label="Training">{% for s in sessions %}<option value="s:{{ s.id }}" {% if cur == 's:' ~ s.id %}selected{% endif %}>{{ s.title }} ({{ s.date.strftime('%a %-d %b') }})</option>{% endfor %}</optgroup>{% endif %}
+      </select>
+    </div>
+    {% endif %}
+
+    <div class="ci-scale-key mb-2">
+      <span>Tap a chosen answer again to clear it. Star <i class="bi bi-star" aria-hidden="true"></i> the one thing you most want to focus on next time.</span>
+    </div>
+
+    {% for section, label, items in sections %}
+    {% set answered = items|selectattr('id', 'in', scores)|list|length %}
+    <details class="th-form-card ci-section" {% if loop.first or answered %}open{% endif %}>
+      <summary><span>{{ label }}</span><span class="ci-count" data-count-for="{{ section }}">{{ answered }}/{{ items|length }}</span><i class="bi bi-chevron-down" aria-hidden="true"></i></summary>
+      {% for item in items %}
+      <div class="ci-item" data-section="{{ section }}" role="group" aria-labelledby="q-{{ item.id }}">
+        <div class="ci-item-head">
+          <div class="ci-item-text" id="q-{{ item.id }}">{{ item.text }}</div>
+          <span class="ci-star">
+            <input type="radio" name="focus_item" value="{{ item.id }}" id="focus-{{ item.id }}" {% if check_in and check_in.focus_item_id == item.id %}checked{% endif %}>
+            <label for="focus-{{ item.id }}" title="My focus next time"><i class="bi bi-star"></i><i class="bi bi-star-fill"></i><span class="visually-hidden">Make this my focus next time</span></label>
+          </span>
+        </div>
+        <div class="ci-taps">
+          {% for v, l in scale %}
+          <input type="radio" name="score-{{ item.id }}" value="{{ v }}" id="s-{{ item.id }}-{{ v }}" {% if scores.get(item.id) == v %}checked{% endif %}>
+          <label for="s-{{ item.id }}-{{ v }}">{{ l }}</label>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </details>
+    {% endfor %}
+
+    <div class="th-form-card">
+      <label class="form-label" for="notes">Notes</label>
+      <textarea id="notes" name="notes" class="form-control" rows="5" placeholder="Anything else: moments that went well, what you'd do differently, questions for your coaches">{{ check_in.notes if check_in and check_in.notes else '' }}</textarea>
+    </div>
+
+    <div class="th-actionbar">
+      <a href="{{ url_for('checkin.view', check_in_id=check_in.id) if check_in and check_in.id else url_for('feedback.mine') }}" class="btn btn-link px-2">Cancel</a>
+      <span class="grow"></span>
+      <button type="submit" class="btn btn-primary th-btn px-4"><i class="bi bi-check-lg"></i>Save check-in</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+(function () {
+  var form = document.getElementById('checkin-form');
+  if (!form) return;
+  // Tap a chosen answer (or star) again to clear it.
+  form.addEventListener('pointerdown', function (e) {
+    var label = e.target.closest('.ci-taps label, .ci-star label');
+    if (!label) return;
+    var input = document.getElementById(label.htmlFor);
+    label.dataset.wasChecked = input && input.checked ? '1' : '';
+  });
+  form.addEventListener('click', function (e) {
+    var label = e.target.closest('.ci-taps label, .ci-star label');
+    if (!label || label.dataset.wasChecked !== '1') return;
+    e.preventDefault();
+    document.getElementById(label.htmlFor).checked = false;
+    label.dataset.wasChecked = '';
+    update();
+  });
+  function update() {
+    form.querySelectorAll('[data-count-for]').forEach(function (el) {
+      var items = form.querySelectorAll('.ci-item[data-section="' + el.dataset.countFor + '"]');
+      var done = 0;
+      items.forEach(function (it) { if (it.querySelector('.ci-taps input:checked')) done++; });
+      el.textContent = done + '/' + items.length;
+    });
+  }
+  form.addEventListener('change', update);
+})();
+</script>
+{% endblock %}

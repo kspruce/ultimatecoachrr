@@ -161,11 +161,15 @@ FEATURES = [
     Feature('feedback', 'Player Feedback', 'bi-chat-square-heart', "Coaches' notes on each "
             'player. They stay with the coaches until a coach shares them.', 'feedback.mine',
             'My Feedback', 'training',
-            steps=_m('Read shared notes under My Feedback in your account menu; new ones show on the home page',),
+            steps=_m('Read shared notes under My Feedback in your account menu; new ones show on the home page',
+                     'Rate yourself with <em>How did I go?</em> on My Feedback: tap through offence, cutting, '
+                     'handling, defence and mental &amp; spirit, star a focus and add notes. Your coaches see it'),
             coach_endpoint='feedback.hub', coach_link_label='Player Feedback',
             coach_steps=_m('Write notes from a session (Quick Feedback), a game, a clip\'s Feedback tab or the player\'s page',
-                           'Tick <em>Share with the player</em> for the ones they should read'),
-            pages=('feedback.',)),
+                           'Tick <em>Share with the player</em> for the ones they should read',
+                           'Under <em>Check-ins</em>, nudge the team to rate themselves (after a tournament, monthly, '
+                           'mid-season), see the lowest-rated statements across the squad, and edit the rubric'),
+            pages=('feedback.', 'checkin.')),
 
     # ── Teach how you play ───────────────────────────────────
     Feature('playbook', 'Playbook', 'bi-book-fill', 'Your offence and defence plays, drawn on the '
