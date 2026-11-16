@@ -69,6 +69,35 @@ def test_coach_reminds_players_who_havent_joined(app, herd, discord_calls):
     assert len(sent_to(app)) == 4 and InviteToken.query.count() == 2
 
 
+CLUB_INFO = 'Welcome to the Herd!\nFees are £60 for the season. Training is Tuesdays at 7pm.'
+
+
+def test_invites_carry_the_clubs_message(app, herd, discord_calls):
+    """After trials the club sends its information with the invite: the
+    message goes in each email, is kept for later reminders, and shows on
+    the page where they set up their account."""
+    coach = login(app, herd['coach'])
+    coach.post('/auth/remind-unjoined', data={'invite_message': f'  {CLUB_INFO}  '})
+    assert TeamSettings.query.filter_by(team_id=herd['team']).one().invite_message == CLUB_INFO
+    body = app.extensions['sent_emails'][0].get_content()
+    assert 'Fees are £60 for the season.' in body and 'Welcome to the Herd!' in body
+
+    page = coach.get('/auth/users').get_data(as_text=True)
+    assert 'Training is Tuesdays at 7pm.' in page  # the box keeps it for next time
+
+    token = InviteToken.query.filter_by(player_id=herd['players'][0]).one().token
+    page = app.test_client().get(f'/auth/invite/accept/{token}').get_data(as_text=True)
+    assert 'Fees are £60 for the season.' in page
+
+    # Emptying the box removes it from later invites
+    for t in InviteToken.query.all():
+        t.created_at = datetime.utcnow() - timedelta(days=4)
+    db.session.commit()
+    coach.post('/auth/remind-unjoined', data={'invite_message': ''})
+    assert TeamSettings.query.filter_by(team_id=herd['team']).one().invite_message is None
+    assert 'Fees' not in app.extensions['sent_emails'][-1].get_content()
+
+
 def test_players_cant_send_reminders(app, herd):
     team = db.session.get(TeamOrganization, herd['team'])
     player = make_user(team, 'herd-player', welcomed=True)

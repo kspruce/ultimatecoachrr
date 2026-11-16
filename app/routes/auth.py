@@ -584,6 +584,9 @@ def manage_join_link():
     return redirect(url_for('auth.users', team_id=team.id))
 
 
+INVITE_MESSAGE_LIMIT = 3000
+
+
 @bp.route('/remind-unjoined', methods=['POST'])
 @login_required
 def remind_unjoined():
@@ -596,6 +599,14 @@ def remind_unjoined():
         return redirect(url_for("main.index"))
 
     team = TeamOrganization.query.get_or_404(team_id)
+    if 'invite_message' in request.form:
+        from app.models.team_settings import TeamSettings
+        settings = TeamSettings.query.filter_by(team_id=team.id).first()
+        if settings is None:
+            settings = TeamSettings(team_id=team.id)
+            db.session.add(settings)
+        settings.invite_message = (request.form.get('invite_message') or '').strip()[:INVITE_MESSAGE_LIMIT] or None
+        db.session.commit()
     result = onboarding.remind_unjoined(team, current_user)
     if not result['waiting']:
         flash('Everyone on the roster has an account.', 'info')

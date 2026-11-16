@@ -66,6 +66,10 @@ class TeamSettings(db.Model):
     primary_color = db.Column(db.String(7))
     accent_color = db.Column(db.String(7))
     show_kit_stripe = db.Column(db.Boolean, default=True)
+
+    # The club's own words for new players (fees, kit, training times...),
+    # put in the invite emails and on the page where they set up an account
+    invite_message = db.Column(db.Text)
     
     def __repr__(self):
         return f'<TeamSettings id={self.id} team_id={self.team_id}>'
