@@ -57,7 +57,7 @@
       <div class="tile-lbl">Points F–A</div>
     </div>
     <div class="tourn-stat-tile">
-      <div class="tile-val">{{ totals.completion_rate }}%</div>
+      <div class="tile-val">{{ '%s%%'|format(totals.completion_rate) if totals.completion_rate is not none else '–' }}</div>
       <div class="tile-lbl">Completion</div>
     </div>
     <div class="tourn-stat-tile">

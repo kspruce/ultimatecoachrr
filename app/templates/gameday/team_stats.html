@@ -59,7 +59,7 @@
     </div>
     <div class="col-md-3 col-sm-6">
       <div class="stat-card">
-        <div class="stat-value">{{ team_totals.completion_rate }}%</div>
+        <div class="stat-value">{{ '%s%%'|format(team_totals.completion_rate) if team_totals.completion_rate is not none else '–' }}</div>
         <div class="stat-label">Completion Rate</div>
       </div>
     </div>
@@ -219,7 +219,7 @@
                 </tr>
                 <tr>
                   <th>Completion Rate:</th>
-                  <td>{{ team_totals.completion_rate }}%</td>
+                  <td>{{ '%s%%'|format(team_totals.completion_rate) if team_totals.completion_rate is not none else '–' }}</td>
                 </tr>
                 <tr>
                   <th>Plus/Minus:</th>

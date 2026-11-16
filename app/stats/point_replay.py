@@ -148,7 +148,8 @@ def build_point_replay(point, events, with_positions_only=True):
 
         # The throw that got the disc here, on our possessions. The first
         # touch of a possession is the pickup: nobody threw it.
-        source = steps[holder] if holder is not None else None
+        # A pickup starts a possession: nobody threw it
+        source = steps[holder] if holder is not None and kind != 'pickup' else None
         if ours and kind == 'throwaway' and source is None and index > 0:
             # Picked up and thrown away with no catch recorded: thrown from
             # where the disc was won back.

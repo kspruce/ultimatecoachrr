@@ -6,7 +6,7 @@ from collections import defaultdict
 from statistics import median
 
 from app.stats import turnovers
-from app.stats.formulas import point_we_scored
+from app.stats.formulas import point_has_result, point_we_scored
 from app.stats.profile import MIN_RATED_POINTS, percentile
 from app.stats.throwing import DEPTH_ZONES
 
@@ -23,8 +23,11 @@ def _rate(part, whole):
 def period_numbers(data, game_ids, games):
     """The headline numbers for one set of games."""
     points = [p for pid, p in data.points.items() if data.game_of_point[pid].id in game_ids]
-    o_points = [p for p in points if p.our_line_type == 'O-line']
-    d_points = [p for p in points if p.our_line_type == 'D-line']
+    # Hold, break and clean hold count points that ended in a goal (not
+    # ones stopped by the cap or half time)
+    finished = [p for p in points if point_has_result(p)]
+    o_points = [p for p in finished if p.our_line_type == 'O-line']
+    d_points = [p for p in finished if p.our_line_type == 'D-line']
     analysed_o = [p for p in o_points if p.id in data.analysed]
     # A clean hold: an O-line point we scored without turning it over
     clean = 0
@@ -42,7 +45,7 @@ def period_numbers(data, game_ids, games):
         'hold': _rate(sum(1 for p in o_points if point_we_scored(p)), len(o_points)),
         'break': _rate(sum(1 for p in d_points if point_we_scored(p)), len(d_points)),
         'clean_hold': _rate(clean, len(analysed_o)),
-        'completion': handling['completion_rate'],
+        'completion': handling['pass_completion_rate'],
         'turnovers_per_point': handling['turnovers'] / analysed if analysed else None,
     }
 
@@ -51,7 +54,7 @@ HEADLINE = [
     {'key': 'hold', 'label': 'Hold %', 'fmt': 'pct', 'help': 'O-line points we scored'},
     {'key': 'break', 'label': 'Break %', 'fmt': 'pct', 'help': 'D-line points we scored'},
     {'key': 'clean_hold', 'label': 'Clean holds', 'fmt': 'pct', 'help': 'O-line points scored without a turnover (full-stat points)'},
-    {'key': 'completion', 'label': 'Completion', 'fmt': 'pct', 'help': 'Throws completed (full-stat points)'},
+    {'key': 'completion', 'label': 'Completion', 'fmt': 'pct', 'help': 'Passes caught out of passes thrown; a drop is an incomplete pass (full-stat points)'},
     {'key': 'turnovers_per_point', 'label': 'Turnovers / point', 'fmt': 'dec2', 'lower_better': True,
      'help': 'Throwaways, drops and stalls per point with full stats'},
 ]
@@ -91,17 +94,17 @@ COLUMNS = [
     {'key': 'full', 'label': 'Full', 'group': 'usage', 'help': 'Points with full stats: what every other column counts', 'fmt': 'int', 'rate_fmt': 'int'},
     {'key': 'ppg', 'label': 'Pts/G', 'group': 'usage', 'help': 'Points played per game', 'fmt': 'dec1', 'rate_fmt': 'dec1'},
     {'key': 'o_share', 'label': 'O %', 'group': 'usage', 'help': 'Share of their points played on O-line', 'fmt': 'pct', 'rate_fmt': 'pct'},
-    {'key': 'goals', 'label': 'G', 'group': 'offence', 'help': 'Goals (per point: per full-stat point)', 'fmt': 'int', 'rate_fmt': 'dec2', 'shade': True},
+    {'key': 'goals', 'label': 'G', 'group': 'offence', 'help': 'Goals, a Callahan included (per point: per full-stat point)', 'fmt': 'int', 'rate_fmt': 'dec2', 'shade': True},
     {'key': 'assists', 'label': 'A', 'group': 'offence', 'help': 'Assists', 'fmt': 'int', 'rate_fmt': 'dec2', 'shade': True},
     {'key': 'hockey', 'label': 'HA', 'group': 'offence', 'help': 'Hockey assists', 'fmt': 'int', 'rate_fmt': 'dec2', 'shade': True},
-    {'key': 'completion', 'label': 'Cmp %', 'group': 'offence', 'help': 'Completion rate (completions / throws)', 'fmt': 'pct', 'rate_fmt': 'pct', 'shade': True},
+    {'key': 'completion', 'label': 'Cmp %', 'group': 'offence', 'help': 'Throwing completion: completions / throws. A drop is the receiver\'s turnover, not the thrower\'s', 'fmt': 'pct', 'rate_fmt': 'pct', 'shade': True},
     {'key': 'huck', 'label': 'Huck %', 'group': 'offence', 'help': 'Huck completion rate', 'fmt': 'pct', 'rate_fmt': 'pct', 'shade': True},
     {'key': 'turnovers', 'label': 'TO', 'group': 'offence', 'fmt': 'int', 'rate_fmt': 'dec1', 'shade': True, 'lower_better': True,
      'help': 'Turnovers: throwaways, drops and stalls (per point mode: per 10 touches)'},
-    {'key': 'blocks', 'label': 'Blk', 'group': 'defence', 'help': 'Blocks (per point mode: blocks on D-line points per D-point)', 'fmt': 'int', 'rate_fmt': 'dec2', 'shade': True},
+    {'key': 'blocks', 'label': 'Blk', 'group': 'defence', 'help': 'Blocks, a Callahan included (per point mode: blocks on D-line points per D-point)', 'fmt': 'int', 'rate_fmt': 'dec2', 'shade': True},
     {'key': 'takeaways', 'label': 'Take', 'group': 'defence', 'help': 'Takeaways: blocks, forced turnovers and Callahans (per point mode: on D-line points per D-point)', 'fmt': 'int', 'rate_fmt': 'dec2', 'shade': True},
     {'key': 'pulls', 'label': 'Pulls', 'group': 'defence', 'help': 'Pulls (per point mode: share landing in)', 'fmt': 'int', 'rate_fmt': 'pct'},
-    {'key': 'plus_minus', 'label': '+/-', 'group': 'ratings', 'help': 'Goals + assists + blocks - turnovers (per point mode: per full-stat point)', 'fmt': 'signed0', 'rate_fmt': 'signed2', 'shade': True},
+    {'key': 'plus_minus', 'label': '+/-', 'group': 'ratings', 'help': 'Goals + assists + blocks - turnovers; a Callahan is a goal and a block (per point mode: per full-stat point)', 'fmt': 'signed0', 'rate_fmt': 'signed2', 'shade': True},
     {'key': 'per', 'label': 'PER', 'group': 'ratings', 'help': 'Player Efficiency Rating: goal equivalents per 10 points played', 'fmt': 'dec1', 'rate_fmt': 'dec1', 'shade': True},
     {'key': 'epm', 'label': 'EPM', 'group': 'ratings', 'help': 'EDGE Plus/Minus: total goal equivalents', 'fmt': 'signed2', 'rate_fmt': 'signed2', 'shade': True},
     {'key': 'eff', 'label': 'Eff', 'group': 'ratings', 'help': 'Share of goal equivalents not given back in turns (0 to 1)', 'fmt': 'dec3', 'rate_fmt': 'dec3', 'shade': True},
@@ -125,13 +128,13 @@ def _values(s, handling):
         'full': (full, full),
         'ppg': (points / games if games else None,) * 2,
         'o_share': (_rate(s.get('o_line_points_played', 0), points),) * 2,
-        'goals': (s.get('goals', 0), per_point(s.get('goals', 0))),
+        'goals': (s.get('total_goals', 0), per_point(s.get('total_goals', 0))),
         'assists': (s.get('assists', 0), per_point(s.get('assists', 0))),
         'hockey': (s.get('hockey_assists', 0), per_point(s.get('hockey_assists', 0))),
         'completion': (completion, completion),
         'huck': (handling['huck_completion_rate'],) * 2,
         'turnovers': (s.get('turnovers', 0), handling['turnovers_per_10']),
-        'blocks': (s.get('blocks', 0), s.get('blocks_per_d_point') if s.get('analysed_d_line_points') else None),
+        'blocks': (s.get('total_blocks', 0), s.get('blocks_per_d_point') if s.get('analysed_d_line_points') else None),
         'takeaways': (takeaways, s.get('takeaways_per_d_point') if s.get('analysed_d_line_points') else None),
         'pulls': (pulls.get('pulls', 0), pulls.get('in_rate')),
         'plus_minus': (s.get('plus_minus', 0), per_point(s.get('plus_minus', 0))),

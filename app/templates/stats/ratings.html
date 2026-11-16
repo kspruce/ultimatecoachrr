@@ -39,11 +39,12 @@
     <li><a href="#eff">Eff</a></li>
     <li><a href="#example">A worked example</a></li>
     <li><a href="#counts">What counts, and what doesn't</a></li>
+    <li><a href="#counting">How the other stats are counted</a></li>
   </ol>
 
   <h2 id="why">1. Why not plain plus/minus?</h2>
   <p>
-    Plus/minus is goals + assists + blocks − turns. It treats every turn as costing exactly what a goal is worth,
+    Plus/minus is goals + assists + blocks − turns (a Callahan is a goal and a block). It treats every turn as costing exactly what a goal is worth,
     whoever throws it and however your games are going. That's rarely true:
   </p>
   <ul>
@@ -255,7 +256,7 @@
     </tbody>
   </table>
   <p>
-    For comparison, plain plus/minus would be {{ example.goals + example.assists + example.blocks - example.turnovers }}.
+    For comparison, plain plus/minus would be {{ example.plus_minus }} (a Callahan counts as a goal and a block).
     <a href="{{ url_for('stats_dashboard.player_stats', player_id=example_player.id) }}">See {{ example_player.name }}'s stats</a>.
   </p>
   {% else %}
@@ -272,6 +273,44 @@
       that open space) don't show up in any box score. Use the ratings to ask questions, not to settle them.</li>
     <li>Each rating uses the SE of the games you're looking at. A player's PER for one game is priced by that game's
       SE, so it can differ from their season PER even at the same rate.</li>
+  </ul>
+
+  <h2 id="counting">9. How the other stats are counted</h2>
+  <p>The same rules on every stats page, following the usual conventions in ultimate stats.</p>
+  <ul>
+    <li><strong>Callahans.</strong> A Callahan is a goal and a block, everywhere: goals, blocks, +/- (it's worth
+      +2), the ratings and Game Day. It's also a possession that ends in a goal straight away.</li>
+    <li><strong>Turnovers.</strong> Throwaways, drops and stalls. A stall is the holder's turnover, not a throw. A
+      drop is the receiver's turnover: it counts against the receiver's catching, not the thrower's completion. A
+      dropped pull is a drop. A throwaway counts even when no pickup was recorded before it.</li>
+    <li><strong>Completion.</strong> A player's completion is their passes caught out of passes thrown, so a pass
+      the receiver drops doesn't count against the thrower. The team's completion is the team's passes caught out
+      of passes thrown, so a drop is an incomplete pass there.</li>
+    <li><strong>Catch and drop rate.</strong> Passes caught (or dropped) out of passes that reached the player.
+      Picking up the disc isn't a catch: on the stat taker, the first touch after the pull or a turnover is a
+      pickup, whether it was tapped as Pickup or Catch.</li>
+    <li><strong>Pulls.</strong> In bounds unless out of bounds or a brick. Hang time is from release to landing. A
+      pull lands in their endzone 82 m or more up the field; its depth is how far short of their back line it came
+      down. The stat taker's pull counts where there is one, otherwise Game Day's.</li>
+    <li><strong>Touches.</strong> Every time the disc came to a player: each ends in a throw, a stall, a goal caught
+      or a drop. Turnovers per 10 touches is the fair way to compare ball security between handlers and cutters.</li>
+    <li><strong>Hold, break and conversion.</strong> Hold % is the O-line points we scored, break % the D-line
+      points we scored, out of points that ended in a goal. A point stopped by the cap or half time was neither held
+      nor broken, so it's left out of these (it still counts as a point played).</li>
+    <li><strong>Possessions.</strong> We get a possession by receiving the pull and every time we win the disc back:
+      a block, a forced or unforced turnover by them, or a Callahan.</li>
+    <li><strong>Hucks.</strong> A throw 20 m or more long that goes at least 15 m upfield.</li>
+    <li><strong>Break throws.</strong> A throw that crosses 3 m or more to the side the mark is stopping. It needs the
+      point's force to be recorded.</li>
+    <li><strong>Offensive yardage.</strong> Metres gained upfield on completed passes, by the thrower (yards thrown)
+      and the receiver (yards caught). Passes backwards count against it.</li>
+    <li><strong>Full stats.</strong> Per-point rates only count points with full stats (at least one play recorded
+      on the stat taker). Points only taken live on Game Day count for points played, the score, holds and breaks,
+      the season box score and the base metrics.</li>
+    <li><strong>Base metrics</strong> (the season plan's measures, on the team page): a point we had the disc is an
+      O point, or a D point where we won it back. Conversion rate is goals out of those points, perfect conversion
+      rate the goals scored without a turnover, recovery rate the goals scored after a turnover out of the points
+      where we had it and didn't score clean, and successful-defence rate the D points where we got the disc.</li>
   </ul>
 
   <p class="mt-4"><a href="{{ url_for('stats_dashboard.index') }}">&larr; Back to the stats dashboard</a></p>

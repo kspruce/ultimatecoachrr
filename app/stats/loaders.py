@@ -45,15 +45,31 @@ def analysed_point_ids(point_ids):
     from app.models.event import Event
     if not point_ids:
         return set()
-    rows = db.session.query(Event.point_id).filter(Event.point_id.in_(list(point_ids))).distinct()
+    rows = db.session.query(Event.point_id).filter(
+        Event.point_id.in_(list(point_ids)), Event.event_type != 'substitution').distinct()
     return {pid for (pid,) in rows}
+
+
+def has_plays(events):
+    """Has the point any recorded play? A substitution alone isn't one."""
+    return any(e.event_type != 'substitution' for e in events)
 
 
 def is_analysed(point):
     """For points loaded by preload_game_points (events already loaded)."""
-    return bool(point.events)
+    return has_plays(point.events)
 
 
 def game_line_points(game, line_type):
     """The game's points where we started on 'O-line' or 'D-line'."""
     return [p for p in game_points(game) if p.our_line_type == line_type]
+
+
+def unthrown_throwaways(events, throwing_event_ids):
+    """Our throwaways that have no stored throw: the first play of a point
+    when nobody's pickup was recorded (the pull picked up and thrown away),
+    so the throw had no start (app/stats/throw_rebuild.py). They're still a
+    throw and a turnover for whoever threw it."""
+    return [e for e in events
+            if e.event_type == 'throwaway' and not getattr(e, 'is_opponent', False)
+            and e.id not in throwing_event_ids]

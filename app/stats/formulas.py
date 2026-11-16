@@ -154,16 +154,20 @@ MIN_LINE_POINTS = 5
 
 def calculate_optimized_line_efficiency(players, player_stats, is_offensive=True, min_points=MIN_LINE_POINTS):
     """Players ranked by line conversion (share of their O-line points we
-    held, or D-line points we broke), for the games player_stats covers,
-    among those with min_points+ points on that line.
+    held, or D-line points we broke, out of those that ended in a goal),
+    for the games player_stats covers, among those with min_points+ such
+    points on that line.
     Returns [(player, fraction 0-1), ...], best first."""
     line = 'o_line' if is_offensive else 'd_line'
     player_efficiency = {}
     for player in players:
         stats = player_stats.get(player.id)
-        if stats and stats.get(f'{line}_points_played', 0) >= max(1, min_points):
-            player_efficiency[player] = (stats[f'{line}_points_scored']
-                                         / stats[f'{line}_points_played'])
+        if not stats:
+            continue
+        # Points that ended in a goal (the cap or half time ends neither)
+        finished = stats.get(f'{line}_points_with_result', stats.get(f'{line}_points_played', 0))
+        if finished >= max(1, min_points):
+            player_efficiency[player] = stats[f'{line}_points_scored'] / finished
     return sorted(player_efficiency.items(), key=lambda x: x[1], reverse=True)
 
 # --- Core Statistical Calculation Functions ---
@@ -209,6 +213,17 @@ def point_we_scored(point) -> bool:
         return ws
 
     return False
+
+def point_has_result(point):
+    """Did the point end in a goal for either team? A point stopped by the
+    cap or the end of a half, or still being recorded, didn't: it's
+    neither held nor broken, so it's left out of hold, break and
+    conversion rates."""
+    outcome = (getattr(point, 'point_outcome', None) or '').strip().lower()
+    if outcome:
+        return outcome in ('scored', 'score', 'won', 'conceded', 'concede', 'lost')
+    return point_we_scored(point) or bool(getattr(point, 'they_scored', False))
+
 
 def get_point_starting_possession(point):
     """

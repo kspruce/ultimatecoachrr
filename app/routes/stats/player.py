@@ -4,6 +4,7 @@ from app.models.player import Player
 from app.models.game import Game
 from app.models.tournament import Tournament
 from app.models.cutting_skill import CuttingSkill
+from app.models.event import Pull
 from app.utils.team_filter import get_current_team_id
 from app.utils.season import scope_games, scope_tournaments
 
@@ -145,4 +146,5 @@ def player_stats(player_id):
         cutting_stats=cutting_stats,
         cut_profile=cut_profile,
         improvement=improvement,
+        pull_results=Pull.RESULTS,
     )

@@ -3,12 +3,12 @@ from flask import current_app
 from app import db
 from app.models.player import Player
 from app.models.point import LineUp
-from app.models.event import Event
+from app.models.event import Event, Pull
 from app.models.throws import Throw
 import math
 from app.utils.team_filter import get_current_team_id
-from app.stats.formulas import point_we_scored
-from app.stats.loaders import analysed_point_ids, preload_game_points, game_points
+from app.stats.formulas import point_has_result, point_we_scored
+from app.stats.loaders import analysed_point_ids, preload_game_points, game_points, unthrown_throwaways
 
 
 
@@ -33,8 +33,10 @@ def players_in_games(games=None):
                                Player.team_organization_id == get_current_team_id()).order_by(Player.name).all()
 
 
-def get_players_base_stats(players, games=None):
-    """Get stats for multiple players in a single batch of queries"""
+def get_players_base_stats(players, games=None, pulls=True):
+    """Get stats for multiple players in a single batch of queries.
+    pulls=False skips the stat taker's pulls (one query) for callers that
+    don't show them; Game Day pulls still count."""
     current_app.logger.debug(f"Batch loading stats for {len(players)} players")
     player_ids = [p.id for p in players]
     
@@ -119,15 +121,26 @@ def get_players_base_stats(players, games=None):
             analysed=analysed,
         )
 
-    # Game Day: the box score for points without full stats, and pulls
-    # (only Game Day records those)
+    # Pulls recorded on the stat taker (every pull in scope, so a point's
+    # Game Day pull isn't counted as well)
+    pull_query = Pull.query.filter(Pull.team_organization_id == get_current_team_id())
+    if point_ids is not None:
+        pull_query = pull_query.filter(Pull.point_id.in_(point_ids))
+    full_pulls = pull_query.all() if pulls and (point_ids is None or point_ids) else []
+    pulls_by_player = {}
+    for pull in full_pulls:
+        pulls_by_player.setdefault(pull.player_id, []).append(pull)
+
+    # Game Day: the box score for points without full stats, and pulls on
+    # points without a stat-taker pull
     lineup_points = {lu.point_id for lus in lineups_by_player.values() for lu in lus}
-    gameday = gameday_by_player(player_ids, lineup_points - analysed, point_ids)
+    gameday = gameday_by_player(player_ids, lineup_points - analysed, point_ids,
+                                skip_pulls_on={p.point_id for p in full_pulls})
     for player in players:
         stats = player_stats[player.id]
         gd = gameday.get(player.id, {})
         stats['box'] = season_box_score(stats, gd)
-        stats['pulls'] = pull_stats(gd)
+        stats['pulls'] = pull_stats(gd, pulls_by_player.get(player.id, []))
 
     return player_stats
 
@@ -135,10 +148,11 @@ def get_players_base_stats(players, games=None):
 GAMEDAY_TURNOVERS = ('throwaway', 'drop', 'stall')
 
 
-def gameday_by_player(player_ids, gameday_points, point_ids=None):
+def gameday_by_player(player_ids, gameday_points, point_ids=None, skip_pulls_on=()):
     """Counts of each player's Game Day plays: box-score plays on points
     without full stats (so nothing is counted twice), and every pull in
-    scope with its hang time."""
+    scope with its hang time, except on points whose pull was recorded on
+    the stat taker (skip_pulls_on)."""
     from app.models.gameday import GameDayEvent
     query = GameDayEvent.query.filter(
         GameDayEvent.player_id.in_(player_ids),
@@ -151,6 +165,8 @@ def gameday_by_player(player_ids, gameday_points, point_ids=None):
         gd = out.setdefault(e.player_id, {'goals': 0, 'assists': 0, 'blocks': 0, 'callahans': 0,
                                           'turnovers': 0, 'pulls': 0, 'pulls_out': 0, 'hang_times': []})
         if e.event_type == 'pull':
+            if e.point_id in skip_pulls_on:
+                continue  # the stat taker's pull wins
             gd['pulls'] += 1
             gd['pulls_out'] += e.event_result == 'out'
             if e.hang_time is not None:
@@ -168,6 +184,42 @@ def gameday_by_player(player_ids, gameday_points, point_ids=None):
             gd['callahans'] += 1
         elif e.event_type in GAMEDAY_TURNOVERS:
             gd['turnovers'] += 1
+    return out
+
+
+def gameday_throwing(point_ids, team_id=None):
+    """Each player's throws on Game Day, from its catch, pickup, stall and
+    throwaway taps, in one query: {player_id: {'throws', 'throwaways',
+    'completion_rate'}}, plus the team's total under None.
+
+    Every catch or pickup puts the disc in a player's hands, and they then
+    throw it (caught, or thrown away) unless they're stalled. So throws =
+    catches + pickups - stalls, and completion = (throws - throwaways) /
+    throws. A drop is the receiver's turnover, as with full stats. Points
+    where Game Day only kept the score and the box score have no catches,
+    so no completion (None)."""
+    from collections import defaultdict
+    from sqlalchemy import func
+    from app.models.gameday import GameDayEvent
+    if not point_ids:
+        return {}
+    team_id = team_id or get_current_team_id()
+    counts = defaultdict(lambda: defaultdict(int))
+    for player_id, kind, n in (db.session.query(GameDayEvent.player_id, GameDayEvent.event_type,
+                                                func.count(GameDayEvent.id))
+                               .filter(GameDayEvent.point_id.in_(list(point_ids)),
+                                       GameDayEvent.team_organization_id == team_id,
+                                       GameDayEvent.event_type.in_(['catch', 'pickup', 'stall', 'throwaway']))
+                               .group_by(GameDayEvent.player_id, GameDayEvent.event_type)):
+        for who in (player_id, None):
+            counts[who][kind] += n
+    out = {}
+    for who, c in counts.items():
+        # A throwaway always follows a catch or pickup; if one wasn't tapped,
+        # the throwaway is still a throw
+        throws = max(c['catch'] + c['pickup'] - c['stall'], c['throwaway'])
+        out[who] = {'throws': throws, 'throwaways': c['throwaway'],
+                    'completion_rate': round(100.0 * (throws - c['throwaway']) / throws, 1) if throws else None}
     return out
 
 
@@ -191,20 +243,41 @@ def season_box_score(stats, gd):
     }
 
 
-def pull_stats(gd):
-    hang = gd.get('hang_times', [])
-    pulls = gd.get('pulls', 0)
+def pull_stats(gd, full_pulls=()):
+    """A player's pulls: the stat taker's (Pull rows, with where they landed
+    and how they went) and Game Day's on other points (in or out, hang time).
+
+    Out of bounds counts 'out' and 'brick'. Landing is for pulls with a
+    landing spot that stayed in: x is metres up the field attacking right,
+    so their endzone (where a pull lands deep) is x 82-100. Depth is how
+    far short of their back line it came down (100 - x): smaller is deeper.
+    """
+    hang = list(gd.get('hang_times', [])) + [p.hang_time for p in full_pulls if p.hang_time is not None]
+    pulls = gd.get('pulls', 0) + len(full_pulls)
+    out = gd.get('pulls_out', 0) + sum(1 for p in full_pulls if p.result in Pull.OUT_RESULTS)
+    results = {key: sum(1 for p in full_pulls if p.result == key) for key, _ in Pull.RESULTS}
+    landed = [p for p in full_pulls if p.landing_x is not None and p.landing_y is not None
+              and p.result not in Pull.OUT_RESULTS]
     return {
         'pulls': pulls,
-        'out': gd.get('pulls_out', 0),
-        'in_rate': 100.0 * (pulls - gd.get('pulls_out', 0)) / pulls if pulls else None,
+        'out': out,
+        'in_rate': 100.0 * (pulls - out) / pulls if pulls else None,
         'avg_hang_time': sum(hang) / len(hang) if hang else None,
         'best_hang_time': max(hang) if hang else None,
         'timed': len(hang),
+        'results': results,
+        'recorded': len(full_pulls),   # with result and landing, from the stat taker
+        'landed': len(landed),
+        'endzone_rate': 100.0 * sum(1 for p in landed if p.landing_x >= 82) / len(landed) if landed else None,
+        'avg_depth': sum(100 - p.landing_x for p in landed) / len(landed) if landed else None,
+        'landings': [{'x': p.landing_x, 'y': p.landing_y, 'result': p.result} for p in full_pulls
+                     if p.landing_x is not None and p.landing_y is not None],
     }
 
-# Same definition as the team huck count in app.stats.team.
-from app.stats.throwing import HUCK_DISTANCE  # noqa: E402,F401  (re-exported for app.stats.team)
+# A huck: 20 m+ long and 15 m+ upfield (app.stats.throwing.throw_kind), the
+# same definition as huck completion on the turnover pages and the team's
+# hucks per point.
+from app.stats.throwing import throw_kind  # noqa: E402
 
 
 def process_player_stats(player, lineups, throws_by_player, throws_to_player, events, games=None,
@@ -255,6 +328,15 @@ def process_player_stats(player, lineups, throws_by_player, throws_to_player, ev
         'throw_vectors': [],
         'break_throws': 0,
         'break_throw_percentage': 0,
+        'completed_break_throws': 0,
+        'yards_thrown': 0,
+        'yards_received': 0,
+        'yards': 0,
+        'touches': 0,
+        # None: no touches, so no rate
+        'turnovers_per_10_touches': None,
+        'throwaways_per_10_touches': None,
+        'drops_per_10_touches': None,
         
         # Efficiency metrics
         'per': 0,
@@ -262,15 +344,20 @@ def process_player_stats(player, lineups, throws_by_player, throws_to_player, ev
         
         # Additional stats
         'callahans': 0,
+        'total_goals': 0,   # goals + Callahans
+        'total_blocks': 0,  # blocks + Callahans
         'stalls': 0,  # times this player was stalled (a turnover)
         'forced_turnovers': 0,
         'o_line_points_scored': 0,
         'd_line_points_scored': 0,
         'o_line_conversion_rate': 0,
         'd_line_conversion_rate': 0,
-        'hucks': 0,
-        # Blocks and takeaways (blocks, forced turnovers, Callahans) made on
-        # D-line points with full stats: what the per-D-point rates divide
+        'o_line_points_with_result': 0,
+        'd_line_points_with_result': 0,
+        'hucks': 0,  # huck attempts: 20 m+ long and 15 m+ upfield
+        # Blocks (with Callahans) and takeaways (blocks, forced turnovers,
+        # Callahans) made on D-line points with full stats: what the
+        # per-D-point rates divide
         'd_line_blocks': 0,
         'd_line_takeaways': 0,
 
@@ -308,18 +395,29 @@ def process_player_stats(player, lineups, throws_by_player, throws_to_player, ev
     # Games this player was on a line in (not the number of games in the filter)
     stats['games_played'] = len({lineup.point.game_id for lineup in lineups})
 
-    # Process throws
-    stats['throws'] = len(throws_by_player)
+    # Process throws. A throwaway with no stored throw (thrown before any
+    # catch was recorded in the point) is still a throw and a throwaway.
+    unthrown = unthrown_throwaways(events, {t.throwing_event_id for t in throws_by_player})
+    stats['throws'] = len(throws_by_player) + len(unthrown)
     stats['completions'] = sum(1 for t in throws_by_player if t.is_completion)
     stats['assists'] = sum(1 for t in throws_by_player if t.throw_type == 'assist')
     stats['hockey_assists'] = sum(1 for t in throws_by_player if t.throw_type == 'hockey_assist')
-    stats['throwaways'] = sum(1 for t in throws_by_player if t.throw_type == 'throwaway')
-    stats['break_throws'] = sum(1 for t in throws_by_player if t.break_throw)
+    stats['throwaways'] = sum(1 for t in throws_by_player if t.throw_type == 'throwaway') + len(unthrown)
+    stats['break_throws'] = sum(1 for t in throws_by_player if t.break_throw)  # attempts
+    stats['completed_break_throws'] = sum(1 for t in throws_by_player if t.break_throw and t.is_completion)
+    # Offensive yardage: metres upfield (back is negative) on completed
+    # passes, thrown and caught
+    stats['yards_thrown'] = sum(t.x_end - t.x_start for t in throws_by_player
+                                if t.is_completion and t.x_start is not None and t.x_end is not None)
+    stats['yards_received'] = sum(t.x_end - t.x_start for t in throws_to_player
+                                  if t.is_completion and t.x_start is not None and t.x_end is not None)
+    stats['yards'] = stats['yards_thrown'] + stats['yards_received']
     
     # Calculate throw distances
     distances = [t.calculate_distance() for t in throws_by_player if t.calculate_distance()]
     stats['total_throw_distance'] = sum(distances) if distances else 0
-    stats['hucks'] = sum(1 for d in distances if d > HUCK_DISTANCE)
+    stats['hucks'] = sum(1 for t in throws_by_player
+                         if throw_kind(t.x_start, t.y_start, t.x_end, t.y_end) == 'huck')
     stats['avg_throw_distance'] = stats['total_throw_distance'] / stats['throws'] if stats['throws'] > 0 else 0
     
     # Store throw vectors for visualization
@@ -409,6 +507,17 @@ def process_player_stats(player, lineups, throws_by_player, throws_to_player, ev
     
     # Calculate derived stats
     stats['turnovers'] = stats['throwaways'] + stats['drops'] + stats['stalls']
+    # Touches: every time the disc came to them. Each one ends in a throw,
+    # a stall, a goal caught or a drop (as turnovers.handling_summary).
+    stats['touches'] = stats['throws'] + stats['stalls'] + stats['goals'] + stats['drops']
+    if stats['touches']:
+        for key in ('turnovers', 'throwaways', 'drops'):
+            stats[f'{key}_per_10_touches'] = 10.0 * stats[key] / stats['touches']
+    # A Callahan is a goal and a block (as on Game Day and in the ratings).
+    # 'goals' and 'blocks' are the plays recorded as such; these totals are
+    # what the pages show as Goals and Blocks.
+    stats['total_goals'] = stats['goals'] + stats['callahans']
+    stats['total_blocks'] = stats['blocks'] + stats['callahans']
     
     # Calculate rates
     if stats['throws'] > 0:
@@ -418,9 +527,9 @@ def process_player_stats(player, lineups, throws_by_player, throws_to_player, ev
     
     # Calculate plus/minus
     stats['plus_minus'] = (
-        stats['goals'] + 
-        stats['assists'] + 
-        stats['blocks'] - 
+        stats['total_goals'] +
+        stats['assists'] +
+        stats['total_blocks'] -
         stats['turnovers']
     )
     
@@ -432,13 +541,17 @@ def process_player_stats(player, lineups, throws_by_player, throws_to_player, ev
     stats['d_line_points_played'] = len(d_line_points)
     stats['analysed_o_line_points'] = sum(1 for l in analysed_lineups if l.point.our_line_type == 'O-line')
     stats['analysed_d_line_points'] = sum(1 for l in analysed_lineups if l.point.our_line_type == 'D-line')
-# Conversion: share of their O-line points we held, D-line points we broke
+    # Conversion: share of their O-line points we held, D-line points we
+    # broke, out of the points that ended in a goal (a point stopped by the
+    # cap or half time was neither)
     stats['o_line_points_scored'] = sum(1 for l in o_line_points if point_we_scored(l.point))
     stats['d_line_points_scored'] = sum(1 for l in d_line_points if point_we_scored(l.point))
-    if o_line_points:
-        stats['o_line_conversion_rate'] = 100 * stats['o_line_points_scored'] / len(o_line_points)
-    if d_line_points:
-        stats['d_line_conversion_rate'] = 100 * stats['d_line_points_scored'] / len(d_line_points)
+    stats['o_line_points_with_result'] = sum(1 for l in o_line_points if point_has_result(l.point))
+    stats['d_line_points_with_result'] = sum(1 for l in d_line_points if point_has_result(l.point))
+    if stats['o_line_points_with_result']:
+        stats['o_line_conversion_rate'] = 100 * stats['o_line_points_scored'] / stats['o_line_points_with_result']
+    if stats['d_line_points_with_result']:
+        stats['d_line_conversion_rate'] = 100 * stats['d_line_points_scored'] / stats['d_line_points_with_result']
     
     # Calculate O-line and D-line plus/minus
     o_line_plus_minus = 0
@@ -464,6 +577,8 @@ def process_player_stats(player, lineups, throws_by_player, throws_to_player, ev
         for event in point_events:
             if event.event_type in ['goal', 'assist', 'block']:
                 point_plus_minus += 1
+            elif event.event_type == 'callahan':
+                point_plus_minus += 2  # a goal and a block
             elif event.event_type in ['throwaway', 'drop', 'stall']:
                 point_plus_minus -= 1
         
@@ -493,13 +608,13 @@ def process_player_stats(player, lineups, throws_by_player, throws_to_player, ev
     for event in events:
         if event.point_id not in analysed_d_ids or getattr(event, 'is_opponent', False):
             continue
-        if event.event_type == 'block':
+        if event.event_type in ('block', 'callahan'):
             stats['d_line_blocks'] += 1
         if event.event_type in ('block', 'forced_turnover', 'callahan'):
             stats['d_line_takeaways'] += 1
     if stats['analysed_points']:
         n = stats['analysed_points']
-        stats['goals_per_point'] = stats['goals'] / n
+        stats['goals_per_point'] = stats['total_goals'] / n
         stats['assists_per_point'] = stats['assists'] / n
         stats['hockey_assists_per_point'] = stats['hockey_assists'] / n
         stats['throws_per_point'] = stats['throws'] / n

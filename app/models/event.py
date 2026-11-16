@@ -24,7 +24,7 @@ class Event(db.Model):
     
     # Define valid event types
     VALID_EVENT_TYPES = [
-        'catch', 'goal', 'throwaway', 'drop', 'stall', 'assist', 'hockey_assist',   # offensive events
+        'catch', 'pickup', 'goal', 'throwaway', 'drop', 'stall', 'assist', 'hockey_assist',   # offensive events
         'shutdown', 'forced_turnover', 'unforced_turnover', 'block', 'callahan', 'scored_on',  # defensive events
         'substitution'  # Add this
     ]
@@ -81,10 +81,27 @@ class Event(db.Model):
 
 
 class Pull(db.Model):
+    """Our pull on a D point, recorded on the stat taker: who pulled, how
+    long it hung, where it landed (metres, attacking right like every
+    position: x 0-100 upfield, y 0-37) and how it went."""
+    # result: how the pull went for the receiving team
+    RESULTS = [
+        ('caught', 'Caught'),
+        ('landed', 'Let it land'),
+        ('out', 'Out of bounds'),
+        ('brick', 'Brick'),
+        ('dropped', 'Dropped (their turnover)'),
+    ]
+    OUT_RESULTS = ('out', 'brick')
+
     id = db.Column(db.Integer, primary_key=True)
     point_id = db.Column(db.Integer, db.ForeignKey('point.id'), nullable=False)
     player_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=False)
     is_inbounds = db.Column(db.Boolean, default=True)
+    hang_time = db.Column(db.Float, nullable=True)   # seconds
+    landing_x = db.Column(db.Float, nullable=True)
+    landing_y = db.Column(db.Float, nullable=True)
+    result = db.Column(db.String(20), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'), nullable=True) # Nullable for migration
    

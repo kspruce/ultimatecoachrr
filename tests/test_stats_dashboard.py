@@ -46,7 +46,8 @@ def test_dashboard_sections(app, season):
 
 def test_plus_minus_is_the_same_everywhere(app, season):
     """Goals + assists + blocks - turnovers (stalls included) on the
-    dashboard, as on the player and game pages and in the CSV."""
+    dashboard, as on the player and game pages and in the CSV. A Callahan
+    is a goal and a block, as on Game Day and in the ratings."""
     html = season['client'].get('/stats/').get_data(as_text=True)
     plus_minus_col = [c['key'] for c in dash.COLUMNS].index('plus_minus')
     shown = _cells(html, plus_minus_col)
@@ -58,7 +59,8 @@ def test_plus_minus_is_the_same_everywhere(app, season):
     assert shown
     for pid, value in shown.items():
         s = stats[pid]
-        assert int(value) == s['plus_minus'] == s['goals'] + s['assists'] + s['blocks'] - s['turnovers']
+        assert int(value) == s['plus_minus'] == (
+            s['goals'] + s['callahans'] + s['assists'] + s['blocks'] + s['callahans'] - s['turnovers'])
 
 
 def test_players_in_games_leaves_out_the_bench(app, season):

@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request, render_template, url_for, current
 from flask_login import current_user, login_required
 from app import db
 from app.models.point import Point, LineUp
-from app.models.event import Event
+from app.models.event import Event, Pull
 from app.models.game import Game
 from app.models.player import Player
 from app.models.throws import Throw
@@ -36,7 +36,9 @@ def record_events(point_id):
             point_id=point.id,
             team_organization_id=get_current_team_id()
         ).order_by(CuttingSkill.id).all()
+        pull = Pull.query.filter_by(point_id=point.id, team_organization_id=get_current_team_id()).first()
         existing = {
+            'pull': _pull_dict(pull) if pull else None,
             'events': [{
                 'id': e.id, 'event_type': e.event_type, 'player_id': e.player_id,
                 'player_name': e.player.name if getattr(e, 'player', None) else None,
@@ -53,7 +55,8 @@ def record_events(point_id):
         # Players in kit-number order (no number last), not the order picked
         line = sorted((lu.player for lu in point.lineups if lu.player),
                       key=lambda p: (p.jersey_number is None, p.jersey_number or 0, p.name or ''))
-        return render_template('stats/record.html', point=point, line=line, existing=existing)
+        return render_template('stats/record.html', point=point, line=line, existing=existing,
+                               pull_results=Pull.RESULTS)
 
     if request.method == 'POST':
         try:
@@ -95,10 +98,11 @@ def record_events(point_id):
             db.session.add(event)
             db.session.flush()
 
-            # A goal makes the catch before it the assist, and the catch
-            # before that the hockey assist (substitutions aren't play).
-            # Only catches are promoted: blocks, drops, throwaways etc. are
-            # never retyped, and opponent plays aren't part of our chain.
+            # A goal makes the catch (or pickup) before it the assist, and
+            # the one before that the hockey assist (substitutions aren't
+            # play). Only catches and pickups are promoted: blocks, drops,
+            # throwaways etc. are never retyped, and opponent plays aren't
+            # part of our chain.
             if event.event_type == 'goal':
                 previous_events = Event.query.filter(
                     Event.point_id == point_id,
@@ -108,7 +112,7 @@ def record_events(point_id):
                 ).order_by(Event.id.desc()).limit(2).all()
 
                 def assistable(e):
-                    return e.event_type == 'catch' and not e.is_opponent
+                    return e.event_type in ('catch', 'pickup') and not e.is_opponent
 
                 if previous_events and assistable(previous_events[0]):
                     previous_events[0].event_type = 'assist'
@@ -143,6 +147,78 @@ def record_events(point_id):
 
 
 
+def _pull_dict(pull):
+    return {'id': pull.id, 'player_id': pull.player_id,
+            'player_name': pull.player.name if pull.player else None,
+            'hang_time': pull.hang_time, 'landing_x': pull.landing_x, 'landing_y': pull.landing_y,
+            'result': pull.result, 'is_inbounds': pull.is_inbounds}
+
+
+def _number(value, low, high):
+    """A float between low and high, or None for a blank or nonsense value."""
+    try:
+        value = float(value)
+    except (TypeError, ValueError):
+        return None
+    if math.isnan(value):
+        return None
+    return min(max(value, low), high)
+
+
+@bp.route('/record_pull/<int:point_id>', methods=['POST'])
+@login_required
+@stat_taker_required
+def record_pull(point_id):
+    """Our pull for this point: who pulled, hang time (seconds), where it
+    landed and how it went. A point has one pull: recording it again
+    replaces it."""
+    point = Point.query.filter_by(id=point_id, team_organization_id=get_current_team_id()).first_or_404()
+    data = request.get_json(silent=True) or {}
+    try:
+        player_id = int(data.get('player_id'))
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Pick who pulled'}), 400
+    if not Player.query.filter_by(id=player_id, team_organization_id=get_current_team_id()).first():
+        return jsonify({'error': 'Player not found'}), 404
+    result = data.get('result')
+    if result not in dict(Pull.RESULTS):
+        return jsonify({'error': 'Pick how the pull went'}), 400
+    hang_time = _number(data.get('hang_time'), 0, 20)
+    pull = Pull.query.filter_by(point_id=point.id, team_organization_id=get_current_team_id()).first()
+    if pull is None:
+        pull = Pull(point_id=point.id, team_organization_id=get_current_team_id())
+        db.session.add(pull)
+    pull.player_id = player_id
+    pull.result = result
+    pull.is_inbounds = result not in Pull.OUT_RESULTS
+    pull.hang_time = round(hang_time, 2) if hang_time else None
+    pull.landing_x = _number(data.get('landing_x'), 0, 100)
+    pull.landing_y = _number(data.get('landing_y'), 0, 37)
+    db.session.commit()
+    return jsonify(_pull_dict(pull)), 201
+
+
+@bp.route('/undo_pull/<int:point_id>', methods=['POST'])
+@login_required
+@stat_taker_required
+def undo_pull(point_id):
+    point = Point.query.filter_by(id=point_id, team_organization_id=get_current_team_id()).first_or_404()
+    deleted = Pull.query.filter_by(point_id=point.id, team_organization_id=get_current_team_id()).delete()
+    db.session.commit()
+    return jsonify({'deleted': deleted}), 200
+
+
+def _starts_possession(event):
+    """Is this touch the first of a possession (after the pull, or after we
+    won the disc back)? Then it was a pickup: nobody threw it."""
+    before = Event.query.filter(
+        Event.point_id == event.point_id,
+        Event.id < event.id,
+        Event.event_type != 'substitution',
+    ).order_by(Event.id.desc()).first()
+    return before is None or before.event_type in ('block', 'forced_turnover', 'unforced_turnover')
+
+
 @bp.route('/undo_event/<int:point_id>', methods=['POST'])
 @login_required
 @stat_taker_required
@@ -174,7 +250,7 @@ def undo_event(point_id):
                 ).order_by(Event.id.desc()).limit(2).all()
                 for prior, retyped in zip(prior_events, ('assist', 'hockey_assist')):
                     if prior.event_type == retyped:
-                        prior.event_type = 'catch'
+                        prior.event_type = 'pickup' if _starts_possession(prior) else 'catch'
 
             db.session.delete(last_event)
             rebuild_point_throws(point)

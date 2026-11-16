@@ -554,9 +554,12 @@ def result_card(token):
     point_ids = [pid for (pid,) in Point.query.with_entities(Point.id).filter_by(game_id=game.id)]
     if point_ids:
         for kind, player_id in (Event.query.with_entities(Event.event_type, Event.player_id)
-                                .filter(Event.point_id.in_(point_ids), Event.event_type.in_(list(counts)),
+                                .filter(Event.point_id.in_(point_ids),
+                                        Event.event_type.in_(list(counts) + ['callahan']),
                                         Event.player_id.isnot(None), Event.is_opponent.isnot(True))):
-            counts[kind][player_id] += 1
+            # A Callahan is a goal and a block (as on Game Day)
+            for counted in (('goal', 'block') if kind == 'callahan' else (kind,)):
+                counts[counted][player_id] += 1
     for row in GameDayPlayerStats.query.filter_by(game_id=game.id):
         for kind, value in (('goal', row.goals), ('assist', row.assists), ('block', row.blocks)):
             counts[kind][row.player_id] = max(counts[kind][row.player_id], value or 0)

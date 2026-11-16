@@ -707,39 +707,14 @@ def game_stats(game_id):
         else:
             stat.avg_hang_time = None
 
-    # Compute throws (catches + pickups) and throwaways from raw events
-    from app.models.gameday import GameDayEvent
-    from sqlalchemy import func as sa_func
-    point_ids = [p.id for p in points]
-
-    if point_ids:
-        throw_rows = db.session.query(
-            GameDayEvent.player_id,
-            sa_func.count(GameDayEvent.id)
-        ).filter(
-            GameDayEvent.point_id.in_(point_ids),
-            GameDayEvent.event_type.in_(['catch', 'pickup'])
-        ).group_by(GameDayEvent.player_id).all()
-
-        throwaway_rows = db.session.query(
-            GameDayEvent.player_id,
-            sa_func.count(GameDayEvent.id)
-        ).filter(
-            GameDayEvent.point_id.in_(point_ids),
-            GameDayEvent.event_type == 'throwaway'
-        ).group_by(GameDayEvent.player_id).all()
-    else:
-        throw_rows = []
-        throwaway_rows = []
-
-    throws_by_player = {pid: cnt for pid, cnt in throw_rows}
-    throwaways_by_player = {pid: cnt for pid, cnt in throwaway_rows}
-
+    # Throws and completion from the Game Day catch / pickup / stall /
+    # throwaway taps (app.stats.players.gameday_throwing)
+    from app.stats.players import gameday_throwing
+    throwing = gameday_throwing([p.id for p in points], team_id)
     for stat in player_stats:
-        t  = throws_by_player.get(stat.player_id, 0)
-        ta = throwaways_by_player.get(stat.player_id, 0)
-        stat.throws = t
-        stat.completion_rate = round(t / (t + ta) * 100, 1) if (t + ta) > 0 else None
+        mine = throwing.get(stat.player_id, {})
+        stat.throws = mine.get('throws', 0)
+        stat.completion_rate = mine.get('completion_rate')
 
     # Calculate team totals
     total_pulls = sum(stat.pulls or 0 for stat in player_stats)
@@ -756,10 +731,9 @@ def game_stats(game_id):
         'avg_hang_time': round(total_hang / total_pulls, 1) if total_pulls > 0 else None,
     }
 
-    # Team completion rate = average of individual player completion rates
-    # (only players who have at least one recorded throw are included)
-    player_rates = [stat.completion_rate for stat in player_stats if stat.completion_rate is not None]
-    team_totals['completion_rate'] = round(sum(player_rates) / len(player_rates), 1) if player_rates else 0
+    # Team completion: all the team's throws completed, not an average of
+    # each player's percentage
+    team_totals['completion_rate'] = throwing.get(None, {}).get('completion_rate')
 
     # ── Tournament stats (points played + +/- across all games in the tournament) ──
     tournament_stats = None
@@ -905,8 +879,12 @@ def tournament_stats(tournament_id):
         'blocks': sum(r['blocks'] for r in player_rows),
         'turns': sum(r['turns'] for r in player_rows),
     }
-    denom = totals['goals'] + totals['assists'] + totals['turns']
-    totals['completion_rate'] = round((totals['goals'] + totals['assists']) / denom * 100, 1) if denom else 0
+    # Completion from the Game Day catch / pickup / stall / throwaway taps
+    # (not goals and assists against turns, which isn't a completion rate)
+    from app.stats.players import gameday_throwing
+    point_ids = [pid for (pid,) in Point.query.with_entities(Point.id).filter(
+        Point.game_id.in_(game_ids or [-1]), Point.team_organization_id == team_id)]
+    totals['completion_rate'] = gameday_throwing(point_ids, team_id).get(None, {}).get('completion_rate')
 
     return render_template(
         'gameday/tournament_stats.html',
@@ -1014,14 +992,12 @@ def team_stats():
         'pulls_ob': sum(stats['pulls_ob'] for stats in player_stats),
     }
     
-    # Calculate efficiency metrics
-    if team_totals['goals'] > 0:
-        team_totals['completion_rate'] = round(
-            (team_totals['goals'] + team_totals['assists']) / 
-            (team_totals['goals'] + team_totals['assists'] + team_totals['turns']) * 100, 1
-        ) if (team_totals['goals'] + team_totals['assists'] + team_totals['turns']) > 0 else 0
-    else:
-        team_totals['completion_rate'] = 0
+    # Completion from the Game Day catch / pickup / stall / throwaway taps
+    # (not goals and assists against turns, which isn't a completion rate)
+    from app.stats.players import gameday_throwing
+    point_ids = [pid for (pid,) in Point.query.with_entities(Point.id).filter(
+        Point.game_id.in_([g.id for g in games] or [-1]), Point.team_organization_id == team_id)]
+    team_totals['completion_rate'] = gameday_throwing(point_ids, team_id).get(None, {}).get('completion_rate')
     
     # Get current team
     team = TeamOrganization.query.get(team_id)
