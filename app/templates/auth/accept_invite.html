@@ -23,6 +23,13 @@
       {% endif %}
     </div>
 
+    {% if invite.team.settings and invite.team.settings.invite_message %}
+    <div class="alert alert-light border mb-4" style="font-size:.9rem">
+      <div class="fw-semibold mb-1">A message from {{ invite.team.name }}</div>
+      {{ invite.team.settings.invite_message|nl2br }}
+    </div>
+    {% endif %}
+
     <form method="POST">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
@@ -58,6 +65,8 @@
                placeholder="Repeat your password"
                required minlength="{{ min_password }}" autocomplete="new-password">
       </div>
+
+      {% with player=invite.player %}{% include "auth/_number_picker.html" %}{% endwith %}
 
       <button type="submit" class="invite-submit">
         <i class="bi bi-check-circle me-2"></i>Create My Account

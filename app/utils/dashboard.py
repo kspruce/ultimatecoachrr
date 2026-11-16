@@ -377,6 +377,15 @@ def needs_attention(team_id, today, coming, settings=None, roster_signup=None):
 
     items += after_the_event(team_id, today, coming, settings)
 
+    from app.utils import numbers
+    picked = numbers.provisional(team_id)
+    if picked:
+        n = len(picked)
+        items.append({'icon': 'bi-123', 'url': url_for('team.numbers'),
+                      'title': f'{n} new player{"s" if n != 1 else ""} picked a number to confirm',
+                      'detail': ', '.join(f'#{p.jersey_number} {p.name}' for p in picked[:4]) + ('…' if n > 4 else ''),
+                      'action': None, 'action_label': None})
+
     from app.models.link_request import PlayerLinkRequest
     asks = (PlayerLinkRequest.query.filter_by(team_organization_id=team_id)
             .order_by(PlayerLinkRequest.created_at).all())

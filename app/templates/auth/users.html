@@ -163,6 +163,12 @@
             </div>
             <form method="POST" action="{{ url_for('auth.remind_unjoined', team_id=current_team.id) }}" class="d-flex flex-wrap align-items-center gap-2 mt-3">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="w-100">
+                    <label for="invite_message" class="form-label small fw-semibold mb-1">Message from the club (optional)</label>
+                    <textarea class="form-control form-control-sm" id="invite_message" name="invite_message" rows="4" maxlength="3000"
+                              placeholder="Welcome to the club! Fees, kit, training times, where to find the group chat...">{{ current_team.settings.invite_message if current_team.settings and current_team.settings.invite_message else '' }}</textarea>
+                    <div class="form-text">Goes in each invite email and on the page where they set up their account. Kept for the next reminder.</div>
+                </div>
                 <button class="btn btn-sm btn-primary"><i class="bi bi-send me-1"></i>Remind them</button>
                 <span class="small text-muted">Emails each of them their own invite link{% if current_team.settings and current_team.settings.discord_enabled %} and posts who's left to your Discord{% endif %}. Nobody is sent more than one every few days.</span>
             </form>

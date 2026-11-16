@@ -1,0 +1,16 @@
+{# Shirt number on the invite pages: free_numbers lists what's free in the
+   club (None once a coach has given them a number). #}
+{% if free_numbers is not none %}
+<div class="mb-3">
+  <label for="jersey_number" class="invite-label" style="display:block">Shirt number</label>
+  <select name="jersey_number" id="jersey_number" class="form-select">
+    <option value="">Decide later</option>
+    {% for n in free_numbers %}
+    <option value="{{ n }}"{% if player and player.jersey_number == n %} selected{% endif %}>{{ n }}</option>
+    {% endfor %}
+  </select>
+  <div class="form-text">These numbers are free in the club. A coach confirms your pick.</div>
+</div>
+{% elif player and player.jersey_number is not none %}
+<p class="small text-muted">Your shirt number is #{{ player.jersey_number }}.</p>
+{% endif %}

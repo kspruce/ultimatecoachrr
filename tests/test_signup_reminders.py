@@ -69,6 +69,35 @@ def test_coach_reminds_players_who_havent_joined(app, herd, discord_calls):
     assert len(sent_to(app)) == 4 and InviteToken.query.count() == 2
 
 
+CLUB_INFO = 'Welcome to the Herd!\nFees are £60 for the season. Training is Tuesdays at 7pm.'
+
+
+def test_invites_carry_the_clubs_message(app, herd, discord_calls):
+    """After trials the club sends its information with the invite: the
+    message goes in each email, is kept for later reminders, and shows on
+    the page where they set up their account."""
+    coach = login(app, herd['coach'])
+    coach.post('/auth/remind-unjoined', data={'invite_message': f'  {CLUB_INFO}  '})
+    assert TeamSettings.query.filter_by(team_id=herd['team']).one().invite_message == CLUB_INFO
+    body = app.extensions['sent_emails'][0].get_content()
+    assert 'Fees are £60 for the season.' in body and 'Welcome to the Herd!' in body
+
+    page = coach.get('/auth/users').get_data(as_text=True)
+    assert 'Training is Tuesdays at 7pm.' in page  # the box keeps it for next time
+
+    token = InviteToken.query.filter_by(player_id=herd['players'][0]).one().token
+    page = app.test_client().get(f'/auth/invite/accept/{token}').get_data(as_text=True)
+    assert 'Fees are £60 for the season.' in page
+
+    # Emptying the box removes it from later invites
+    for t in InviteToken.query.all():
+        t.created_at = datetime.utcnow() - timedelta(days=4)
+    db.session.commit()
+    coach.post('/auth/remind-unjoined', data={'invite_message': ''})
+    assert TeamSettings.query.filter_by(team_id=herd['team']).one().invite_message is None
+    assert 'Fees' not in app.extensions['sent_emails'][-1].get_content()
+
+
 def test_players_cant_send_reminders(app, herd):
     team = db.session.get(TeamOrganization, herd['team'])
     player = make_user(team, 'herd-player', welcomed=True)
@@ -120,3 +149,118 @@ def test_new_users_without_email_get_their_reminder_on_discord(app, bot, herd, d
     assert 'Pick your name from the roster' in dm[-1][2]['json']['content']
     assert 'https://coach.example.com/welcome' in dm[-1][2]['json']['content']
     assert onboarding.send_nudges(now) == 0
+
+
+def _newbie(herd, **extra):
+    from app.models.player import Player
+    from app.models.invite_token import InviteToken
+    player = Player(name='New Player', active=True, team_organization_id=herd['team'], **extra)
+    db.session.add(player)
+    db.session.flush()
+    invite = InviteToken.create(player_id=player.id, team_id=herd['team'], created_by_id=herd['coach'])
+    db.session.add(invite)
+    db.session.commit()
+    return player.id, invite.token
+
+
+def _number(player_id):
+    from app.models.player import Player
+    db.session.expire_all()
+    p = db.session.get(Player, player_id)
+    return p.jersey_number, p.number_provisional
+
+
+def _account(number):
+    return {'username': 'newbie', 'email': 'newbie@example.com', 'password': 'a-strong-passphrase-9',
+            'confirm_password': 'a-strong-passphrase-9', 'jersey_number': number}
+
+
+def test_new_players_pick_a_free_number_and_a_coach_confirms(app, herd):
+    """Numbers are unique across the club (0-99). A new player picks one of
+    the free ones when they set up their account; it's provisional until a
+    coach confirms it."""
+    from app.models.player import Player
+    db.session.get(Player, herd['players'][2]).active = False  # left the club: number 3 is free again
+    db.session.commit()
+    player_id, token = _newbie(herd)
+    visitor = app.test_client()
+    page = visitor.get(f'/auth/invite/accept/{token}').get_data(as_text=True)
+    assert '<option value="0">0</option>' in page and '<option value="3">3</option>' in page
+    assert '<option value="1">' not in page and '<option value="2">' not in page
+
+    visitor.post(f'/auth/invite/accept/{token}', data=_account('2'))  # taken
+    assert User.query.filter_by(username='newbie').first() is None and _number(player_id) == (None, False)
+    visitor.post(f'/auth/invite/accept/{token}', data=_account('7'))
+    assert User.query.filter_by(username='newbie').first() is not None
+    assert _number(player_id) == (7, True)
+
+    coach = login(app, herd['coach'])
+    assert 'picked a number' in coach.get('/').get_data(as_text=True)  # Needs attention
+    page = coach.get('/team/numbers').get_data(as_text=True)
+    assert 'New Player' in page and 'Provisional' in page
+    newbie = User.query.filter_by(username='newbie').one()
+    login(app, newbie.id).post(f'/team/numbers/{player_id}/confirm')
+    assert _number(player_id) == (7, True)  # players can't confirm
+    coach.post(f'/team/numbers/{player_id}/confirm')
+    assert _number(player_id) == (7, False)
+
+
+def test_new_players_can_decide_their_number_later(app, herd):
+    player_id, token = _newbie(herd)
+    app.test_client().post(f'/auth/invite/accept/{token}', data=_account(''))
+    assert User.query.filter_by(username='newbie').first() is not None and _number(player_id) == (None, False)
+
+
+def test_a_coach_given_number_is_not_offered_again(app, herd):
+    player_id, token = _newbie(herd, jersey_number=12)
+    page = app.test_client().get(f'/auth/invite/accept/{token}').get_data(as_text=True)
+    assert 'name="jersey_number"' not in page and '#12' in page
+    app.test_client().post(f'/auth/invite/accept/{token}', data=_account('40'))
+    assert _number(player_id) == (12, False)
+
+
+def test_captains_and_coaches_set_everyones_number_at_once(app, herd):
+    """The record of the squad's numbers can be entered on one page; a
+    clash saves nothing and says which number."""
+    from app.models.player import Player
+    ana, ben, cat = herd['players']
+    coach = login(app, herd['coach'])
+    page = coach.get('/team/numbers/edit').get_data(as_text=True)
+    assert f'name="number_{ana}"' in page and f'name="number_{cat}"' in page
+
+    coach.post('/team/numbers/edit', data={f'number_{ana}': '10', f'number_{ben}': '10', f'number_{cat}': '0'})
+    assert [_number(p)[0] for p in (ana, ben, cat)] == [1, 2, 3]  # 10 twice: nothing saved
+
+    db.session.get(Player, ben).number_provisional = True
+    db.session.commit()
+    coach.post('/team/numbers/edit', data={f'number_{ana}': '10', f'number_{ben}': '2', f'number_{cat}': ''})
+    assert [_number(p) for p in (ana, ben, cat)] == [(10, False), (2, False), (None, False)]
+
+    team = db.session.get(TeamOrganization, herd['team'])
+    player = make_user(team, 'herd-player', welcomed=True)
+    login(app, player).post('/team/numbers/edit', data={f'number_{ana}': '50'})
+    assert _number(ana)[0] == 10
+    assert '10' in login(app, player).get('/team/numbers').get_data(as_text=True)  # everyone can look
+
+
+def test_reserved_numbers_are_not_offered_to_new_players(app, herd):
+    from app.models.player import ReservedNumber
+    coach = login(app, herd['coach'])
+    coach.post('/team/numbers/reserve', data={'number': '23', 'note': 'Alex, back in January'})
+    coach.post('/team/numbers/reserve', data={'number': '1', 'note': 'Taken already'})  # worn: refused
+    assert [(r.number, r.note) for r in ReservedNumber.query.all()] == [(23, 'Alex, back in January')]
+    assert 'Alex, back in January' in coach.get('/team/numbers').get_data(as_text=True)
+
+    player_id, token = _newbie(herd)
+    visitor = app.test_client()
+    assert '<option value="23">' not in visitor.get(f'/auth/invite/accept/{token}').get_data(as_text=True)
+    visitor.post(f'/auth/invite/accept/{token}', data=_account('23'))
+    assert User.query.filter_by(username='newbie').first() is None
+
+    # Giving it to someone on the edit page is refused too, until it's released
+    ana = herd['players'][0]
+    coach.post('/team/numbers/edit', data={f'number_{ana}': '23'})
+    assert _number(ana)[0] == 1
+    reservation = ReservedNumber.query.one()
+    coach.post(f'/team/numbers/reserve/{reservation.id}/release')
+    assert ReservedNumber.query.count() == 0

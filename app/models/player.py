@@ -12,6 +12,8 @@ class Player(db.Model):
     name = db.Column(db.String(100), nullable=False)
 
     jersey_number = db.Column(db.Integer)
+    # A number the player picked when they joined, until a coach confirms it
+    number_provisional = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
 
     position = db.Column(db.String(20))
 
@@ -214,3 +216,16 @@ class Player(db.Model):
             )
 
         return None
+
+class ReservedNumber(db.Model):
+    """A shirt number held back by captains or coaches: for someone not on
+    the site yet, or retired. It isn't offered to new players."""
+    __tablename__ = 'reserved_number'
+    __table_args__ = (db.UniqueConstraint('team_organization_id', 'number', name='uq_reserved_number_team'),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'), nullable=False, index=True)
+    number = db.Column(db.Integer, nullable=False)
+    note = db.Column(db.String(200))
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)

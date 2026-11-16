@@ -513,9 +513,13 @@ def post_signup_note(team, settings=None):
 
 
 def _invite_body(player, team, coach, link):
+    message = team.settings.invite_message if team.settings else None
     lines = [f'Hi {player.name.split()[0]},', '',
              f"{coach.username} has added you to {team.name} on Ultimate Coach, where the team "
-             "does RSVPs, the playbook, stats and feedback.", '',
+             "does RSVPs, the playbook, stats and feedback.", '']
+    if message:
+        lines += [f'A message from {team.name}:', '', message, '']
+    lines += [
              f'Set up your account here (the link works for 7 days): {link}', '',
              "Already on Ultimate Coach with another team? Log in first, then open the link, "
              "and the team is added to your account."]
