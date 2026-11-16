@@ -232,7 +232,8 @@
                     <p class="small mb-1">
                         From the {{ m.full_points }} point{{ '' if m.full_points == 1 else 's' }} with full stats:
                         <strong>{{ dec(m.turnovers_per_point) }}</strong> turnovers per point
-                        · completion <strong>{{ tm.pct(m.completion_rate, 1) }}</strong> <small class="text-muted">(a drop is an incomplete pass)</small>
+                        · completion <strong>{{ tm.pct(m.completion_rate, 1) }}</strong> <small class="text-muted">(passes caught; a drop is an incomplete pass)</small>
+                        · throwing completion <strong>{{ tm.pct(m.throwing_completion_rate, 1) }}</strong> <small class="text-muted">(throws not thrown away; a drop is the receiver's)</small>
                         · breaks thrown <strong>{{ m.break_attempts }}</strong>, completed <strong>{{ m.completed_breaks }}</strong> ({{ tm.pct(m.break_completion_rate) }})
                         · offensive yardage <strong>{{ dec(m.yards, 0) }} m</strong> ({{ dec(m.yards_per_point, 1) }} m per point)
                     </p>

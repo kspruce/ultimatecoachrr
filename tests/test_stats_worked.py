@@ -553,7 +553,7 @@ def test_season_plan_throwing_measures(possession_game):
       point 3: A to B, dropped (a drop is B's turnover, not a throw of A's)
 
     Throws 4: caught 3, thrown away 1; dropped passes 1.
-    Completion = 3 / (4 + 1) = 60%. Turnovers 2 (B's throwaway and drop) in
+    Completion = 3 / (4 + 1) = 60%; throwing completion = 3 / 4 = 75%. Turnovers 2 (B's throwaway and drop) in
     5 points = 0.40 per point.
     Breaks thrown 1, completed 0. Yardage = 20 + 50 + 33 = 103 m, 20.6 m per point.
 
@@ -575,6 +575,8 @@ def test_season_plan_throwing_measures(possession_game):
     finally:
         ctx.pop()
     assert m['completion_rate'] == pytest.approx(60)
+    # Throwing completion leaves B's dropped pass out: 3 / 4 = 75%
+    assert m['throwing_completion_rate'] == pytest.approx(75)
     assert m['turnovers_per_point'] == pytest.approx(0.4)
     assert (m['break_attempts'], m['completed_breaks']) == (1, 0)
     assert m['yards'] == pytest.approx(103) and m['yards_per_point'] == pytest.approx(20.6)

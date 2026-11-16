@@ -111,7 +111,11 @@ def team_measures(data, game_ids):
         'gameday_points': sum(1 for r in rows if r['source'] == 'gameday'),
         # From points with full stats
         'turnovers_per_point': handling['turnovers'] / len(analysed) if analysed else None,
+        # Both completions: the team's passes caught (a drop is an
+        # incomplete pass) and throwing completion (a drop is the
+        # receiver's turnover, not an incomplete throw)
         'completion_rate': handling['pass_completion_rate'],
+        'throwing_completion_rate': handling['completion_rate'],
         'break_attempts': len(breaks),
         'completed_breaks': sum(1 for t in breaks if not t['turnover']),
         'break_completion_rate': handling['break_completion_rate'],
