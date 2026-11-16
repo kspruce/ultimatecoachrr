@@ -15,6 +15,7 @@ from app.models.session import SessionComponent
 from tests.test_drill_editor_browser import browser, live_server, logged_in_page  # noqa: F401
 from tests.test_theory_browser import in_view, no_sideways_scroll, phone_page
 from tests.test_training import club, week  # noqa: F401
+from tests.urls import sref
 
 pytest.importorskip('playwright.sync_api')
 
@@ -38,7 +39,7 @@ def planned(club, week):
 
 def test_building_a_plan_on_a_phone(app, club, planned, live_server, browser):
     page = phone_page(app, browser, live_server, club['coach'], club['team'])
-    page.goto(live_server + f'/sessions/{planned}/plan')
+    page.goto(live_server + f'/sessions/{sref(planned)}/plan')
     no_sideways_scroll(page)
 
     # Save and publish sit at the bottom of the screen in place of the tab bar
@@ -78,7 +79,7 @@ def test_building_a_plan_on_a_phone(app, club, planned, live_server, browser):
 
 def test_session_page_on_a_phone_shows_the_plan_first(app, club, planned, live_server, browser):
     page = phone_page(app, browser, live_server, club['coach'], club['team'])
-    page.goto(live_server + f'/sessions/{planned}/detail')
+    page.goto(live_server + f'/sessions/{sref(planned)}/detail')
     no_sideways_scroll(page)
     plan = page.get_by_text('Session Components').bounding_box()
     actions = page.get_by_text('Quick Actions').bounding_box()
@@ -92,7 +93,7 @@ def test_session_page_on_a_phone_shows_the_plan_first(app, club, planned, live_s
 def test_builder_on_a_desktop_keeps_the_library_beside_the_plan(app, club, planned, live_server, browser):
     page = logged_in_page(app, browser, live_server, club['coach'], club['team'],
                           viewport={'width': 1280, 'height': 900})
-    page.goto(live_server + f'/sessions/{planned}/plan')
+    page.goto(live_server + f'/sessions/{sref(planned)}/plan')
     assert page.is_visible('#pb-search')
     assert not page.is_visible('.pb-drills-btn')
     assert not page.is_visible('.pb-peek')
