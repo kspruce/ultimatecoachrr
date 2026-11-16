@@ -59,6 +59,7 @@ def team_stats():
     # Calculate previous period stats for comparison
     # (e.g., previous season or previous tournament)
     prev_games = get_previous_period_games(season, tournament_id, squad)
+    preload_game_points(prev_games)  # their points and events in two queries, not two per game
     prev_summary = calculate_team_summary(prev_games)
     prev_metrics = calculate_additional_team_metrics(prev_games)
     
