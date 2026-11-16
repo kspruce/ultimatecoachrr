@@ -11,7 +11,7 @@ from app.utils.team_filter import get_current_team_id
 from app.stats.formulas import (OUR_TURNS, POSSESSION_CHANGES, REGAINS, get_point_starting_possession, goal_equivalents,
                                 point_has_result, point_we_scored, possession_gap, scoring_efficiency)
 from app.stats.players import HUCK_DISTANCE, get_players_base_stats, players_in_games
-from app.stats.loaders import preload_game_points, game_points, game_line_points, is_analysed
+from app.stats.loaders import preload_game_points, game_points, game_line_points, is_analysed, unthrown_throwaways
 
 
 def _point_gap(point):
@@ -540,6 +540,11 @@ def calculate_additional_team_metrics(games):
     throws_query = Throw.query.filter_by(team_organization_id=get_current_team_id())
     throws_query = throws_query.filter(Throw.point_id.in_(point_ids))
     throws = throws_query.all()
+    # Plus throwaways with no stored throw (thrown before any catch was
+    # recorded in the point): still thrown, and not completed
+    thrown = {t.throwing_event_id for t in throws}
+    unthrown = sum(len(unthrown_throwaways(p.events, thrown)) for g in games for p in game_points(g))
+    attempts = len(throws) + unthrown
 
     # Count completions and break throws
     completions = sum(1 for t in throws if t.is_completion)
@@ -614,10 +619,10 @@ def calculate_additional_team_metrics(games):
             current_app.logger.error(f"Error calculating o-line stats for game {game.id}: {str(e)}")
 
     # Calculate throws per point correctly - total throws divided by total points
-    throws_per_point = len(throws) / total_points if total_points > 0 else 0
+    throws_per_point = attempts / total_points if total_points > 0 else 0
 
     result = {
-        'completion_rate': (completions / len(throws)) * 100 if throws else 0,
+        'completion_rate': (completions / attempts) * 100 if attempts else 0,
         'catch_rate': (catches / (catches + drops)) * 100 if (catches + drops) > 0 else 0,
         'goals_per_point': goals / total_points,
         'assists_per_point': assists / total_points,

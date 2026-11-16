@@ -57,3 +57,13 @@ def is_analysed(point):
 def game_line_points(game, line_type):
     """The game's points where we started on 'O-line' or 'D-line'."""
     return [p for p in game_points(game) if p.our_line_type == line_type]
+
+
+def unthrown_throwaways(events, throwing_event_ids):
+    """Our throwaways that have no stored throw: the first play of a point
+    when nobody's pickup was recorded (the pull picked up and thrown away),
+    so the throw had no start (app/stats/throw_rebuild.py). They're still a
+    throw and a turnover for whoever threw it."""
+    return [e for e in events
+            if e.event_type == 'throwaway' and not getattr(e, 'is_opponent', False)
+            and e.id not in throwing_event_ids]

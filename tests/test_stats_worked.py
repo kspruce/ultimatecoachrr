@@ -201,3 +201,41 @@ def test_a_callahan_is_a_goal_and_a_block_everywhere(possession_game):
     assert (rows['Player F']['goals'], rows['Player F']['blocks'], rows['Player F']['plus_minus']) == (1, 1, 2)
     page = w.client.get('/stats/').get_data(as_text=True)
     assert 'a Callahan included' in page
+
+
+# --- a turnover straight off the pull ----------------------------------------
+
+def test_a_throwaway_before_any_catch_still_counts(app):
+    """O point: A picks up the pull and throws it away (no pickup tapped),
+    B blocks their first throw, C picks up, D scores.
+
+    A: 1 throw, 1 throwaway, 0 completions -> 1 turnover, completion 0%.
+    The team: 1 turnover; throws: A's throwaway and C's goal pass = 2,
+    1 completed = 50%. (Before the fix A's throwaway had no stored throw, so
+    A showed 0 turnovers while the turnover log listed 1, and the team
+    showed 0 turnovers and 100%.)
+    """
+    from app.stats import turnovers
+    from app.stats.players import get_players_base_stats
+    from app.stats.team import calculate_additional_team_metrics
+    w = WorkedGame(app)
+    w.point('O', [('throwaway', 'A', 25, 18), ('block', 'B', 30, 18),
+                  ('catch', 'C', 30, 18), ('goal', 'D', 90, 18)])
+    ctx = w.context()
+    try:
+        games = w.games()
+        a = get_players_base_stats([w.players['A']], games)[w.ids['A']]
+        data = turnovers.ThrowingData(games)
+        mine = turnovers.handling_summary(data, w.ids['A'], None)
+        team = turnovers.handling_summary(data, None, None)
+        log = turnovers.turnover_log(data, w.ids['A'])
+        metrics = calculate_additional_team_metrics(games)
+    finally:
+        ctx.pop()
+    assert (a['throws'], a['throwaways'], a['turnovers'], a['completion_rate']) == (1, 1, 1, 0)
+    assert (mine['throws'], mine['throwaways'], mine['turnovers']) == (1, 1, 1)
+    assert len(log) == 1
+    assert (team['throws'], team['turnovers']) == (2, 1)
+    assert team['completion_rate'] == pytest.approx(50)
+    assert metrics['completion_rate'] == pytest.approx(50)
+    assert metrics['throws_per_point'] == pytest.approx(2)

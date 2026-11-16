@@ -8,7 +8,7 @@ from app.models.throws import Throw
 import math
 from app.utils.team_filter import get_current_team_id
 from app.stats.formulas import point_has_result, point_we_scored
-from app.stats.loaders import analysed_point_ids, preload_game_points, game_points
+from app.stats.loaders import analysed_point_ids, preload_game_points, game_points, unthrown_throwaways
 
 
 
@@ -313,12 +313,14 @@ def process_player_stats(player, lineups, throws_by_player, throws_to_player, ev
     # Games this player was on a line in (not the number of games in the filter)
     stats['games_played'] = len({lineup.point.game_id for lineup in lineups})
 
-    # Process throws
-    stats['throws'] = len(throws_by_player)
+    # Process throws. A throwaway with no stored throw (thrown before any
+    # catch was recorded in the point) is still a throw and a throwaway.
+    unthrown = unthrown_throwaways(events, {t.throwing_event_id for t in throws_by_player})
+    stats['throws'] = len(throws_by_player) + len(unthrown)
     stats['completions'] = sum(1 for t in throws_by_player if t.is_completion)
     stats['assists'] = sum(1 for t in throws_by_player if t.throw_type == 'assist')
     stats['hockey_assists'] = sum(1 for t in throws_by_player if t.throw_type == 'hockey_assist')
-    stats['throwaways'] = sum(1 for t in throws_by_player if t.throw_type == 'throwaway')
+    stats['throwaways'] = sum(1 for t in throws_by_player if t.throw_type == 'throwaway') + len(unthrown)
     stats['break_throws'] = sum(1 for t in throws_by_player if t.break_throw)
     
     # Calculate throw distances

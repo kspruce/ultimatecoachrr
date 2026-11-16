@@ -13,7 +13,7 @@ from app.models.throws import Throw
 from app.utils.media_embed import youtube_id
 from app.utils.team_filter import get_current_team_id
 
-from app.stats.loaders import preload_game_points, game_points
+from app.stats.loaders import preload_game_points, game_points, unthrown_throwaways
 from app.stats.throwing import (DEPTH_LABELS, DEPTH_ZONES, LANE_LABELS, LANES, THROW_KIND_LABELS,
                                 THROW_KINDS, depth_zone, lane, throw_kind)
 
@@ -120,6 +120,23 @@ class ThrowingData:
         }
         # Points with full stats (not just taken live on Game Day)
         self.analysed = {pid for pid, events in self.events_by_point.items() if events}
+
+        # A throwaway with no stored throw (the first play of a point, with
+        # no pickup recorded) is still a throw and a turnover: added with an
+        # unknown start, so it counts but isn't put in a zone or a side.
+        thrown = {t['throwing_event_id'] for t in self.throws}
+        for pid, events in self.events_by_point.items():
+            for e in unthrown_throwaways(events, thrown):
+                self.throws.append({
+                    'id': None, 'point_id': pid, 'game_id': self.game_of_point[pid].id,
+                    'thrower_id': e.player_id, 'receiver_id': None,
+                    'turnover': True, 'assist': False, 'kind': None, 'side': None,
+                    'depth': None, 'lane': None,
+                    'x_start': None, 'y_start': None,
+                    'x_end': e.field_position_x, 'y_end': e.field_position_y,
+                    'throwing_event_id': e.id,
+                    **context[pid],
+                })
 
     # --- slicing ---------------------------------------------------------
 
