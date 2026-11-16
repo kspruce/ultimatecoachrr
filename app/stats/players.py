@@ -33,8 +33,10 @@ def players_in_games(games=None):
                                Player.team_organization_id == get_current_team_id()).order_by(Player.name).all()
 
 
-def get_players_base_stats(players, games=None):
-    """Get stats for multiple players in a single batch of queries"""
+def get_players_base_stats(players, games=None, pulls=True):
+    """Get stats for multiple players in a single batch of queries.
+    pulls=False skips the stat taker's pulls (one query) for callers that
+    don't show them; Game Day pulls still count."""
     current_app.logger.debug(f"Batch loading stats for {len(players)} players")
     player_ids = [p.id for p in players]
     
@@ -124,7 +126,7 @@ def get_players_base_stats(players, games=None):
     pull_query = Pull.query.filter(Pull.team_organization_id == get_current_team_id())
     if point_ids is not None:
         pull_query = pull_query.filter(Pull.point_id.in_(point_ids))
-    full_pulls = pull_query.all() if point_ids is None or point_ids else []
+    full_pulls = pull_query.all() if pulls and (point_ids is None or point_ids) else []
     pulls_by_player = {}
     for pull in full_pulls:
         pulls_by_player.setdefault(pull.player_id, []).append(pull)

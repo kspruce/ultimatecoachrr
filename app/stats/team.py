@@ -75,7 +75,7 @@ def calculate_team_averages(games=None):
     # Everyone who played in these games (not the active roster, which
     # ignores the season being viewed)
     players = players_in_games(games)
-    player_stats = get_players_base_stats(players, games)
+    player_stats = get_players_base_stats(players, games, pulls=False)  # ratings don't use pulls
 
     result = calculate_scoring_efficiency(games)
     se = result['se']

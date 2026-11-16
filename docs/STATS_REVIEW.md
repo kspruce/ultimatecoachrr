@@ -32,6 +32,8 @@ convention, it's kept and now applied everywhere.
 | Huck | 20 m+ long and 15 m+ upfield (`throwing.throw_kind`). |
 | Break throw | Crosses 3 m+ to the side the mark is stopping; needs the point's force recorded. |
 | Full stats | A point with at least one recorded play on the stat taker (a substitution alone isn't one). Per-point rates only count these. |
+| Pickup | The first touch after the pull or a turnover, tapped as Pickup or Catch: not a catch, nobody threw it. |
+| Pull | In bounds unless out of bounds or a brick; in their endzone at 82 m+ up the field; the stat taker's pull counts where there is one, otherwise Game Day's. |
 | A player with no points on a line | Has no O-line (D-line) +/- per point: shown as a dash and left out of teammates' medians and ranks, not counted as 0. |
 
 ## What was wrong, what changed, and by how much
@@ -80,12 +82,14 @@ It now checks the corrected formula, (goals + Callahans) + assists + (blocks
 
 ### Performance
 
-No extra queries on the dashboard or team pages from the fixes. Measured on
-a 24-game season: dashboard 129 queries (unchanged), team page 34 → 32
-(the catch-rate query went; the season plan card adds one), game page
-45 → 44, player page 411 (unchanged; most of it is the per-game history,
-one set of queries per game, which was already the case). The stats cache
-still clears on any change to stats data; nothing new is cached.
+Measured on a 24-game season, before → after: dashboard 129 → 130 queries
+(one for the stat taker's pulls, shown in its Pulls column), team page
+34 → 33 (the catch-rate query went; the season plan card adds one), game
+page 45 → 45, player page 411 → 389 (its game history now finds the
+player's games in one query instead of one per game, and skips pulls,
+which it doesn't show). Most of the player page is still the per-game
+history, one set of queries per game. The stats cache still clears on any
+change to stats data, pulls included; nothing new is cached.
 
 ## Every stat, where it appears, and whether it was correct
 
@@ -130,7 +134,7 @@ explanation fixed.
 | Huck % | Huck completion | ✔ |
 | TO | Turnovers; per 10 touches in per-point mode | ✘ 9 |
 | Blk, Take | Blocks (with Callahans), takeaways; per D-point | ✘ 4 (Blk) |
-| Pulls | Game Day pulls; share in bounds | ✔ |
+| Pulls | Pulls (stat taker and Game Day); share in bounds | ✔ (stat-taker pulls added) |
 | +/- | Goals + assists + blocks − turnovers, a Callahan +2 | ✘ 4 |
 | PER, EPM, Eff | See ratings | ✔ |
 | Leaders, line usage | From the table | ✘ 4 (goals, blocks) |
@@ -157,7 +161,7 @@ explanation fixed.
 | Stat | Definition | Status |
 | --- | --- | --- |
 | Headline: games, points, goals, assists, blocks, turnovers | Season box score (every point) | ✘ 5 |
-| Season box score, pulls | Full stats where recorded, Game Day otherwise; pulls from Game Day | ✔ |
+| Season box score, pulls | Full stats where recorded, Game Day otherwise; pulls from the stat taker, else Game Day, with hang time, landing and results | ✔ (stat-taker pulls added) |
 | Throws, completions, completion rate | Player throwing completion | ✘ 9, 16 ✎ |
 | Catches, catch rate | Completed passes caught; ÷ (caught + dropped) | ✔ ✘ 16 ✎ |
 | Goals, assists, hockey assists | Goals include Callahans | ✘ 4 |
@@ -227,13 +231,33 @@ The "filmed games" stats (per-player turnovers per touch, completed breaks,
 yardage) come from the full stat taker, which is how filmed games are
 recorded; nothing extra is needed.
 
+## Added to the stat taker (asked for during the review)
+
+- **Pickup button.** The first touch after the pull or a turnover can be
+  tapped as a Pickup (as on Game Day). Nobody threw it, so no throw is
+  credited, and a throwaway straight after it starts where it was picked
+  up. Tapping Catch for that touch still counts the same way, so older
+  points are unchanged.
+- **Pulls.** On D points: "Pull released" starts a timer, a tap on the
+  field marks where it landed, then who pulled, the hang time (editable;
+  "No timer" for video) and how it went: caught, let it land, out of
+  bounds, brick or dropped (a dropped pull also records their turnover).
+  Migration `d2f4a6c8e0b1` adds `hang_time`, `landing_x`, `landing_y` and
+  `result` to the `pull` table (nullable; agreed with the club). Player
+  pull stats combine these with Game Day's pulls on other points: in-bounds
+  rate, average and best hang time, results, landed in their endzone %,
+  average depth (metres short of their back line) and a landing map.
+
+Also removed: `get_player_stats` and `calculate_completion_rate` in
+`app/routes/point.py`, unused helpers with their own (wrong) definitions.
+
 ## Still open
 
 - Every plan stat can now be worked out from what's recorded. Where opponents
   catch their own passes would need their passes recorded.
 - The player page runs one set of queries per game for the game history
-  (about 400 queries for a 24-game season). It isn't a regression, but it's
-  the next place to batch if the page gets slow.
+  (about 390 queries for a 24-game season). It's the next place to batch if
+  the page gets slow.
 - Points' O/D are read from `starting_position` for possessions and from
   `our_line_type` for line stats; the point form sets both, and they agree
   in all recorded data, so this was left alone.
