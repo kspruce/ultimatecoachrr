@@ -8,7 +8,7 @@ from app.models.throws import Throw
 from jinja2.utils import htmlsafe_json_dumps  # JSON that is safe inside <script>
 from app.utils.team_filter import get_current_team_id
 
-from app.stats.formulas import (POSSESSION_CHANGES, TURNOVER_EVENTS, get_point_starting_possession, goal_equivalents,
+from app.stats.formulas import (OUR_TURNS, POSSESSION_CHANGES, REGAINS, get_point_starting_possession, goal_equivalents,
                                 point_we_scored, possession_gap, scoring_efficiency)
 from app.stats.players import HUCK_DISTANCE, get_players_base_stats, players_in_games
 from app.stats.loaders import preload_game_points, game_points, game_line_points, is_analysed
@@ -126,12 +126,15 @@ def calculate_game_stats(game):
         'analysed_d_line_points': 0,
         'scoring_possessions': 0,
         'goals': 0,
+        'analysed_goals': 0,
 
         # REQUIRED by game_stats.html JS
         'point_flow': [],
     }
 
 
+    total_possessions = 0
+    d_possessions_gained = 0
     for point in all_points:
         point_events = list(point.events)
 
@@ -145,22 +148,27 @@ def calculate_game_stats(game):
         if is_d_point:
             stats['d_line_points'] += 1
         analysed = bool(point_events)
+        scored = point_we_scored(point)
+
+        # Possessions and turnovers only exist for points with full stats:
+        # a Game Day-only point has a line and a result but no plays.
+        our_turnovers = our_possessions = None
         if analysed:
             stats['analysed_points'] += 1
             stats['analysed_o_line_points'] += is_o_point
             stats['analysed_d_line_points'] += is_d_point
-
-        # Canonical possession analysis
-        analysis = analyze_point_possessions(point, point_events)
-        our_turnovers = analysis['our_turnovers']
-        our_possessions = analysis['our_possessions']
-        possessions_gained = analysis['possessions_gained']
-
-        stats['turnovers'] += our_turnovers
-        stats['possessions'] += our_possessions
-        stats['possessions_gained'] += possessions_gained
-
-        scored = point_we_scored(point)
+            analysis = analyze_point_possessions(point, point_events)
+            our_turnovers = analysis['our_turnovers']
+            our_possessions = analysis['our_possessions']
+            stats['turnovers'] += our_turnovers
+            stats['possessions'] += our_possessions
+            stats['possessions_gained'] += analysis['possessions_gained']
+            total_possessions += our_possessions
+            if is_d_point:
+                d_possessions_gained += analysis['possessions_gained']
+            if scored:
+                stats['scoring_possessions'] += our_possessions
+                stats['analysed_goals'] += 1
 
         stats['point_flow'].append({
             'point_number': getattr(point, 'point_number', len(stats['point_flow']) + 1),
@@ -168,14 +176,13 @@ def calculate_game_stats(game):
             'their_score_after': getattr(point, 'their_score_after', None),
             'scored': scored,
             'start_possession': start_pos,
+            'analysed': analysed,
             'turnovers': our_turnovers,
             'possessions': our_possessions,
         })
 
-
         if scored:
             stats['goals'] += 1
-            stats['scoring_possessions'] += our_possessions
 
             if is_o_point:
                 stats['o_line_conversions'] += 1
@@ -184,10 +191,9 @@ def calculate_game_stats(game):
 
             if is_d_point:
                 stats['d_line_conversions'] += 1
-                stats['breaks'] += 1   # <-- THIS IS THE MISSING PIECE
+                stats['breaks'] += 1
                 if analysed and our_turnovers == 0:
                     stats['clean_breaks'] += 1
-
 
     # Final derived metrics (MATCH TEAM STATS)
     stats['o_line_conversion_rate'] = (
@@ -215,14 +221,18 @@ def calculate_game_stats(game):
         if stats['analysed_points'] else 0
     )
 
+    # Every possession we had (points with full stats) per goal we scored
+    # in those points: possessions that ended in a turn count too.
     stats['possessions_per_goal'] = (
-        stats['scoring_possessions'] / stats['goals']
-        if stats['goals'] else 0
+        total_possessions / stats['analysed_goals']
+        if stats['analysed_goals'] else 0
     )
 
+    # Times we won the disc back on D-line points, per D-line point with
+    # full stats (the same as the team page)
     stats['avg_possessions_gained_per_point'] = (
-        stats['possessions_gained'] / stats['d_line_points']
-        if stats['d_line_points'] else 0
+        d_possessions_gained / stats['analysed_d_line_points']
+        if stats['analysed_d_line_points'] else 0
     )
 
     return stats
@@ -337,32 +347,8 @@ def calculate_possession_based_team_metrics(games):
             'possessions_per_goal': 0,
         }
 
-    # Load ALL events once
-    point_ids = [p.id for p in points]
-    # Determine team_organization_id safely (avoid relying on session/current_user)
-    team_org_id = None
-    for p in points:
-        if getattr(p, "team_organization_id", None):
-            team_org_id = p.team_organization_id
-            break
-    if team_org_id is None:
-        # final fallback
-        team_org_id = get_current_team_id()
-
-    all_events = (
-        Event.query
-        .filter(Event.team_organization_id == team_org_id)
-        .filter(Event.point_id.in_(point_ids))
-        .order_by(Event.point_id, Event.timestamp)
-        .all()
-    )
-
-
-    events_by_point = {}
-    for e in all_events:
-        events_by_point.setdefault(e.point_id, []).append(e)
-
-    # Counters
+    # Counters (points with full stats only: Game Day-only points have no
+    # possessions recorded)
     o_points = 0
     d_points = 0
 
@@ -374,10 +360,10 @@ def calculate_possession_based_team_metrics(games):
     d_possessions_gained = 0
 
     goals_scored = 0
-    possessions_in_scoring_points = 0
+    total_possessions = 0
 
     for point in points:
-        if point.id not in events_by_point:
+        if not is_analysed(point):
             continue  # Game Day only: no possessions recorded
         start_pos = get_point_starting_possession(point)
         is_o_point = start_pos == 'offence'
@@ -388,24 +374,19 @@ def calculate_possession_based_team_metrics(games):
         elif is_d_point:
             d_points += 1
 
-        analysis = analyze_point_possessions(
-            point,
-            events_by_point.get(point.id, [])
-        )
+        analysis = analyze_point_possessions(point, point.events)
 
         our_turnovers = analysis['our_turnovers']
-        our_possessions = analysis['our_possessions']
-        possessions_gained = analysis['possessions_gained']
+        total_possessions += analysis['our_possessions']
 
         if is_o_point:
             o_turnovers_total += our_turnovers
 
         if is_d_point:
-            d_possessions_gained += possessions_gained
+            d_possessions_gained += analysis['possessions_gained']
 
         if point_we_scored(point):
             goals_scored += 1
-            possessions_in_scoring_points += our_possessions
 
             if our_turnovers > 0:
                 scored_after_turnover += 1
@@ -422,8 +403,10 @@ def calculate_possession_based_team_metrics(games):
         'regain_offense_count': scored_after_turnover,
         'avg_o_turnovers_per_point': (o_turnovers_total / o_points) if o_points else 0,
         'avg_possessions_gained_per_point': (d_possessions_gained / d_points) if d_points else 0,
+        # Every possession we had per goal we scored (points with full
+        # stats): possessions that ended in a turn count too
         'possessions_per_goal': (
-            possessions_in_scoring_points / goals_scored if goals_scored else 0
+            total_possessions / goals_scored if goals_scored else 0
         ),
     }
 
@@ -479,112 +462,30 @@ def calculate_team_summary(games):
     return summary
 
 def analyze_point_possessions(point, events):
+    """Our possessions and turnovers in one point with full stats.
+
+    Uses the same rules as the stat recorder and formulas.possession_gap:
+    a throwaway, drop or stall is our turn (they are only recorded while we
+    have the disc); a block, forced or unforced turnover or Callahan wins it
+    back. So the counts don't depend on the order events were saved in, or
+    on Event.is_offensive (unreliable on older points).
+
+      - our_turnovers: our throwaways, drops and stalls
+      - possessions_gained: times we won the disc back from them
+      - our_possessions: possessions we had: the first one if we received
+        the pull, plus one for every time we won it back. A Callahan is a
+        possession that ends in a goal straight away.
     """
-    Possession-aware analysis for a single point.
-
-    Returns:
-      - our_turnovers: turnovers committed while we had possession
-      - our_possessions: number of distinct possessions we had in the point
-      - possessions_gained: number of times we gained the disc from them
-        (useful for D-line turnover generation)
-
-    This is resilient to different event schemas:
-      - event_type vs event vs result
-      - is_offensive vs offence
-      - timestamp vs event_index
-    """
-
-    def get_event_type(e):
-        return (
-            getattr(e, 'event_type', None)
-            or getattr(e, 'result', None)
-            or getattr(e, 'event', None)
-            or getattr(e, 'type', None)
-        )
-
-    def get_is_offensive(e):
-        # True means we were on offence when the event happened
-        v = getattr(e, 'is_offensive', None)
-        if v is None:
-            v = getattr(e, 'offence', None)
-        if v is None:
-            v = getattr(e, 'offense', None)
-        return v
-
-    def get_order_key(e):
-        # Prefer timestamp; fallback to event_index; then 0
-        ts = getattr(e, 'timestamp', None)
-        if ts is None:
-            ts = getattr(e, 'event_index', None)
-        return ts if ts is not None else 0
-
-    # Ensure chronological
-    events = sorted(list(events or []), key=get_order_key)
-
-    start_pos = get_point_starting_possession(point)
-    we_have_disc = (start_pos == 'offence')
-
-    our_turnovers = 0
-    our_possessions = 1 if we_have_disc else 0
-
-    # "possessions_gained" = how many times we gained the disc from them
-    # If we start on D, first gain increments this (good).
-    possessions_gained = 0
-
-    def switch_possession(to_us: bool, gained_from_them: bool = False):
-        nonlocal we_have_disc, our_possessions, possessions_gained
-        if we_have_disc == to_us:
-            return
-        we_have_disc = to_us
-        if to_us:
-            our_possessions += 1
-            if gained_from_them:
-                possessions_gained += 1
-
-    for e in events:
-        et = (get_event_type(e) or '').strip().lower()
-        is_off = get_is_offensive(e)
-
-        # Turnovers always flip possession
-        if et in TURNOVER_EVENTS:
-            if is_off is True:
-                # Our turnover
-                our_turnovers += 1
-                switch_possession(to_us=False)
-            elif is_off is False:
-                # Their turnover -> we gain
-                switch_possession(to_us=True, gained_from_them=True)
-            else:
-                # Fallback: assume current state
-                if we_have_disc:
-                    our_turnovers += 1
-                    switch_possession(to_us=False)
-                else:
-                    switch_possession(to_us=True, gained_from_them=True)
-
-        # Blocks also flip possession
-        elif et == 'block':
-            if is_off is False:
-                # We were defending -> our block -> we gain
-                switch_possession(to_us=True, gained_from_them=True)
-            elif is_off is True:
-                # Opponent block while we were attacking
-                switch_possession(to_us=False)
-            else:
-                # Fallback: flip
-                # If we had it, they now have it; if they had it, we now have it and we "gained"
-                if we_have_disc:
-                    switch_possession(to_us=False)
-                else:
-                    switch_possession(to_us=True, gained_from_them=True)
-
-        # Goals end the point; no need to flip possession
-
+    types = [getattr(e, 'event_type', None) for e in events or []]
+    our_turnovers = sum(1 for t in types if t in OUR_TURNS)
+    regains = sum(1 for t in types if t in REGAINS)
+    started_on_offence = get_point_starting_possession(point) == 'offence'
     return {
         'our_turnovers': our_turnovers,
-        'our_possessions': our_possessions,
-        'possessions_gained': possessions_gained
+        'our_possessions': int(started_on_offence) + regains,
+        'possessions_gained': regains,
     }
+
 
 def calculate_additional_team_metrics(games):
     """Calculate additional team metrics for radar charts"""

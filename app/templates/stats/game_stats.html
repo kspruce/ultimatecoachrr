@@ -72,8 +72,8 @@
         <div class="col-md-4">
             <div class="card stat-card">
                 <div class="stat-value">{{ (team_stats.avg_possessions_gained_per_point|default(0))|round(2) }}</div>
-                <div class="stat-label">Possessions Gained/Point</div>
-                <small class="text-muted">D-line turnover generation</small>
+                <div class="stat-label">Possessions Gained / D-point</div>
+                <small class="text-muted">Times we won the disc back (blocks, their turnovers, Callahans) per D-line point</small>
             </div>
         </div>
     </div>
@@ -348,8 +348,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                 },
                                 afterTitle: function(items) {
                                     const p = pointFlow[items[0].dataIndex];
+                                    if (!p.analysed) return 'Game Day only: no turnovers recorded';
                                     const t = p.turnovers || 0;
-                                    return t > 0 ? `${t} turnover${t > 1 ? 's' : ''} this point` : 'Clean point';
+                                    return t > 0 ? `${t} turnover${t > 1 ? 's' : ''} this point` : 'No turnovers';
                                 },
                                 label: function(context) {
                                     return `${context.dataset.label}: ${context.raw}`;

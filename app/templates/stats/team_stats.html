@@ -182,14 +182,14 @@
                             <div class="stat-card">
                                 <div class="stat-value">{{ (team_summary.possessions_per_goal|default(0))|round(1) }}</div>
                                 <div class="stat-label">Possessions/Goal</div>
-                                <small class="text-muted">Avg possessions needed to score</small>
+                                <small class="text-muted">Our possessions per goal we scored (full-stat points)</small>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="stat-card">
                                 <div class="stat-value">{{ (team_summary.avg_possessions_gained_per_point|default(0))|round(2) }}</div>
-                                <div class="stat-label">Possessions Gained/Point</div>
-                                <small class="text-muted">D-line turnover generation</small>
+                                <div class="stat-label">Possessions Gained / D-point</div>
+                                <small class="text-muted">Times we won the disc back (blocks, their turnovers, Callahans) per D-line point</small>
                             </div>
                         </div>
                     </div>
