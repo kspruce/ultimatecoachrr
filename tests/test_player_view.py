@@ -129,3 +129,11 @@ def test_other_peoples_roles_are_unaffected(app, club):
         assert captain.role_in(club['team']) == 'player'
         assert captain.real_role_in(club['team']) == 'captain'
         assert coach.role_in(club['team']) == 'coach'
+
+
+def test_record_is_only_in_the_menu_for_stat_takers_and_up(app, club):
+    record = 'bi-record-circle-fill'
+    assert record in text(club['coach'].get('/'))
+    assert record not in text(club['ann'].get('/'))
+    club['coach'].post('/player-view/start', data={'player': 'none'})
+    assert record not in text(club['coach'].get('/'))

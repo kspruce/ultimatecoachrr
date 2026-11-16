@@ -95,8 +95,8 @@
         </a>
       </li>
 
-      {# Record Stats #}
-      {% if current_user.is_authenticated %}
+      {# Record Stats: stat takers and above (players can't open it) #}
+      {% if current_user.is_authenticated and current_user.is_stat_taker %}
       <li class="nav-item {% if current_team and current_user.is_stat_taker and (not ts or ts.gameday_enabled) %}uc-on-tabbar {% endif %}{% if in_record %}uc-active{% endif %}">
         <a class="nav-link" href="{{ url_for('gameday.index') }}">
           <i class="bi bi-record-circle-fill"></i> Record
