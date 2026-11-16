@@ -655,6 +655,17 @@ def test_parse_reports_problems_with_row_numbers():
     assert 'missing the column(s): session' in missing['errors'][0][1]
 
 
+def test_parse_reports_text_too_long_for_its_column():
+    """Postgres refuses text longer than its column (SQLite doesn't check),
+    so an over-long value must be reported by row, not crash the import."""
+    long_reps = '20 clap, 20 crab high and low, 10 one-handed each hand'  # 54 characters; reps holds 50
+    bad = GOOD_CSV.replace('10 m sprints,15,,', f'10 m sprints,15,"{long_reps}",')
+    long_unit = 'seconds over the line'  # 21 characters; unit holds 20
+    parsed = pimport.parse(pimport.rows_from_csv(bad), pimport.rows_from_csv(GOOD_TESTS.replace(',s,', f',{long_unit},')))
+    assert (2, 'reps is 54 characters long; it can be at most 50.') in parsed['errors']
+    assert (2, 'unit is 21 characters long; it can be at most 20.') in parsed['errors']
+
+
 def test_parse_maps_tracks_weeks_sessions_and_tests():
     parsed = pimport.parse(pimport.rows_from_csv(GOOD_CSV), pimport.rows_from_csv(GOOD_TESTS))
     assert parsed['errors'] == []
