@@ -449,7 +449,8 @@
             <div class="row mb-4">
                 <div class="col-md-12">
                     <div class="card">
-                        <div class="card-header"><h5 class="mb-0">Pulls <small class="text-muted fw-normal">· from Game Day</small></h5></div>
+                        <div class="card-header"><h5 class="mb-0">Pulls
+                            <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="From the stat taker (hang time, where it landed, how it went) and from Game Day (in or out, hang time) on other points. Out of bounds includes a brick."></i></h5></div>
                         <div class="card-body">
                             <div class="row g-3 text-center">
                                 <div class="col-6 col-md-3"><div class="cutting-stat-value">{{ pl.pulls }}</div><div class="cutting-stat-label">Pulls</div></div>
@@ -457,6 +458,30 @@
                                 <div class="col-6 col-md-3"><div class="cutting-stat-value">{{ "%.1f"|format(pl.avg_hang_time) ~ 's' if pl.avg_hang_time is not none else '–' }}</div><div class="cutting-stat-label">Average hang time</div><div class="small text-muted">{{ pl.timed }} timed</div></div>
                                 <div class="col-6 col-md-3"><div class="cutting-stat-value">{{ "%.1f"|format(pl.best_hang_time) ~ 's' if pl.best_hang_time is not none else '–' }}</div><div class="cutting-stat-label">Best hang time</div></div>
                             </div>
+                            {% if pl.recorded %}
+                            <div class="row g-3 text-center mt-1">
+                                <div class="col-6 col-md-3"><div class="cutting-stat-value">{{ "%.0f%%"|format(pl.endzone_rate) if pl.endzone_rate is not none else '–' }}</div><div class="cutting-stat-label">Landed in their endzone</div><div class="small text-muted">of {{ pl.landed }} in bounds with a spot</div></div>
+                                <div class="col-6 col-md-3"><div class="cutting-stat-value">{{ "%.0f m"|format(pl.avg_depth) if pl.avg_depth is not none else '–' }}</div><div class="cutting-stat-label">Average landing</div><div class="small text-muted">short of their back line</div></div>
+                                <div class="col-12 col-md-6 small text-start">
+                                    {% for key, label in pull_results %}{% if pl.results[key] %}<span class="me-3">{{ label }}: <strong>{{ pl.results[key] }}</strong></span>{% endif %}{% endfor %}
+                                </div>
+                            </div>
+                            {% if pl.landings %}
+                            {# Where they landed: our end on the left, their endzone (where we pull to) on the right #}
+                            <svg viewBox="0 0 100 37" class="w-100 mt-3" style="max-height: 220px" role="img" aria-label="Where the pulls landed">
+                                <rect x="0" y="0" width="100" height="37" fill="#e8f3e8" stroke="#999" stroke-width="0.3"/>
+                                <rect x="0" y="0" width="18" height="37" fill="#d5e8d5"/>
+                                <rect x="82" y="0" width="18" height="37" fill="#d5e8d5"/>
+                                <line x1="18" y1="0" x2="18" y2="37" stroke="#999" stroke-width="0.3"/>
+                                <line x1="82" y1="0" x2="82" y2="37" stroke="#999" stroke-width="0.3"/>
+                                {% for l in pl.landings %}
+                                <circle cx="{{ l.x }}" cy="{{ l.y }}" r="1.2"
+                                        fill="{{ '#c0392b' if l.result in ('out', 'brick') else ('#e67e22' if l.result == 'dropped' else '#1f4e8c') }}"><title>{{ dict(pull_results)[l.result] if l.result else '' }}</title></circle>
+                                {% endfor %}
+                            </svg>
+                            <p class="small text-muted mb-0">Their endzone is on the right. Blue: in, orange: dropped, red: out or brick.</p>
+                            {% endif %}
+                            {% endif %}
                         </div>
                     </div>
                 </div>

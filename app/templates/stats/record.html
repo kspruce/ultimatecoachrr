@@ -33,6 +33,20 @@
 
     <!-- Mode toggle button removed from here and moved next to substitution button above -->
 
+    {% if point.starting_position == 'defense' %}
+    <!-- Our pull: tap when it's released (starts the timer), then where it lands -->
+    <div class="pull-bar" id="pull-bar">
+        <span id="pull-summary" class="pull-summary">Pull not recorded.</span>
+        <button type="button" id="pull-start" class="btn btn-sm btn-primary"
+                title="Tap as the disc leaves the puller's hand: starts the hang-time timer. Then tap where it lands.">Pull released ▶</button>
+        <button type="button" id="pull-no-timer" class="btn btn-sm btn-link"
+                title="From video: tap where it landed and type the hang time">No timer</button>
+        <span id="pull-timer" class="pull-timer" hidden></span>
+        <button type="button" id="pull-cancel" class="btn btn-sm btn-outline-secondary" hidden>Cancel</button>
+        <button type="button" id="pull-undo" class="btn btn-sm btn-outline-danger" hidden>Undo pull</button>
+    </div>
+    {% endif %}
+
     <div class="field-area">
     <!-- Single field for both events and cutting skills -->
     <div class="field-container" id="field">
@@ -103,6 +117,27 @@
             </div>
         </div>
     </div>
+
+    {% if point.starting_position == 'defense' %}
+    <!-- Pull details: who pulled, hang time, how it went -->
+    <div class="pull-select picker" id="pull-select">
+        <div class="picker-head"><h5>Pull</h5><button type="button" class="picker-cancel" id="pull-select-cancel" aria-label="Cancel">Cancel</button></div>
+        <div class="mb-2 small text-muted">Who pulled?</div>
+        <div class="player-grid" id="pull-players">
+            {% for player in line %}
+            <button type="button" class="pull-player" data-player-id="{{ player.id }}">#{{ player.jersey_number }} - {{ player.name }}</button>
+            {% endfor %}
+        </div>
+        <label class="form-label small mt-3 mb-1" for="pull-hang-time">Hang time (seconds)</label>
+        <input type="number" id="pull-hang-time" class="form-control form-control-sm" step="0.1" min="0" max="20" inputmode="decimal" style="max-width: 8rem">
+        <div class="mt-3 mb-2 small text-muted">How did it go?</div>
+        <div class="action-grid" id="pull-results">
+            {% for value, label in pull_results %}
+            <button type="button" class="action-button pull-result" data-result="{{ value }}">{{ label }}</button>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
 
     <!-- Player selection overlay -->
     <div class="player-select picker" id="player-select">
@@ -566,6 +601,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                 : (relativeX < 0.18 || relativeX > 0.82)
         };
         showPendingMarker(selectedPosition);
+
+        // Recording the pull: this tap is where it landed
+        if (window.pullLanded && window.pullLanded(selectedPosition)) return;
 
         console.log('Field click coordinates:', {
             clientX: e.clientX,
@@ -1535,6 +1573,102 @@ document.addEventListener('DOMContentLoaded', function() {
         updateCuttingSkillsTable();
         recomputePossession();
         undoButton.style.display = 'block';
+    }
+
+    // --- Our pull (D points): released -> landed -> who, hang time, result ---
+    const pullBar = document.getElementById('pull-bar');
+    if (pullBar) {
+        const pullSelect = document.getElementById('pull-select');
+        const summary = document.getElementById('pull-summary');
+        const timerEl = document.getElementById('pull-timer');
+        const startBtn = document.getElementById('pull-start');
+        const noTimerBtn = document.getElementById('pull-no-timer');
+        const cancelBtn = document.getElementById('pull-cancel');
+        const undoPullBtn = document.getElementById('pull-undo');
+        const hangInput = document.getElementById('pull-hang-time');
+        const RESULT_LABELS = {{ pull_results | tojson }}.reduce((o, [k, v]) => (o[k] = v, o), {});
+        let waiting = false, startedAt = null, ticker = null, landing = null, puller = null;
+
+        const csrf = () => document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        function showPull(pull) {
+            if (!pull) {
+                summary.textContent = 'Pull not recorded.';
+                undoPullBtn.hidden = true;
+                return;
+            }
+            const bits = [pull.player_name || 'Pull'];
+            if (pull.hang_time != null) bits.push(`${pull.hang_time.toFixed(1)} s`);
+            bits.push(RESULT_LABELS[pull.result] || pull.result);
+            summary.textContent = 'Pull: ' + bits.join(' · ');
+            undoPullBtn.hidden = false;
+        }
+        function idle() {
+            waiting = false; startedAt = null; clearInterval(ticker);
+            timerEl.hidden = true; cancelBtn.hidden = true;
+            startBtn.hidden = false; noTimerBtn.hidden = false;
+        }
+        function begin(timed) {
+            waiting = true; landing = null;
+            startedAt = timed ? performance.now() : null;
+            startBtn.hidden = true; noTimerBtn.hidden = true; cancelBtn.hidden = false; timerEl.hidden = false;
+            const tick = () => {
+                timerEl.textContent = (startedAt ? ((performance.now() - startedAt) / 1000).toFixed(1) + ' s · ' : '')
+                    + 'tap where it lands';
+            };
+            tick();
+            if (timed) ticker = setInterval(tick, 100);
+        }
+        startBtn.addEventListener('click', () => begin(true));
+        noTimerBtn.addEventListener('click', () => begin(false));
+        cancelBtn.addEventListener('click', () => { idle(); clearPendingMarker(); });
+
+        window.pullLanded = function(position) {
+            if (!waiting) return false;
+            const seconds = startedAt ? (performance.now() - startedAt) / 1000 : null;
+            idle();
+            landing = {x: position.x, y: position.y};
+            hangInput.value = seconds != null ? seconds.toFixed(1) : '';
+            puller = null;
+            document.querySelectorAll('.pull-player').forEach(b => b.classList.remove('selected'));
+            pullSelect.style.display = 'block';
+            return true;
+        };
+        document.querySelectorAll('.pull-player').forEach(btn => btn.addEventListener('click', () => {
+            puller = btn.dataset.playerId;
+            document.querySelectorAll('.pull-player').forEach(b => b.classList.toggle('selected', b === btn));
+        }));
+        document.getElementById('pull-select-cancel').addEventListener('click', () => {
+            pullSelect.style.display = 'none';
+            clearPendingMarker();
+        });
+        document.querySelectorAll('.pull-result').forEach(btn => btn.addEventListener('click', () => {
+            if (!puller) { notify('Pick who pulled first', 'warning'); return; }
+            const result = btn.dataset.result;
+            fetch(`/stats/record_pull/{{ point.id }}`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrf()},
+                body: JSON.stringify({player_id: puller, result: result, hang_time: hangInput.value,
+                                      landing_x: landing.x, landing_y: landing.y}),
+            }).then(r => r.json().then(data => {
+                if (!r.ok) throw new Error(data.error || r.status);
+                pullSelect.style.display = 'none';
+                clearPendingMarker();
+                showPull(data);
+                // A dropped pull is their turnover: record it, where it landed,
+                // so possession moves to us (it can be undone like any play)
+                if (result === 'dropped' && !gameState.is_offensive) {
+                    selectedPosition = {x: landing.x, y: landing.y};
+                    selectedPlayer = 'opponent';
+                    handleAction('unforced_turnover');
+                }
+            })).catch(err => notify(`Couldn't save the pull: ${err.message}`));
+        }));
+        undoPullBtn.addEventListener('click', () => {
+            fetch(`/stats/undo_pull/{{ point.id }}`, {method: 'POST', headers: {'X-CSRFToken': csrf()}})
+                .then(r => { if (!r.ok) throw new Error(r.status); showPull(null); })
+                .catch(err => notify(`Couldn't undo the pull: ${err.message}`));
+        });
+        showPull(existing.pull);
     }
 });
 

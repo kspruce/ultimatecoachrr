@@ -3,7 +3,7 @@ from flask import current_app
 from app import db
 from app.models.player import Player
 from app.models.point import LineUp
-from app.models.event import Event
+from app.models.event import Event, Pull
 from app.models.throws import Throw
 import math
 from app.utils.team_filter import get_current_team_id
@@ -119,15 +119,26 @@ def get_players_base_stats(players, games=None):
             analysed=analysed,
         )
 
-    # Game Day: the box score for points without full stats, and pulls
-    # (only Game Day records those)
+    # Pulls recorded on the stat taker (every pull in scope, so a point's
+    # Game Day pull isn't counted as well)
+    pull_query = Pull.query.filter(Pull.team_organization_id == get_current_team_id())
+    if point_ids is not None:
+        pull_query = pull_query.filter(Pull.point_id.in_(point_ids))
+    full_pulls = pull_query.all() if point_ids is None or point_ids else []
+    pulls_by_player = {}
+    for pull in full_pulls:
+        pulls_by_player.setdefault(pull.player_id, []).append(pull)
+
+    # Game Day: the box score for points without full stats, and pulls on
+    # points without a stat-taker pull
     lineup_points = {lu.point_id for lus in lineups_by_player.values() for lu in lus}
-    gameday = gameday_by_player(player_ids, lineup_points - analysed, point_ids)
+    gameday = gameday_by_player(player_ids, lineup_points - analysed, point_ids,
+                                skip_pulls_on={p.point_id for p in full_pulls})
     for player in players:
         stats = player_stats[player.id]
         gd = gameday.get(player.id, {})
         stats['box'] = season_box_score(stats, gd)
-        stats['pulls'] = pull_stats(gd)
+        stats['pulls'] = pull_stats(gd, pulls_by_player.get(player.id, []))
 
     return player_stats
 
@@ -135,10 +146,11 @@ def get_players_base_stats(players, games=None):
 GAMEDAY_TURNOVERS = ('throwaway', 'drop', 'stall')
 
 
-def gameday_by_player(player_ids, gameday_points, point_ids=None):
+def gameday_by_player(player_ids, gameday_points, point_ids=None, skip_pulls_on=()):
     """Counts of each player's Game Day plays: box-score plays on points
     without full stats (so nothing is counted twice), and every pull in
-    scope with its hang time."""
+    scope with its hang time, except on points whose pull was recorded on
+    the stat taker (skip_pulls_on)."""
     from app.models.gameday import GameDayEvent
     query = GameDayEvent.query.filter(
         GameDayEvent.player_id.in_(player_ids),
@@ -151,6 +163,8 @@ def gameday_by_player(player_ids, gameday_points, point_ids=None):
         gd = out.setdefault(e.player_id, {'goals': 0, 'assists': 0, 'blocks': 0, 'callahans': 0,
                                           'turnovers': 0, 'pulls': 0, 'pulls_out': 0, 'hang_times': []})
         if e.event_type == 'pull':
+            if e.point_id in skip_pulls_on:
+                continue  # the stat taker's pull wins
             gd['pulls'] += 1
             gd['pulls_out'] += e.event_result == 'out'
             if e.hang_time is not None:
@@ -227,16 +241,35 @@ def season_box_score(stats, gd):
     }
 
 
-def pull_stats(gd):
-    hang = gd.get('hang_times', [])
-    pulls = gd.get('pulls', 0)
+def pull_stats(gd, full_pulls=()):
+    """A player's pulls: the stat taker's (Pull rows, with where they landed
+    and how they went) and Game Day's on other points (in or out, hang time).
+
+    Out of bounds counts 'out' and 'brick'. Landing is for pulls with a
+    landing spot that stayed in: x is metres up the field attacking right,
+    so their endzone (where a pull lands deep) is x 82-100. Depth is how
+    far short of their back line it came down (100 - x): smaller is deeper.
+    """
+    hang = list(gd.get('hang_times', [])) + [p.hang_time for p in full_pulls if p.hang_time is not None]
+    pulls = gd.get('pulls', 0) + len(full_pulls)
+    out = gd.get('pulls_out', 0) + sum(1 for p in full_pulls if p.result in Pull.OUT_RESULTS)
+    results = {key: sum(1 for p in full_pulls if p.result == key) for key, _ in Pull.RESULTS}
+    landed = [p for p in full_pulls if p.landing_x is not None and p.landing_y is not None
+              and p.result not in Pull.OUT_RESULTS]
     return {
         'pulls': pulls,
-        'out': gd.get('pulls_out', 0),
-        'in_rate': 100.0 * (pulls - gd.get('pulls_out', 0)) / pulls if pulls else None,
+        'out': out,
+        'in_rate': 100.0 * (pulls - out) / pulls if pulls else None,
         'avg_hang_time': sum(hang) / len(hang) if hang else None,
         'best_hang_time': max(hang) if hang else None,
         'timed': len(hang),
+        'results': results,
+        'recorded': len(full_pulls),   # with result and landing, from the stat taker
+        'landed': len(landed),
+        'endzone_rate': 100.0 * sum(1 for p in landed if p.landing_x >= 82) / len(landed) if landed else None,
+        'avg_depth': sum(100 - p.landing_x for p in landed) / len(landed) if landed else None,
+        'landings': [{'x': p.landing_x, 'y': p.landing_y, 'result': p.result} for p in full_pulls
+                     if p.landing_x is not None and p.landing_y is not None],
     }
 
 # A huck: 20 m+ long and 15 m+ upfield (app.stats.throwing.throw_kind), the

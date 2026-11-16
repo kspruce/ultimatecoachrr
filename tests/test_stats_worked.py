@@ -845,3 +845,75 @@ def test_a_pickup_starts_a_possession(app):
     assert db.session.get(Point, p1).point_outcome is None
     types = [e.event_type for e in Event.query.filter_by(point_id=p1).order_by(Event.id)]
     assert types == ['pickup', 'catch']
+
+
+# --- pulls --------------------------------------------------------------------------
+
+def test_pull_stats_by_hand(app):
+    """C pulls on three D points; they score each time.
+
+    1. Stat taker: 5.0 s, landed at (90, 18) in their endzone, caught.
+       Game Day also logged this pull (9.9 s): the stat taker's wins.
+    2. Stat taker: 4.0 s, out of bounds at (60, 36).
+    3. Only taken on Game Day: in, 6.0 s.
+
+    Pulls 3, out 1 -> in bounds 2 of 3 = 66.7%.
+    Hang times 5.0, 4.0, 6.0: average 5.0 s, best 6.0 s.
+    In bounds with a landing spot: point 1 only, 90 m up the field, so in
+    their endzone (82-100 m): 100%, and 100 - 90 = 10 m short of their
+    back line.
+    """
+    from app import db
+    from app.models.gameday import GameDayEvent
+    from app.stats.players import get_players_base_stats
+    w = WorkedGame(app)
+    c = w.ids['C']
+    p1 = w.point('D', [('scored_on', 'opp', 0, 18)])
+    p2 = w.point('D', [('scored_on', 'opp', 0, 18)])
+    for point_id, hang, x, y, result in [(p1, '5.0', 90, 18, 'caught'), (p2, '4.0', 60, 36, 'out')]:
+        r = w.client.post(f'/stats/record_pull/{point_id}', json={
+            'player_id': c, 'hang_time': hang, 'landing_x': x, 'landing_y': y, 'result': result})
+        assert r.status_code == 201, r.get_data(as_text=True)
+    db.session.add(GameDayEvent(point_id=p1, player_id=c, event_type='pull', event_result='in',
+                                hang_time=9.9, sequence=1, team_organization_id=w.team.id))
+    db.session.commit()
+    r = w.client.post('/gameday/api/record-point', json={
+        'game_id': w.game_id, 'point_number': 3, 'line_type': 'D-line', 'gender_ratio': '4-3',
+        'players': list(w.ids.values()), 'outcome': 'conceded',
+        'events': [{'type': 'pull', 'player_id': c, 'result': 'in', 'hang_time': 6.0}]})
+    assert r.get_json()['success'], r.get_data(as_text=True)
+    ctx = w.context()
+    try:
+        pulls = get_players_base_stats([w.players['C']], w.games())[c]['pulls']
+    finally:
+        ctx.pop()
+    assert (pulls['pulls'], pulls['out']) == (3, 1)
+    assert pulls['in_rate'] == pytest.approx(200 / 3)
+    assert pulls['avg_hang_time'] == pytest.approx(5.0) and pulls['best_hang_time'] == 6.0
+    assert (pulls['results']['caught'], pulls['results']['out'], pulls['landed']) == (1, 1, 1)
+    assert pulls['endzone_rate'] == 100 and pulls['avg_depth'] == pytest.approx(10)
+    page = w.client.get(f'/stats/player/{c}').get_data(as_text=True)
+    assert 'Landed in their endzone' in page and 'Where the pulls landed' in page
+
+
+def test_record_pull_checks_its_input(app):
+    w = WorkedGame(app)
+    p = w.point('D', [('scored_on', 'opp', 0, 18)])
+    assert w.client.post(f'/stats/record_pull/{p}', json={'player_id': w.ids['C']}).status_code == 400
+    assert w.client.post(f'/stats/record_pull/{p}', json={'result': 'caught'}).status_code == 400
+    # A player from another team isn't allowed
+    from app import db
+    from app.models.player import Player
+    from tests import stats_data
+    team2 = stats_data.build_team(name='Other', slug='other')
+    stranger = Player(name='Stranger', team_organization_id=team2.id)
+    db.session.add(stranger)
+    db.session.commit()
+    assert w.client.post(f'/stats/record_pull/{p}', json={'player_id': stranger.id, 'result': 'caught'}).status_code == 404
+    # Recording again replaces the pull; a silly hang time is capped
+    for hang in ('3', '99'):
+        r = w.client.post(f'/stats/record_pull/{p}', json={'player_id': w.ids['C'], 'result': 'landed', 'hang_time': hang})
+        assert r.status_code == 201
+    assert r.get_json()['hang_time'] == 20
+    from app.models.event import Pull
+    assert Pull.query.filter_by(point_id=p).count() == 1
