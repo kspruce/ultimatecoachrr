@@ -171,6 +171,42 @@ def gameday_by_player(player_ids, gameday_points, point_ids=None):
     return out
 
 
+def gameday_throwing(point_ids, team_id=None):
+    """Each player's throws on Game Day, from its catch, pickup, stall and
+    throwaway taps, in one query: {player_id: {'throws', 'throwaways',
+    'completion_rate'}}, plus the team's total under None.
+
+    Every catch or pickup puts the disc in a player's hands, and they then
+    throw it (caught, or thrown away) unless they're stalled. So throws =
+    catches + pickups - stalls, and completion = (throws - throwaways) /
+    throws. A drop is the receiver's turnover, as with full stats. Points
+    where Game Day only kept the score and the box score have no catches,
+    so no completion (None)."""
+    from collections import defaultdict
+    from sqlalchemy import func
+    from app.models.gameday import GameDayEvent
+    if not point_ids:
+        return {}
+    team_id = team_id or get_current_team_id()
+    counts = defaultdict(lambda: defaultdict(int))
+    for player_id, kind, n in (db.session.query(GameDayEvent.player_id, GameDayEvent.event_type,
+                                                func.count(GameDayEvent.id))
+                               .filter(GameDayEvent.point_id.in_(list(point_ids)),
+                                       GameDayEvent.team_organization_id == team_id,
+                                       GameDayEvent.event_type.in_(['catch', 'pickup', 'stall', 'throwaway']))
+                               .group_by(GameDayEvent.player_id, GameDayEvent.event_type)):
+        for who in (player_id, None):
+            counts[who][kind] += n
+    out = {}
+    for who, c in counts.items():
+        # A throwaway always follows a catch or pickup; if one wasn't tapped,
+        # the throwaway is still a throw
+        throws = max(c['catch'] + c['pickup'] - c['stall'], c['throwaway'])
+        out[who] = {'throws': throws, 'throwaways': c['throwaway'],
+                    'completion_rate': round(100.0 * (throws - c['throwaway']) / throws, 1) if throws else None}
+    return out
+
+
 def season_box_score(stats, gd):
     """Goals, assists, blocks and turnovers from every point: full stats
     where the point has them, the Game Day record where it doesn't."""

@@ -430,3 +430,52 @@ def test_a_d_line_player_has_no_o_line_plus_minus(app):
     # And the other way round: only Z has a D-line +/-.
     assert y['d_line_plus_minus_per_point']['value'] is None
     assert z['d_line_plus_minus_per_point']['rank'] == 1
+
+
+# --- Game Day ------------------------------------------------------------------
+
+def test_game_day_completion(app):
+    """Two points taken live on Game Day (no full stats).
+
+    1. O point: A picks up, B catches, C catches and throws it away, D
+       blocks, E picks up, A catches, B scores from A's assist.
+    2. O point: F picks up and is stalled; they score.
+
+    The disc was in someone's hands 6 times (catches and pickups): A twice,
+    B, C, E and F once. F was stalled, so F threw nothing: throws = 6 - 1 =
+    5, and 1 was thrown away (C). Completion = 4 / 5 = 80%.
+    C: 1 throw, thrown away = 0%. F: no throws, so no completion (a dash).
+    (Before the fix C showed 1 / (1 + 1) = 50% and F 100%, the game's team
+    figure was the average of the players' percentages, (100 + 100 + 50 +
+    100 + 100) / 5 = 90%, and the tournament and season pages showed
+    (goals + assists) / (goals + assists + turns) = 2 / 4 = 50%.)
+    """
+    from app.models.point import Point
+    from app.stats.players import gameday_throwing
+    w = WorkedGame(app)
+    ids = w.ids
+    line = [ids[k] for k in 'ABCDEFG']
+    for number, events, outcome in [
+        (1, [('pickup', 'A'), ('catch', 'B'), ('catch', 'C'), ('throwaway', 'C'), ('block', 'D'),
+             ('pickup', 'E'), ('catch', 'A'), ('assist', 'A'), ('score', 'B')], 'scored'),
+        (2, [('pickup', 'F'), ('stall', 'F')], 'conceded'),
+    ]:
+        r = w.client.post('/gameday/api/record-point', json={
+            'game_id': w.game_id, 'point_number': number, 'line_type': 'O-line',
+            'gender_ratio': '4-3', 'players': line, 'outcome': outcome,
+            'events': [{'type': t, 'player_id': ids[k]} for t, k in events]})
+        assert r.get_json()['success'], r.get_data(as_text=True)
+    ctx = w.context()
+    try:
+        point_ids = [p.id for p in Point.query.filter_by(game_id=w.game_id)]
+        throwing = gameday_throwing(point_ids)
+    finally:
+        ctx.pop()
+    assert throwing[None] == {'throws': 5, 'throwaways': 1, 'completion_rate': 80.0}
+    assert throwing[ids['C']]['completion_rate'] == 0
+    assert throwing[ids['F']] == {'throws': 0, 'throwaways': 0, 'completion_rate': None}
+    assert throwing[ids['A']]['throws'] == 2
+    game_page = w.client.get(f'/gameday/stats/{w.game_id}').get_data(as_text=True)
+    assert '80.0%' in game_page and '90.0%' not in game_page
+    tournament_page = w.client.get(f'/gameday/tournament/{w.tournament.id}/stats').get_data(as_text=True)
+    assert '80.0%' in tournament_page and '50.0%' not in tournament_page
