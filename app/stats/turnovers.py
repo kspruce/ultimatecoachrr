@@ -13,7 +13,7 @@ from app.models.throws import Throw
 from app.utils.media_embed import youtube_id
 from app.utils.team_filter import get_current_team_id
 
-from app.stats.loaders import preload_game_points, game_points, unthrown_throwaways
+from app.stats.loaders import has_plays, preload_game_points, game_points, unthrown_throwaways
 from app.stats.throwing import (DEPTH_LABELS, DEPTH_ZONES, LANE_LABELS, LANES, THROW_KIND_LABELS,
                                 THROW_KINDS, depth_zone, lane, throw_kind)
 
@@ -119,7 +119,7 @@ class ThrowingData:
             pid: sorted(point.events, key=lambda e: e.id) for pid, point in self.points.items()
         }
         # Points with full stats (not just taken live on Game Day)
-        self.analysed = {pid for pid, events in self.events_by_point.items() if events}
+        self.analysed = {pid for pid, events in self.events_by_point.items() if has_plays(events)}
 
         # A throwaway with no stored throw (the first play of a point, with
         # no pickup recorded) is still a throw and a turnover: added with an

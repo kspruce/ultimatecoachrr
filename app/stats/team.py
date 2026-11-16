@@ -12,7 +12,8 @@ from app.stats.formulas import (OUR_TURNS, POSSESSION_CHANGES, REGAINS, get_poin
                                 point_has_result, point_we_scored, possession_gap, scoring_efficiency)
 from app.stats.players import get_players_base_stats, players_in_games
 from app.stats.throwing import throw_kind
-from app.stats.loaders import preload_game_points, game_points, game_line_points, is_analysed, unthrown_throwaways
+from app.stats.loaders import (game_line_points, game_points, has_plays, is_analysed, preload_game_points,
+                               unthrown_throwaways)
 
 
 def _point_gap(point):
@@ -142,7 +143,7 @@ def calculate_game_stats(game):
         is_o_point = start_pos == 'offence'
         is_d_point = start_pos == 'defence'
 
-        analysed = bool(point_events)
+        analysed = has_plays(point_events)
         scored = point_we_scored(point)
         # Holds, breaks and conversion only count points that ended in a
         # goal: one stopped by the cap or half time was neither.

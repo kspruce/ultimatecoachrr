@@ -354,3 +354,47 @@ def test_breaks_and_holds_are_ours(possession_game):
     assert (summary['holds'], summary['breaks']) == (1, 2)
     assert json.loads(trends['break_percentage']) == [pytest.approx(60)]
     assert json.loads(trends['d_line_efficiency']) == [pytest.approx(200 / 3)]
+
+
+# --- a point with no plays ------------------------------------------------------
+
+def test_a_point_with_no_plays_has_no_full_stats(app):
+    """1. O point: A picks up, A to B, B throws it away; they score.
+    2. O point, a hold taken live (no plays), where the only thing recorded
+       was a substitution.
+
+    Only point 1 has full stats, so turnovers per point = 1 / 1 = 1.0 and
+    A's and B's per-point rates divide by 1 point, not 2. Point 2 still
+    counts as played, and as a hold: hold % = 1 of 2 = 50%.
+    (Before, the substitution made point 2 a point with full stats and no
+    turns: 0.5 turnovers per point.)
+    """
+    from app import db
+    from app.models.event import Event
+    from app.models.point import Point
+    from app.stats import dashboard, turnovers
+    from app.stats.players import get_players_base_stats
+    from app.stats.team import calculate_game_stats
+    w = WorkedGame(app)
+    w.point('O', [('catch', 'A', 20, 18), ('catch', 'B', 35, 18), ('throwaway', 'B', 60, 18),
+                  ('scored_on', 'opp', 0, 18)])
+    p2 = w.point('O', [])
+    point = db.session.get(Point, p2)
+    point.point_outcome, point.our_score_after, point.their_score_after = 'scored', 1, 1
+    db.session.add(Event(point_id=p2, player_id=w.ids['A'], event_type='substitution',
+                         team_organization_id=w.team.id))
+    db.session.commit()
+    ctx = w.context()
+    try:
+        games = w.games()
+        data = turnovers.ThrowingData(games)
+        headline = dashboard.period_numbers(data, {w.game_id}, games)
+        game = calculate_game_stats(w.game())
+        b = get_players_base_stats([w.players['B']], games)[w.ids['B']]
+    finally:
+        ctx.pop()
+    assert headline['turnovers_per_point'] == pytest.approx(1.0)
+    assert headline['hold'] == pytest.approx(50)
+    assert game['analysed_points'] == 1 and game['avg_turnovers_per_point'] == pytest.approx(1.0)
+    assert (b['points_played'], b['analysed_points']) == (2, 1)
+    assert b['throws_per_point'] == pytest.approx(1.0)   # B's one throw, the throwaway
