@@ -10,7 +10,7 @@
 
 {% block content %}
 <div class="container th-page" style="max-width:760px">
-  <nav class="th-crumbs" aria-label="Breadcrumb"><a href="{{ url_for('feedback.mine') }}">My Feedback</a></nav>
+  <nav class="th-crumbs" aria-label="Breadcrumb"><a href="{{ url_for('checkin.mine') }}">My Check-ins</a></nav>
   <div class="th-head"><div>
     <h1>{{ req.title if req else 'How did I go?' }}</h1>
     <p>{% if req and req.message %}{{ req.message }}<br>{% endif %}Tap what fits, skip what didn't come up. About a minute. Your coaches see this.</p>
@@ -23,7 +23,7 @@
     {% if not req %}
     <div class="th-form-card">
       <label class="form-label" for="about">What's it about?</label>
-      {% set cur = ('t:' ~ check_in.tournament_id) if check_in and check_in.tournament_id else ('s:' ~ check_in.session_id) if check_in and check_in.session_id else 'none' %}
+      {% set cur = ('t:' ~ check_in.tournament_id) if check_in and check_in.tournament_id else ('s:' ~ check_in.session_id) if check_in and check_in.session_id else (request.args.get('about') or 'none') if not check_in else 'none' %}
       <select id="about" name="about" class="form-select">
         <option value="none" {% if cur == 'none' %}selected{% endif %}>Generally, lately</option>
         {% if tournaments %}<optgroup label="Tournaments">{% for t in tournaments %}<option value="t:{{ t.id }}" {% if cur == 't:' ~ t.id %}selected{% endif %}>{{ t.name }}</option>{% endfor %}</optgroup>{% endif %}
@@ -66,7 +66,7 @@
     </div>
 
     <div class="th-actionbar">
-      <a href="{{ url_for('checkin.view', check_in_id=check_in.id) if check_in and check_in.id else url_for('feedback.mine') }}" class="btn btn-link px-2">Cancel</a>
+      <a href="{{ url_for('checkin.view', check_in_id=check_in.id) if check_in and check_in.id else url_for('checkin.mine') }}" class="btn btn-link px-2">Cancel</a>
       <span class="grow"></span>
       <button type="submit" class="btn btn-primary th-btn px-4"><i class="bi bi-check-lg"></i>Save check-in</button>
     </div>

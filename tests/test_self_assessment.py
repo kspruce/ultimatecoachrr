@@ -52,7 +52,8 @@ def test_player_fills_in_a_check_in(app, club):
     assert a.score_map() == {cut[0].id: 3} and a.notes == 'Better by the end' and a.focus_item_id is None
 
     # Listed on My Feedback and their profile
-    assert 'My check-ins' in text(ann.get('/feedback/mine'))
+    assert 'My Check-ins' in text(ann.get('/feedback/mine')) and 'Late on my cuts' not in text(ann.get('/feedback/mine'))
+    assert 'Better by the end' not in text(ann.get('/check-ins/mine')) and 'Check-in' in text(ann.get('/check-ins/mine'))
     assert 'Check-ins' in text(ann.get(f"/team/player/{club['ann']}"))
 
 
@@ -87,13 +88,21 @@ def test_nudge_and_team_overview(app, club):
     req = CheckInRequest.query.one()
     assert req.team_organization_id == club['team'] and req.is_open()
 
-    # Players see it and it counts as something new for them
+    # Players see it on the home page, in the menu (with a badge) and on
+    # My Check-ins; it isn't counted as a new feedback note
     ann = login(app, club, 'ann_user')
-    mine = text(ann.get('/feedback/mine'))
-    assert 'After Nationals' in mine and 'Be honest' in mine
+    home = text(ann.get('/'))
+    assert 'Check-in: After Nationals' in home and 'Be honest' in home
+    assert f'/check-in/new?request={req.id}' in home
+    assert 'My Check-ins' in home and 'uc-user-dot' in home
+    mine = text(ann.get('/check-ins/mine'))
+    assert 'Your coaches asked for a check-in: After Nationals' in mine and 'Be honest' in mine
+    assert 'your coaches asked for one' in text(ann.get('/feedback/mine'))
     from app.models.user import User
     from app.routes.feedback import unseen_count
-    assert unseen_count(db.session.get(User, club['ann_user'])) == 1
+    assert unseen_count(db.session.get(User, club['ann_user'])) == 0
+    # Coaches (on their home page) don't get the player's card
+    assert 'Check-in: After Nationals' not in text(coach.get('/'))
     # Another team's players don't
     assert CheckInRequest.query.filter_by(team_organization_id=club['other']).count() == 0
 
@@ -103,8 +112,9 @@ def test_nudge_and_team_overview(app, club):
     ann.post('/check-in/new', data={'request': req.id, f'score-{d[0].id}': '1', f'score-{d[1].id}': '2'})
     a = SelfAssessment.query.one()
     assert a.request_id == req.id
-    assert unseen_count(db.session.get(User, club['ann_user'])) == 0
-    assert 'Your coaches asked' not in text(ann.get('/feedback/mine'))
+    assert 'Check-in: After Nationals' not in text(ann.get('/'))
+    assert 'Your coaches asked' not in text(ann.get('/check-ins/mine'))
+    assert 'uc-user-dot' not in text(ann.get('/check-ins/mine'))
     # Going back to the nudge opens the one they filled in
     assert ann.get(f'/check-in/new?request={req.id}').headers['Location'].endswith(f'/check-in/{a.id}/edit')
 
@@ -168,3 +178,42 @@ def test_coaches_edit_the_rubric(app, club):
     login(app, club, 'other_coach', team='other').get('/check-ins/rubric')
     assert RubricItem.query.filter_by(team_organization_id=club['other']).count() == \
         sum(len(v) for v in DEFAULT_ITEMS.values())
+
+
+def test_home_asks_after_a_tournament(app, club):
+    """For a few days after a tournament they went to, the home page asks
+    how it went, until they check in."""
+    from datetime import date, timedelta
+    from app.models.tournament import Tournament
+    from app.models.tournament_rsvp import TournamentRSVP
+    today = date.today()
+    went = Tournament(name='Windmill', team_organization_id=club['team'],
+                      start_date=today - timedelta(days=2), end_date=today - timedelta(days=1))
+    skipped = Tournament(name='Skipped Cup', team_organization_id=club['team'],
+                         start_date=today - timedelta(days=1), end_date=today - timedelta(days=1))
+    old = Tournament(name='Long Ago Open', team_organization_id=club['team'],
+                     start_date=today - timedelta(days=20), end_date=today - timedelta(days=19))
+    db.session.add_all([went, skipped, old])
+    db.session.flush()
+    db.session.add_all([
+        TournamentRSVP(tournament_id=went.id, player_id=club['ann'], status='attending', team_organization_id=club['team']),
+        TournamentRSVP(tournament_id=skipped.id, player_id=club['ann'], status='not_attending', team_organization_id=club['team']),
+        TournamentRSVP(tournament_id=old.id, player_id=club['ann'], status='attending', team_organization_id=club['team']),
+    ])
+    db.session.commit()
+    went_id = went.id
+
+    ann = login(app, club, 'ann_user')
+    home = text(ann.get('/'))
+    assert 'How did Windmill go?' in home and 'Skipped Cup' not in home and 'Long Ago Open' not in home
+    assert f'about=t:{went_id}' in home
+    # The form opens about that tournament
+    form = text(ann.get(f'/check-in/new?about=t:{went_id}'))
+    assert f'value="t:{went_id}" selected' in form
+    # Ben didn't go: nothing for him
+    assert 'How did Windmill go?' not in text(login(app, club, 'ben_user').get('/'))
+
+    cut = items(club, 'cutting')
+    ann.post('/check-in/new', data={'about': f't:{went_id}', f'score-{cut[0].id}': '3'})
+    assert SelfAssessment.query.one().tournament_id == went_id
+    assert 'How did Windmill go?' not in text(ann.get('/'))

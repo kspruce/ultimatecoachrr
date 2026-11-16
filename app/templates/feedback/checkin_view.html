@@ -11,7 +11,7 @@
 {% block content %}
 <div class="container th-page" style="max-width:760px">
   <nav class="th-crumbs" aria-label="Breadcrumb">
-    {% if is_own %}<a href="{{ url_for('feedback.mine') }}">My Feedback</a>
+    {% if is_own %}<a href="{{ url_for('checkin.mine') }}">My Check-ins</a>
     {% else %}<a href="{{ url_for('checkin.team') }}">Check-ins</a> · <a href="{{ url_for('team.player_detail', player_id=check_in.player_id, _anchor='development') }}">{{ check_in.player.name }}</a>{% endif %}
   </nav>
   <div class="th-head">

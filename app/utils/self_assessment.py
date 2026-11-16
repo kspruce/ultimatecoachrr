@@ -135,3 +135,46 @@ def team_overview(team_id, request_id=None, days=None):
 def section_trend(check_ins):
     """[(check-in, {section: average})] oldest first, for a player's trend."""
     return [(a, a.section_averages()) for a in reversed(check_ins)]
+
+
+PROMPT_DAYS_AFTER_TOURNAMENT = 4
+
+
+def recent_tournament_prompt(player, today=None):
+    """A tournament the player went to that ended in the last few days and
+    they haven't checked in about since, so the home page can ask "How did
+    you go?". None otherwise (or when a nudge already covers it)."""
+    from datetime import date
+    from app.models.tournament import Tournament
+    from app.models.tournament_rsvp import TournamentRSVP
+    if player is None or not player.active:
+        return None
+    today = today or date.today()
+    since = today - timedelta(days=PROMPT_DAYS_AFTER_TOURNAMENT)
+    went = (Tournament.query.join(TournamentRSVP, TournamentRSVP.tournament_id == Tournament.id)
+            .filter(Tournament.team_organization_id == player.team_organization_id,
+                    TournamentRSVP.player_id == player.id,
+                    db.or_(TournamentRSVP.status == 'attending', TournamentRSVP.selection == 'picked'),
+                    Tournament.start_date.isnot(None), Tournament.start_date <= today)
+            .order_by(Tournament.start_date.desc()).limit(3).all())
+    nudged = {r.tournament_id for r in open_requests(player.team_organization_id) if r.tournament_id}
+    for t in went:
+        last_day = t.end_or_start
+        if last_day < since or last_day > today or t.id in nudged:
+            continue
+        started = datetime.combine(t.start_date, datetime.min.time())
+        done = (SelfAssessment.query.filter_by(player_id=player.id)
+                .filter(db.or_(SelfAssessment.tournament_id == t.id, SelfAssessment.created_at >= started))
+                .first())
+        if done is None:
+            return t
+    return None
+
+
+def prompts_for(player):
+    """What to ask the player about: open nudges, and a recent tournament."""
+    if player is None:
+        return {'requests': [], 'tournament': None, 'count': 0}
+    requests = pending_requests(player)
+    tournament = recent_tournament_prompt(player)
+    return {'requests': requests, 'tournament': tournament, 'count': len(requests)}

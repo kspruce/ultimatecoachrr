@@ -218,6 +218,30 @@
   {% endif %}
 </section>
 
+{# ══════════ CHECK-IN (coaches asked, or a tournament just finished) ══════════ #}
+{% if current_user.player and not coach_view|default(false) %}
+{% set ci = check_in_prompts() %}
+{% for r in ci.requests[:1] %}
+<section class="panel" aria-labelledby="checkin-h" style="border:2px solid var(--club-ink)">
+  <div class="panel-h"><h2 id="checkin-h"><i class="bi bi-clipboard-check me-1" aria-hidden="true"></i>Check-in: {{ r.title }}</h2>{% if ci.requests|length > 1 %}<a href="{{ url_for('checkin.mine') }}">{{ ci.requests|length }} asked →</a>{% endif %}</div>
+  <div class="d-flex flex-wrap align-items-center gap-2">
+    <div class="flex-grow-1">{{ r.message or 'Your coaches asked how you went.' }} <span class="text-muted">About a minute.</span></div>
+    <a class="btn btn-primary" href="{{ url_for('checkin.new', request=r.id) }}">Fill it in</a>
+  </div>
+</section>
+{% else %}
+{% if ci.tournament %}
+<section class="panel" aria-labelledby="checkin-h">
+  <div class="d-flex flex-wrap align-items-center gap-2">
+    <i class="bi bi-flag fs-4" style="color:var(--club-ink)" aria-hidden="true"></i>
+    <div class="flex-grow-1"><b id="checkin-h">How did {{ ci.tournament.name }} go?</b><br><span class="small text-muted">Rate yourself while it's fresh. About a minute.</span></div>
+    <a class="btn btn-outline-primary" href="{{ url_for('checkin.new', about='t:' ~ ci.tournament.id) }}">Check in</a>
+  </div>
+</section>
+{% endif %}
+{% endfor %}
+{% endif %}
+
 {# ══════════ GETTING STARTED ══════════ #}
 {% if checklist %}
 <section class="panel ob-card">
@@ -343,6 +367,7 @@
       {% endif %}
       <div class="pills">
         <a href="{{ url_for('team.player_detail', player_id=me.id) }}">Profile</a>
+        <a href="{{ url_for('checkin.mine') }}">How did I go?</a>
         {% if not s or s.stats_enabled %}<a href="{{ url_for('stats_dashboard.player_stats', player_id=me.id) }}">My stats</a>{% endif %}
         {% if sessions_on %}<a href="{{ url_for('session.player_attendance', player_id=me.id) }}">Attendance</a>{% endif %}
         {% if not s or s.fitness_enabled %}<a href="{{ url_for('fitness.player_fitness', player_id=me.id) }}">Fitness</a>{% endif %}

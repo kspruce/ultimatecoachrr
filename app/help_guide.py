@@ -162,7 +162,7 @@ FEATURES = [
             'player. They stay with the coaches until a coach shares them.', 'feedback.mine',
             'My Feedback', 'training',
             steps=_m('Read shared notes under My Feedback in your account menu; new ones show on the home page',
-                     'Rate yourself with <em>How did I go?</em> on My Feedback: tap through offence, cutting, '
+                     'Rate yourself under <em>My Check-ins</em> in your account menu (or <em>How did I go?</em> on the home page): tap through offence, cutting, '
                      'handling, defence and mental &amp; spirit, star a focus and add notes. Your coaches see it'),
             coach_endpoint='feedback.hub', coach_link_label='Player Feedback',
             coach_steps=_m('Write notes from a session (Quick Feedback), a game, a clip\'s Feedback tab or the player\'s page',
