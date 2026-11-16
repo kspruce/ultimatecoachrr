@@ -297,3 +297,37 @@ def test_team_completion_counts_a_drop_as_an_incomplete_pass(app):
     assert c['touches'] == 2
     assert c['turnovers_per_10'] == pytest.approx(5.0)
     assert (c['throwaways_per_10'], c['drops_per_10']) == (0, pytest.approx(5.0))
+
+
+# --- hucks -------------------------------------------------------------------
+
+def test_a_huck_is_long_and_upfield_on_every_page(app):
+    """O point: A picks up at 20 m, A to B at 45 m (25 m upfield), B swings it
+    back to C at 23 m (22 m backwards), C to D at 30 m, D to E who scores at 88 m.
+
+    A huck is 20 m+ long and 15 m+ upfield:
+        A-B: 25 m, 25 m upfield      huck
+        B-C: 22 m, backwards         a swing, not a huck
+        C-D: about 11 m              short
+        D-E: about 58 m upfield      huck
+    Team: 2 hucks in 1 point = 2.0 hucks per point; A and D 1 each, B none.
+    (Before the fix hucks per point and the CSV counted any throw over 20 m,
+    so B's swing made 3, while huck completion % already used this rule.)
+    """
+    from app.stats import turnovers
+    from app.stats.players import get_players_base_stats
+    from app.stats.team import calculate_additional_team_metrics
+    w = WorkedGame(app)
+    w.point('O', [('catch', 'A', 20, 18), ('catch', 'B', 45, 18), ('catch', 'C', 23, 18),
+                  ('catch', 'D', 30, 10), ('goal', 'E', 88, 10)])
+    ctx = w.context()
+    try:
+        games = w.games()
+        stats = get_players_base_stats(list(w.players.values()), games)
+        metrics = calculate_additional_team_metrics(games)
+        team = turnovers.handling_summary(turnovers.ThrowingData(games), None, None)
+    finally:
+        ctx.pop()
+    assert [stats[w.ids[k]]['hucks'] for k in 'ABCD'] == [1, 0, 0, 1]
+    assert metrics['hucks_per_point'] == pytest.approx(2.0)
+    assert team['huck_attempts'] == 2

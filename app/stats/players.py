@@ -203,8 +203,10 @@ def pull_stats(gd):
         'timed': len(hang),
     }
 
-# Same definition as the team huck count in app.stats.team.
-from app.stats.throwing import HUCK_DISTANCE  # noqa: E402,F401  (re-exported for app.stats.team)
+# A huck: 20 m+ long and 15 m+ upfield (app.stats.throwing.throw_kind), the
+# same definition as huck completion on the turnover pages and the team's
+# hucks per point.
+from app.stats.throwing import throw_kind  # noqa: E402
 
 
 def process_player_stats(player, lineups, throws_by_player, throws_to_player, events, games=None,
@@ -272,7 +274,7 @@ def process_player_stats(player, lineups, throws_by_player, throws_to_player, ev
         'd_line_conversion_rate': 0,
         'o_line_points_with_result': 0,
         'd_line_points_with_result': 0,
-        'hucks': 0,
+        'hucks': 0,  # huck attempts: 20 m+ long and 15 m+ upfield
         # Blocks (with Callahans) and takeaways (blocks, forced turnovers,
         # Callahans) made on D-line points with full stats: what the
         # per-D-point rates divide
@@ -326,7 +328,8 @@ def process_player_stats(player, lineups, throws_by_player, throws_to_player, ev
     # Calculate throw distances
     distances = [t.calculate_distance() for t in throws_by_player if t.calculate_distance()]
     stats['total_throw_distance'] = sum(distances) if distances else 0
-    stats['hucks'] = sum(1 for d in distances if d > HUCK_DISTANCE)
+    stats['hucks'] = sum(1 for t in throws_by_player
+                         if throw_kind(t.x_start, t.y_start, t.x_end, t.y_end) == 'huck')
     stats['avg_throw_distance'] = stats['total_throw_distance'] / stats['throws'] if stats['throws'] > 0 else 0
     
     # Store throw vectors for visualization

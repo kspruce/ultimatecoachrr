@@ -10,7 +10,8 @@ from app.utils.team_filter import get_current_team_id
 
 from app.stats.formulas import (OUR_TURNS, POSSESSION_CHANGES, REGAINS, get_point_starting_possession, goal_equivalents,
                                 point_has_result, point_we_scored, possession_gap, scoring_efficiency)
-from app.stats.players import HUCK_DISTANCE, get_players_base_stats, players_in_games
+from app.stats.players import get_players_base_stats, players_in_games
+from app.stats.throwing import throw_kind
 from app.stats.loaders import preload_game_points, game_points, game_line_points, is_analysed, unthrown_throwaways
 
 
@@ -584,7 +585,8 @@ def calculate_additional_team_metrics(games):
         Event.event_type.in_(['block', 'forced_turnover', 'callahan'])).count() if analysed_d_ids else 0
 
     # Count hucks
-    hucks = sum(1 for t in throws if t.calculate_distance() and t.calculate_distance() > HUCK_DISTANCE)
+    # (20 m+ long and 15 m+ upfield, as everywhere else)
+    hucks = sum(1 for t in throws if throw_kind(t.x_start, t.y_start, t.x_end, t.y_end) == 'huck')
 
     # Calculate D-line totals once: conversion from every point, per-D-point
     # rates from points with full stats
