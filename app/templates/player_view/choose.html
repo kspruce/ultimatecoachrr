@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-header"><h5 class="mb-0"><i class="bi bi-eye"></i> Player view</h5></div>
+      <div class="card-body">
+        <p class="text-muted">
+          See {{ current_team.name if current_team else 'the team' }} the way a player does: the same menus and pages,
+          without your {{ current_user.real_role_in(current_team.id if current_team else none)|replace('_', ' ') }} access.
+          Switch back any time from the bar at the top of the page.
+        </p>
+        {% if not own %}
+        <p class="text-muted small">
+          You don’t have a player profile on this team, so pick a player to see it as them
+          (their sessions, feedback, goals and stats). That’s look-only: nothing is saved on their behalf.
+        </p>
+        {% endif %}
+        <form method="POST" action="{{ url_for('player_view.start') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="mb-3">
+            <label class="form-label" for="pv-player">See the site as</label>
+            <select name="player" id="pv-player" class="form-select" required>
+              {% if not own %}<option value="" {{ 'selected' if not selected }} disabled>Choose a player…</option>{% endif %}
+              {% if own %}<option value="me" {{ 'selected' if selected == 'me' }}>Me ({{ own.name }})</option>{% endif %}
+              {% if players %}
+              <optgroup label="{{ 'Someone else (look-only)' if own else 'A player (look-only)' }}">
+                {% for p in players %}
+                <option value="{{ p.id }}" {{ 'selected' if selected == p.id|string }}>{{ p.name }}{% if p.jersey_number %} #{{ p.jersey_number }}{% endif %}</option>
+                {% endfor %}
+              </optgroup>
+              {% endif %}
+              <option value="none" {{ 'selected' if selected == 'none' }}>A player who hasn’t linked a profile yet</option>
+            </select>
+          </div>
+          <div class="d-flex gap-2 flex-wrap">
+            <button class="btn btn-primary"><i class="bi bi-eye"></i>
+              {{ 'Switch' if current_user.in_player_view else 'Start player view' }}</button>
+            {% if current_user.in_player_view %}
+            <button class="btn btn-outline-secondary" formaction="{{ url_for('player_view.stop') }}" formnovalidate>
+              Leave player view</button>
+            {% else %}
+            <a class="btn btn-outline-secondary" href="{{ next_url if next_url and next_url.startswith('/') and not next_url.startswith('//') else url_for('main.index') }}">Cancel</a>
+            {% endif %}
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

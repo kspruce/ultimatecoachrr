@@ -1,8 +1,9 @@
 # app/models/user.py
 from app import db, login
-from flask import has_request_context
+from flask import has_request_context, session as flask_session
 from flask_login import UserMixin
 from sqlalchemy import event
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Session
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
@@ -23,6 +24,13 @@ ROLE_ORDER = {
 # Roles with full control of their own team
 TEAM_ADMIN_ROLES = ("admin", "captain")
 
+# Player view (app/routes/player_view.py): a coach, captain or admin sees the
+# site as a player does. Kept in the login's session as
+# {"user": <user id>, "player": <player id or None>}; "player" is a roster
+# player they're previewing as (for coaches who don't play), else their own
+# profile is used.
+PLAYER_VIEW_KEY = "player_view"
+
 class User(UserMixin, db.Model):
     __tablename__ = "user"
 
@@ -42,8 +50,10 @@ class User(UserMixin, db.Model):
     # We'll stop using it and use is_superadmin instead.
     is_admin_flag = db.Column("is_admin", db.Boolean, default=False, nullable=False)
 
-    # Global superadmin (you = username 'admin')
-    is_superadmin = db.Column(db.Boolean, default=False, nullable=False)
+    # Global superadmin (you = username 'admin'). Read `is_superadmin`, which
+    # is False while they're in player view; this column is the real flag
+    # (team switching keeps using it, so player view stays on the same team).
+    superadmin_flag = db.Column("is_superadmin", db.Boolean, default=False, nullable=False)
 
     # The shared demo login (app/demo): sees its team as its role does but,
     # like a guest, can't change anything
@@ -105,14 +115,86 @@ class User(UserMixin, db.Model):
     def is_member_of(self, team_id):
         return self.membership_for(team_id) is not None
 
-    def role_in(self, team_id):
-        """Role on one team. Not on it: guest (superadmins: their home role)."""
+    def real_role_in(self, team_id):
+        """Role on one team, ignoring player view. Not on it: guest
+        (superadmins: their home role)."""
         membership = self.membership_for(team_id)
         if membership:
             return membership.role
-        if self.is_superadmin or not self.memberships or team_id in (None, self.team_organization_id):
+        if self.superadmin_flag or not self.memberships or team_id in (None, self.team_organization_id):
             return self.home_role
         return "guest"
+
+    def role_in(self, team_id):
+        """Role on one team: a player's while they're in player view."""
+        role = self.real_role_in(team_id)
+        if self._player_view_state() is not None and ROLE_ORDER.get(role, 1) > ROLE_ORDER["player"]:
+            return "player"
+        return role
+
+    # ── Player view ──────────────────────────────────────────
+
+    @hybrid_property
+    def is_superadmin(self):
+        return bool(self.superadmin_flag) and self._player_view_state() is None
+
+    @is_superadmin.setter
+    def is_superadmin(self, value):
+        self.superadmin_flag = value
+
+    @is_superadmin.expression
+    def is_superadmin(cls):
+        return cls.superadmin_flag
+
+    def _player_view_state(self):
+        """The player-view state if this is the login viewing the page and
+        they've turned it on, else None (so other people's roles shown on a
+        page are never affected)."""
+        if not has_request_context() or self.id is None:
+            return None
+        state = flask_session.get(PLAYER_VIEW_KEY)
+        if isinstance(state, dict) and state.get("user") == self.id:
+            return state
+        return None
+
+    @property
+    def in_player_view(self):
+        return self._player_view_state() is not None
+
+    @property
+    def can_use_player_view(self):
+        """Coaches, captains, admins (and stat takers) can look at the site as
+        a player would; checked against their real role, so they can always
+        get back out."""
+        if self.superadmin_flag:
+            return True
+        return ROLE_ORDER.get(self.real_role_in(self._context_team_id()), 1) > ROLE_ORDER["player"]
+
+    def _previewed_player(self, team_id):
+        """The roster player they're previewing as on this team, if any."""
+        state = self._player_view_state()
+        if not state or not state.get("player"):
+            return None
+        from app.models.player import Player
+        player = db.session.get(Player, state["player"])
+        if player is not None and player.team_organization_id == team_id:
+            return player
+        return None
+
+    @property
+    def previewing_other_player(self):
+        """In player view as someone else's profile: look, don't touch."""
+        return self._previewed_player(self._context_team_id()) is not None
+
+    def owns_player(self, player):
+        """Is this player profile theirs? (In player view as someone else,
+        that player counts as theirs, so their pages look the same.)"""
+        if player is None:
+            return False
+        previewed = self._previewed_player(self._context_team_id())
+        if previewed is not None:
+            return previewed.id == player.id
+        return bool(player.user_id) and player.user_id == self.id
 
     def set_role_in(self, team_id, role):
         """Give them `role` on a team, adding them to it if they aren't on it."""
@@ -166,6 +248,9 @@ class User(UserMixin, db.Model):
     @property
     def player_profile(self):
         team_id = self._context_team_id()
+        previewed = self._previewed_player(team_id)
+        if previewed is not None:
+            return previewed
         if team_id is None:
             return self.player_profiles[0] if self.player_profiles else None
         return self.player_for(team_id)
