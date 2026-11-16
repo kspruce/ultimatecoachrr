@@ -1,7 +1,7 @@
 """Player check-ins: self-assessment rubric, coach nudges
 
 Revision ID: a1c3e5b7d9f2
-Revises: f7b9d1c3e5a8
+Revises: d2f4a6c8e0b1
 Create Date: 2026-11-16
 
 """
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 revision = 'a1c3e5b7d9f2'
-down_revision = 'f7b9d1c3e5a8'
+down_revision = 'd2f4a6c8e0b1'
 branch_labels = None
 depends_on = None
 
