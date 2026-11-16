@@ -339,7 +339,9 @@ document.addEventListener('DOMContentLoaded', function() {
     window.addEventListener('resize', checkFieldDimensions);
 
     // Define event types - UPDATED with correct event types
-    const OFFENSIVE_EVENTS = ['catch', 'goal', 'throwaway', 'drop', 'stall'];
+    // A pickup starts a possession (after the pull or a turnover): nobody
+    // threw it. Tapping Catch for that first touch is treated the same way.
+    const OFFENSIVE_EVENTS = ['pickup', 'catch', 'goal', 'throwaway', 'drop', 'stall'];
     const DEFENSIVE_EVENTS = ['shutdown', 'forced_turnover', 'unforced_turnover', 'block', 'callahan', 'scored_on'];
     
     // Define cutting skill outcomes - UPDATED with correct outcomes

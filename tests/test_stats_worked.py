@@ -807,3 +807,41 @@ def test_turnovers_by_the_throw_we_lost_it_on(app):
     assert rows['stall']['turnovers'] == 1 and rows['stall']['zones']['own_third'] == 1
     assert rows['break']['share'] == pytest.approx(100 / 3)
     assert 'Where they got the disc from us' in w.client.get('/stats/team').get_data(as_text=True)
+
+
+# --- pickups ---------------------------------------------------------------------------
+
+def test_a_pickup_starts_a_possession(app):
+    """1. O point: A picks up the pull at 20 m (Pickup), A to B at 40 m, B to C
+       who scores at 90 m.
+    2. O point: A picks up at 25 m and throws it away, landing at 50 m; they
+       score.
+
+    Point 1: A's pickup is nobody's catch: throws A-B and B-C only, B the
+    assist, A the hockey assist (a pickup is promoted like a catch).
+    Point 2: the throwaway is A's throw from the pickup at 25 m, so it has
+    a start: 25 m upfield, a throw from our own third.
+    Undoing point 1's goal puts B back to a catch and A back to a pickup.
+    """
+    from app.models.event import Event
+    from app.models.point import Point
+    from app.models.throws import Throw
+    w = WorkedGame(app)
+    p1 = w.point('O', [('pickup', 'A', 20, 18), ('catch', 'B', 40, 18), ('goal', 'C', 90, 18)])
+    p2 = w.point('O', [('pickup', 'A', 25, 18), ('throwaway', 'A', 50, 18), ('scored_on', 'opp', 0, 18)])
+    types = [e.event_type for e in Event.query.filter_by(point_id=p1).order_by(Event.id)]
+    assert types == ['hockey_assist', 'assist', 'goal']
+    throws = Throw.query.filter_by(point_id=p1).order_by(Throw.id).all()
+    assert [(t.thrower_id, t.receiver_id, t.throw_type) for t in throws] == [
+        (w.ids['A'], w.ids['B'], 'hockey_assist'), (w.ids['B'], w.ids['C'], 'assist')]
+    assert Throw.query.filter_by(receiver_id=w.ids['A']).count() == 0
+    away = Throw.query.filter_by(point_id=p2).one()
+    assert (away.thrower_id, away.throw_type, away.x_start, away.x_end) == (w.ids['A'], 'throwaway', 25, 50)
+
+    from app import db
+    r = w.client.post(f'/stats/undo_event/{p1}')  # undo the goal
+    assert r.status_code == 200, r.get_data(as_text=True)
+    db.session.expire_all()
+    assert db.session.get(Point, p1).point_outcome is None
+    types = [e.event_type for e in Event.query.filter_by(point_id=p1).order_by(Event.id)]
+    assert types == ['pickup', 'catch']

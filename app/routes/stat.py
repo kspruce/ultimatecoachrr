@@ -95,10 +95,11 @@ def record_events(point_id):
             db.session.add(event)
             db.session.flush()
 
-            # A goal makes the catch before it the assist, and the catch
-            # before that the hockey assist (substitutions aren't play).
-            # Only catches are promoted: blocks, drops, throwaways etc. are
-            # never retyped, and opponent plays aren't part of our chain.
+            # A goal makes the catch (or pickup) before it the assist, and
+            # the one before that the hockey assist (substitutions aren't
+            # play). Only catches and pickups are promoted: blocks, drops,
+            # throwaways etc. are never retyped, and opponent plays aren't
+            # part of our chain.
             if event.event_type == 'goal':
                 previous_events = Event.query.filter(
                     Event.point_id == point_id,
@@ -108,7 +109,7 @@ def record_events(point_id):
                 ).order_by(Event.id.desc()).limit(2).all()
 
                 def assistable(e):
-                    return e.event_type == 'catch' and not e.is_opponent
+                    return e.event_type in ('catch', 'pickup') and not e.is_opponent
 
                 if previous_events and assistable(previous_events[0]):
                     previous_events[0].event_type = 'assist'
@@ -143,6 +144,17 @@ def record_events(point_id):
 
 
 
+def _starts_possession(event):
+    """Is this touch the first of a possession (after the pull, or after we
+    won the disc back)? Then it was a pickup: nobody threw it."""
+    before = Event.query.filter(
+        Event.point_id == event.point_id,
+        Event.id < event.id,
+        Event.event_type != 'substitution',
+    ).order_by(Event.id.desc()).first()
+    return before is None or before.event_type in ('block', 'forced_turnover', 'unforced_turnover')
+
+
 @bp.route('/undo_event/<int:point_id>', methods=['POST'])
 @login_required
 @stat_taker_required
@@ -174,7 +186,7 @@ def undo_event(point_id):
                 ).order_by(Event.id.desc()).limit(2).all()
                 for prior, retyped in zip(prior_events, ('assist', 'hockey_assist')):
                     if prior.event_type == retyped:
-                        prior.event_type = 'catch'
+                        prior.event_type = 'pickup' if _starts_possession(prior) else 'catch'
 
             db.session.delete(last_event)
             rebuild_point_throws(point)
