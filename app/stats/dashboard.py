@@ -6,7 +6,7 @@ from collections import defaultdict
 from statistics import median
 
 from app.stats import turnovers
-from app.stats.formulas import point_we_scored
+from app.stats.formulas import point_has_result, point_we_scored
 from app.stats.profile import MIN_RATED_POINTS, percentile
 from app.stats.throwing import DEPTH_ZONES
 
@@ -23,8 +23,11 @@ def _rate(part, whole):
 def period_numbers(data, game_ids, games):
     """The headline numbers for one set of games."""
     points = [p for pid, p in data.points.items() if data.game_of_point[pid].id in game_ids]
-    o_points = [p for p in points if p.our_line_type == 'O-line']
-    d_points = [p for p in points if p.our_line_type == 'D-line']
+    # Hold, break and clean hold count points that ended in a goal (not
+    # ones stopped by the cap or half time)
+    finished = [p for p in points if point_has_result(p)]
+    o_points = [p for p in finished if p.our_line_type == 'O-line']
+    d_points = [p for p in finished if p.our_line_type == 'D-line']
     analysed_o = [p for p in o_points if p.id in data.analysed]
     # A clean hold: an O-line point we scored without turning it over
     clean = 0

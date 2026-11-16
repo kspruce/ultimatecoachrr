@@ -7,7 +7,7 @@ from app.models.event import Event
 from app.models.throws import Throw
 import math
 from app.utils.team_filter import get_current_team_id
-from app.stats.formulas import point_we_scored
+from app.stats.formulas import point_has_result, point_we_scored
 from app.stats.loaders import analysed_point_ids, preload_game_points, game_points
 
 
@@ -268,6 +268,8 @@ def process_player_stats(player, lineups, throws_by_player, throws_to_player, ev
         'd_line_points_scored': 0,
         'o_line_conversion_rate': 0,
         'd_line_conversion_rate': 0,
+        'o_line_points_with_result': 0,
+        'd_line_points_with_result': 0,
         'hucks': 0,
         # Blocks and takeaways (blocks, forced turnovers, Callahans) made on
         # D-line points with full stats: what the per-D-point rates divide
@@ -432,13 +434,17 @@ def process_player_stats(player, lineups, throws_by_player, throws_to_player, ev
     stats['d_line_points_played'] = len(d_line_points)
     stats['analysed_o_line_points'] = sum(1 for l in analysed_lineups if l.point.our_line_type == 'O-line')
     stats['analysed_d_line_points'] = sum(1 for l in analysed_lineups if l.point.our_line_type == 'D-line')
-# Conversion: share of their O-line points we held, D-line points we broke
+    # Conversion: share of their O-line points we held, D-line points we
+    # broke, out of the points that ended in a goal (a point stopped by the
+    # cap or half time was neither)
     stats['o_line_points_scored'] = sum(1 for l in o_line_points if point_we_scored(l.point))
     stats['d_line_points_scored'] = sum(1 for l in d_line_points if point_we_scored(l.point))
-    if o_line_points:
-        stats['o_line_conversion_rate'] = 100 * stats['o_line_points_scored'] / len(o_line_points)
-    if d_line_points:
-        stats['d_line_conversion_rate'] = 100 * stats['d_line_points_scored'] / len(d_line_points)
+    stats['o_line_points_with_result'] = sum(1 for l in o_line_points if point_has_result(l.point))
+    stats['d_line_points_with_result'] = sum(1 for l in d_line_points if point_has_result(l.point))
+    if stats['o_line_points_with_result']:
+        stats['o_line_conversion_rate'] = 100 * stats['o_line_points_scored'] / stats['o_line_points_with_result']
+    if stats['d_line_points_with_result']:
+        stats['d_line_conversion_rate'] = 100 * stats['d_line_points_scored'] / stats['d_line_points_with_result']
     
     # Calculate O-line and D-line plus/minus
     o_line_plus_minus = 0

@@ -113,3 +113,49 @@ def test_scoring_efficiency_by_hand(possession_game):
         ctx.pop()
     assert (se['se_goals'], se['se_turns'], se['se_incomplete']) == (5, 5, 0)
     assert se['se'] == pytest.approx(0.5)
+
+
+# --- points without a result (the cap, half time) ---------------------------
+
+def test_a_point_stopped_by_the_cap_is_neither_held_nor_broken(app):
+    """1. O point: A, B scores.                  hold
+    2. D point: they score.                      their hold
+    3. O point: A, B... and the hard cap goes.   no result
+
+    Hold % counts O points that ended in a goal: 1 held of 1 = 100%.
+    (Before the fix point 3 counted as not held: 1 of 2 = 50%.)
+    Break %: 0 of 1 = 0%. Clean holds: point 1 of 1 = 100%.
+    Every player was on all three points, so each player's O-line
+    conversion is 100% too, and they still played 3 points.
+    """
+    from app.stats import dashboard, turnovers
+    from app.stats.players import get_players_base_stats
+    from app.stats.team import (calculate_game_stats, calculate_possession_based_team_metrics,
+                                calculate_team_summary)
+    w = WorkedGame(app)
+    w.point('O', [('catch', 'A', 20, 18), ('goal', 'B', 90, 18)])
+    w.point('D', [('scored_on', 'opp', 0, 18)])
+    w.point('O', [('catch', 'A', 20, 18), ('catch', 'B', 40, 18)], finish=False)
+    ctx = w.context()
+    try:
+        games = w.games()
+        summary = calculate_team_summary(games)
+        game = calculate_game_stats(w.game())
+        poss = calculate_possession_based_team_metrics(games)
+        data = turnovers.ThrowingData(games)
+        headline = dashboard.period_numbers(data, {w.game_id}, games)
+        a = get_players_base_stats([w.players['A']], games)[w.ids['A']]
+    finally:
+        ctx.pop()
+    assert summary['o_line_conversion_rate'] == pytest.approx(100)
+    assert (summary['o_line_conversions'], summary['o_line_points']) == (1, 1)
+    assert summary['d_line_conversion_rate'] == 0
+    assert summary['total_points'] == 3
+    assert game['o_line_conversion_rate'] == pytest.approx(100)
+    assert game['unfinished_points'] == 1
+    assert game['clean_hold_percentage'] == pytest.approx(100)
+    assert poss['clean_hold_percentage'] == pytest.approx(100)
+    assert headline['hold'] == pytest.approx(100) and headline['clean_hold'] == pytest.approx(100)
+    assert headline['break'] == 0
+    assert a['points_played'] == 3 and a['o_line_points_played'] == 2
+    assert a['o_line_conversion_rate'] == pytest.approx(100)

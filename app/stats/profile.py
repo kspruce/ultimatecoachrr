@@ -161,7 +161,7 @@ MIN_HISTORY = 3
 
 def team_period_metrics(data, game_ids):
     """The team radar values for one set of games (from turnovers.ThrowingData)."""
-    from app.stats.formulas import point_we_scored
+    from app.stats.formulas import point_has_result, point_we_scored
 
     def rate(part, whole):
         return 100.0 * part / whole if whole else None
@@ -174,18 +174,23 @@ def team_period_metrics(data, game_ids):
     events = data.events_by_point
     our_turnovers = sum(1 for p in o_full for e in events.get(p.id, [])
                         if e.event_type in turnovers.OUR_TURNOVERS and not e.is_opponent and e.is_offensive is not False)
-    blocks = takeaways = regained = regained_scored = 0
+    blocks = takeaways = regained = regained_scored = regained_finished = 0
     for p in d_full:
         evs = events.get(p.id, [])
         blocks += sum(1 for e in evs if e.event_type == 'block' and not e.is_opponent)
         takeaways += sum(1 for e in evs if e.event_type in ('block', 'forced_turnover', 'callahan') and not e.is_opponent)
         if any(e.event_type in turnovers.WE_REGAIN for e in evs):
             regained += 1
-            regained_scored += point_we_scored(p)
+            if point_has_result(p):
+                regained_finished += 1
+                regained_scored += point_we_scored(p)
     h = turnovers.handling_summary(data, None, game_ids)
+    # Hold and break count points that ended in a goal (not the cap or half)
+    o_finished = [p for p in o_points if point_has_result(p)]
+    d_finished = [p for p in d_points if point_has_result(p)]
     return {
-        'hold': rate(sum(1 for p in o_points if point_we_scored(p)), len(o_points)),
-        'break': rate(sum(1 for p in d_points if point_we_scored(p)), len(d_points)),
+        'hold': rate(sum(1 for p in o_finished if point_we_scored(p)), len(o_finished)),
+        'break': rate(sum(1 for p in d_finished if point_we_scored(p)), len(d_finished)),
         'completion': h['completion_rate'],
         'huck_completion': h['huck_completion_rate'],
         'break_completion': h['break_completion_rate'],
@@ -193,7 +198,7 @@ def team_period_metrics(data, game_ids):
         'blocks_per_d_point': blocks / len(d_full) if d_full else None,
         'takeaways_per_d_point': takeaways / len(d_full) if d_full else None,
         'regain_rate': rate(regained, len(d_full)),
-        'regain_conversion': rate(regained_scored, regained),
+        'regain_conversion': rate(regained_scored, regained_finished),
     }
 
 
