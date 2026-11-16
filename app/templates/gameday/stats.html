@@ -79,7 +79,7 @@
                 </tr>
                 <tr>
                   <th>Completion Rate:</th>
-                  <td>{{ team_totals.completion_rate }}%</td>
+                  <td>{{ '%s%%'|format(team_totals.completion_rate) if team_totals.completion_rate is not none else '–' }}</td>
                 </tr>
                 <tr>
                   <th>Plus/Minus:</th>

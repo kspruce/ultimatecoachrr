@@ -36,13 +36,13 @@
         <div class="col-md-3">
             <div class="card stat-card">
                 <div class="stat-value">{{ team_stats.o_line_conversion_rate|round(1) }}%</div>
-                <div class="stat-label">O-Line Efficiency</div>
+                <div class="stat-label">Hold %</div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card stat-card">
                 <div class="stat-value">{{ team_stats.d_line_conversion_rate|round(1) }}%</div>
-                <div class="stat-label">D-Line Efficiency</div>
+                <div class="stat-label">Break %</div>
             </div>
         </div>
         <div class="col-md-3">
@@ -72,8 +72,8 @@
         <div class="col-md-4">
             <div class="card stat-card">
                 <div class="stat-value">{{ (team_stats.avg_possessions_gained_per_point|default(0))|round(2) }}</div>
-                <div class="stat-label">Possessions Gained/Point</div>
-                <small class="text-muted">D-line turnover generation</small>
+                <div class="stat-label">Possessions Gained / D-point</div>
+                <small class="text-muted">Times we won the disc back (blocks, their turnovers, Callahans) per D-line point</small>
             </div>
         </div>
     </div>
@@ -211,10 +211,10 @@
                                             </a>
                                         </td>
                                         <td>{{ item.stats.points_played }}</td>
-                                        <td>{{ item.stats.goals }}</td>
+                                        <td>{{ item.stats.total_goals }}</td>
                                         <td>{{ item.stats.assists }}</td>
                                         <td>{{ item.stats.hockey_assists }}</td>
-                                        <td>{{ item.stats.blocks }}</td>
+                                        <td>{{ item.stats.total_blocks }}</td>
                                         <td>
                                             {{ item.stats.completions }}
                                             <small class="text-muted">({{ item.stats.completion_rate|round(1) }}%)</small>
@@ -348,8 +348,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                 },
                                 afterTitle: function(items) {
                                     const p = pointFlow[items[0].dataIndex];
+                                    if (!p.analysed) return 'Game Day only: no turnovers recorded';
                                     const t = p.turnovers || 0;
-                                    return t > 0 ? `${t} turnover${t > 1 ? 's' : ''} this point` : 'Clean point';
+                                    return t > 0 ? `${t} turnover${t > 1 ? 's' : ''} this point` : 'No turnovers';
                                 },
                                 label: function(context) {
                                     return `${context.dataset.label}: ${context.raw}`;

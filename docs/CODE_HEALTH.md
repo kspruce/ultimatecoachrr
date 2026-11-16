@@ -66,6 +66,13 @@ SQLite and Postgres in GitHub Actions on every pull request.
 - The stats cache clears whenever stats data changes.
 - No debug routes; data-changing maintenance is admin-only POST buttons on
   Data Management.
+- November 2026 review (`docs/STATS_REVIEW.md`): possessions count every
+  regain, not just blocks; points stopped by the cap don't count against
+  hold/break %; a Callahan is a goal and a block on every page; team
+  completion counts drops; one huck definition; Game Day completion is a
+  real completion rate; the season plan's base metrics, yardage and
+  per-touch turnovers are on the team page. Every formula has a
+  hand-worked test (`tests/test_stats_worked.py`).
 
 **Data**
 - JSON ZIP backups include tables with dates (older backups don't).

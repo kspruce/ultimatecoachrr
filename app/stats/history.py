@@ -19,9 +19,13 @@ def get_player_game_history(player, tournament_id, game_id):
     else:
         games_query = scope_games(games_query)  # the season (and squad) being viewed
 
+    # The games they were on a line in, in one query
+    played = {gid for (gid,) in LineUp.query.join(Point).with_entities(Point.game_id)
+              .filter(LineUp.player_id == player.id).distinct()}
     for game in games_query.order_by(Game.date.desc()).all():
-        if LineUp.query.join(Point).filter(LineUp.player_id == player.id, Point.game_id == game.id).first():
-            game_stats_dict = get_players_base_stats([player], [game])
+        if game.id in played:
+            # (the history shows no pulls)
+            game_stats_dict = get_players_base_stats([player], [game], pulls=False)
             game_stats = game_stats_dict[player.id]
             game_team_avgs = get_cached_team_averages([game])
             apply_ratings(game_stats, game_team_avgs)

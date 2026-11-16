@@ -106,8 +106,11 @@ RATINGS = [
     {'key': 'per', 'label': 'PER', 'fmt': '%.1f'},
     {'key': 'epm', 'label': 'EPM', 'fmt': '%+.2f'},
     {'key': 'eff', 'label': 'Eff', 'fmt': '%.3f'},
-    {'key': 'o_line_plus_minus_per_point', 'label': 'O-line +/- per point', 'fmt': '%+.2f'},
-    {'key': 'd_line_plus_minus_per_point', 'label': 'D-line +/- per point', 'fmt': '%+.2f'},
+    # Only players with full-stat points on that line have one
+    {'key': 'o_line_plus_minus_per_point', 'label': 'O-line +/- per point', 'fmt': '%+.2f',
+     'sample': 'analysed_o_line_points'},
+    {'key': 'd_line_plus_minus_per_point', 'label': 'D-line +/- per point', 'fmt': '%+.2f',
+     'sample': 'analysed_d_line_points'},
 ]
 MIN_RATED_POINTS = 10
 
@@ -121,13 +124,19 @@ def rating_comparison(player_id, stats_by_player):
     qualifies = mine.get('analysed_points', 0) >= MIN_RATED_POINTS
     rows = []
     for r in RATINGS:
-        values = [s.get(r['key'], 0) or 0 for s in rated]
-        value = mine.get(r['key'], 0) or 0
+        # A player with no points on a line has no +/- per point there (not
+        # 0): they're left out of the median and the ranking for it.
+        sample = r.get('sample')
+
+        def has(s):
+            return sample is None or s.get(sample, 0) > 0
+        values = [s.get(r['key'], 0) or 0 for s in rated if has(s)]
+        value = (mine.get(r['key'], 0) or 0) if has(mine) else None
         rows.append({
             **r,
             'value': value,
             'team_median': median(values) if values else None,
-            'rank': 1 + sum(v > value for v in values) if qualifies and values else None,
+            'rank': 1 + sum(v > value for v in values) if qualifies and values and value is not None else None,
             'of': len(values),
         })
     return {'rows': rows, 'min_points': MIN_RATED_POINTS, 'qualifies': qualifies}
@@ -138,7 +147,8 @@ def rating_comparison(player_id, stats_by_player):
 TEAM_AXES = {
     'offence': [
         {'key': 'hold', 'label': 'Hold %', 'fmt': 'pct', 'help': 'O-line points we scored'},
-        {'key': 'completion', 'label': 'Completion', 'fmt': 'pct'},
+        {'key': 'completion', 'label': 'Completion', 'fmt': 'pct',
+         'help': 'Passes caught out of passes thrown; a drop is an incomplete pass (full stats)'},
         {'key': 'huck_completion', 'label': 'Huck completion', 'fmt': 'pct'},
         {'key': 'break_completion', 'label': 'Break-side completion', 'fmt': 'pct'},
         {'key': 'turnovers_per_o_point', 'label': 'Turnovers / O-pt', 'short': 'Ball security', 'fmt': 'rate',
@@ -161,7 +171,7 @@ MIN_HISTORY = 3
 
 def team_period_metrics(data, game_ids):
     """The team radar values for one set of games (from turnovers.ThrowingData)."""
-    from app.stats.formulas import point_we_scored
+    from app.stats.formulas import point_has_result, point_we_scored
 
     def rate(part, whole):
         return 100.0 * part / whole if whole else None
@@ -173,27 +183,32 @@ def team_period_metrics(data, game_ids):
     d_full = [p for p in d_points if p.id in data.analysed]
     events = data.events_by_point
     our_turnovers = sum(1 for p in o_full for e in events.get(p.id, [])
-                        if e.event_type in turnovers.OUR_TURNOVERS and not e.is_opponent and e.is_offensive is not False)
-    blocks = takeaways = regained = regained_scored = 0
+                        if e.event_type in turnovers.OUR_TURNOVERS and not e.is_opponent)
+    blocks = takeaways = regained = regained_scored = regained_finished = 0
     for p in d_full:
         evs = events.get(p.id, [])
-        blocks += sum(1 for e in evs if e.event_type == 'block' and not e.is_opponent)
+        blocks += sum(1 for e in evs if e.event_type in ('block', 'callahan') and not e.is_opponent)
         takeaways += sum(1 for e in evs if e.event_type in ('block', 'forced_turnover', 'callahan') and not e.is_opponent)
         if any(e.event_type in turnovers.WE_REGAIN for e in evs):
             regained += 1
-            regained_scored += point_we_scored(p)
+            if point_has_result(p):
+                regained_finished += 1
+                regained_scored += point_we_scored(p)
     h = turnovers.handling_summary(data, None, game_ids)
+    # Hold and break count points that ended in a goal (not the cap or half)
+    o_finished = [p for p in o_points if point_has_result(p)]
+    d_finished = [p for p in d_points if point_has_result(p)]
     return {
-        'hold': rate(sum(1 for p in o_points if point_we_scored(p)), len(o_points)),
-        'break': rate(sum(1 for p in d_points if point_we_scored(p)), len(d_points)),
-        'completion': h['completion_rate'],
+        'hold': rate(sum(1 for p in o_finished if point_we_scored(p)), len(o_finished)),
+        'break': rate(sum(1 for p in d_finished if point_we_scored(p)), len(d_finished)),
+        'completion': h['pass_completion_rate'],
         'huck_completion': h['huck_completion_rate'],
         'break_completion': h['break_completion_rate'],
         'turnovers_per_o_point': our_turnovers / len(o_full) if o_full else None,
         'blocks_per_d_point': blocks / len(d_full) if d_full else None,
         'takeaways_per_d_point': takeaways / len(d_full) if d_full else None,
         'regain_rate': rate(regained, len(d_full)),
-        'regain_conversion': rate(regained_scored, regained),
+        'regain_conversion': rate(regained_scored, regained_finished),
     }
 
 

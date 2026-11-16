@@ -48,10 +48,11 @@
     <div class="ps-headline" id="playerHeadline">
         <div><b>{{ stats.games_played }}</b><span>Games</span></div>
         <div><b>{{ stats.points_played }}</b><span>Points</span></div>
-        <div><b>{{ stats.goals }}</b><span>Goals</span></div>
-        <div><b>{{ stats.assists }}</b><span>Assists</span></div>
-        <div><b>{{ stats.blocks }}</b><span>Blocks</span></div>
-        <div><b>{{ stats.turnovers }}</b><span>Turnovers</span></div>
+        {# Every point played, like the Points tile: the season box score #}
+        <div><b>{{ stats.box.goals }}</b><span>Goals</span></div>
+        <div><b>{{ stats.box.assists }}</b><span>Assists</span></div>
+        <div><b>{{ stats.box.blocks }}</b><span>Blocks</span></div>
+        <div><b>{{ stats.box.turnovers }}</b><span>Turnovers</span></div>
     </div>
     <form method="get" action="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}" class="ps-filters" id="playerFilters">
         <select name="tournament_id" id="tournament_id" class="form-select form-select-sm" aria-label="Tournament">
@@ -284,7 +285,7 @@
                                 {% for r in ratings.rows %}
                                 <tr>
                                     <th class="fw-normal">{{ r.label }}</th>
-                                    <td class="text-end fw-bold">{{ r.fmt|format(r.value) }}</td>
+                                    <td class="text-end fw-bold">{{ r.fmt|format(r.value) if r.value is not none else '–' }}</td>
                                     <td class="text-end text-muted">{{ r.fmt|format(r.team_median) if r.team_median is not none else '–' }}</td>
                                     <td class="text-end text-muted">{{ '%d of %d'|format(r.rank, r.of) if r.rank else '–' }}</td>
                                 </tr>
@@ -321,8 +322,8 @@
                                 </div>
                                 <div class="col-sm-6">
                                     <table class="table table-sm">
-                                        <tr><th>Completion Rate</th><td>{{ stats.completion_rate|round(1) }}% <small class="text-muted">({{ stats.completions }}/{{ stats.throws }})</small></td></tr>
-                                        <tr><th>Catch Rate</th><td>{{ stats.catch_rate|round(1) }}%</td></tr>
+                                        <tr><th>Completion Rate <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="Your passes caught out of passes thrown. A dropped pass is the receiver's turnover, so it doesn't count against the thrower. The team's completion counts it as an incomplete pass."></i></th><td>{% if stats.throws %}{{ stats.completion_rate|round(1) }}% <small class="text-muted">({{ stats.completions }}/{{ stats.throws }})</small>{% else %}–{% endif %}</td></tr>
+                                        <tr><th>Catch Rate <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="Passes caught out of passes that reached you (caught or dropped). Picking up the disc isn't a catch."></i></th><td>{{ '%.1f%%'|format(stats.catch_rate) if stats.catches + stats.drops else '–' }}</td></tr>
                                         <tr><th>Hockey Assists</th><td>{{ stats.hockey_assists }}</td></tr>
                                         <tr><th>Break Throws</th><td>{{ stats.break_throws }} <small class="text-muted">({{ stats.break_throw_percentage|round(0)|int }}% of throws)</small></td></tr>
                                     </table>
@@ -398,7 +399,7 @@
                                         </tr>
                                         <tr>
                                             <th>Goals</th>
-                                            <td>{{ stats.goals }}</td>
+                                            <td>{{ stats.total_goals }}{% if stats.callahans %} <small class="text-muted">(incl. {{ stats.callahans }} Callahan{{ 's' if stats.callahans != 1 }})</small>{% endif %}</td>
                                         </tr>
                                         <tr>
                                             <th>Assists</th>
@@ -448,7 +449,8 @@
             <div class="row mb-4">
                 <div class="col-md-12">
                     <div class="card">
-                        <div class="card-header"><h5 class="mb-0">Pulls <small class="text-muted fw-normal">· from Game Day</small></h5></div>
+                        <div class="card-header"><h5 class="mb-0">Pulls
+                            <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="From the stat taker (hang time, where it landed, how it went) and from Game Day (in or out, hang time) on other points. Out of bounds includes a brick."></i></h5></div>
                         <div class="card-body">
                             <div class="row g-3 text-center">
                                 <div class="col-6 col-md-3"><div class="cutting-stat-value">{{ pl.pulls }}</div><div class="cutting-stat-label">Pulls</div></div>
@@ -456,6 +458,30 @@
                                 <div class="col-6 col-md-3"><div class="cutting-stat-value">{{ "%.1f"|format(pl.avg_hang_time) ~ 's' if pl.avg_hang_time is not none else '–' }}</div><div class="cutting-stat-label">Average hang time</div><div class="small text-muted">{{ pl.timed }} timed</div></div>
                                 <div class="col-6 col-md-3"><div class="cutting-stat-value">{{ "%.1f"|format(pl.best_hang_time) ~ 's' if pl.best_hang_time is not none else '–' }}</div><div class="cutting-stat-label">Best hang time</div></div>
                             </div>
+                            {% if pl.recorded %}
+                            <div class="row g-3 text-center mt-1">
+                                <div class="col-6 col-md-3"><div class="cutting-stat-value">{{ "%.0f%%"|format(pl.endzone_rate) if pl.endzone_rate is not none else '–' }}</div><div class="cutting-stat-label">Landed in their endzone</div><div class="small text-muted">of {{ pl.landed }} in bounds with a spot</div></div>
+                                <div class="col-6 col-md-3"><div class="cutting-stat-value">{{ "%.0f m"|format(pl.avg_depth) if pl.avg_depth is not none else '–' }}</div><div class="cutting-stat-label">Average landing</div><div class="small text-muted">short of their back line</div></div>
+                                <div class="col-12 col-md-6 small text-start">
+                                    {% for key, label in pull_results %}{% if pl.results[key] %}<span class="me-3">{{ label }}: <strong>{{ pl.results[key] }}</strong></span>{% endif %}{% endfor %}
+                                </div>
+                            </div>
+                            {% if pl.landings %}
+                            {# Where they landed: our end on the left, their endzone (where we pull to) on the right #}
+                            <svg viewBox="0 0 100 37" class="w-100 mt-3" style="max-height: 220px" role="img" aria-label="Where the pulls landed">
+                                <rect x="0" y="0" width="100" height="37" fill="#e8f3e8" stroke="#999" stroke-width="0.3"/>
+                                <rect x="0" y="0" width="18" height="37" fill="#d5e8d5"/>
+                                <rect x="82" y="0" width="18" height="37" fill="#d5e8d5"/>
+                                <line x1="18" y1="0" x2="18" y2="37" stroke="#999" stroke-width="0.3"/>
+                                <line x1="82" y1="0" x2="82" y2="37" stroke="#999" stroke-width="0.3"/>
+                                {% for l in pl.landings %}
+                                <circle cx="{{ l.x }}" cy="{{ l.y }}" r="1.2"
+                                        fill="{{ '#c0392b' if l.result in ('out', 'brick') else ('#e67e22' if l.result == 'dropped' else '#1f4e8c') }}"><title>{{ dict(pull_results)[l.result] if l.result else '' }}</title></circle>
+                                {% endfor %}
+                            </svg>
+                            <p class="small text-muted mb-0">Their endzone is on the right. Blue: in, orange: dropped, red: out or brick.</p>
+                            {% endif %}
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -475,15 +501,15 @@
                                     <table class="table table-sm">
                                         <tr>
                                             <th>Blocks</th>
-                                            <td>{{ stats.blocks }}</td>
+                                            <td>{{ stats.total_blocks }}{% if stats.callahans %} <small class="text-muted">(incl. Callahans)</small>{% endif %}</td>
                                         </tr>
                                         <tr>
                                             <th>Callahans</th>
                                             <td>{{ stats.callahans }}</td>
                                         </tr>
                                         <tr>
-                                            <th>Forced Turnovers</th>
-                                            <td>{{ stats.blocks + stats.forced_turnovers }}</td>
+                                            <th>Takeaways <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="Blocks, forced turnovers and Callahans"></i></th>
+                                            <td>{{ stats.blocks + stats.forced_turnovers + stats.callahans }}</td>
                                         </tr>
                                         <tr>
                                             <th>D-Line Points</th>
@@ -1113,9 +1139,9 @@ function initializePerformanceTrendChart() {
             per:             {{ game_data.stats.per|default(0)|round(2) }},
             plus_minus:      {{ game_data.stats.plus_minus }},
             completion_rate: {{ ((game_data.stats.completions / game_data.stats.throws * 100) if game_data.stats.throws > 0 else 0)|round(1) }},
-            goals_per_point: {{ (game_data.stats.goals / game_data.stats.analysed_points if game_data.stats.analysed_points > 0 else 0)|round(3) }},
+            goals_per_point: {{ (game_data.stats.total_goals / game_data.stats.analysed_points if game_data.stats.analysed_points > 0 else 0)|round(3) }},
             assists_per_point: {{ (game_data.stats.assists / game_data.stats.analysed_points if game_data.stats.analysed_points > 0 else 0)|round(3) }},
-            blocks_per_point: {{ (game_data.stats.blocks / game_data.stats.analysed_points if game_data.stats.analysed_points > 0 else 0)|round(3) }}
+            blocks_per_point: {{ (game_data.stats.total_blocks / game_data.stats.analysed_points if game_data.stats.analysed_points > 0 else 0)|round(3) }}
         },
         {% endfor %}
     ];
@@ -2218,7 +2244,7 @@ function generatePrintableReport() {
                         <div class="stat-label">Blocks</div>
                     </div>
                     <div class="stat-box">
-                        <div class="stat-value">{{ stats.completion_rate|round(1) }}%</div>
+                        <div class="stat-value">{{ (stats.completion_rate|round(1) ~ '%') if stats.throws else '–' }}</div>
                         <div class="stat-label">Completion Rate</div>
                     </div>
                 </div>
@@ -2264,7 +2290,7 @@ function generatePrintableReport() {
                 <table>
                     <tr>
                         <th>Blocks</th>
-                        <td>{{ stats.blocks }}</td>
+                        <td>{{ stats.total_blocks }}</td>
                         <th>Callahans</th>
                         <td>{{ stats.callahans }}</td>
                     </tr>
