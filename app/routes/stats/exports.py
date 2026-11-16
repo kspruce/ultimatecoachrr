@@ -32,6 +32,10 @@ def _csv_response(rows, headers, filename):
     )
 
 
+def _round(value, places):
+    return '' if value is None else round(value, places)
+
+
 def _stat_columns(s):
     """The stat columns shared by all three exports, from one player's stats."""
     points = s.get('analysed_points', s.get('points_played', 0))  # per-point rates
@@ -58,6 +62,13 @@ def _stat_columns(s):
         'hucks':                  s.get('hucks', 0),
         'break_throws':           s.get('break_throws', 0),
         'break_throw_percentage': round(s.get('break_throw_percentage', 0), 1),
+        'completed_break_throws': s.get('completed_break_throws', 0),
+        'yards_thrown':           round(s.get('yards_thrown', 0), 1),
+        'yards_received':         round(s.get('yards_received', 0), 1),
+        'touches':                s.get('touches', 0),
+        'turnovers_per_10_touches':  _round(s.get('turnovers_per_10_touches'), 2),
+        'throwaways_per_10_touches': _round(s.get('throwaways_per_10_touches'), 2),
+        'drops_per_10_touches':      _round(s.get('drops_per_10_touches'), 2),
         'goals_per_point':        round(s.get('total_goals', 0) / points, 3) if points else 0,
         'assists_per_point':      round(s.get('assists', 0) / points, 3) if points else 0,
         'blocks_per_point':       round(s.get('total_blocks', 0) / points, 3) if points else 0,
@@ -100,7 +111,9 @@ def export_player_history_csv(player_id):
         'completions', 'throws', 'completion_rate',
         'catches', 'drops', 'catch_rate',
         'throwaways', 'turnovers', 'plus_minus',
-        'hucks', 'break_throws', 'break_throw_percentage',
+        'hucks', 'break_throws', 'break_throw_percentage', 'completed_break_throws',
+        'yards_thrown', 'yards_received', 'touches',
+        'turnovers_per_10_touches', 'throwaways_per_10_touches', 'drops_per_10_touches',
         'o_line_conversion_rate', 'd_line_conversion_rate',
         'per', 'epm', 'eff',
     ]
@@ -151,7 +164,9 @@ def export_game_csv(game_id):
         'goals', 'assists', 'hockey_assists', 'blocks', 'callahans',
         'completions', 'throws', 'completion_rate',
         'throwaways', 'drops', 'turnovers', 'plus_minus',
-        'hucks', 'break_throws', 'break_throw_percentage',
+        'hucks', 'break_throws', 'break_throw_percentage', 'completed_break_throws',
+        'yards_thrown', 'yards_received', 'touches',
+        'turnovers_per_10_touches', 'throwaways_per_10_touches', 'drops_per_10_touches',
         'o_line_conversion_rate', 'd_line_conversion_rate',
         'per', 'epm', 'eff',
     ]
@@ -194,7 +209,9 @@ def export_team_season_csv():
         'completions', 'throws', 'completion_rate',
         'catches', 'drops', 'catch_rate',
         'throwaways', 'turnovers', 'plus_minus',
-        'hucks', 'break_throws', 'break_throw_percentage',
+        'hucks', 'break_throws', 'break_throw_percentage', 'completed_break_throws',
+        'yards_thrown', 'yards_received', 'touches',
+        'turnovers_per_10_touches', 'throwaways_per_10_touches', 'drops_per_10_touches',
         'goals_per_point', 'assists_per_point', 'blocks_per_point', 'blocks_per_d_point', 'takeaways_per_d_point',
         'o_line_conversion_rate', 'd_line_conversion_rate',
         'per', 'epm', 'eff',

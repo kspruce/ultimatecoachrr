@@ -293,6 +293,15 @@ def process_player_stats(player, lineups, throws_by_player, throws_to_player, ev
         'throw_vectors': [],
         'break_throws': 0,
         'break_throw_percentage': 0,
+        'completed_break_throws': 0,
+        'yards_thrown': 0,
+        'yards_received': 0,
+        'yards': 0,
+        'touches': 0,
+        # None: no touches, so no rate
+        'turnovers_per_10_touches': None,
+        'throwaways_per_10_touches': None,
+        'drops_per_10_touches': None,
         
         # Efficiency metrics
         'per': 0,
@@ -359,7 +368,15 @@ def process_player_stats(player, lineups, throws_by_player, throws_to_player, ev
     stats['assists'] = sum(1 for t in throws_by_player if t.throw_type == 'assist')
     stats['hockey_assists'] = sum(1 for t in throws_by_player if t.throw_type == 'hockey_assist')
     stats['throwaways'] = sum(1 for t in throws_by_player if t.throw_type == 'throwaway') + len(unthrown)
-    stats['break_throws'] = sum(1 for t in throws_by_player if t.break_throw)
+    stats['break_throws'] = sum(1 for t in throws_by_player if t.break_throw)  # attempts
+    stats['completed_break_throws'] = sum(1 for t in throws_by_player if t.break_throw and t.is_completion)
+    # Offensive yardage: metres upfield (back is negative) on completed
+    # passes, thrown and caught
+    stats['yards_thrown'] = sum(t.x_end - t.x_start for t in throws_by_player
+                                if t.is_completion and t.x_start is not None and t.x_end is not None)
+    stats['yards_received'] = sum(t.x_end - t.x_start for t in throws_to_player
+                                  if t.is_completion and t.x_start is not None and t.x_end is not None)
+    stats['yards'] = stats['yards_thrown'] + stats['yards_received']
     
     # Calculate throw distances
     distances = [t.calculate_distance() for t in throws_by_player if t.calculate_distance()]
@@ -455,6 +472,12 @@ def process_player_stats(player, lineups, throws_by_player, throws_to_player, ev
     
     # Calculate derived stats
     stats['turnovers'] = stats['throwaways'] + stats['drops'] + stats['stalls']
+    # Touches: every time the disc came to them. Each one ends in a throw,
+    # a stall, a goal caught or a drop (as turnovers.handling_summary).
+    stats['touches'] = stats['throws'] + stats['stalls'] + stats['goals'] + stats['drops']
+    if stats['touches']:
+        for key in ('turnovers', 'throwaways', 'drops'):
+            stats[f'{key}_per_10_touches'] = 10.0 * stats[key] / stats['touches']
     # A Callahan is a goal and a block (as on Game Day and in the ratings).
     # 'goals' and 'blocks' are the plays recorded as such; these totals are
     # what the pages show as Goals and Blocks.

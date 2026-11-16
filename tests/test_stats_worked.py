@@ -479,3 +479,117 @@ def test_game_day_completion(app):
     assert '80.0%' in game_page and '90.0%' not in game_page
     tournament_page = w.client.get(f'/gameday/tournament/{w.tournament.id}/stats').get_data(as_text=True)
     assert '80.0%' in tournament_page and '50.0%' not in tournament_page
+
+
+# --- the season plan's measures ------------------------------------------------
+
+def test_season_plan_base_metrics(possession_game):
+    """The possession game, plus point 6: a D point taken live on Game Day
+    (no full stats) where D blocks, A throws it away and they score.
+
+    Point  start  scored  our turns  had the disc
+      1      O     yes        0      yes (we received)
+      2      D     yes        1      yes (regained)
+      3      O     no         1      yes
+      4      D     yes        0      yes (the Callahan)
+      5      D     no         0      no
+      6      D     no         1      yes (D's block, from Game Day)
+
+    O-line: 2 points, had it in 2, 1 goal, 1 no-turn goal (point 1).
+      Conversion 1/2 = 50%. Perfect conversion 1/2 = 50%.
+      Recovery: goals after a turn 0 / (had 2 - no-turn 1) = 0%.
+      Turnovers per point with the disc: 1/2 = 0.50.
+    D-line: 4 points, had it in 3 (2, 4, 6), 2 goals (breaks), 1 no-turn
+      goal (point 4), 1 goal after a turn (point 2).
+      Successful defence 3/4 = 75%. Conversion 2/3 = 66.7%.
+      Perfect conversion 1/3 = 33.3%. Recovery 1 / (3 - 1) = 50%.
+      Turnovers per point with the disc: 2/3 = 0.67.
+    All: 6 points, had it in 5, 3 goals, 2 no-turn goals, 1 after a turn.
+      Conversion 3/5 = 60%, perfect 2/5 = 40%, recovery 1 / (5 - 2) = 33.3%.
+    """
+    from app.stats import measures, turnovers
+    w = possession_game
+    r = w.client.post('/gameday/api/record-point', json={
+        'game_id': w.game_id, 'point_number': 6, 'line_type': 'D-line', 'gender_ratio': '4-3',
+        'players': list(w.ids.values()), 'outcome': 'conceded',
+        'events': [{'type': 'block', 'player_id': w.ids['D']},
+                   {'type': 'throwaway', 'player_id': w.ids['A']}]})
+    assert r.get_json()['success'], r.get_data(as_text=True)
+    ctx = w.context()
+    try:
+        games = w.games()
+        m = measures.team_measures(turnovers.ThrowingData(games), {w.game_id})
+    finally:
+        ctx.pop()
+    o, d, total = m['o'], m['d'], m['all']
+    assert (o['points'], o['had_disc'], o['goals'], o['no_turn_goals']) == (2, 2, 1, 1)
+    assert o['conversion_rate'] == pytest.approx(50) and o['perfect_conversion_rate'] == pytest.approx(50)
+    assert o['recovery_rate'] == 0
+    assert o['turnovers_per_had_disc_point'] == pytest.approx(0.5)
+    assert (d['points'], d['had_disc'], d['breaks'], d['no_turn_goals'], d['goals_after_a_turn']) == (4, 3, 2, 1, 1)
+    assert d['successful_defence_rate'] == pytest.approx(75)
+    assert d['conversion_rate'] == pytest.approx(200 / 3)
+    assert d['perfect_conversion_rate'] == pytest.approx(100 / 3)
+    assert d['recovery_rate'] == pytest.approx(50)
+    assert d['turnovers_per_had_disc_point'] == pytest.approx(2 / 3)
+    assert (total['points'], total['had_disc'], total['goals'], total['no_turn_goals']) == (6, 5, 3, 2)
+    assert total['conversion_rate'] == pytest.approx(60)
+    assert total['perfect_conversion_rate'] == pytest.approx(40)
+    assert total['recovery_rate'] == pytest.approx(100 / 3)
+    assert (m['full_points'], m['gameday_points']) == (5, 1)
+    page = w.client.get('/stats/team').get_data(as_text=True)
+    assert 'Season Plan Measures' in page and 'Successful-defence rate' in page
+
+
+def test_season_plan_throwing_measures(possession_game):
+    """The throws in the possession game's 5 full-stat points (force
+    forehand, so the break side is a throw 3 m+ towards smaller y):
+
+      point 1: A (20 m) to B (40 m)   caught, +20 m, open side
+               B (40 m) to C (90 m)   caught, +50 m (the assist), open side
+      point 2: B throws it away, from where A had it (40, 18) to (50, 10):
+               8 m across to the break side, not caught
+               C (55, 12) to E (88, 20) caught, +33 m, open side
+      point 3: A to B, dropped (a drop is B's turnover, not a throw of A's)
+
+    Throws 4: caught 3, thrown away 1; dropped passes 1.
+    Completion = 3 / (4 + 1) = 60%. Turnovers 2 (B's throwaway and drop) in
+    5 points = 0.40 per point.
+    Breaks thrown 1, completed 0. Yardage = 20 + 50 + 33 = 103 m, 20.6 m per point.
+
+    B: touches = throws 2 + drops 1 = 3. Throwaways per 10 touches =
+    10 x 1 / 3 = 3.3, drops 3.3, all turnovers 6.7. Breaks 0 of 1.
+    Yards thrown 50, caught 20.
+    C: touches = 1 throw + 1 goal = 2, no turnovers. Yards thrown 33, caught 50.
+    """
+    from app.stats import measures, turnovers
+    from app.stats.players import get_players_base_stats
+    w = possession_game
+    ctx = w.context()
+    try:
+        games = w.games()
+        data = turnovers.ThrowingData(games)
+        m = measures.team_measures(data, {w.game_id})
+        stats = get_players_base_stats(list(w.players.values()), games)
+        handling = {k: turnovers.handling_summary(data, w.ids[k], {w.game_id}) for k in w.ids}
+    finally:
+        ctx.pop()
+    assert m['completion_rate'] == pytest.approx(60)
+    assert m['turnovers_per_point'] == pytest.approx(0.4)
+    assert (m['break_attempts'], m['completed_breaks']) == (1, 0)
+    assert m['yards'] == pytest.approx(103) and m['yards_per_point'] == pytest.approx(20.6)
+    b, c = stats[w.ids['B']], stats[w.ids['C']]
+    assert (b['touches'], b['throwaways'], b['drops']) == (3, 1, 1)
+    assert b['throwaways_per_10_touches'] == pytest.approx(10 / 3)
+    assert b['drops_per_10_touches'] == pytest.approx(10 / 3)
+    assert b['turnovers_per_10_touches'] == pytest.approx(20 / 3)
+    assert (b['break_throws'], b['completed_break_throws']) == (1, 0)
+    assert (b['yards_thrown'], b['yards_received']) == (pytest.approx(50), pytest.approx(20))
+    assert (c['touches'], c['turnovers']) == (2, 0)
+    assert (c['yards_thrown'], c['yards_received']) == (pytest.approx(33), pytest.approx(50))
+    # A player's touches and turnovers per touch are the same on every page
+    for k, h in handling.items():
+        s = stats[w.ids[k]]
+        assert s['touches'] == h['touches'], k
+        assert s['turnovers_per_10_touches'] == (pytest.approx(h['turnovers_per_10'])
+                                                 if h['turnovers_per_10'] is not None else None), k

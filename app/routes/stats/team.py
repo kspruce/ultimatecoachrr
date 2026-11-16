@@ -13,7 +13,7 @@ from app.stats.formulas import calculate_optimized_line_efficiency
 from app.stats.players import get_players_base_stats, players_in_games
 from app.stats.team import calculate_additional_team_metrics, calculate_performance_trends, calculate_possession_based_team_metrics, calculate_team_summary, get_previous_period_games
 from app.stats.loaders import game_points, is_analysed, preload_game_points
-from app.stats import turnovers
+from app.stats import measures, turnovers
 from app.stats.profile import team_profile
 
 
@@ -155,6 +155,14 @@ def team_stats():
     # Trend over the games in the filter only
     ball_security['trends'] = turnovers.game_trends(throwing, None, game_ids)
 
+    # The team stats the season plan measures improvement with, and each
+    # player's own (from the player stats already worked out above)
+    plan_measures = measures.team_measures(throwing, game_ids)
+    plan_players = sorted(
+        ({'player': p, 'stats': player_stats_dict[p.id]} for p in players
+         if player_stats_dict.get(p.id, {}).get('touches')),
+        key=lambda r: -r['stats']['touches'])
+
     # The radars: this period (and the one before) against the team's history
     team_radar = team_profile(throwing, game_ids, {g.id for g in prev_games}, all_games)
 
@@ -182,4 +190,6 @@ def team_stats():
         performance_trends=performance_trends,
         ball_security=ball_security,
         team_radar=team_radar,
+        plan_measures=plan_measures,
+        plan_players=plan_players,
     )
