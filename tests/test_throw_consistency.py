@@ -190,9 +190,12 @@ def test_catch_rate_and_turnovers_forced(app, setup):
     with app.test_request_context():
         login_user(admin)
         metrics = calculate_additional_team_metrics([db.session.get(Game, setup['game_id'])])
-    # 5 catches (two catches, the hockey assist, the assist and the goal)
-    # and 1 drop; only 'catch' events used to count (2 of 3)
-    assert round(metrics['catch_rate'], 1) == round(500 / 6, 1)
+    # Catch rate is passes caught / passes that reached a receiver. The two
+    # pickups (after the forced turnover and the block) aren't passes. The
+    # passes: 0 to 1 dropped; then 0 to 1, 1 to 4 and 4 to 5 (the goal)
+    # caught = 3 caught, 1 dropped = 75%.
+    # (Pickups used to count as catches: 5 of 6.)
+    assert round(metrics['catch_rate'], 1) == 75.0
     # The forced turnover and the block
     assert metrics['turnovers_forced_per_point'] == 2
 
