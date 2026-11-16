@@ -322,8 +322,8 @@
                                 </div>
                                 <div class="col-sm-6">
                                     <table class="table table-sm">
-                                        <tr><th>Completion Rate <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="Your passes caught out of passes thrown. A dropped pass is the receiver's turnover, so it doesn't count against the thrower. The team's completion counts it as an incomplete pass."></i></th><td>{{ stats.completion_rate|round(1) }}% <small class="text-muted">({{ stats.completions }}/{{ stats.throws }})</small></td></tr>
-                                        <tr><th>Catch Rate <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="Passes caught out of passes that reached you (caught or dropped). Picking up the disc isn't a catch."></i></th><td>{{ stats.catch_rate|round(1) }}%</td></tr>
+                                        <tr><th>Completion Rate <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="Your passes caught out of passes thrown. A dropped pass is the receiver's turnover, so it doesn't count against the thrower. The team's completion counts it as an incomplete pass."></i></th><td>{% if stats.throws %}{{ stats.completion_rate|round(1) }}% <small class="text-muted">({{ stats.completions }}/{{ stats.throws }})</small>{% else %}–{% endif %}</td></tr>
+                                        <tr><th>Catch Rate <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="Passes caught out of passes that reached you (caught or dropped). Picking up the disc isn't a catch."></i></th><td>{{ '%.1f%%'|format(stats.catch_rate) if stats.catches + stats.drops else '–' }}</td></tr>
                                         <tr><th>Hockey Assists</th><td>{{ stats.hockey_assists }}</td></tr>
                                         <tr><th>Break Throws</th><td>{{ stats.break_throws }} <small class="text-muted">({{ stats.break_throw_percentage|round(0)|int }}% of throws)</small></td></tr>
                                     </table>
@@ -2219,7 +2219,7 @@ function generatePrintableReport() {
                         <div class="stat-label">Blocks</div>
                     </div>
                     <div class="stat-box">
-                        <div class="stat-value">{{ stats.completion_rate|round(1) }}%</div>
+                        <div class="stat-value">{{ (stats.completion_rate|round(1) ~ '%') if stats.throws else '–' }}</div>
                         <div class="stat-label">Completion Rate</div>
                     </div>
                 </div>

@@ -109,13 +109,14 @@
                         <div class="col-md-6">
                             <div class="stat-card">
                                 <div class="stat-value">{{ team_summary.o_line_conversion_rate|round(1) }}%</div>
-                                <div class="stat-label">O-Line Conversion Rate</div>
+                                <div class="stat-label">Hold %</div>
+                                <small class="text-muted">O-line points we scored</small>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="stat-card">
                                 <div class="stat-value">{{ team_summary.o_line_conversions }} / {{ team_summary.o_line_points }}</div>
-                                <div class="stat-label">O-Line Points Converted</div>
+                                <div class="stat-label">O-Line Points Held</div>
                             </div>
                         </div>
                     </div>
@@ -158,13 +159,14 @@
                         <div class="col-md-6">
                             <div class="stat-card">
                                 <div class="stat-value">{{ team_summary.d_line_conversion_rate|round(1) }}%</div>
-                                <div class="stat-label">D-Line Conversion Rate</div>
+                                <div class="stat-label">Break %</div>
+                                <small class="text-muted">D-line points we scored</small>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="stat-card">
                                 <div class="stat-value">{{ team_summary.d_line_conversions }} / {{ team_summary.d_line_points }}</div>
-                                <div class="stat-label">D-Line Points Converted</div>
+                                <div class="stat-label">D-Line Points Broken</div>
                             </div>
                         </div>
                     </div>

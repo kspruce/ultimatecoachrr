@@ -760,3 +760,14 @@ def test_break_throws_by_hand(start, end, force, expected):
 def test_throw_kinds_by_hand(start, end, kind):
     from app.stats.throwing import throw_kind
     assert throw_kind(*start, *end) == kind
+
+
+def test_no_throws_is_no_completion_rate_not_zero(app):
+    """G played a point but never touched the disc: no completion or catch
+    rate (a dash), not 0%."""
+    w = WorkedGame(app)
+    w.point('O', [('catch', 'A', 20, 18), ('goal', 'B', 90, 18)])
+    page = w.client.get(f"/stats/player/{w.ids['G']}").get_data(as_text=True)
+    row = page[page.index('Completion Rate <i'):]
+    row = row[:row.index('</tr>')]
+    assert '0.0%' not in row and '–' in row
