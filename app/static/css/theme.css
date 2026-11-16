@@ -765,3 +765,22 @@ pre { background: var(--sunken); color: var(--ink); border-radius: var(--radius-
 .uc-search-list a + a { border-top: 1px solid var(--rule); }
 .uc-search-list a:hover { background: var(--club-soft); }
 .uc-search-list span { color: var(--ink-3); font-size: .84rem; }
+
+/* Player view (app/routes/player_view.py): a coach seeing the site as a
+   player does. A bright bar on every page so it's never forgotten. */
+.uc-player-view-bar {
+  background: #ffd166;
+  color: #1f1f1f;
+  font-size: .9rem;
+  position: sticky;
+  top: 0;
+  z-index: 1020;
+  box-shadow: 0 1px 0 rgba(0,0,0,.12);
+}
+.uc-player-view-bar .btn-outline-dark { color: #1f1f1f; border-color: #1f1f1f; }
+.uc-player-view-bar .btn-outline-dark:hover { background: #1f1f1f; color: #ffd166; }
+@media (max-width: 575.98px) {
+  .uc-player-view-bar { font-size: .8rem; }
+  .uc-player-view-bar .container { row-gap: .35rem !important; padding-top: .4rem !important; padding-bottom: .4rem !important; }
+  .uc-player-view-bar .uc-pv-text { flex-basis: 100%; }
+}

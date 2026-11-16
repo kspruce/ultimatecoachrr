@@ -334,16 +334,21 @@ def mine():
     entries = (PlayerFeedback.query.filter_by(player_id=player.id, shared=True)
                .order_by(PlayerFeedback.created_at.desc()).all())
     new_ids = {e.id for e in entries if e.seen_at is None}
-    now = datetime.utcnow()
-    for e in entries:
-        if e.id in new_ids:
-            e.seen_at = now
-    new_reply_ids = _mark_seen([r for e in entries for r in e.replies if not r.from_player])
+    coach_replies = [r for e in entries for r in e.replies if not r.from_player]
     focus = fbu.current_focus(player.id)
     new_focus = focus is not None and focus.seen_at is None
-    if new_focus:
-        focus.seen_at = now
-    db.session.commit()
+    if current_user.previewing_other_player:
+        # A coach seeing it through the player's eyes: leave it unread for them
+        new_reply_ids = {r.id for r in coach_replies if r.seen_at is None}
+    else:
+        now = datetime.utcnow()
+        for e in entries:
+            if e.id in new_ids:
+                e.seen_at = now
+        new_reply_ids = _mark_seen(coach_replies)
+        if new_focus:
+            focus.seen_at = now
+        db.session.commit()
 
     return render_template('feedback/mine.html', player=player, entries=entries, new_ids=new_ids,
                            new_reply_ids=new_reply_ids, focus=focus, new_focus=new_focus,
@@ -472,7 +477,7 @@ def _player_goal_id(player, raw):
 
 def _own_or_coach(player):
     """The player themself, or a coach."""
-    if not (current_user.is_coach or (player.user_id and player.user_id == current_user.id)):
+    if not (current_user.is_coach or current_user.owns_player(player)):
         abort(403)
 
 
@@ -549,7 +554,7 @@ def delete_goal(goal_id):
 
 def _review_or_404(review_id):
     review = PlayerReview.query.filter_by(id=review_id, team_organization_id=get_current_team_id()).first_or_404()
-    is_player = review.player.user_id and review.player.user_id == current_user.id
+    is_player = current_user.owns_player(review.player)
     if not (current_user.is_coach or (is_player and review.shared)):
         abort(404)
     return review
@@ -589,8 +594,8 @@ def new_review(player_id):
 @login_required
 def view_review(review_id):
     review = _review_or_404(review_id)
-    is_player = review.player.user_id == current_user.id
-    if is_player and review.seen_at is None:
+    is_player = current_user.owns_player(review.player)
+    if is_player and review.seen_at is None and not current_user.previewing_other_player:
         review.seen_at = datetime.utcnow()
         db.session.commit()
     return render_template('feedback/review.html', review=review, is_player=is_player)
@@ -616,7 +621,7 @@ def edit_review(review_id):
 @login_required
 def review_comment(review_id):
     review = _review_or_404(review_id)
-    if review.player.user_id != current_user.id:
+    if not current_user.owns_player(review.player):
         abort(403)
     review.player_comment = (request.form.get('player_comment') or '').strip()[:5000] or None
     db.session.commit()

@@ -24,7 +24,7 @@ def team_info_processor():
         available_teams = accessible_teams(current_user)
         team_id = get_current_team_id()
         current_team = next((t for t in available_teams if t.id == team_id), None)
-        if current_user.is_superadmin and available_teams:
+        if current_user.superadmin_flag and available_teams:
             if current_team is None:  # saved team was deleted: own team, else the first
                 current_team = next((t for t in available_teams
                                      if t.id == current_user.team_organization_id), available_teams[0])
