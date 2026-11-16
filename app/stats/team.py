@@ -307,7 +307,9 @@ def calculate_performance_trends(games):
         d_conversions = sum(1 for p in d_points if point_we_scored(p))
         d_line_efficiency.append((d_conversions / d_points_count * 100) if d_points_count > 0 else 0)
         
-        # Calculate break percentage - handle both query objects and lists
+        # Points broken by either team (Point.is_break: our D-line scored or
+        # their D-line scored), as a share of points that ended in a goal.
+        # Our own break rate is d_line_efficiency.
         all_points = [p for p in game_points(game) if point_has_result(p)]
         
         total_points = len(all_points)
@@ -456,8 +458,9 @@ def calculate_team_summary(games):
         summary['o_line_conversions'] += sum(1 for p in o_points if point_we_scored(p))
         summary['d_line_points'] += len(d_points)
         summary['d_line_conversions'] += sum(1 for p in d_points if point_we_scored(p))
-        summary['breaks'] += sum(1 for p in game_points(game) if p.is_break)
-        summary['holds'] += sum(1 for p in game_points(game) if p.is_hold)
+        # Our breaks and holds (Point.is_break / is_hold count either team's)
+        summary['breaks'] += sum(1 for p in d_points if point_we_scored(p))
+        summary['holds'] += sum(1 for p in o_points if point_we_scored(p))
 
     summary['win_percentage'] = (
         (summary['wins'] / summary['games_played'] * 100) 

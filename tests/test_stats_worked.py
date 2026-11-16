@@ -331,3 +331,26 @@ def test_a_huck_is_long_and_upfield_on_every_page(app):
     assert [stats[w.ids[k]]['hucks'] for k in 'ABCD'] == [1, 0, 0, 1]
     assert metrics['hucks_per_point'] == pytest.approx(2.0)
     assert team['huck_attempts'] == 2
+
+
+def test_breaks_and_holds_are_ours(possession_game):
+    """The possession game: points 1 (O, we scored) is our hold, points 2
+    and 4 (D, we scored) our breaks, point 3 (O, they scored) their break,
+    point 5 (D, they scored) their hold.
+
+    Our holds 1, our breaks 2. (Before, the summary's breaks counted their
+    break too, 3, and holds their hold, 2.) The trend line "breaks by either
+    team" is 3 of 5 points = 60%; break % (D-line) 2 of 3 = 66.7%.
+    """
+    import json
+    from app.stats.team import calculate_performance_trends, calculate_team_summary
+    w = possession_game
+    ctx = w.context()
+    try:
+        summary = calculate_team_summary(w.games())
+        trends = calculate_performance_trends(w.games())
+    finally:
+        ctx.pop()
+    assert (summary['holds'], summary['breaks']) == (1, 2)
+    assert json.loads(trends['break_percentage']) == [pytest.approx(60)]
+    assert json.loads(trends['d_line_efficiency']) == [pytest.approx(200 / 3)]

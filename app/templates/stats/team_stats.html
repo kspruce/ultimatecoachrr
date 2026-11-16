@@ -565,7 +565,7 @@
                 <div class="card-header">
                     <h5>Performance Trends
                         <i class="bi bi-info-circle ms-2" data-bs-toggle="tooltip" 
-                           title="Team performance trends over time">
+                           title="Per game: hold % (O-line points we scored), break % (D-line points we scored), and the share of points broken by either team. Points stopped by the cap or half time aren't counted.">
                         </i>
                     </h5>
                 </div>
@@ -715,7 +715,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         labels: labels,
                         datasets: [
                             {
-                                label: 'O-Line Efficiency',
+                                label: 'Hold % (O-line)',
                                 data: oLineEfficiency,
                                 borderColor: 'rgba(75, 192, 192, 1)',
                                 backgroundColor: 'rgba(75, 192, 192, 0.2)',
@@ -725,7 +725,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 pointHoverRadius: 7
                             },
                         {
-                            label: 'D-Line Efficiency',
+                            label: 'Break % (D-line)',
                             data: dLineEfficiency,
                             borderColor: 'rgba(255, 99, 132, 1)',
                             backgroundColor: 'rgba(255, 99, 132, 0.2)',
@@ -733,7 +733,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             fill: false
                         },
                         {
-                            label: 'Break Percentage',
+                            label: 'Breaks by either team (% of points)',
                             data: breakPercentage,
                             borderColor: 'rgba(255, 206, 86, 1)',
                             backgroundColor: 'rgba(255, 206, 86, 0.2)',
