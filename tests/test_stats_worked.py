@@ -602,3 +602,161 @@ def test_the_counting_rules_are_on_the_stats_pages(possession_game):
     assert 'stopped by the cap' in page
     assert '#counting' in w.client.get('/stats/').get_data(as_text=True)
     assert '#counting' in w.client.get('/stats/team').get_data(as_text=True)
+
+
+# --- ratings, end to end --------------------------------------------------------
+
+def test_ratings_by_hand(possession_game):
+    """The possession game's box score (everyone played all 5 points):
+
+        A: a hockey assist (point 1)                       nothing that's rated
+        B: assist (point 1), throwaway (2), drop (3)       1 assist, 2 turns
+        C: goal (1), assist (2)                            1 goal, 1 assist
+        D: block (2)                                       1 block
+        E: goal (2)                                        1 goal
+        F: Callahan (4)                                    a goal and a block
+        G: nothing
+
+    SE = 0.5 (test_scoring_efficiency_by_hand), so one
+        goal   = 0.86 - 0.43 x 0.5 = 0.645
+        assist = 1.14 - 0.57 x 0.5 = 0.855
+        block  = turn = 0.5
+    EPM: B = 0.855 - 2 x 0.5 = -0.145; C = 0.645 + 0.855 = 1.5; D = 0.5;
+         E = 0.645; F = 0.645 + 0.5 = 1.145; A = G = 0.
+    Team rate = all EPM / player-points = 3.645 / (7 x 5) = 0.10414 per point.
+    PER for C = 10 x (1.5 + 10 x 0.10414) / (5 + 10) = 1.694.
+    Eff prior = SE x team turns / players = 0.5 x 2 / 7 = 0.142857.
+    Eff for C = 1.5 / (1.5 + 0 + 0.142857) = 0.913;
+    for B = 0.855 / (0.855 + 1.0 + 0.142857) = 0.428.
+    Plain +/-: B = 1 - 2 = -1, F = 1 + 1 = +2.
+    """
+    from app.stats.formulas import apply_ratings
+    from app.stats.players import get_players_base_stats
+    from app.stats.team import calculate_team_averages
+    w = possession_game
+    ctx = w.context()
+    try:
+        games = w.games()
+        avgs = calculate_team_averages(games)
+        stats = get_players_base_stats(list(w.players.values()), games)
+    finally:
+        ctx.pop()
+    for s in stats.values():
+        apply_ratings(s, avgs)
+    s = {k: stats[w.ids[k]] for k in w.ids}
+    assert avgs['se'] == pytest.approx(0.5)
+    assert avgs['avg_ge_per_point'] == pytest.approx(3.645 / 35)
+    assert avgs['eff_prior'] == pytest.approx(1 / 7)
+    expected_epm = {'A': 0, 'B': -0.145, 'C': 1.5, 'D': 0.5, 'E': 0.645, 'F': 1.145, 'G': 0}
+    for k, epm in expected_epm.items():
+        assert s[k]['epm'] == pytest.approx(epm), k
+    assert s['C']['per'] == pytest.approx(10 * (1.5 + 10 * 3.645 / 35) / 15)
+    assert s['C']['eff'] == pytest.approx(1.5 / (1.5 + 1 / 7))
+    assert s['B']['eff'] == pytest.approx(0.855 / (0.855 + 1.0 + 1 / 7))
+    assert (s['B']['plus_minus'], s['F']['plus_minus']) == (-1, 2)
+    assert s['A']['hockey_assists'] == 1
+
+
+# --- what turnovers cost --------------------------------------------------------
+
+def test_turnover_cost_by_hand(possession_game):
+    """Our turnovers in the possession game:
+        point 2: B throws it away, landing at 50 m (middle third): D blocks
+                 their next throw, so we got it back
+        point 3: B drops it at 35 m (our own third): they score
+    2 turnovers, 1 turned into a goal for them = 50%; own third 1 of 1 =
+    100%, middle third 0 of 1 = 0%.
+    """
+    from app.stats import turnovers
+    w = possession_game
+    ctx = w.context()
+    try:
+        cost = turnovers.turnover_cost(turnovers.ThrowingData(w.games()), {w.game_id})
+    finally:
+        ctx.pop()
+    rows = {r['label']: r for r in cost['rows']}
+    assert (cost['turnovers'], cost['conceded']) == (2, 1)
+    assert cost['conceded_rate'] == pytest.approx(50)
+    assert (rows['Own third']['turnovers'], rows['Own third']['conceded_rate']) == (1, 100)
+    assert (rows['Middle third']['turnovers'], rows['Middle third']['conceded_rate']) == (1, 0)
+
+
+# --- one point, play by play ------------------------------------------------------
+
+def test_point_replay_by_hand(possession_game):
+    """Point 2 of the possession game, as the point page shows it:
+        possession 1 (theirs): their unforced turnover
+        possession 2 (ours):   A picks up, B throws it away
+        possession 3 (theirs): D blocks
+        possession 4 (ours):   C picks up, C to E, E scores
+    Throws counted 2 (B's throwaway, C's assist), 1 completed = 50%.
+    Our turns 1; times we won it back 2 (their turnover and the block).
+    Gain on completed throws = 88 - 55 = 33 m. Story: E scored, C assisted.
+    """
+    from app.models.event import Event
+    from app.models.point import Point
+    from app.stats.point_replay import build_point_replay
+    w = possession_game
+    point = Point.query.filter_by(game_id=w.game_id, point_number=2).one()
+    replay = build_point_replay(point, Event.query.filter_by(point_id=point.id).all())
+    s = replay['stats']
+    assert [p['ours'] for p in replay['possessions']] == [False, True, False, True]
+    assert (s['throws'], s['completions'], s['completion_pct']) == (2, 1, 50)
+    assert (s['turns'], s['blocks']) == (1, 2)
+    assert s['gain'] == pytest.approx(33)
+    assert (replay['story']['scorer'], replay['story']['assist']) == ('Player E', 'Player C')
+
+
+# --- cutting ------------------------------------------------------------------------
+
+def test_cuts_from_catches_by_hand(possession_game):
+    """Completed passes that gained ground are cuts that worked. In the
+    possession game: A to B (20 m up), B to C (50 m up), C to E (33 m up);
+    all are 20 m+ long and 15 m+ upfield, so all deep. C caught 1 in 5
+    points with full stats = 0.2 per point; the team caught 3 in 35
+    player-points = 0.0857 per point per player.
+    """
+    from app.stats import cutting, turnovers
+    w = possession_game
+    ctx = w.context()
+    try:
+        profile = cutting.cut_profile(turnovers.ThrowingData(w.games()), w.ids['C'], {w.game_id})
+    finally:
+        ctx.pop()
+    assert profile['receptions'] == 1
+    assert profile['per_point'] == pytest.approx(0.2)
+    assert profile['deep_share'] == pytest.approx(100)
+    assert profile['team']['per_point'] == pytest.approx(3 / 35)
+
+
+# --- throw geometry ---------------------------------------------------------------
+
+@pytest.mark.parametrize('start, end, force, expected', [
+    # Forced forehand: the break side is the thrower's left (smaller y)
+    ((40, 18), (50, 12), 'forehand', True),     # 6 m across to the left
+    ((40, 18), (50, 16), 'forehand', False),    # only 2 m across: not a break
+    ((40, 18), (50, 25), 'forehand', False),    # open side
+    # Forced backhand: the break side is the right
+    ((40, 18), (50, 25), 'backhand', True),
+    # Forced middle: the break is towards the nearer sideline
+    ((40, 10), (50, 5), 'middle', True),
+    ((40, 30), (50, 34), 'middle', True),
+    # No force recorded: we can't say
+    ((40, 18), (50, 12), None, None),
+])
+def test_break_throws_by_hand(start, end, force, expected):
+    from app.stats.throwing import is_break_throw
+    assert is_break_throw(*start, *end, force) == expected
+
+
+@pytest.mark.parametrize('start, end, kind', [
+    ((40, 18), (39, 30), 'dump_swing'),   # backwards: a reset
+    ((40, 18), (41, 30), 'dump_swing'),   # under 2 m upfield
+    ((40, 18), (50, 18), 'short'),        # 10 m upfield
+    ((40, 18), (57, 18), 'mid'),          # 17 m: too short for a huck
+    ((40, 18), (55, 32), 'huck'),         # 15 m up, 20.5 m long
+    ((40, 18), (54, 34), 'short'),        # 21 m long, but only 14 m gained: not a huck
+])
+def test_throw_kinds_by_hand(start, end, kind):
+    from app.stats.throwing import throw_kind
+    assert throw_kind(*start, *end) == kind
