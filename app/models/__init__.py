@@ -56,6 +56,7 @@ from app.models.gameday import LineTemplate, LineTemplatePlayer, GameDayEvent, G
 
 # Invite tokens
 from app.models.invite_token import InviteToken
+from app.models.link_request import PlayerLinkRequest
 from app.models.team_signup_invite import TeamSignupInvite
 
 # Site-wide settings
@@ -107,7 +108,7 @@ __all__ = [
     # Settings & Export
     'TeamSettings', 'ExportLog',
     # Invites
-    'InviteToken', 'TeamSignupInvite',
+    'InviteToken', 'TeamSignupInvite', 'PlayerLinkRequest',
     # Site settings
     'SiteSettings',
     # Coach feedback

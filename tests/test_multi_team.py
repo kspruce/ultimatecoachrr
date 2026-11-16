@@ -128,6 +128,10 @@ def test_player_profile_is_per_team(app, clubs):
     db.session.commit()
 
     c.post('/auth/link_player', data={'player_id': other_row})  # current team: Biscuits
+    # Players ask; a Biscuits coach approves
+    from app.models.link_request import PlayerLinkRequest
+    request_id = PlayerLinkRequest.query.filter_by(user_id=clubs['alex']).one().id
+    stats_data.Client(app, clubs['other_coach'], clubs['other']).post(f'/auth/link-requests/{request_id}/approve')
     alex = get_user(clubs['alex'])
     assert {p.id for p in alex.player_profiles} == {herd_row, other_row}
     assert alex.player_for(clubs['herd']).id == herd_row

@@ -107,13 +107,81 @@ def test_coach_cannot_read_or_change_another_teams_feedback(app, two_teams):
     assert c.get('/sessions/1/feedback/quick').status_code == 404
 
 
+def link_requests():
+    from app.models.link_request import PlayerLinkRequest
+    db.session.expire_all()
+    return PlayerLinkRequest.query.all()
+
+
+def linked_user(player_id):
+    db.session.expire_all()
+    return db.session.get(Player, player_id).user_id
+
+
 def test_link_player_only_offers_your_own_unlinked_players(app, two_teams):
     c = client_for(app, two_teams['herd_player_user'])
     c.post('/auth/link_player', data={'player_id': two_teams['other_player']})
-    assert db.session.get(Player, two_teams['other_player']).user_id is None
-    c.post('/auth/link_player', data={'player_id': two_teams['herd_player']})
-    db.session.expire_all()
-    assert db.session.get(Player, two_teams['herd_player']).user_id == two_teams['herd_player_user']
+    assert linked_user(two_teams['other_player']) is None and link_requests() == []
+
+
+def test_players_ask_to_be_linked_and_a_coach_approves(app, two_teams):
+    """Picking a profile used to link it straight away, so anyone on the
+    team could take over an unlinked profile and read its feedback, goals
+    and fitness. Now it asks the coaches."""
+    player = client_for(app, two_teams['herd_player_user'])
+    player.post('/auth/link_player', data={'player_id': two_teams['herd_player']})
+    assert linked_user(two_teams['herd_player']) is None
+    [request] = link_requests()
+    assert (request.user_id, request.player_id) == (two_teams['herd_player_user'], two_teams['herd_player'])
+    assert 'Waiting for a coach' in player.get('/auth/link_player').get_data(as_text=True)
+
+    from app.models.onboarding import UserOnboarding
+    db.session.add(UserOnboarding(user_id=two_teams['herd_admin'], welcomed_role='admin', completed_steps=[]))
+    db.session.commit()
+    coach = client_for(app, two_teams['herd_admin'])
+    assert 'asked to be linked' in coach.get('/').get_data(as_text=True)  # Needs attention
+    users = coach.get('/auth/users').get_data(as_text=True)
+    assert 'playeruser' in users and 'Herd Player 01' in users
+    coach.post(f'/auth/link-requests/{request.id}/approve')
+    assert linked_user(two_teams['herd_player']) == two_teams['herd_player_user']
+    assert link_requests() == []
+
+
+def test_coach_declines_and_player_cancels(app, two_teams):
+    player = client_for(app, two_teams['herd_player_user'])
+    coach = client_for(app, two_teams['herd_admin'])
+    player.post('/auth/link_player', data={'player_id': two_teams['herd_player']})
+    coach.post(f'/auth/link-requests/{link_requests()[0].id}/decline')
+    assert link_requests() == [] and linked_user(two_teams['herd_player']) is None
+
+    player.post('/auth/link_player', data={'player_id': two_teams['herd_player']})
+    player.post('/auth/link_player/cancel')
+    assert link_requests() == []
+
+
+def test_only_the_teams_coaches_approve_link_requests(app, two_teams):
+    player = client_for(app, two_teams['herd_player_user'])
+    player.post('/auth/link_player', data={'player_id': two_teams['herd_player']})
+    request_id = link_requests()[0].id
+    player.post(f'/auth/link-requests/{request_id}/approve')
+    assert client_for(app, two_teams['other_admin']).post(
+        f'/auth/link-requests/{request_id}/approve').status_code == 404
+    assert linked_user(two_teams['herd_player']) is None and len(link_requests()) == 1
+
+
+def test_approving_a_profile_someone_else_got_first_changes_nothing(app, two_teams):
+    player = client_for(app, two_teams['herd_player_user'])
+    player.post('/auth/link_player', data={'player_id': two_teams['herd_player']})
+    db.session.get(Player, two_teams['herd_player']).user_id = two_teams['herd_admin']
+    db.session.commit()
+    client_for(app, two_teams['herd_admin']).post(f'/auth/link-requests/{link_requests()[0].id}/approve')
+    assert linked_user(two_teams['herd_player']) == two_teams['herd_admin']
+    assert link_requests() == []
+
+
+def test_coaches_link_their_own_account_directly(app, two_teams):
+    client_for(app, two_teams['herd_admin']).post('/auth/link_player', data={'player_id': two_teams['herd_player']})
+    assert linked_user(two_teams['herd_player']) == two_teams['herd_admin'] and link_requests() == []
 
 
 def test_tournament_bulk_update_needs_coach_and_same_team(app, two_teams):

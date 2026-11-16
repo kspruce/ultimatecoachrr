@@ -47,6 +47,37 @@
         </div>
     </div>
 
+    {% if link_requests %}
+    <!-- Players asking to be linked to a profile -->
+    <div class="card shadow-sm mb-4 border-primary" id="link-requests">
+        <div class="card-body">
+            <h6 class="fw-bold mb-1"><i class="bi bi-person-check me-1"></i>Asked to be linked</h6>
+            <p class="text-muted small">Check each account belongs to the player before approving: a linked
+                account sees that player's feedback, goals and fitness.</p>
+            {% for r in link_requests %}
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 py-2 border-top">
+                <div>
+                    <strong>{{ r.user.username }}</strong>{% if r.user.email %} <span class="text-muted">({{ r.user.email }})</span>{% endif %}
+                    wants to be <strong>{{ r.player.name }}</strong>{% if r.player.jersey_number %} #{{ r.player.jersey_number }}{% endif %}
+                    <span class="text-muted small">· {{ r.created_at.strftime('%-d %b') }}</span>
+                    {% if r.user.player %}<div class="small text-muted">Now linked to {{ r.user.player.name }}; approving moves them.</div>{% endif %}
+                </div>
+                <div class="d-flex gap-2">
+                    <form method="POST" action="{{ url_for('auth.answer_link_request', request_id=r.id, action='approve') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button class="btn btn-sm btn-primary">Approve</button>
+                    </form>
+                    <form method="POST" action="{{ url_for('auth.answer_link_request', request_id=r.id, action='decline') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button class="btn btn-sm btn-outline-secondary">Decline</button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
     {% if current_team %}
     <!-- Team join link -->
     <div class="card shadow-sm mb-4">

@@ -113,11 +113,12 @@ run in CI, which installs Chromium). Each fails on the old code.
 
 **Left to decide**
 
-1. **Players can claim any unlinked player profile on their team**
-   (`/auth/link_player`). Once linked, they see that profile's shared
-   feedback, goals, reviews and fitness results. Invite links already link
-   the right person; you could take the self-service picker away, or have
-   a coach approve the link.
+1. ~~**Players can claim any unlinked player profile on their team**~~
+   **Decided and done:** picking a profile on `/auth/link_player` now sends
+   a request that a coach approves or declines (Users page, and the home
+   page's "Needs attention", so it's in the coach summary email too).
+   Coaches and above still link their own account directly, and invite
+   links work as before. Tests in `tests/test_teams.py`.
 2. **Spreadsheet formulas in CSV exports.** Annotation titles and other
    text people type go into CSV exports as they are, so a cell starting
    with `=` runs as a formula when a coach opens the file in Excel. Putting
