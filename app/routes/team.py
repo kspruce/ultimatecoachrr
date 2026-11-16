@@ -312,6 +312,8 @@ def edit_player(player_id):
     if form.validate_on_submit():
         try:
             player.name = form.name.data
+            if player.jersey_number != form.jersey_number.data:
+                player.number_provisional = False  # a coach chose it
             player.jersey_number = form.jersey_number.data
             player.position = form.position.data
             player.gender = form.gender_match.data
@@ -886,3 +888,29 @@ def bulk_import():
         )
 
     return render_template('team/bulk_import.html')
+
+
+# ── Shirt numbers ──────────────────────────────────────────────────────────
+
+@bp.route('/numbers')
+@login_required
+def numbers():
+    """The club's numbers, 0-99: who wears each (provisional picks marked)
+    and which are free. Coaches confirm new players' picks here."""
+    from app.utils import numbers as shirt
+    team_id = get_current_team_id()
+    held = shirt.holders(team_id)
+    return render_template('team/numbers.html', title='Shirt numbers', numbers=shirt.NUMBERS, held=held,
+                           provisional=shirt.provisional(team_id) if current_user.is_coach else [],
+                           free_count=sum(1 for n in shirt.NUMBERS if n not in held))
+
+
+@bp.route('/numbers/<int:player_id>/confirm', methods=['POST'])
+@login_required
+@coach_required
+def confirm_number(player_id):
+    player = Player.query.filter_by(id=player_id, team_organization_id=get_current_team_id()).first_or_404()
+    player.number_provisional = False
+    db.session.commit()
+    flash(f'#{player.jersey_number} confirmed for {player.name}.', 'success')
+    return redirect(url_for('team.numbers'))

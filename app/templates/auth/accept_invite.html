@@ -66,6 +66,8 @@
                required minlength="{{ min_password }}" autocomplete="new-password">
       </div>
 
+      {% with player=invite.player %}{% include "auth/_number_picker.html" %}{% endwith %}
+
       <button type="submit" class="invite-submit">
         <i class="bi bi-check-circle me-2"></i>Create My Account
       </button>

@@ -12,6 +12,8 @@ class Player(db.Model):
     name = db.Column(db.String(100), nullable=False)
 
     jersey_number = db.Column(db.Integer)
+    # A number the player picked when they joined, until a coach confirms it
+    number_provisional = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
 
     position = db.Column(db.String(20))
 

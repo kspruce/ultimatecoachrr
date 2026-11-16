@@ -23,6 +23,9 @@
                     <i class="bi bi-calendar3 me-1"></i> {{ roster_season.name }} roster: add past players
                 </a>
             {% endif %}
+            <a href="{{ url_for('team.numbers') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-123 me-1"></i> Numbers
+            </a>
             {% if current_user.is_coach %}
                 <button type="button" class="btn btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#quickAdd" aria-expanded="false" aria-controls="quickAdd">
                     <i class="bi bi-lightning-charge me-1"></i> Quick add

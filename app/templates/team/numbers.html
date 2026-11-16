@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
+    <div>
+      <h2 class="fw-bold mb-1">Shirt numbers</h2>
+      <p class="text-muted mb-0">One player per number across the club, 1s and 2s alike. {{ free_count }} of 100 free.</p>
+    </div>
+    <a href="{{ url_for('team.index') }}" class="btn btn-outline-secondary btn-sm">Back to the roster</a>
+  </div>
+
+  {% if provisional %}
+  <div class="card shadow-sm mb-4 border-primary">
+    <div class="card-body">
+      <h6 class="fw-bold mb-1">Picked by new players</h6>
+      <p class="text-muted small">Confirm each pick, or change it from the player's profile.</p>
+      {% for p in provisional %}
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 py-2 border-top">
+        <div><strong>#{{ p.jersey_number }}</strong> {{ p.name }}</div>
+        <div class="d-flex gap-2">
+          <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('team.edit_player', player_id=p.id) }}">Change</a>
+          <form method="POST" action="{{ url_for('team.confirm_number', player_id=p.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-sm btn-primary">Confirm</button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <style>
+    .num-grid { display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:.4rem; }
+    @media (min-width: 768px) { .num-grid { grid-template-columns:repeat(10, minmax(0, 1fr)); } }
+    .num-cell { border:1px solid var(--uc-gray-200, #ddd); border-radius:8px; padding:.35rem .5rem; min-height:3.4rem; }
+    .num-cell.free { border-style:dashed; color:var(--bs-success); }
+    .num-cell .num { font-weight:700; }
+  </style>
+  <div class="num-grid">
+    {% for n in numbers %}
+    {% set p = held.get(n) %}
+    <div class="num-cell {{ '' if p else 'free' }}">
+      <div class="num">{{ n }}</div>
+      {% if p %}
+      <div class="small text-truncate" title="{{ p.name }}">{{ p.name }}</div>
+      {% if p.number_provisional %}<span class="badge bg-warning text-dark">Provisional</span>{% endif %}
+      {% else %}
+      <div class="small">Free</div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

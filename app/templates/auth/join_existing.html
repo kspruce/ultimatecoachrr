@@ -13,6 +13,7 @@
     </p>
     <form method="POST" action="{{ action }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      {% include "auth/_number_picker.html" %}
       <button type="submit" class="ac-btn"><i class="bi bi-check-circle me-2"></i>Join {{ team.name }}</button>
     </form>
   </div>

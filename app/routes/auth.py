@@ -16,6 +16,7 @@ from app.models.site_settings import SiteSettings
 from app.models.team_signup_invite import TeamSignupInvite
 from app.forms.auth import LoginForm, UserForm
 from app.utils.email import email_configured, is_real_email, send_email
+from app.utils import numbers
 from app.utils.password_reset import (COACH_LINK_SECONDS, EMAIL_LINK_SECONDS,
                                       emailed_reset_url, reset_url, user_for_reset_token)
 from app.utils.permissions import can_manage_account, can_manage_team_users, can_manage_user, grantable_roles
@@ -971,11 +972,15 @@ def accept_invite(token):
         email = _clean_email(request.form.get('email'))
         password = request.form.get('password', '')
         errors = _new_account_errors(username, email, password, request.form.get('confirm_password', ''))
+        number, number_error = numbers.parse_pick(invite.player, request.form.get('jersey_number'))
+        if number_error:
+            errors.append(number_error)
 
         if errors:
             _flash_all(errors)
             return render_template('auth/accept_invite.html', invite=invite, username=username,
-                                   email=email or '', min_password=MIN_PASSWORD_LENGTH)
+                                   email=email or '', min_password=MIN_PASSWORD_LENGTH,
+                                   **_number_choices(invite.player))
 
         # Create the user account
         user = User(
@@ -992,6 +997,8 @@ def accept_invite(token):
         # Link to player profile
         if invite.player:
             invite.player.user_id = user.id
+            if number is not None:
+                numbers.give_provisional(invite.player, number)
 
         # Mark invite as used
         invite.used_at = datetime.utcnow()
@@ -1005,7 +1012,16 @@ def accept_invite(token):
 
     return render_template('auth/accept_invite.html', invite=invite, username='',
                            email=player_email or '', min_password=MIN_PASSWORD_LENGTH,
-                           login_next=url_for('auth.accept_invite', token=token))
+                           login_next=url_for('auth.accept_invite', token=token),
+                           **_number_choices(invite.player))
+
+
+def _number_choices(player):
+    """The shirt numbers a new player can pick from (none when a coach
+    has already given them one)."""
+    if not numbers.can_pick(player):
+        return {'free_numbers': None}
+    return {'free_numbers': numbers.free_numbers(player.team_organization_id, player)}
 
 
 def _accept_invite_signed_in(invite):
@@ -1025,9 +1041,15 @@ def _accept_invite_signed_in(invite):
         return redirect(url_for('main.index'))
 
     if request.method == 'POST':
+        number, number_error = numbers.parse_pick(player, request.form.get('jersey_number'))
+        if number_error:
+            flash(number_error, 'danger')
+            return redirect(url_for('auth.accept_invite', token=invite.token))
         user.join_team(team_id, 'player')
         if player:
             player.user_account = user
+            if number is not None:
+                numbers.give_provisional(player, number)
         invite.used_at = datetime.utcnow()
         invite.used_by_user_id = user.id
         db.session.commit()
@@ -1038,7 +1060,8 @@ def _accept_invite_signed_in(invite):
 
     return render_template('auth/join_existing.html', title=f'Join {invite.team.name}',
                            team=invite.team, player=player,
-                           action=url_for('auth.accept_invite', token=invite.token))
+                           action=url_for('auth.accept_invite', token=invite.token),
+                           **_number_choices(player))
 
 
 # ─────────────────────────────────────────────────────────────
