@@ -57,6 +57,14 @@ CSP_REPORT_ONLY = '; '.join([
 ])
 
 
+def clean_rich_text(html):
+    """HTML from a rich-text editor (clip annotation notes), kept to safe
+    formatting: no scripts, event handlers or javascript: links."""
+    if not html:
+        return html
+    return nh3.clean(html, attributes=MARKDOWN_ATTRIBUTES)
+
+
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
@@ -166,6 +174,10 @@ def create_app(config_class=Config):
         # Markdown passes raw HTML through, so strip scripts, event
         # handlers and javascript: links before it reaches the page
         return Markup(nh3.clean(md_html, attributes=MARKDOWN_ATTRIBUTES))
+
+    @app.template_filter('rich_text')
+    def rich_text_filter(html):
+        return Markup(clean_rich_text(html) or '')
 
     @app.template_filter('embed_html')
     def embed_html_filter(html):

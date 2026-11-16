@@ -34,6 +34,17 @@ def reset_url(user, valid_for=EMAIL_LINK_SECONDS):
     return url_for('auth.reset_password', token=make_reset_token(user, valid_for), _external=True)
 
 
+def emailed_reset_url(user):
+    """The link for a reset email, on the site's own address (BASE_URL, as
+    the site's other emails use). Anyone can ask for someone's reset email,
+    so the address must not come from the request's Host or X-Forwarded-Host
+    headers, which the asker controls."""
+    base = (current_app.config.get('BASE_URL') or '').rstrip('/')
+    if not base:
+        return reset_url(user, EMAIL_LINK_SECONDS)
+    return base + url_for('auth.reset_password', token=make_reset_token(user, EMAIL_LINK_SECONDS))
+
+
 def user_for_reset_token(token):
     """The user a still-valid token belongs to, else None."""
     try:

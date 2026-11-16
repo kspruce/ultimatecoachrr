@@ -195,6 +195,34 @@ def test_annotation_visibility_by_role(app, herd, notes, url):
     assert {n for n in notes if n in body} == notes
 
 
+ANNOTATION_XSS = '<img src=x onerror=alert(1)>'
+
+
+def test_annotation_notes_cannot_run_script(app, herd):
+    """Notes are rich text from the editor. A player's notes must keep their
+    formatting but never run script for the coaches who open the clip or
+    edit the note, including notes saved before they were cleaned."""
+    r = client(app, herd, 'player').post(f"/clips/{herd['shown']}/annotation/add", data={
+        'timestamp': '12', 'title': 'Player note', 'visibility': 'team',
+        'notes': f'<p><strong>Watch the mark</strong></p>{ANNOTATION_XSS}'})
+    assert r.status_code == 302
+    saved = ClipAnnotation.query.filter_by(title='Player note').one()
+    assert 'onerror' not in saved.notes and '<strong>Watch the mark</strong>' in saved.notes
+
+    old = ClipAnnotation(clip_id=herd['shown'], timestamp=20, title='Old note', visibility='team',
+                         user_id=herd['player'], notes=f'<p>Old</p>{ANNOTATION_XSS}',
+                         team_organization_id=herd['team'])
+    db.session.add(old)
+    db.session.commit()
+    coach = client(app, herd, 'coach')
+    page = coach.get(f"/clips/{herd['shown']}").get_data(as_text=True)
+    assert '<strong>Watch the mark</strong>' in page and '<p>Old</p>' in page
+    assert 'onerror' not in page
+    # The edit page loads the notes into the editor as HTML
+    page = coach.get(f'/clips/annotation/{old.id}/edit').get_data(as_text=True)
+    assert 'Old' in page and 'onerror' not in html.unescape(page)
+
+
 def test_shared_page_shows_only_team_notes(app, herd, notes):
     _, data = share_url(client(app, herd, 'coach'), herd['shown'])
     body = app.test_client().get(data['url']).get_data(as_text=True)

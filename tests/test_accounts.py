@@ -299,6 +299,24 @@ def test_forgot_password_emails_a_link_when_email_is_set_up(app, teams):
     assert '/auth/reset-password/' in sent[0].get_content()
 
 
+def test_reset_email_links_to_the_site_whatever_host_is_asked_for(app, teams):
+    """Anyone can ask for someone else's reset email. If the link took its
+    address from the request, a forged Host or X-Forwarded-Host would send
+    the victim a link to the attacker's site, carrying a working token."""
+    app.config.update(MAIL_SERVER='smtp.example.com', MAIL_DEFAULT_SENDER='coach@example.com',
+                      BASE_URL='https://coach.example.org')
+    Anon(app).post('/auth/forgot-password', data={'identifier': 'player@example.com'},
+                   headers={'X-Forwarded-Host': 'evil.example.net'})
+    Anon(app).post('/auth/forgot-password', data={'identifier': 'player@example.com'},
+                   base_url='http://evil.example.net')
+    sent = app.extensions.get('sent_emails', [])
+    assert len(sent) == 2
+    for message in sent:
+        body = message.get_content()
+        assert 'https://coach.example.org/auth/reset-password/' in body
+        assert 'evil' not in body
+
+
 def test_forgot_password_without_email_points_to_the_coach(app, teams):
     page = Anon(app).get('/auth/forgot-password').get_data(as_text=True)
     assert 'Ask your coach' in page and 'identifier' not in page

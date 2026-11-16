@@ -108,7 +108,7 @@
                                   <input type="text" name="confirm_name"
                                          class="form-control form-control-sm mb-3"
                                          placeholder="{{ team.name }}" autocomplete="off"
-                                         oninput="document.getElementById('confirmBtn{{ team.id }}').disabled = (this.value !== '{{ team.name }}')">
+                                         oninput="document.getElementById('confirmBtn{{ team.id }}').disabled = (this.value !== {{ team.name|tojson|forceescape }})">
                                   <div class="d-flex gap-2 justify-content-end">
                                     <button type="button" class="btn btn-secondary btn-sm"
                                             data-bs-dismiss="modal">Cancel</button>

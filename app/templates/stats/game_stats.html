@@ -863,12 +863,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 .style("opacity", 0)
                 .style("z-index", 1000);
             
+            // Player names are typed by coaches: escape them in the tooltips
+            const escapeHtml = text => String(text ?? '').replace(/[&<>"']/g,
+                c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+
             // Add tooltip behavior
             node.on("mouseover", function(event, d) {
                     tooltip.transition()
                         .duration(200)
                         .style("opacity", .9);
-                    tooltip.html(`<strong>${d.name}</strong> (#${d.jersey_number})<br/>Position: ${d.position || 'N/A'}`)
+                    tooltip.html(`<strong>${escapeHtml(d.name)}</strong> (#${escapeHtml(d.jersey_number)})<br/>Position: ${escapeHtml(d.position || 'N/A')}`)
                         .style("left", (event.pageX + 10) + "px")
                         .style("top", (event.pageY - 28) + "px");
                 })
@@ -886,7 +890,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     tooltip.transition()
                         .duration(200)
                         .style("opacity", .9);
-                    tooltip.html(`<strong>Connection:</strong><br/>${source.name} → ${target.name}<br/><strong>Throws:</strong> ${d.value}`)
+                    tooltip.html(`<strong>Connection:</strong><br/>${escapeHtml(source.name)} → ${escapeHtml(target.name)}<br/><strong>Throws:</strong> ${escapeHtml(d.value)}`)
                         .style("left", (event.pageX + 10) + "px")
                         .style("top", (event.pageY - 28) + "px");
                 })

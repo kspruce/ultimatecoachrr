@@ -12,7 +12,7 @@ from app.models.playbook import Play
 from app.models.session import SessionComponent, SessionPlan
 from app.utils.playbook_export import build_sections
 from tests.test_playbook import club, draw, play_form  # noqa: F401 (fixtures)
-from tests.urls import sref
+from tests.urls import session_path
 
 EMBED = '<iframe src="https://www.ultiplays.com/embed/abc" width="600"></iframe>'
 
@@ -189,9 +189,9 @@ def test_plays_show_on_the_session(app, club):
     component.plays.append(db.session.get(Play, shown))
     component.plays.append(db.session.get(Play, draft))
     db.session.commit()
-    page = club['coach'].get(f'/sessions/{sref(session.id)}/detail').get_data(as_text=True)
+    page = club['coach'].get(session_path(session.id, '/detail')).get_data(as_text=True)
     assert 'Side stack' in page and 'Secret' in page
     assert f'/playbook/plays/{shown}/drawing.json' in page and 'play_preview.js' in page
-    page = club['player'].get(f'/sessions/{sref(session.id)}/detail').get_data(as_text=True)
+    page = club['player'].get(session_path(session.id, '/detail')).get_data(as_text=True)
     if 'Reps' in page:  # the plan is shown to players
         assert 'Side stack' in page and 'Secret' not in page
