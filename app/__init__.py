@@ -303,6 +303,10 @@ def create_app(config_class=Config):
     from app.routes.programmes import bp as programmes_bp
     app.register_blueprint(programmes_bp)
 
+    # Player view: coaches see the site as a player does
+    from app.routes.player_view import bp as player_view_bp
+    app.register_blueprint(player_view_bp)
+
     # Coach feedback blueprint
     from app.routes.feedback import bp as feedback_bp
     app.register_blueprint(feedback_bp)
@@ -385,6 +389,9 @@ def create_app(config_class=Config):
         # Allow the logout POST (CSRF-protected form submit)
         if req.endpoint in ('auth.logout', 'auth.login', 'auth.demo_login'):
             return None
+        # Player view only changes what this login sees, never the team's data
+        if req.blueprint == 'player_view':
+            return None
 
         # AJAX / JSON callers
         is_ajax = (
@@ -397,6 +404,29 @@ def create_app(config_class=Config):
 
         # Regular form submissions
         flash('You are viewing in guest/demo mode — changes cannot be saved.', 'warning')
+        return redirect(req.referrer or url_for('main.index'))
+
+    @app.before_request
+    def block_preview_writes():
+        """In player view as a roster player (a coach seeing someone else's
+        view), nothing is saved: they'd be answering, commenting or setting
+        goals as that player. Player view on their own profile isn't
+        affected."""
+        from flask_login import current_user
+        from flask import request as req, redirect, url_for, flash, jsonify as _jsonify
+
+        if req.method in ('GET', 'HEAD', 'OPTIONS'):
+            return None
+        if not current_user.is_authenticated or not current_user.previewing_other_player:
+            return None
+        if req.blueprint == 'player_view' or req.endpoint in ('auth.logout', 'auth.login'):
+            return None
+        message = ('You’re previewing as ' + current_user.player.name +
+                   ', so changes aren’t saved. Leave player view to make changes.')
+        if (req.is_json or req.headers.get('X-Requested-With') == 'XMLHttpRequest'
+                or 'application/json' in req.headers.get('Accept', '')):
+            return _jsonify({'success': False, 'message': message}), 403
+        flash(message, 'warning')
         return redirect(req.referrer or url_for('main.index'))
 
     # Register central error handlers last

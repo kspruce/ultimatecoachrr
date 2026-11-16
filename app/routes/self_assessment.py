@@ -38,7 +38,7 @@ def _check_in_or_404(check_in_id):
     """A check-in the signed-in user may see: their own, or any of the
     team's for coaches."""
     a = SelfAssessment.query.filter_by(id=check_in_id, team_organization_id=get_current_team_id()).first_or_404()
-    is_own = a.player.user_id and a.player.user_id == current_user.id
+    is_own = current_user.owns_player(a.player)
     if not (is_own or current_user.is_coach):
         abort(404)
     return a, bool(is_own)

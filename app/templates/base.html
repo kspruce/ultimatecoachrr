@@ -29,7 +29,7 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Young+Serif&display=swap">
     {# Team colours (Team settings -> Colours & crest); theme.css builds everything else from them #}
     <style>{{ team_theme_css | default('') | safe }}</style>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}?v=8">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}?v=9">
 
     {% block styles %}{% endblock %}
 </head>
@@ -95,8 +95,8 @@
         </a>
       </li>
 
-      {# Record Stats #}
-      {% if current_user.is_authenticated %}
+      {# Record Stats: stat takers and above (players can't open it) #}
+      {% if current_user.is_authenticated and current_user.is_stat_taker %}
       <li class="nav-item {% if current_team and current_user.is_stat_taker and (not ts or ts.gameday_enabled) %}uc-on-tabbar {% endif %}{% if in_record %}uc-active{% endif %}">
         <a class="nav-link" href="{{ url_for('gameday.index') }}">
           <i class="bi bi-record-circle-fill"></i> Record
@@ -390,6 +390,27 @@
             <i class="bi bi-database"></i> Your Team's Data</a></li>
           {% endif %}
 
+          {# Player view: see the site as a player does (checked against
+             their real role, so it's here while it's on, too) #}
+          {% if current_user.can_use_player_view and not current_user.in_player_view %}
+          {% if current_user.player_profile %}
+          <li><form method="post" action="{{ url_for('player_view.start') }}" class="m-0">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="player" value="me">
+            <button type="submit" class="dropdown-item"><i class="bi bi-eye"></i> Player View</button></form></li>
+          <li><a class="dropdown-item small" href="{{ url_for('player_view.choose') }}">
+            <i class="bi bi-person-badge"></i> View as a Player…</a></li>
+          {% else %}
+          <li><a class="dropdown-item" href="{{ url_for('player_view.choose') }}">
+            <i class="bi bi-eye"></i> Player View</a></li>
+          {% endif %}
+          {% elif current_user.in_player_view %}
+          <li><form method="post" action="{{ url_for('player_view.stop') }}" class="m-0">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="next" value="{{ request.full_path if request.method == 'GET' else '' }}">
+            <button type="submit" class="dropdown-item"><i class="bi bi-eye-slash"></i> Leave Player View</button></form></li>
+          {% endif %}
+
           {% if not current_user.is_guest %}
           <li><a class="dropdown-item" href="{{ url_for('onboarding.welcome') }}">
             <i class="bi bi-flag"></i> Getting Started</a></li>
@@ -422,7 +443,7 @@
           {% endif %}
 
           {# Superadmins see every team, too many to list: link to Manage Teams instead #}
-          {% if current_user.is_superadmin %}
+          {% if current_user.superadmin_flag %}
           <li><a class="dropdown-item" href="{{ url_for('team_organization.index') }}">
             <i class="bi bi-arrow-left-right"></i> Switch Team
             {% if current_team %}<span class="ms-auto small text-truncate" style="max-width:110px;opacity:.7">{{ current_team.name }}</span>{% endif %}</a></li>
@@ -466,6 +487,27 @@
 <!-- ============================= -->
 <!-- Content -->
 <!-- ============================= -->
+{# Player view: always on screen, so it's never mistaken for a real permission change #}
+{% if current_user.is_authenticated and current_user.in_player_view %}
+{% set pv_player = current_user.player_profile %}
+<div class="uc-player-view-bar" role="status">
+  <div class="container d-flex align-items-center gap-2 flex-wrap py-2">
+    <span class="me-auto uc-pv-text"><i class="bi bi-eye-fill me-1" aria-hidden="true"></i>
+      <strong>Player view</strong> –
+      {% if current_user.previewing_other_player %}seeing the site as {{ pv_player.name }} (look-only)
+      {% elif pv_player %}seeing the site as a player
+      {% else %}seeing the site as a player with no linked profile{% endif %}
+    </span>
+    <a href="{{ url_for('player_view.choose') }}" class="btn btn-sm btn-outline-dark py-0">Change</a>
+    <form method="post" action="{{ url_for('player_view.stop') }}" class="m-0">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="next" value="{{ request.full_path if request.method == 'GET' else '' }}">
+      <button type="submit" class="btn btn-sm btn-dark py-0"><i class="bi bi-x-lg"></i> Exit player view</button>
+    </form>
+  </div>
+</div>
+{% endif %}
+
 {# Full-width header band straight under the navbar (the homepage uses it) #}
 {% block hero %}{% endblock %}
 

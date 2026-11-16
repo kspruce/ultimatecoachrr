@@ -15,7 +15,7 @@ def get_current_team_id():
     cached = g.get('current_team')
     if cached and cached[0] == current_user.id:
         return cached[1]
-    team_id = (_valid_superadmin_team_id() if current_user.is_superadmin
+    team_id = (_valid_superadmin_team_id() if current_user.superadmin_flag
                else _valid_member_team_id())
     g.current_team = (current_user.id, team_id)
     return team_id
@@ -31,7 +31,7 @@ def accessible_teams(user):
     from app.models.team_organization import TeamOrganization
     if not user.is_authenticated:
         return []
-    if user.is_superadmin:
+    if user.superadmin_flag:  # the real flag: player view stays on the team
         return TeamOrganization.query.order_by(TeamOrganization.id).all()
     if not user.team_ids:
         return []
@@ -40,7 +40,7 @@ def accessible_teams(user):
 
 
 def can_access_team(user, team_id):
-    return user.is_authenticated and (user.is_superadmin or user.is_member_of(team_id))
+    return user.is_authenticated and (user.superadmin_flag or user.is_member_of(team_id))
 
 
 def _valid_member_team_id():

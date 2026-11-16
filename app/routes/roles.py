@@ -182,7 +182,7 @@ def player(player_id):
     kind = request.form.get('kind')
     if kind == PlayerRole.ASSIGNED and not current_user.is_coach:
         abort(403)
-    if kind == PlayerRole.PREFERRED and not (current_user.is_coach or player.user_id == current_user.id):
+    if kind == PlayerRole.PREFERRED and not (current_user.is_coach or current_user.owns_player(player)):
         abort(403)
     if kind not in (PlayerRole.ASSIGNED, PlayerRole.PREFERRED):
         abort(400)
