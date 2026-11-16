@@ -175,12 +175,18 @@ def bucket_stats(throws, key):
 
 
 def handling_summary(data, player_id=None, game_ids=None):
-    """Throws, touches and turnovers for a player (or the whole team)."""
+    """Throws, touches and turnovers for a player (or the whole team).
+
+    completion_rate is throwing completion: the thrower's passes caught,
+    out of passes thrown, where a drop is the receiver's turnover and not
+    an incomplete throw. pass_completion_rate (the team only) counts a drop
+    as an incomplete pass too: the team's passes caught out of passes
+    thrown. drop_rate is drops out of passes that reached the player (caught
+    or dropped); a pickup isn't a pass."""
     throws = data.throws_for(player_id, game_ids)
     counts = defaultdict(int)
-    for e in data.events_for(player_id, game_ids, types=('drop', 'stall', 'goal', 'catch')):
-        if e.is_offensive is not False:
-            counts[e.event_type] += 1
+    for e in data.events_for(player_id, game_ids, types=('drop', 'stall', 'goal')):
+        counts[e.event_type] += 1
     throwaways = sum(t['turnover'] for t in throws)
     # Each possession a player has ends in a throw, a stall or a goal
     # caught; a drop is a touch that never became a possession.
@@ -189,11 +195,19 @@ def handling_summary(data, player_id=None, game_ids=None):
     hucks = [t for t in throws if t['kind'] == 'huck']
     breaks = [t for t in throws if t['side'] == 'break']
     sided = [t for t in throws if t['side'] is not None]
-    receptions = counts['catch'] + counts['goal'] + counts['drop']
+    # Passes that reached them: completed throws to them (to anyone, for
+    # the team), and the ones they dropped
+    caught = sum(1 for t in data.throws_for(None, game_ids)
+                 if not t['turnover'] and (player_id is None or t['receiver_id'] == player_id))
+    receptions = caught + counts['drop']
+    completed = len(throws) - throwaways
     return {
         'throws': len(throws), 'throwaways': throwaways, 'drops': counts['drop'],
         'stalls': counts['stall'], 'touches': touches, 'turnovers': turnovers,
-        'completion_rate': _rate(len(throws) - throwaways, len(throws)),
+        'completion_rate': _rate(completed, len(throws)),
+        'pass_completion_rate': _rate(completed, len(throws) + counts['drop']) if player_id is None else None,
+        'throwaways_per_10': 10.0 * throwaways / touches if touches else None,
+        'drops_per_10': 10.0 * counts['drop'] / touches if touches else None,
         'turnovers_per_10': 10.0 * turnovers / touches if touches else None,
         'huck_attempts': len(hucks),
         'huck_completion_rate': _rate(sum(not t['turnover'] for t in hucks), len(hucks)),
@@ -366,10 +380,12 @@ def game_trends(data, player_id=None, game_ids=None):
         s = handling_summary(data, player_id, {game.id})
         if not s['touches']:
             continue
+        # The team's completion counts drops as incomplete passes
+        completion = s['pass_completion_rate'] if player_id is None else s['completion_rate']
         rows.append({
             'label': f"{game.date.strftime('%d %b') if game.date else '?'} vs {game.opponent}",
             'turnovers_per_10': round(s['turnovers_per_10'], 1) if s['turnovers_per_10'] is not None else None,
-            'completion_rate': round(s['completion_rate'], 1) if s['completion_rate'] is not None else None,
+            'completion_rate': round(completion, 1) if completion is not None else None,
             'huck_completion_rate': (round(s['huck_completion_rate'], 1)
                                      if s['huck_completion_rate'] is not None else None),
             'break_share': round(s['break_share'], 1) if s['break_share'] is not None else None,
@@ -494,8 +510,6 @@ def turnover_log(data, player_id, game_ids=None):
     throw_by_event = {t['throwing_event_id']: t for t in data.throws if t['turnover']}
     out = []
     for e in data.events_for(player_id, game_ids, types=OUR_TURNOVERS):
-        if e.is_offensive is False:
-            continue
         point = data.points[e.point_id]
         game = data.game_of_point[e.point_id]
         throw = throw_by_event.get(e.id)
@@ -539,7 +553,7 @@ def turnover_cost(data, game_ids=None):
         if game_ids is not None and data.game_of_point[pid].id not in game_ids:
             continue
         for i, e in enumerate(events):
-            if e.event_type not in OUR_TURNOVERS or e.is_offensive is False:
+            if e.event_type not in OUR_TURNOVERS or e.is_opponent:
                 continue
             zone = depth_zone(e.field_position_x)
             if zone is None:

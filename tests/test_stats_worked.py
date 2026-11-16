@@ -239,3 +239,61 @@ def test_a_throwaway_before_any_catch_still_counts(app):
     assert team['completion_rate'] == pytest.approx(50)
     assert metrics['completion_rate'] == pytest.approx(50)
     assert metrics['throws_per_point'] == pytest.approx(2)
+
+
+# --- completion, catching and drops -----------------------------------------
+
+def test_team_completion_counts_a_drop_as_an_incomplete_pass(app):
+    """1. O point: A picks up, A to B, B to C... C drops it, they score.
+    2. O point: A picks up, A to B, B to C, C to D who scores.
+
+    Passes thrown: A-B, B-C (dropped); A-B, B-C, C-D           = 5
+    Caught: 4. Thrown away: none. Dropped: 1 (C, point 1).
+    Team completion = 4 caught / 5 passes = 80%.
+    Throwing completion (a drop is the receiver's turnover, so B's pass to C
+    in point 1 isn't B's incomplete throw) = 4 / 4 = 100%.
+    Catch rate = 4 caught / (4 caught + 1 dropped) = 80%; drop rate 20%.
+    (Before the fix the team showed 100% completion, and its catch rate
+    counted the two pickups as catches: 6 / 7 = 85.7%.)
+
+    C: 1 pass caught (point 2), 1 dropped: drop rate 1 / 2 = 50%, catch rate
+    50%. (Before, C's caught pass had become an assist and wasn't counted:
+    1 drop out of 1 = 100%.)
+    C's touches: 1 throw (the assist) + 1 drop = 2. Turnovers per 10
+    touches = 10 x 1 / 2 = 5.0: throwaways 0, drops 5.0.
+    """
+    from app.stats import dashboard, profile, turnovers
+    from app.stats.players import get_players_base_stats
+    from app.stats.team import calculate_additional_team_metrics
+    w = WorkedGame(app)
+    w.point('O', [('catch', 'A', 20, 18), ('catch', 'B', 35, 18), ('drop', 'C', 50, 18),
+                  ('scored_on', 'opp', 0, 18)])
+    w.point('O', [('catch', 'A', 20, 18), ('catch', 'B', 40, 18), ('catch', 'C', 60, 18),
+                  ('goal', 'D', 90, 18)])
+    ctx = w.context()
+    try:
+        games = w.games()
+        ids = {w.game_id}
+        data = turnovers.ThrowingData(games)
+        team = turnovers.handling_summary(data, None, ids)
+        c = turnovers.handling_summary(data, w.ids['C'], ids)
+        metrics = calculate_additional_team_metrics(games)
+        headline = dashboard.period_numbers(data, ids, games)
+        radar = profile.team_period_metrics(data, ids)
+        c_stats = get_players_base_stats([w.players['C']], games)[w.ids['C']]
+    finally:
+        ctx.pop()
+    assert (team['throws'], team['throwaways'], team['drops'], team['receptions']) == (4, 0, 1, 5)
+    assert team['pass_completion_rate'] == pytest.approx(80)
+    assert team['completion_rate'] == pytest.approx(100)
+    assert team['drop_rate'] == pytest.approx(20)
+    assert metrics['completion_rate'] == pytest.approx(80)
+    assert metrics['catch_rate'] == pytest.approx(80)
+    assert headline['completion'] == pytest.approx(80)
+    assert radar['completion'] == pytest.approx(80)
+    assert (c['receptions'], c['drops']) == (2, 1)
+    assert c['drop_rate'] == pytest.approx(50)
+    assert c_stats['catch_rate'] == pytest.approx(50)
+    assert c['touches'] == 2
+    assert c['turnovers_per_10'] == pytest.approx(5.0)
+    assert (c['throwaways_per_10'], c['drops_per_10']) == (0, pytest.approx(5.0))

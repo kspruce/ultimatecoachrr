@@ -561,14 +561,9 @@ def calculate_additional_team_metrics(games):
     goals = goals_query.count()
     assists = sum(1 for t in throws if t.throw_type == 'assist')
 
-    # Count catch/drop events for catch_rate. A goal is a catch, and so
-    # are the assist and hockey assist (catches retyped when the goal was
-    # recorded). Opponent plays aren't ours.
-    catches = Event.query.filter(
-        Event.event_type.in_(['catch', 'assist', 'hockey_assist', 'goal']),
-        Event.is_opponent.isnot(True),
-        Event.team_organization_id == get_current_team_id()
-    ).filter(Event.point_id.in_(point_ids)).count()
+    # Catch rate: passes caught (completed throws) out of passes caught
+    # or dropped. A pickup isn't a pass.
+    catches = completions
 
     drops = Event.query.filter_by(
         event_type='drop',
@@ -622,7 +617,9 @@ def calculate_additional_team_metrics(games):
     throws_per_point = attempts / total_points if total_points > 0 else 0
 
     result = {
-        'completion_rate': (completions / attempts) * 100 if attempts else 0,
+        # The team's passes caught out of passes thrown: a drop is an
+        # incomplete pass (for a player's throwing, it's the receiver's)
+        'completion_rate': (completions / (attempts + drops)) * 100 if attempts + drops else 0,
         'catch_rate': (catches / (catches + drops)) * 100 if (catches + drops) > 0 else 0,
         'goals_per_point': goals / total_points,
         'assists_per_point': assists / total_points,

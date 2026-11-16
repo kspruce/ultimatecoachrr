@@ -138,7 +138,8 @@ def rating_comparison(player_id, stats_by_player):
 TEAM_AXES = {
     'offence': [
         {'key': 'hold', 'label': 'Hold %', 'fmt': 'pct', 'help': 'O-line points we scored'},
-        {'key': 'completion', 'label': 'Completion', 'fmt': 'pct'},
+        {'key': 'completion', 'label': 'Completion', 'fmt': 'pct',
+         'help': 'Passes caught out of passes thrown; a drop is an incomplete pass (full stats)'},
         {'key': 'huck_completion', 'label': 'Huck completion', 'fmt': 'pct'},
         {'key': 'break_completion', 'label': 'Break-side completion', 'fmt': 'pct'},
         {'key': 'turnovers_per_o_point', 'label': 'Turnovers / O-pt', 'short': 'Ball security', 'fmt': 'rate',
@@ -173,7 +174,7 @@ def team_period_metrics(data, game_ids):
     d_full = [p for p in d_points if p.id in data.analysed]
     events = data.events_by_point
     our_turnovers = sum(1 for p in o_full for e in events.get(p.id, [])
-                        if e.event_type in turnovers.OUR_TURNOVERS and not e.is_opponent and e.is_offensive is not False)
+                        if e.event_type in turnovers.OUR_TURNOVERS and not e.is_opponent)
     blocks = takeaways = regained = regained_scored = regained_finished = 0
     for p in d_full:
         evs = events.get(p.id, [])
@@ -191,7 +192,7 @@ def team_period_metrics(data, game_ids):
     return {
         'hold': rate(sum(1 for p in o_finished if point_we_scored(p)), len(o_finished)),
         'break': rate(sum(1 for p in d_finished if point_we_scored(p)), len(d_finished)),
-        'completion': h['completion_rate'],
+        'completion': h['pass_completion_rate'],
         'huck_completion': h['huck_completion_rate'],
         'break_completion': h['break_completion_rate'],
         'turnovers_per_o_point': our_turnovers / len(o_full) if o_full else None,

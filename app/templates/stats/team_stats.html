@@ -495,7 +495,8 @@
                 <div class="card-header"><h5 class="mb-0">Where Turnovers Come From</h5></div>
                 <div class="card-body">
                     <p class="mb-3">
-                        Team completion <strong>{{ tm.pct(bs.handling.completion_rate) }}</strong>
+                        Team completion <strong>{{ tm.pct(bs.handling.pass_completion_rate) }}</strong>
+                        <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="Passes caught out of passes thrown: a drop is an incomplete pass. The tables below are throwing completion by where and how it was thrown ({{ tm.pct(bs.handling.completion_rate) }} overall), where a drop is the receiver's turnover."></i>
                         · <strong>{{ "%.1f"|format(bs.handling.turnovers_per_10) if bs.handling.turnovers_per_10 is not none else '–' }}</strong> turnovers per 10 touches
                         · hucks {{ tm.pct(bs.handling.huck_completion_rate) }} ({{ bs.handling.huck_attempts }})
                         · break side {{ tm.pct(bs.handling.break_completion_rate) }} ({{ bs.handling.break_attempts }})

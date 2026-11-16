@@ -45,7 +45,7 @@ def period_numbers(data, game_ids, games):
         'hold': _rate(sum(1 for p in o_points if point_we_scored(p)), len(o_points)),
         'break': _rate(sum(1 for p in d_points if point_we_scored(p)), len(d_points)),
         'clean_hold': _rate(clean, len(analysed_o)),
-        'completion': handling['completion_rate'],
+        'completion': handling['pass_completion_rate'],
         'turnovers_per_point': handling['turnovers'] / analysed if analysed else None,
     }
 
@@ -54,7 +54,7 @@ HEADLINE = [
     {'key': 'hold', 'label': 'Hold %', 'fmt': 'pct', 'help': 'O-line points we scored'},
     {'key': 'break', 'label': 'Break %', 'fmt': 'pct', 'help': 'D-line points we scored'},
     {'key': 'clean_hold', 'label': 'Clean holds', 'fmt': 'pct', 'help': 'O-line points scored without a turnover (full-stat points)'},
-    {'key': 'completion', 'label': 'Completion', 'fmt': 'pct', 'help': 'Throws completed (full-stat points)'},
+    {'key': 'completion', 'label': 'Completion', 'fmt': 'pct', 'help': 'Passes caught out of passes thrown; a drop is an incomplete pass (full-stat points)'},
     {'key': 'turnovers_per_point', 'label': 'Turnovers / point', 'fmt': 'dec2', 'lower_better': True,
      'help': 'Throwaways, drops and stalls per point with full stats'},
 ]
@@ -97,7 +97,7 @@ COLUMNS = [
     {'key': 'goals', 'label': 'G', 'group': 'offence', 'help': 'Goals, a Callahan included (per point: per full-stat point)', 'fmt': 'int', 'rate_fmt': 'dec2', 'shade': True},
     {'key': 'assists', 'label': 'A', 'group': 'offence', 'help': 'Assists', 'fmt': 'int', 'rate_fmt': 'dec2', 'shade': True},
     {'key': 'hockey', 'label': 'HA', 'group': 'offence', 'help': 'Hockey assists', 'fmt': 'int', 'rate_fmt': 'dec2', 'shade': True},
-    {'key': 'completion', 'label': 'Cmp %', 'group': 'offence', 'help': 'Completion rate (completions / throws)', 'fmt': 'pct', 'rate_fmt': 'pct', 'shade': True},
+    {'key': 'completion', 'label': 'Cmp %', 'group': 'offence', 'help': 'Throwing completion: completions / throws. A drop is the receiver\'s turnover, not the thrower\'s', 'fmt': 'pct', 'rate_fmt': 'pct', 'shade': True},
     {'key': 'huck', 'label': 'Huck %', 'group': 'offence', 'help': 'Huck completion rate', 'fmt': 'pct', 'rate_fmt': 'pct', 'shade': True},
     {'key': 'turnovers', 'label': 'TO', 'group': 'offence', 'fmt': 'int', 'rate_fmt': 'dec1', 'shade': True, 'lower_better': True,
      'help': 'Turnovers: throwaways, drops and stalls (per point mode: per 10 touches)'},
