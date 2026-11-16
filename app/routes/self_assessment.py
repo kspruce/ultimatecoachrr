@@ -11,7 +11,6 @@ from flask import Blueprint, abort, flash, redirect, render_template, request, u
 from flask_login import current_user, login_required
 
 from app import db
-from app.models.player import Player
 from app.models.self_assessment import (
     SCALE, SECTIONS, CheckInRequest, RubricItem, SelfAssessment,
 )
