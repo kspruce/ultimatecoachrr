@@ -65,8 +65,7 @@ def unseen_count(user):
                        FeedbackReply.from_player.is_(False), FeedbackReply.seen_at.is_(None)).count())
     focus = PlayerFocus.query.filter_by(player_id=player.id, active=True, seen_at=None).count()
     reviews = PlayerReview.query.filter_by(player_id=player.id, shared=True, seen_at=None).count()
-    from app.utils.self_assessment import pending_requests
-    return notes + replies + focus + reviews + len(pending_requests(player))
+    return notes + replies + focus + reviews
 
 
 @bp.app_context_processor

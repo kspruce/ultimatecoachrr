@@ -7,7 +7,7 @@ Coaches always see them, edit the team's rubric statements and see what the
 team says about itself."""
 from datetime import date, datetime, timedelta
 
-from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
+from flask import Blueprint, abort, flash, g, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from app import db
@@ -20,6 +20,24 @@ from app.utils import self_assessment as sau
 from app.utils.team_filter import get_current_team_id
 
 bp = Blueprint('checkin', __name__)
+
+
+@bp.app_context_processor
+def check_in_nav():
+    def check_in_prompts():
+        """Open nudges and a recent tournament to ask the signed-in player
+        about (worked out once per request)."""
+        if 'check_in_prompts' not in g:
+            player = current_user.player if current_user.is_authenticated else None
+            if player is not None and player.team_organization_id != get_current_team_id():
+                player = None
+            try:
+                g.check_in_prompts = sau.prompts_for(player)
+            except Exception:  # noqa: BLE001 - a prompt never takes a page down
+                db.session.rollback()
+                g.check_in_prompts = sau.prompts_for(None)
+        return g.check_in_prompts
+    return {'check_in_prompts': check_in_prompts}
 
 
 def _require_coach():
@@ -95,6 +113,17 @@ def _form(player, a, req, items):
 
 # ── The player fills one in ──────────────────────────────────────────────────
 
+@bp.route('/check-ins/mine')
+@login_required
+def mine():
+    """The player's check-ins: what the coaches have asked for, a button to
+    start one, and their history with section averages."""
+    player = _my_player()
+    check_ins = sau.player_check_ins(player.id)
+    return render_template('feedback/checkin_mine.html', player=player, check_ins=check_ins,
+                           prompts=sau.prompts_for(player), sections=SECTIONS)
+
+
 @bp.route('/check-in/new', methods=['GET', 'POST'])
 @login_required
 def new():
@@ -166,7 +195,7 @@ def delete(check_in_id):
     db.session.commit()
     flash('Check-in deleted.', 'success')
     if is_own:
-        return redirect(url_for('feedback.mine'))
+        return redirect(url_for('checkin.mine'))
     return redirect(url_for('team.player_detail', player_id=player_id, _anchor='development'))
 
 

@@ -49,6 +49,7 @@
 {# Unread things addressed to you: badges in the account menu, a dot on the avatar and hamburger #}
 {% set my_feedback_new = unseen_feedback_count() if current_user.is_authenticated and current_user.player else 0 %}
 {% set my_answers_new = unseen_answers() if current_user.is_authenticated and my_questions_nav() else 0 %}
+{% set my_check_ins_new = check_in_prompts().count if current_user.is_authenticated and current_user.player else 0 %}
 
 <nav class="uc-navbar navbar navbar-expand-xl{% if team_palette is defined and team_palette.show_stripe and not uc_full_hero %} uc-has-stripe{% endif %}">
 <div class="container d-flex align-items-center gap-2">
@@ -78,7 +79,7 @@
     <button class="uc-toggler navbar-toggler" type="button"
             data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-label="Toggle navigation">
       <i class="bi bi-list" style="font-size:1.25rem"></i>
-      {% if my_feedback_new or my_answers_new %}<span class="uc-user-dot"><span class="visually-hidden">New for you</span></span>{% endif %}
+      {% if my_feedback_new or my_answers_new or my_check_ins_new %}<span class="uc-user-dot"><span class="visually-hidden">New for you</span></span>{% endif %}
     </button>
   </div>
 
@@ -345,7 +346,7 @@
         <a class="uc-user-btn dropdown-toggle" href="#" data-bs-toggle="dropdown" role="button"
            aria-expanded="false" aria-label="Account menu for {{ current_user.username }}">
           <div class="uc-user-avatar">{{ current_user.username[0].upper() }}</div>
-          {% if my_feedback_new or my_answers_new %}<span class="uc-user-dot" title="Something new for you"><span class="visually-hidden">New for you</span></span>{% endif %}
+          {% if my_feedback_new or my_answers_new or my_check_ins_new %}<span class="uc-user-dot" title="Something new for you"><span class="visually-hidden">New for you</span></span>{% endif %}
           <span class="uc-user-name d-none d-md-inline">
             {{ current_user.username }}
           </span>
@@ -361,6 +362,9 @@
           <li><a class="dropdown-item" href="{{ url_for('feedback.mine') }}">
             <i class="bi bi-chat-square-heart-fill"></i> My Feedback
             {% if my_feedback_new %}<span class="badge rounded-pill bg-success ms-1">{{ my_feedback_new }}</span>{% endif %}</a></li>
+          <li><a class="dropdown-item" href="{{ url_for('checkin.mine') }}">
+            <i class="bi bi-clipboard-check-fill"></i> My Check-ins
+            {% if my_check_ins_new %}<span class="badge rounded-pill bg-success ms-1">{{ my_check_ins_new }}</span>{% endif %}</a></li>
           {% if (not ts or ts.sessions_enabled) and current_user.is_coach %}
           <li><a class="dropdown-item" href="{{ url_for('training.availability') }}">
             <i class="bi bi-hand-thumbs-up-fill"></i> My Availability</a></li>

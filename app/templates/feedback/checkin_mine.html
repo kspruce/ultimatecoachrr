@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{# The player's own check-ins: what the coaches asked for, start one, and the history. #}
+{% block title %}My Check-ins{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/theory.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/feedback__checkin.css') }}?v=1">
+{% endblock %}
+
+{% block content %}
+<div class="container th-page" style="max-width:760px">
+  <div class="th-head">
+    <div>
+      <h1>My Check-ins</h1>
+      <p>Rate yourself on offence, cutting, handling, defence and mental &amp; spirit in about a minute, star what you want to focus on, and add notes. Your coaches see your check-ins.</p>
+    </div>
+  </div>
+
+  {% for r in prompts.requests %}
+  <a class="alert alert-success d-flex align-items-center gap-2 text-decoration-none mb-2" href="{{ url_for('checkin.new', request=r.id) }}">
+    <i class="bi bi-clipboard-check fs-5" aria-hidden="true"></i>
+    <span class="flex-grow-1"><b>Your coaches asked for a check-in: {{ r.title }}</b>{% if r.message %}<br><span class="small">{{ r.message }}</span>{% endif %}</span>
+    <span class="btn btn-success btn-sm text-nowrap">Fill it in</span>
+  </a>
+  {% endfor %}
+  {% if prompts.tournament %}
+  <a class="alert alert-light border d-flex align-items-center gap-2 text-decoration-none mb-2" href="{{ url_for('checkin.new', about='t:' ~ prompts.tournament.id) }}">
+    <i class="bi bi-flag fs-5" aria-hidden="true"></i>
+    <span class="flex-grow-1"><b>How did {{ prompts.tournament.name }} go?</b><br><span class="small">Check in while it's fresh.</span></span>
+    <span class="btn btn-primary btn-sm text-nowrap">Check in</span>
+  </a>
+  {% endif %}
+
+  <a href="{{ url_for('checkin.new') }}" class="btn btn-primary th-btn w-100 my-3 py-2"><i class="bi bi-clipboard-check"></i>How did I go? Start a check-in</a>
+
+  {% if check_ins %}
+  <div class="th-label mt-0">Earlier check-ins</div>
+  <div class="th-list mb-4">
+    {% for a in check_ins %}
+    {% set avgs = a.section_averages() %}
+    <a class="th-row" href="{{ url_for('checkin.view', check_in_id=a.id) }}">
+      <i class="bi bi-clipboard-check" aria-hidden="true"></i>
+      <div class="th-row-text">
+        <div class="th-row-title">{{ a.label }}</div>
+        <div class="th-row-sub">{{ a.created_at.strftime('%-d %b %Y') }}{% for key, label in sections if key in avgs %} · {{ label }} {{ avgs[key] }}{% endfor %}</div>
+        {% if a.focus_item %}<div class="th-row-sub"><i class="bi bi-star-fill" style="color:var(--warn)" aria-hidden="true"></i> {{ a.focus_item.text }}</div>{% endif %}
+      </div>
+      <span class="go" aria-hidden="true"><i class="bi bi-chevron-right"></i></span>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="th-list th-empty py-3 text-center">No check-ins yet. Your first one sets a starting point to compare against later.</div>
+  {% endif %}
+</div>
+{% endblock %}
