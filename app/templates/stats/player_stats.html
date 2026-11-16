@@ -285,7 +285,7 @@
                                 {% for r in ratings.rows %}
                                 <tr>
                                     <th class="fw-normal">{{ r.label }}</th>
-                                    <td class="text-end fw-bold">{{ r.fmt|format(r.value) }}</td>
+                                    <td class="text-end fw-bold">{{ r.fmt|format(r.value) if r.value is not none else '–' }}</td>
                                     <td class="text-end text-muted">{{ r.fmt|format(r.team_median) if r.team_median is not none else '–' }}</td>
                                     <td class="text-end text-muted">{{ '%d of %d'|format(r.rank, r.of) if r.rank else '–' }}</td>
                                 </tr>

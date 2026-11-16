@@ -106,8 +106,11 @@ RATINGS = [
     {'key': 'per', 'label': 'PER', 'fmt': '%.1f'},
     {'key': 'epm', 'label': 'EPM', 'fmt': '%+.2f'},
     {'key': 'eff', 'label': 'Eff', 'fmt': '%.3f'},
-    {'key': 'o_line_plus_minus_per_point', 'label': 'O-line +/- per point', 'fmt': '%+.2f'},
-    {'key': 'd_line_plus_minus_per_point', 'label': 'D-line +/- per point', 'fmt': '%+.2f'},
+    # Only players with full-stat points on that line have one
+    {'key': 'o_line_plus_minus_per_point', 'label': 'O-line +/- per point', 'fmt': '%+.2f',
+     'sample': 'analysed_o_line_points'},
+    {'key': 'd_line_plus_minus_per_point', 'label': 'D-line +/- per point', 'fmt': '%+.2f',
+     'sample': 'analysed_d_line_points'},
 ]
 MIN_RATED_POINTS = 10
 
@@ -121,13 +124,19 @@ def rating_comparison(player_id, stats_by_player):
     qualifies = mine.get('analysed_points', 0) >= MIN_RATED_POINTS
     rows = []
     for r in RATINGS:
-        values = [s.get(r['key'], 0) or 0 for s in rated]
-        value = mine.get(r['key'], 0) or 0
+        # A player with no points on a line has no +/- per point there (not
+        # 0): they're left out of the median and the ranking for it.
+        sample = r.get('sample')
+
+        def has(s):
+            return sample is None or s.get(sample, 0) > 0
+        values = [s.get(r['key'], 0) or 0 for s in rated if has(s)]
+        value = (mine.get(r['key'], 0) or 0) if has(mine) else None
         rows.append({
             **r,
             'value': value,
             'team_median': median(values) if values else None,
-            'rank': 1 + sum(v > value for v in values) if qualifies and values else None,
+            'rank': 1 + sum(v > value for v in values) if qualifies and values and value is not None else None,
             'of': len(values),
         })
     return {'rows': rows, 'min_points': MIN_RATED_POINTS, 'qualifies': qualifies}

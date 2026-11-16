@@ -398,3 +398,35 @@ def test_a_point_with_no_plays_has_no_full_stats(app):
     assert game['analysed_points'] == 1 and game['avg_turnovers_per_point'] == pytest.approx(1.0)
     assert (b['points_played'], b['analysed_points']) == (2, 1)
     assert b['throws_per_point'] == pytest.approx(1.0)   # B's one throw, the throwaway
+
+
+# --- players who only play one line ------------------------------------------------
+
+def test_a_d_line_player_has_no_o_line_plus_minus(app):
+    """Three players with 10+ full-stat points (enough to be ranked):
+        X: O-line only, +/- per O-point +0.40
+        Y: O-line only, +/- per O-point +0.20
+        Z: D-line only, no O-line points at all
+    Z has no O-line +/- (shown as a dash), and isn't a 0 in the median: the
+    median of X and Y is +0.30, and Y ranks 2 of 2. (Before, Z showed
+    +0.00 and the median was the middle of 0.4, 0.2 and 0 = 0.20, with Y
+    2 of 3.)
+    """
+    from app.stats.profile import rating_comparison
+    stats = {
+        'X': {'analysed_points': 10, 'analysed_o_line_points': 10, 'analysed_d_line_points': 0,
+              'o_line_plus_minus_per_point': 0.4},
+        'Y': {'analysed_points': 10, 'analysed_o_line_points': 10, 'analysed_d_line_points': 0,
+              'o_line_plus_minus_per_point': 0.2},
+        'Z': {'analysed_points': 12, 'analysed_o_line_points': 0, 'analysed_d_line_points': 12,
+              'o_line_plus_minus_per_point': 0, 'd_line_plus_minus_per_point': 0.25},
+    }
+    z = {r['key']: r for r in rating_comparison('Z', stats)['rows']}
+    y = {r['key']: r for r in rating_comparison('Y', stats)['rows']}
+    assert z['o_line_plus_minus_per_point']['value'] is None
+    assert z['o_line_plus_minus_per_point']['rank'] is None
+    assert y['o_line_plus_minus_per_point']['team_median'] == pytest.approx(0.3)
+    assert (y['o_line_plus_minus_per_point']['rank'], y['o_line_plus_minus_per_point']['of']) == (2, 2)
+    # And the other way round: only Z has a D-line +/-.
+    assert y['d_line_plus_minus_per_point']['value'] is None
+    assert z['d_line_plus_minus_per_point']['rank'] == 1
