@@ -546,9 +546,11 @@ def calculate_additional_team_metrics(games):
     break_throws = sum(1 for t in throws if t.break_throw)
 
     # Count goals and assists
-    goals_query = Event.query.filter_by(
-        event_type='goal',
-        team_organization_id=get_current_team_id()
+    # A Callahan is a goal (and a block), as for players
+    goals_query = Event.query.filter(
+        Event.event_type.in_(['goal', 'callahan']),
+        Event.is_opponent.isnot(True),
+        Event.team_organization_id == get_current_team_id()
     ).filter(Event.point_id.in_(point_ids))
 
     goals = goals_query.count()
@@ -577,7 +579,7 @@ def calculate_additional_team_metrics(games):
         Event.team_organization_id == get_current_team_id(),
         Event.point_id.in_(analysed_d_ids),
     )
-    blocks = d_events.filter(Event.event_type == 'block').count() if analysed_d_ids else 0
+    blocks = d_events.filter(Event.event_type.in_(['block', 'callahan'])).count() if analysed_d_ids else 0
     turnovers_forced = d_events.filter(
         Event.event_type.in_(['block', 'forced_turnover', 'callahan'])).count() if analysed_d_ids else 0
 

@@ -43,7 +43,7 @@
 
   <h2 id="why">1. Why not plain plus/minus?</h2>
   <p>
-    Plus/minus is goals + assists + blocks − turns. It treats every turn as costing exactly what a goal is worth,
+    Plus/minus is goals + assists + blocks − turns (a Callahan is a goal and a block). It treats every turn as costing exactly what a goal is worth,
     whoever throws it and however your games are going. That's rarely true:
   </p>
   <ul>
@@ -255,7 +255,7 @@
     </tbody>
   </table>
   <p>
-    For comparison, plain plus/minus would be {{ example.goals + example.assists + example.blocks - example.turnovers }}.
+    For comparison, plain plus/minus would be {{ example.plus_minus }} (a Callahan counts as a goal and a block).
     <a href="{{ url_for('stats_dashboard.player_stats', player_id=example_player.id) }}">See {{ example_player.name }}'s stats</a>.
   </p>
   {% else %}

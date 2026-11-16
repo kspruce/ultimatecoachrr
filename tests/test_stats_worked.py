@@ -159,3 +159,45 @@ def test_a_point_stopped_by_the_cap_is_neither_held_nor_broken(app):
     assert headline['break'] == 0
     assert a['points_played'] == 3 and a['o_line_points_played'] == 2
     assert a['o_line_conversion_rate'] == pytest.approx(100)
+
+
+# --- Callahans ---------------------------------------------------------------
+
+def test_a_callahan_is_a_goal_and_a_block_everywhere(possession_game):
+    """In the possession game F's only play is the Callahan on point 4, and
+    D's only play is the block on point 2.
+
+    F: goals 1 (the Callahan), blocks 1 (the Callahan), +/- = 1 + 1 = +2.
+       On D-line points: 1 block in 3 D-points = 0.33 blocks per D-point.
+    D: blocks 1, +/- +1.
+    The team: goals = points 1, 2 and 4's goals = 3, over 5 points with full
+    stats = 0.6 goals per point. Blocks on D-points = D's and F's = 2 over 3
+    D-points = 0.67.
+    (Before the fix F showed 0 goals, 0 blocks and +/- 0 on the dashboard,
+    game page and exports, and the team counted 2 goals and 1 block.)
+    """
+    from app.stats.players import get_players_base_stats
+    from app.stats.team import calculate_additional_team_metrics
+    w = possession_game
+    ctx = w.context()
+    try:
+        games = w.games()
+        stats = get_players_base_stats(list(w.players.values()), games)
+        team = calculate_additional_team_metrics(games)
+    finally:
+        ctx.pop()
+    f, d = stats[w.ids['F']], stats[w.ids['D']]
+    assert (f['total_goals'], f['total_blocks'], f['callahans'], f['plus_minus']) == (1, 1, 1, 2)
+    assert f['d_line_plus_minus'] == 2
+    assert f['blocks_per_d_point'] == pytest.approx(1 / 3)
+    assert f['goals_per_point'] == pytest.approx(1 / 5)
+    assert f['box']['goals'] == 1 and f['box']['blocks'] == 1
+    assert (d['total_blocks'], d['plus_minus']) == (1, 1)
+    assert team['goals_per_point'] == pytest.approx(3 / 5)
+    assert team['blocks_per_point'] == pytest.approx(2 / 3)
+
+    rows = {r['name']: r for r in w.client.get(
+        f'/stats/api/player-stats?game_id={w.game_id}').get_json()}
+    assert (rows['Player F']['goals'], rows['Player F']['blocks'], rows['Player F']['plus_minus']) == (1, 1, 2)
+    page = w.client.get('/stats/').get_data(as_text=True)
+    assert 'a Callahan included' in page

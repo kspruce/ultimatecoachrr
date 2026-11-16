@@ -149,10 +149,11 @@ def api_player_stats():
                     'points_played': stats['points_played'],
                     'o_line_points': stats['o_line_points_played'],
                     'd_line_points': stats['d_line_points_played'],
-                    'goals': stats['goals'],
+                    'goals': stats['total_goals'],  # a Callahan is a goal and a block
                     'assists': stats['assists'],
                     'hockey_assists': stats['hockey_assists'],
-                    'blocks': stats['blocks'],
+                    'blocks': stats['total_blocks'],
+                    'callahans': stats['callahans'],
                     'completions': stats['completions'],
                     'completion_rate': stats['completion_rate'],
                     'throwaways': stats['throwaways'],

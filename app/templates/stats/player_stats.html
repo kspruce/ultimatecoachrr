@@ -48,10 +48,11 @@
     <div class="ps-headline" id="playerHeadline">
         <div><b>{{ stats.games_played }}</b><span>Games</span></div>
         <div><b>{{ stats.points_played }}</b><span>Points</span></div>
-        <div><b>{{ stats.goals }}</b><span>Goals</span></div>
-        <div><b>{{ stats.assists }}</b><span>Assists</span></div>
-        <div><b>{{ stats.blocks }}</b><span>Blocks</span></div>
-        <div><b>{{ stats.turnovers }}</b><span>Turnovers</span></div>
+        {# Every point played, like the Points tile: the season box score #}
+        <div><b>{{ stats.box.goals }}</b><span>Goals</span></div>
+        <div><b>{{ stats.box.assists }}</b><span>Assists</span></div>
+        <div><b>{{ stats.box.blocks }}</b><span>Blocks</span></div>
+        <div><b>{{ stats.box.turnovers }}</b><span>Turnovers</span></div>
     </div>
     <form method="get" action="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}" class="ps-filters" id="playerFilters">
         <select name="tournament_id" id="tournament_id" class="form-select form-select-sm" aria-label="Tournament">
@@ -398,7 +399,7 @@
                                         </tr>
                                         <tr>
                                             <th>Goals</th>
-                                            <td>{{ stats.goals }}</td>
+                                            <td>{{ stats.total_goals }}{% if stats.callahans %} <small class="text-muted">(incl. {{ stats.callahans }} Callahan{{ 's' if stats.callahans != 1 }})</small>{% endif %}</td>
                                         </tr>
                                         <tr>
                                             <th>Assists</th>
@@ -475,15 +476,15 @@
                                     <table class="table table-sm">
                                         <tr>
                                             <th>Blocks</th>
-                                            <td>{{ stats.blocks }}</td>
+                                            <td>{{ stats.total_blocks }}{% if stats.callahans %} <small class="text-muted">(incl. Callahans)</small>{% endif %}</td>
                                         </tr>
                                         <tr>
                                             <th>Callahans</th>
                                             <td>{{ stats.callahans }}</td>
                                         </tr>
                                         <tr>
-                                            <th>Forced Turnovers</th>
-                                            <td>{{ stats.blocks + stats.forced_turnovers }}</td>
+                                            <th>Takeaways <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="Blocks, forced turnovers and Callahans"></i></th>
+                                            <td>{{ stats.blocks + stats.forced_turnovers + stats.callahans }}</td>
                                         </tr>
                                         <tr>
                                             <th>D-Line Points</th>
@@ -1113,9 +1114,9 @@ function initializePerformanceTrendChart() {
             per:             {{ game_data.stats.per|default(0)|round(2) }},
             plus_minus:      {{ game_data.stats.plus_minus }},
             completion_rate: {{ ((game_data.stats.completions / game_data.stats.throws * 100) if game_data.stats.throws > 0 else 0)|round(1) }},
-            goals_per_point: {{ (game_data.stats.goals / game_data.stats.analysed_points if game_data.stats.analysed_points > 0 else 0)|round(3) }},
+            goals_per_point: {{ (game_data.stats.total_goals / game_data.stats.analysed_points if game_data.stats.analysed_points > 0 else 0)|round(3) }},
             assists_per_point: {{ (game_data.stats.assists / game_data.stats.analysed_points if game_data.stats.analysed_points > 0 else 0)|round(3) }},
-            blocks_per_point: {{ (game_data.stats.blocks / game_data.stats.analysed_points if game_data.stats.analysed_points > 0 else 0)|round(3) }}
+            blocks_per_point: {{ (game_data.stats.total_blocks / game_data.stats.analysed_points if game_data.stats.analysed_points > 0 else 0)|round(3) }}
         },
         {% endfor %}
     ];
@@ -2264,7 +2265,7 @@ function generatePrintableReport() {
                 <table>
                     <tr>
                         <th>Blocks</th>
-                        <td>{{ stats.blocks }}</td>
+                        <td>{{ stats.total_blocks }}</td>
                         <th>Callahans</th>
                         <td>{{ stats.callahans }}</td>
                     </tr>

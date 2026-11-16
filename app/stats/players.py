@@ -262,6 +262,8 @@ def process_player_stats(player, lineups, throws_by_player, throws_to_player, ev
         
         # Additional stats
         'callahans': 0,
+        'total_goals': 0,   # goals + Callahans
+        'total_blocks': 0,  # blocks + Callahans
         'stalls': 0,  # times this player was stalled (a turnover)
         'forced_turnovers': 0,
         'o_line_points_scored': 0,
@@ -271,8 +273,9 @@ def process_player_stats(player, lineups, throws_by_player, throws_to_player, ev
         'o_line_points_with_result': 0,
         'd_line_points_with_result': 0,
         'hucks': 0,
-        # Blocks and takeaways (blocks, forced turnovers, Callahans) made on
-        # D-line points with full stats: what the per-D-point rates divide
+        # Blocks (with Callahans) and takeaways (blocks, forced turnovers,
+        # Callahans) made on D-line points with full stats: what the
+        # per-D-point rates divide
         'd_line_blocks': 0,
         'd_line_takeaways': 0,
 
@@ -411,6 +414,11 @@ def process_player_stats(player, lineups, throws_by_player, throws_to_player, ev
     
     # Calculate derived stats
     stats['turnovers'] = stats['throwaways'] + stats['drops'] + stats['stalls']
+    # A Callahan is a goal and a block (as on Game Day and in the ratings).
+    # 'goals' and 'blocks' are the plays recorded as such; these totals are
+    # what the pages show as Goals and Blocks.
+    stats['total_goals'] = stats['goals'] + stats['callahans']
+    stats['total_blocks'] = stats['blocks'] + stats['callahans']
     
     # Calculate rates
     if stats['throws'] > 0:
@@ -420,9 +428,9 @@ def process_player_stats(player, lineups, throws_by_player, throws_to_player, ev
     
     # Calculate plus/minus
     stats['plus_minus'] = (
-        stats['goals'] + 
-        stats['assists'] + 
-        stats['blocks'] - 
+        stats['total_goals'] +
+        stats['assists'] +
+        stats['total_blocks'] -
         stats['turnovers']
     )
     
@@ -470,6 +478,8 @@ def process_player_stats(player, lineups, throws_by_player, throws_to_player, ev
         for event in point_events:
             if event.event_type in ['goal', 'assist', 'block']:
                 point_plus_minus += 1
+            elif event.event_type == 'callahan':
+                point_plus_minus += 2  # a goal and a block
             elif event.event_type in ['throwaway', 'drop', 'stall']:
                 point_plus_minus -= 1
         
@@ -499,13 +509,13 @@ def process_player_stats(player, lineups, throws_by_player, throws_to_player, ev
     for event in events:
         if event.point_id not in analysed_d_ids or getattr(event, 'is_opponent', False):
             continue
-        if event.event_type == 'block':
+        if event.event_type in ('block', 'callahan'):
             stats['d_line_blocks'] += 1
         if event.event_type in ('block', 'forced_turnover', 'callahan'):
             stats['d_line_takeaways'] += 1
     if stats['analysed_points']:
         n = stats['analysed_points']
-        stats['goals_per_point'] = stats['goals'] / n
+        stats['goals_per_point'] = stats['total_goals'] / n
         stats['assists_per_point'] = stats['assists'] / n
         stats['hockey_assists_per_point'] = stats['hockey_assists'] / n
         stats['throws_per_point'] = stats['throws'] / n

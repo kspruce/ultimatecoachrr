@@ -177,7 +177,7 @@ def team_period_metrics(data, game_ids):
     blocks = takeaways = regained = regained_scored = regained_finished = 0
     for p in d_full:
         evs = events.get(p.id, [])
-        blocks += sum(1 for e in evs if e.event_type == 'block' and not e.is_opponent)
+        blocks += sum(1 for e in evs if e.event_type in ('block', 'callahan') and not e.is_opponent)
         takeaways += sum(1 for e in evs if e.event_type in ('block', 'forced_turnover', 'callahan') and not e.is_opponent)
         if any(e.event_type in turnovers.WE_REGAIN for e in evs):
             regained += 1
