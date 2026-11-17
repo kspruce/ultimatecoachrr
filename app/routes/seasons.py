@@ -99,7 +99,15 @@ def index():
             'left': s.roster.filter(SeasonRoster.status == 'left').count(),
         }
     return render_template('seasons/index.html', all_seasons=all_seasons, counts=counts,
-                           squads=seasons.team_squads(team_id), next_year=_next_year(all_seasons))
+                           squads=seasons.team_squads(team_id), next_year=_next_year(all_seasons),
+                           next_label=_label(team_id, _next_year(all_seasons)))
+
+
+def _label(team_id, year):
+    """What a new `year` season would be called: '2028', or '2028/29'
+    when the club's seasons run across new year."""
+    start, end = seasons.shaped_dates(year, Season.query.filter_by(team_organization_id=team_id).all())
+    return Season(year=year, start_date=start, end_date=end).name
 
 
 def _next_year(all_seasons):
@@ -111,15 +119,32 @@ def _next_year(all_seasons):
 @login_required
 @coach_required
 def edit(season_id):
+    """New dates for a season. Everything dated in it moves into it, and a
+    season the dates overlap is trimmed (or removed, if left empty)."""
     season = _team_season_or_404(season_id)
     start, end = _parse_date(request.form.get('start_date')), _parse_date(request.form.get('end_date'))
-    if not start or not end or start > end:
-        flash('Give a start date on or before the end date.', 'danger')
+    try:
+        report = seasons.change_dates(season, start, end)
+    except seasons.SeasonDatesError as e:
+        db.session.rollback()
+        flash(str(e), 'danger')
         return redirect(url_for('seasons.index'))
-    season.start_date, season.end_date = start, end
     db.session.commit()
-    flash(f'{season.name} season dates saved.', 'success')
+    flash(_dates_message(season, report), 'success')
     return redirect(url_for('seasons.index'))
+
+
+def _dates_message(season, report):
+    parts = [f'{season.name} season: {season.start_date.strftime("%-d %b %Y")} to '
+             f'{season.end_date.strftime("%-d %b %Y")}.']
+    moved = [f'{n} {kind if n != 1 else kind[:-1]}' for kind, n in report['moved'].items() if n]
+    if moved:
+        parts.append('Moved into the season they now fall in: ' + ', '.join(moved) + '.')
+    if report['trimmed']:
+        parts.append('Shortened to make room: ' + ', '.join(report['trimmed']) + '.')
+    if report['removed']:
+        parts.append('Removed, as nothing was left in it: ' + ', '.join(report['removed']) + '.')
+    return ' '.join(parts)
 
 
 @bp.route('/<int:season_id>/current', methods=['POST'])
@@ -179,7 +204,8 @@ def new():
     previous = seasons.current_season(team_id)
     squads = seasons.team_squads(team_id)
     year = _int_or_none(request.values.get('year')) or _next_year(seasons.team_seasons(team_id))
-    default_start, default_end = Season.default_dates(year)
+    default_start, default_end = seasons.shaped_dates(
+        year, Season.query.filter_by(team_organization_id=team_id).all())
 
     if request.method == 'POST':
         start = _parse_date(request.form.get('start_date')) or default_start
@@ -200,6 +226,13 @@ def new():
                 'position': request.form.get(f'position_{player.id}') or player.position,
             })
         season = seasons.start_new_season(team_id, year, start, end, entries, previous=previous)
+        try:
+            # Make room among the other seasons and bring in what's dated in it
+            seasons.change_dates(season, start, end)
+        except seasons.SeasonDatesError as e:
+            db.session.rollback()
+            flash(str(e), 'danger')
+            return redirect(url_for('seasons.new', year=year))
         db.session.commit()
         seasons.remember_view(team_id, season=str(season.year))
         flash(f'The {season.name} season has started with {len(entries)} players. '
@@ -216,6 +249,7 @@ def new():
         if player.id not in seen:
             rows.append({'player': player, 'entry': None, 'checked': previous is None and player.active})
     return render_template('seasons/new.html', rows=rows, squads=squads, previous=previous, year=year,
+                           label=Season(year=year, start_date=default_start, end_date=default_end).name,
                            start_date=default_start, end_date=default_end,
                            existing=Season.query.filter_by(team_organization_id=team_id, year=year).first())
 

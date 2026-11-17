@@ -10,8 +10,9 @@
       <div>
         <h1>Seasons &amp; squads</h1>
         <p>Each season keeps its own games, tournaments, sessions and roster. Pages show the current season unless you pick another from the season menu at the top.</p>
+        <p class="small text-muted mb-0">Seasons run 1 January to 31 December unless you change their dates. If yours runs across new year (October to September, say), set the dates below: games, tournaments and sessions dated in it move into it, and next season starts on the same day.</p>
       </div>
-      <a class="btn btn-primary" href="{{ url_for('seasons.new', year=next_year) }}"><i class="bi bi-arrow-right-circle me-1"></i> Start {{ next_year }} season</a>
+      <a class="btn btn-primary" href="{{ url_for('seasons.new', year=next_year) }}"><i class="bi bi-arrow-right-circle me-1"></i> Start {{ next_label }} season</a>
     </div>
 
     <div class="fs-card">
