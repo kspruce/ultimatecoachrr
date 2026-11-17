@@ -85,6 +85,11 @@ unchanged.
 
 ### Step 2: structured session editor (in Edit week)
 
+> **Superseded in part by [SESSION_SEASON_LINK_PLAN.md](SESSION_SEASON_LINK_PLAN.md):**
+> linking sessions and the plan both ways lets the existing session planner be
+> the editor, so most of this step isn't needed. What's left is "Copy from
+> week N" and "Apply to weeks X to Y", in the planner.
+
 This replaces the session notes textarea with rows. The **Markdown** tab
 stays as a fallback.
 
