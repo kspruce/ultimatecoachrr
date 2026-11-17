@@ -170,13 +170,18 @@ A suggested combined order:
   register are untouched.
 - Playbook links on blocks survive a rebuild.
 
-## Decisions for you
+## Decisions (agreed)
 
-1. **When both sides change the same session, who wins by default?**
-   Suggestion: the session, because it's closer to the day and a coach
-   chose it, with the plan's version one click away.
-2. **Should title and focus follow the plan?** Suggestion: yes, until a
-   coach changes them in the planner.
-3. **Should "Create draft sessions" run when a plan is created?**
-   Suggestion: no. Make it a button, so the sessions list doesn't fill with
-   40 weeks of drafts until a coach wants them.
+1. **When the plan and the session have both changed, the session wins.**
+   The plan's version is one click away.
+2. **Title and focus follow the plan** until a coach changes them in the
+   planner.
+3. **"Create draft sessions" is a button,** not something that runs when a
+   plan is created.
+
+## Where to pick up
+
+Nothing in this plan is built yet. Start with step 0 of the 2028 plan (the
+notes renderer), then step A here. The sessions list rework (commit "Sessions
+list: browse a whole season a week at a time") is already done on this
+branch.
