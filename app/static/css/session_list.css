@@ -22,11 +22,52 @@
 .sl-type-success { background: var(--ok-soft); color: var(--ok); }
 .sl-squad { font-weight: 700; color: var(--ink); }
 
+/* Coaches: what needs doing either side of today */
+.sl-todo { display: flex; flex-wrap: wrap; align-items: baseline; gap: .35rem 1.1rem; background: var(--card); border: 1px solid var(--rule); border-left: 4px solid var(--warn, #d08a00); border-radius: 12px; padding: .6rem .9rem; margin-bottom: .9rem; font-size: .88rem; }
+.sl-todo-title { font-size: .7rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+.sl-todo a { text-decoration: none; color: var(--ink); }
+.sl-todo a:hover { color: var(--club-ink); }
+.sl-todo b { font-variant-numeric: tabular-nums; }
+
+/* Coming up / Past / All dates */
+.sl-tabs { display: inline-flex; flex-wrap: wrap; gap: .25rem; padding: .25rem; background: var(--sunken); border-radius: 999px; margin-bottom: .7rem; }
+.sl-tabs a { padding: .3rem .85rem; border-radius: 999px; font-size: .86rem; font-weight: 700; color: var(--ink-2); text-decoration: none; }
+.sl-tabs a span { font-weight: 400; color: var(--ink-3); font-variant-numeric: tabular-nums; margin-left: .15rem; }
+.sl-tabs a.active { background: var(--card); color: var(--ink); box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,0,0,.08)); }
+
 /* Filters: one row of small selects, no Apply button */
 .sl-list-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: .6rem; }
 .sl-clear { font-size: .84rem; font-weight: 700; text-decoration: none; white-space: nowrap; }
 .sl-filters { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .9rem; }
 .sl-filters .form-select { width: auto; flex: 1 1 150px; min-width: 0; max-width: 220px; border-radius: 999px; text-overflow: ellipsis; }
+.sl-search { position: relative; flex: 2 1 240px; min-width: 0; max-width: 360px; }
+.sl-search .bi { position: absolute; left: .75rem; top: 50%; transform: translateY(-50%); color: var(--ink-3); font-size: .85rem; pointer-events: none; }
+.sl-search .form-control { border-radius: 999px; padding-left: 2rem; }
+
+.sl-more { flex: 1 1 100%; }
+.sl-more > summary { display: inline-block; cursor: pointer; font-size: .84rem; font-weight: 700; color: var(--club-ink); padding: .15rem .25rem; }
+.sl-more-body { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .4rem; }
+.sl-more-body .form-select { width: auto; flex: 1 1 150px; min-width: 0; max-width: 220px; border-radius: 999px; text-overflow: ellipsis; }
+
+/* A week of sessions; the nearest weeks start open */
+.sl-weeks-bar { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .8rem; margin-bottom: .6rem; }
+.sl-fold { margin-left: auto; display: flex; }
+.sl-fold .btn { font-size: .82rem; font-weight: 700; text-decoration: none; padding: .1rem .4rem; }
+.sl-jump { width: auto; max-width: 260px; border-radius: 999px; }
+.sl-week { margin-bottom: .6rem; scroll-margin-top: 80px; }
+.sl-week > summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: .2rem .8rem; list-style: none; cursor: pointer; padding: .5rem .25rem; border-bottom: 1px solid var(--rule); }
+.sl-week > summary::-webkit-details-marker { display: none; }
+.sl-week > summary::before { content: "\203A"; display: inline-block; width: .8rem; color: var(--ink-3); font-weight: 700; transition: transform .15s; }
+.sl-week[open] > summary::before { transform: rotate(90deg); }
+.sl-week[open] > summary { border-bottom: 0; }
+.sl-week-when { font-family: var(--font-serif); font-size: 1.1rem; color: var(--ink); }
+.sl-week-when small { font-family: var(--font-sans, inherit); font-size: .78rem; color: var(--ink-3); margin-left: .2rem; }
+.sl-week-plan { display: flex; flex-wrap: wrap; gap: .1rem .6rem; font-size: .8rem; color: var(--ink-2); }
+.sl-week-plan span + span::before { content: "·"; margin-right: .6rem; color: var(--ink-3); }
+.sl-week-count { margin-left: auto; display: flex; align-items: center; gap: .6rem; font-size: .8rem; color: var(--ink-3); white-space: nowrap; }
+.sl-need { color: var(--warn, #b26b00); font-weight: 700; }
+.sl-week.is-current > summary .sl-week-when { color: var(--club-ink); font-weight: 600; }
+.sl-week.is-past > summary .sl-week-when { color: var(--ink-2); }
 
 /* Every session, one row each */
 .sl-list { background: var(--card); border: 1px solid var(--rule); border-radius: 16px; overflow: hidden; }
@@ -42,11 +83,24 @@
 .sl-sub { display: flex; flex-wrap: wrap; gap: .15rem .7rem; align-items: center; font-size: .8rem; color: var(--ink-2); margin-top: .15rem; }
 .sl-nums { display: flex; gap: .8rem; font-size: .82rem; color: var(--ink-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .sl-row-actions { display: flex; gap: .3rem; }
+.sl-row.is-today { box-shadow: inset 3px 0 0 var(--club-ink); }
+.sl-row.is-cancelled .sl-name { text-decoration: line-through; color: var(--ink-3); }
+.sl-needs { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .35rem; }
+.sl-flag { display: inline-block; font-size: .68rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; border-radius: 999px; padding: .1rem .5rem; text-decoration: none; background: var(--sunken); color: var(--ink-2); white-space: nowrap; }
+.sl-flag-plan, .sl-flag-register { background: var(--warn-soft, #fff3d6); color: var(--warn, #8a5300); }
+.sl-flag-draft { background: var(--club-soft); color: var(--club-ink); }
+.sl-flag-cancelled { margin-left: .4rem; background: var(--bad-soft, #fde2e2); color: var(--bad, #a12a2a); }
+a.sl-flag:hover { filter: brightness(.95); }
 
 @media (max-width: 640px) {
   .sl-actions { width: 100%; }
   .sl-actions .btn { flex: 1 1 auto; }
-  .sl-filters .form-select { flex: 1 1 calc(50% - .4rem); max-width: 100%; }
+  .sl-filters .form-select, .sl-more-body .form-select { flex: 1 1 calc(50% - .4rem); max-width: 100%; }
+  .sl-search { flex-basis: 100%; max-width: 100%; }
+  .sl-tabs { display: flex; }
+  .sl-tabs a { flex: 1 1 auto; text-align: center; }
+  .sl-jump { flex: 1 1 100%; max-width: 100%; }
+  .sl-week-count { margin-left: 0; }
   .sl-row { grid-template-columns: 46px minmax(0, 1fr); row-gap: .45rem; padding: .7rem .8rem; }
   .sl-nums, .sl-row-actions { grid-column: 2; }
   .sl-row-actions:empty { display: none; }

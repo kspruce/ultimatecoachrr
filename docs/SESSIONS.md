@@ -33,6 +33,18 @@ session knowing who's coming.
 5. **Cancel** a date from its page. Players who said Yes or Maybe are told by
    Discord message or email.
 
+**Browsing sessions** (Training → Sessions). The list opens on **Coming
+up**, earliest first, with **Past** (most recent first) and **All dates**
+beside it. Sessions are grouped a week at a time (Monday to Sunday), each
+week headed with its season plan week, phase and block when it has them. The
+nearest four weeks start open and the rest are folded; *Go to week* jumps to
+any week, and *All dates* opens at this week. Search covers titles, focus,
+blocks, phases and places; the less-used filters sit under *More filters*.
+Coaches also see what each session still needs (*No plan yet*, *Not
+published*, *Register not taken*), a count of those on each week, a summary
+for the two weeks either side of today, and a *status* filter to list just
+those sessions. Players see the same list without the to-dos.
+
 Team settings → **Sessions** controls what players see about who else is
 coming (names, just the numbers, or nothing), when they see published
 plans, and reminders (on by default, 7 days before).
@@ -70,6 +82,10 @@ button clicks arrive as signed HTTP requests to `/discord/interactions`.
 
 ## For developers
 
+- The sessions list: `session.index` in `app/routes/session.py`, with the
+  grouping, ordering and "needs" rules in `app/utils/session_list.py`
+  (tests: `tests/test_session_list.py`). Component and attendance counts
+  are three grouped queries for the whole list, not one per row.
 - Models: `app/models/schedule.py` (`TrainingSchedule`,
   `ScheduleAvailability`, `SessionTemplate`, `SessionReminder`). On
   `SessionPlan`: `schedule_id`, `squads`, `status` (scheduled / cancelled),
