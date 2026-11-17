@@ -131,7 +131,8 @@
       // New blocks get their ids, in the same order
       [...list.children].forEach((el, i) => { if (result.blocks[i]) el.dataset.id = result.blocks[i].id; });
       published = result.published;
-      setStatus('All saved', 'saved');
+      // A session from the season plan also updates its week's notes
+      setStatus(result.plan_message ? `All saved · ${result.plan_message}` : 'All saved', 'saved');
       return true;
     } catch (error) {
       setStatus(error.message, 'dirty');

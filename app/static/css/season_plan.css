@@ -237,3 +237,16 @@
 @media (min-width: 768px) {
   .sp-ms-row > input, .sp-ms-row > .form-check { grid-column: auto; }
 }
+
+/* A week's sessions (built from its session notes) */
+.sp-session { padding: .75rem 0; border-top: 1px solid var(--rule); }
+.sp-session:first-of-type { border-top: 0; }
+.sp-session-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem; }
+.sp-session-name { font-weight: 700; color: var(--ink); text-decoration: none; margin-right: .35rem; }
+.sp-session.is-cancelled .sp-session-name { text-decoration: line-through; color: var(--ink-3); }
+.sp-pill { display: inline-block; font-size: .68rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; border-radius: 999px; padding: .1rem .5rem; margin-left: .3rem; background: var(--sunken); color: var(--ink-2); text-decoration: none; }
+.sp-pill-warn { background: var(--warn-soft); color: var(--warn); }
+.sp-pill-bad { background: var(--bad-soft); color: var(--bad); }
+.sp-blocks { list-style: none; padding: 0; margin: .5rem 0 0; display: grid; gap: .2rem; font-size: .9rem; }
+.sp-blocks li { display: grid; grid-template-columns: 2.6rem minmax(0, 1fr); gap: .4rem; }
+.sp-block-min { color: var(--ink-3); font-variant-numeric: tabular-nums; text-align: right; }

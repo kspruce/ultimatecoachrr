@@ -203,6 +203,7 @@
                 data-url="{{ url_for('session.delete_session', session_id=session.id) }}"
                 data-title="{{ session.title }}" data-components="{{ components.get(session.id, 0) }}"
                 data-attendance="{{ register_rows.get(session.id, 0) }}"
+                data-week="{{ session.week_number if session.external_id and session.external_id.startswith('plan-') else '' }}"
                 title="Delete" aria-label="Delete {{ session.title }}"><i class="bi bi-trash" aria-hidden="true"></i></button>
         {% endif %}
       </div>
@@ -236,6 +237,10 @@
       <div class="modal-body">
         <p>Are you sure you want to delete the session "<span id="deleteSessionName"></span>"?</p>
         <div class="alert alert-warning mb-0" id="deleteSessionWarning" hidden></div>
+        <div class="form-check mt-3" id="deleteFromPlan" hidden>
+          <input class="form-check-input" type="checkbox" name="remove_from_plan" value="1" id="removeFromPlan" form="deleteSessionForm" checked>
+          <label class="form-check-label" for="removeFromPlan">Also remove it from week <span id="deleteFromPlanWeek"></span> of the season plan. Untick to keep it there, and it comes back the next time the week is saved.</label>
+        </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -252,5 +257,5 @@
 
 {% block scripts %}
 {{ super() }}
-<script src="{{ url_for('static', filename='js/session_list.js') }}?v=2"></script>
+<script src="{{ url_for('static', filename='js/session_list.js') }}?v=3"></script>
 {% endblock %}

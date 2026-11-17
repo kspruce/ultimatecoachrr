@@ -9,7 +9,7 @@ import io
 import re
 from datetime import date, time, timedelta
 
-from flask import Blueprint, Response, abort, flash, jsonify, redirect, render_template, request, url_for
+from flask import Blueprint, Response, abort, current_app, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from app import db
@@ -605,9 +605,29 @@ def save_blocks(session, blocks):
             db.session.delete(c)
 
 
+def _write_back(session):
+    """A session built from the season plan: write its activities back into
+    its week's notes. A problem there never stops the session saving."""
+    from app.utils.season_writeback import write_back
+    try:
+        with db.session.begin_nested():
+            return write_back(session)
+    except Exception:
+        current_app.logger.exception('Writing session %s back to the season plan failed', session.id)
+        return "Saved, but the season plan couldn't be updated to match."
+
+
 def _season_week(session):
-    """The season plan's week this session falls in, if the team has one."""
+    """The season plan's week this session belongs to: for a session built
+    from the plan, its own week; otherwise the active plan's week its date
+    falls in."""
     from app.models.season_plan import SeasonPlan, SeasonWeek
+    from app.utils.season_sessions import is_built_session
+    if is_built_session(session) and session.season and session.week_number:
+        plan = SeasonPlan.query.filter_by(team_organization_id=session.team_organization_id,
+                                          season=session.season).first()
+        if plan is not None:
+            return SeasonWeek.query.filter_by(plan_id=plan.id, week_number=session.week_number).first()
     if not session.date:
         return None
     plan = SeasonPlan.query.filter_by(team_organization_id=session.team_organization_id, is_active=True).first()
@@ -673,11 +693,13 @@ def plan(session_id):
             newly_published = bool(data['publish']) and not session.is_published
             session.is_published = bool(data['publish'])
         save_blocks(session, blocks)
+        db.session.flush()
+        plan_message = _write_back(session)
         db.session.commit()
         if newly_published:
             _announce_plan(session)
         return jsonify({'ok': True, 'blocks': [_block(c) for c in session.components.order_by(SessionComponent.order)],
-                        'published': session.is_published})
+                        'published': session.is_published, 'plan_message': plan_message})
 
     blocks = [_block(c) for c in session.components.order_by(SessionComponent.order)]
     drills = [{'id': d.id, 'title': d.title, 'duration_minutes': d.recommended_duration,

@@ -19,7 +19,7 @@ from app import db, login
 from app.models.season_plan import (
     SeasonPlan, SeasonPhase, SeasonWeek, SeasonPage, ClassroomSession, ClassroomResource,
 )
-from app.models.session import SessionPlan
+from app.models.session import SessionComponent, SessionPlan
 from app.models.team_settings import TeamSettings
 from app.utils.media_embed import embed_url, is_web_url
 from app.utils.season_sessions import WEEKDAYS, build_sessions, sync_week, week_sessions
@@ -242,13 +242,23 @@ def week(number):
     cards = classroom_cards(plan, wk.classroom_sessions, _now()) if can_see(plan, 'classroom') else []
     from app.routes.season_plan_year import programme_week
     programme = wk.phase.programme if wk.phase and wk.phase.programme and not wk.phase.programme.archived else None
+    built = week_sessions(plan, wk)
+    # Each session's activities, for anyone allowed to see its plan
+    from app.utils.rsvp import plan_visible
+    session_cards = [{'session': s, 'blocks': s.components.order_by(SessionComponent.order).all()
+                      if plan_visible(s, current_user) else None} for s in built]
+    conflicts = {}
+    if current_user.is_coach and built and plan.sessions_built_at:
+        # Which of them were changed both in the session and in the plan
+        preview = build_sessions(plan, weeks=[wk], dry_run=True)
+        conflicts = {c['session_id']: c['parts'] for c in preview.conflicts}
     return render_template('season_plan/week.html', plan=plan, week=wk, prev_wk=prev_wk,
                            programme=programme, programme_weeks=programme_week(programme, wk.week_commencing),
                            next_wk=next_wk, show_notes=can_see(plan, 'session_notes'),
                            classroom=cards,
                            show_phase=can_see(plan, 'phases'), classroom_page=classroom_page,
                            current=plan.week_for(date.today()), pages=visible_pages(plan),
-                           built_sessions=week_sessions(plan, wk))
+                           built_sessions=built, session_cards=session_cards, conflicts=conflicts)
 
 
 @bp.route('/week/<int:number>/edit', methods=['GET', 'POST'])
@@ -265,7 +275,7 @@ def edit_week(number):
             limit = getattr(SeasonWeek, name).type.length
             if limit and len(value) > limit:
                 flash(f'{name.replace("_", " ").capitalize()} must be at most {limit} characters.', 'danger')
-                return render_template('season_plan/edit_week.html', plan=plan, week=wk,
+                return render_template('season_plan/edit_week.html', plan=plan, week=wk, week_sessions=week_sessions,
                                        session_plans=session_plans, pages=visible_pages(plan)), 400
             setattr(wk, name, value or None)
         for i, (key, _) in enumerate(plan.theme_columns):
@@ -286,7 +296,7 @@ def edit_week(number):
                   f'session\'s version was kept. Choose which to keep under Sessions.', 'warning')
         return redirect(url_for('season_plan.week', number=wk.week_number))
 
-    return render_template('season_plan/edit_week.html', plan=plan, week=wk,
+    return render_template('season_plan/edit_week.html', plan=plan, week=wk, week_sessions=week_sessions,
                            session_plans=session_plans, pages=visible_pages(plan))
 
 

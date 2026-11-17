@@ -53,6 +53,11 @@
     </div>
     <div class="mb-3">
       <label class="form-label" for="session_detail_md">Session notes (markdown)</label>
+      {% set built = week_sessions(plan, week) if plan.sessions_built_at else [] %}
+      {% if built %}
+      <p class="small sp-muted mb-1">Or edit a session's activities in the planner, and these notes follow:
+        {% for s in built %}<a href="{{ url_for('training.plan', session_id=s.id) }}">{{ 'Joint' if s.squad == 'joint' else (s.squad_names or s.squad or s.title) }}</a>{{ ', ' if not loop.last }}{% endfor %}.</p>
+      {% endif %}
       <textarea class="form-control font-monospace" id="session_detail_md" name="session_detail_md" rows="16" style="font-size:.85rem">{{ week.session_detail_md or '' }}</textarea>
     </div>
     <div class="mb-3">

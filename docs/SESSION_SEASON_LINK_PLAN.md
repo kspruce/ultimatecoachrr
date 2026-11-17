@@ -181,10 +181,16 @@ A suggested combined order:
 
 ## Where to pick up
 
-Done: step 0 of the 2028 plan (`app/utils/session_outline.py`) and step A
-here (coaches' edits kept, conflicts listed under Season plan > Sessions).
-Next: step B (the week page shows its sessions; the planner shows the
-week), then step C (write-back from the planner, using the outline
-renderer). The sessions list rework (commit "Sessions
+Done: step 0 of the 2028 plan (`app/utils/session_outline.py`), step A
+(coaches' edits kept, conflicts listed under Season plan > Sessions), step B
+(the week page shows its sessions with Edit in planner; the planner shows
+the week) and step C (planner saves write the activities back into the
+week's notes, `app/utils/season_writeback.py`; deleting a session can take
+it out of its week). Not done from step C: the planner's session notes and
+learning points don't write back (they stay on the session, protected by
+step A), and the "1s session deleted, build again?" notice on the week.
+
+Next: step D (draft sessions for every week from a button; schedule dates
+taking over drafts). The sessions list rework (commit "Sessions
 list: browse a whole season a week at a time") is already done on this
 branch.

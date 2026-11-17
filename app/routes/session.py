@@ -1291,13 +1291,20 @@ def delete_session(session_id):
             team_organization_id=get_current_team_id()
         ).delete()
 
+        # A session built from the season plan comes back the next time its
+        # week is built unless it's taken out of the week too
+        plan_message = None
+        if request.form.get('remove_from_plan'):
+            from app.utils.season_writeback import remove_from_week
+            plan_message = remove_from_week(session_plan)
+
         # Delete the session
         db.session.delete(session_plan)
         db.session.commit()
 
         current_app.logger.info(f"Successfully deleted session {session_id}")
         
-        flash(f'Session "{title}" has been deleted!', 'success')
+        flash(f'Session "{title}" has been deleted!' + (f' {plan_message}' if plan_message else ''), 'success')
         return redirect(url_for('session.index'))
 
     except Exception as e:

@@ -25,11 +25,7 @@
     <div><div class="sp-label">Classroom</div><p>{% if classroom_page %}<a href="{{ url_for('season_plan.page', slug=classroom_page.slug) }}">{{ week.classroom }}</a>{% else %}{{ week.classroom }}{% endif %}</p></div>
     {% endif %}
     {% if week.off_pitch %}<div><div class="sp-label">Off-pitch</div><p>{{ week.off_pitch }}</p></div>{% endif %}
-    {% if built_sessions %}
-    <div><div class="sp-label">Sessions</div><p>
-      {% for s in built_sessions %}<a href="{{ url_for('session.detail', session_id=s.id) }}">{% set who = s.squad_names or s.squad %}{{ 'Joint session' if s.squad == 'joint' else (who ~ ' session' if who else s.title) }}{% if s.date %} · {{ s.date.strftime('%a %-d %b') }}{% endif %}</a>{% if not loop.last %}<br>{% endif %}{% endfor %}
-    </p></div>
-    {% elif week.session_plan %}
+    {% if not built_sessions and week.session_plan %}
     <div><div class="sp-label">Session plan</div><p><a href="{{ url_for('session.detail', session_id=week.session_plan.id) }}">{{ week.session_plan.title }}</a></p></div>
     {% endif %}
   </div>
@@ -51,6 +47,41 @@
   <div class="mt-2"><div class="sp-label">Coaches' notes</div><div class="sp-md">{{ week.notes|markdown }}</div></div>
   {% endif %}
 </div>
+
+{% if session_cards %}
+<div class="sp-card sp-week-sessions">
+  <h2>This week's sessions</h2>
+  {% if current_user.is_coach %}<p class="sp-muted small">Built from the session notes below. Edit a session in the planner and the notes follow; edit the notes and the sessions follow, without undoing anything changed in the planner.</p>{% endif %}
+  {% for card in session_cards %}
+  {% set s = card.session %}
+  {% set who = s.squad_names or s.squad %}
+  <div class="sp-session{{ ' is-cancelled' if s.is_cancelled }}">
+    <div class="sp-session-head">
+      <div>
+        <a class="sp-session-name" href="{{ url_for('session.detail', session_id=s.id) }}">{{ 'Joint session' if s.squad == 'joint' else (who ~ ' session' if who else s.title) }}</a>
+        <span class="sp-muted small">{% if s.date %}{{ s.date.strftime('%a %-d %b') }}{% endif %}{% if s.start_time %} · {{ s.start_time.strftime('%H:%M') }}{% endif %}</span>
+        {% if s.is_cancelled %}<span class="sp-pill sp-pill-bad">Cancelled</span>
+        {% elif current_user.is_coach and not s.is_published %}<span class="sp-pill">Draft</span>{% endif %}
+        {% if conflicts.get(s.id) %}<a class="sp-pill sp-pill-warn" href="{{ url_for('season_plan.sessions') }}" title="Changed in the session and in the plan: {{ conflicts[s.id]|join(', ') }}">Changed in both</a>{% endif %}
+      </div>
+      {% if current_user.is_coach %}
+      <a class="btn btn-sm btn-outline-primary" href="{{ url_for('training.plan', session_id=s.id) }}"><i class="bi bi-pencil-square" aria-hidden="true"></i> Edit in planner</a>
+      {% endif %}
+    </div>
+    {% if card.blocks %}
+    <ol class="sp-blocks">
+      {% for b in card.blocks %}
+      <li><span class="sp-block-min">{{ b.duration_minutes ~ "'" if b.duration_minutes else '' }}</span>
+        {% if b.saved_drill %}<a href="{{ url_for('session.drill_detail', drill_id=b.drill_id) }}">{{ b.title }}</a>{% else %}{{ b.title }}{% endif %}</li>
+      {% endfor %}
+    </ol>
+    {% elif card.blocks is not none %}
+    <p class="sp-muted small mb-0">No activities yet.</p>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
 
 {% if show_notes %}
   {% if week.session_detail_md %}

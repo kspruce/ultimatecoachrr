@@ -80,6 +80,24 @@ write, and any difference is treated as a coach's edit. Code:
 `reconcile()` in `app/utils/season_sessions.py`; tests:
 `tests/test_session_plan_link.py`.
 
+**Both ways.** A week's page lists its sessions with their activities
+(players see a session's activities once it's published), each with **Edit in
+planner** for coaches; Edit week links to them too. The planner shows the
+session's week: phase, block, themes, aim, learning points and a link back.
+Saving a built session in the planner writes its activities back into the
+week's session notes (`app/utils/season_writeback.py`): the joint session
+rewrites the joint table; a squad's session rewrites only its column of the
+split table, with rows lined up by start time so squads can run to
+different timings, and "Same" cells written out first where they'd change
+meaning. The rest of the notes are left exactly as written, and the week's
+sessions are then brought in step with the coach's version kept, so their
+own change isn't reported back as a conflict. A planner save that doesn't
+change the activities (only the notes or title, say) leaves the week alone,
+and a week whose notes have a table the planner can't update is left alone
+with a message. Deleting a built session offers to take it out of its week
+too; otherwise building the week again brings it back. Tests:
+`tests/test_session_writeback.py`.
+
 `app/utils/session_outline.py` reads a week's session notes as structure
 (the joint and split tables and the learning points, everything else kept
 as written) and writes them back; untouched parts come back exactly as they
