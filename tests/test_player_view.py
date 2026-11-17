@@ -58,6 +58,16 @@ def test_captain_loses_their_access_until_they_leave(app, club):
     assert 'Exit player view' not in text(c.get('/'))
 
 
+def test_leaving_player_view_goes_to_the_dashboard(app, club):
+    c = club['captain']
+    c.post('/player-view/start', data={'player': 'me'})
+    r = c.post('/player-view/stop', data={'next': '/playbook/'})  # the page they were on
+    with app.test_request_context():
+        from flask import url_for
+        home = url_for('main.index')
+    assert r.status_code == 302 and r.headers['Location'].endswith(home)
+
+
 def test_playing_coach_keeps_their_own_profile_and_can_act_as_themselves(app, club):
     c = club['captain']
     deep = PlayerPosition.query.filter_by(name='Deep').one()

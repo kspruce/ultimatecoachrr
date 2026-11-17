@@ -411,7 +411,6 @@
           {% elif current_user.in_player_view %}
           <li><form method="post" action="{{ url_for('player_view.stop') }}" class="m-0">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input type="hidden" name="next" value="{{ request.full_path if request.method == 'GET' else '' }}">
             <button type="submit" class="dropdown-item"><i class="bi bi-eye-slash"></i> Leave Player View</button></form></li>
           {% endif %}
 
@@ -505,7 +504,6 @@
     <a href="{{ url_for('player_view.choose') }}" class="btn btn-sm btn-outline-dark py-0">Change</a>
     <form method="post" action="{{ url_for('player_view.stop') }}" class="m-0">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <input type="hidden" name="next" value="{{ request.full_path if request.method == 'GET' else '' }}">
       <button type="submit" class="btn btn-sm btn-dark py-0"><i class="bi bi-x-lg"></i> Exit player view</button>
     </form>
   </div>
