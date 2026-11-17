@@ -259,15 +259,17 @@ def test_reimport_keeps_built_sessions_in_step(app, herd):
     joint = SessionPlan.query.filter_by(external_id='plan-2027/28-w05-joint').one()
     joint.title = 'Edited on the site'
     db.session.commit()
+    # A coach's edit is kept: the plan's title hasn't changed since it was built
     report = do_import(herd['team'])
-    assert report.sessions is not None and report.sessions.count('updated') == 1
-    assert db.session.get(SessionPlan, joint.id).title.startswith('Week 5 Joint:')
-    assert 'sessions: 1 updated' in report.text()
+    assert report.sessions is not None and report.sessions.count('kept') == 1
+    assert report.sessions.count('updated') == 0 and not report.sessions.conflicts
+    assert db.session.get(SessionPlan, joint.id).title == 'Edited on the site'
+    assert "1 with coaches' edits kept" in report.text()
     # --replace keeps the session settings and the links
     report = do_import(herd['team'], replace=True)
     plan = _plan(herd['team'])
     assert plan.joint_weekday == 6 and plan.sessions_built_at is not None
-    assert report.sessions.count('unchanged') == len(built(herd['team']))
+    assert report.sessions.count('unchanged') == len(built(herd['team'])) - 1
     week5 = SeasonWeek.query.filter_by(plan_id=plan.id, week_number=5).one()
     assert week5.session_plan_id == joint.id
 

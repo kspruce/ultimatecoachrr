@@ -181,7 +181,10 @@ A suggested combined order:
 
 ## Where to pick up
 
-Nothing in this plan is built yet. Start with step 0 of the 2028 plan (the
-notes renderer), then step A here. The sessions list rework (commit "Sessions
+Done: step 0 of the 2028 plan (`app/utils/session_outline.py`) and step A
+here (coaches' edits kept, conflicts listed under Season plan > Sessions).
+Next: step B (the week page shows its sessions; the planner shows the
+week), then step C (write-back from the planner, using the outline
+renderer). The sessions list rework (commit "Sessions
 list: browse a whole season a week at a time") is already done on this
 branch.

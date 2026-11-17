@@ -281,6 +281,9 @@ def edit_week(number):
             flash(f'Sessions for week {wk.week_number}: {report.summary()}.', 'info')
         for warning in report.warnings if report else []:
             flash(warning, 'warning')
+        for c in report.conflicts if report else []:
+            flash(f'{c["title"]}: the {", ".join(c["parts"])} were changed in the session too, so the '
+                  f'session\'s version was kept. Choose which to keep under Sessions.', 'warning')
         return redirect(url_for('season_plan.week', number=wk.week_number))
 
     return render_template('season_plan/edit_week.html', plan=plan, week=wk,
@@ -374,6 +377,25 @@ def sessions():
     report = build_sessions(plan, dry_run=True)
     return render_template('season_plan/sessions.html', plan=plan, form=form, report=report,
                            weekdays=WEEKDAYS, pages=visible_pages(plan)), status
+
+
+@bp.route('/sessions/<int:session_id>/settle', methods=['POST'])
+@coach_required
+def settle_session(session_id):
+    """A session changed both in the session and in the plan: use the
+    plan's version, or keep the session's and stop asking."""
+    plan = _plan_or_404()
+    session = SessionPlan.query.filter_by(id=session_id, team_organization_id=plan.team_organization_id).first()
+    choice = request.form.get('choice')
+    if session is None or not session.external_id or choice not in ('plan', 'session'):
+        abort(404)
+    wk = _week_or_404(plan, session.week_number or 0)
+    report = build_sessions(plan, weeks=[wk], choose={session.external_id: choice})
+    flash(f'{session.title}: ' + ("now matches the plan." if choice == 'plan'
+                                  else "kept as it is. The plan won't ask again until it changes."), 'success')
+    for warning in report.warnings:
+        flash(warning, 'warning')
+    return redirect(request.form.get('next') or url_for('season_plan.sessions'))
 
 
 # --------------------------------------------------------------------------

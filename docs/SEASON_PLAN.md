@@ -65,6 +65,27 @@ per squad.
 `SeasonWeek.squad_themes` maps each to its theme. With no squads a week has
 one theme, labelled "Theme". The Weeks filter offers the plan's squads.
 
+**Coaches' edits are kept.** Each built session remembers what the plan
+last wrote to each part of it (`SessionPlan.plan_snapshot`: activities,
+title, focus, aim, learning points, notes, and date, time and place).
+Building again, whether from saving a week, re-importing or Build sessions,
+only writes the plan's change to a part nobody has changed in the session.
+If a coach changed it (in the session planner, say) it's kept, and if the
+plan has also changed that part since, the session is listed under Season
+plan > Sessions as *changed in both*, with **Keep the session's** and **Use
+the plan's**. Week, phase, block, season and squad always follow the plan.
+Activities are updated in place, so playbook links on them survive.
+Sessions built before this existed are compared with what the plan would
+write, and any difference is treated as a coach's edit. Code:
+`reconcile()` in `app/utils/season_sessions.py`; tests:
+`tests/test_session_plan_link.py`.
+
+`app/utils/session_outline.py` reads a week's session notes as structure
+(the joint and split tables and the learning points, everything else kept
+as written) and writes them back; untouched parts come back exactly as they
+were (tests: `tests/test_session_outline.py`, run over every week of the
+2027/28 export).
+
 When sessions are built from session notes, a split table's columns are
 matched to the plan's squads by name ("1s group", "Women (suggested)"); a
 plan without squads matches the club's squads instead. Each squad's session

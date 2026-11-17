@@ -68,6 +68,10 @@ class SessionPlan(db.Model):
     run_by = db.Column(db.String(100), nullable=True)
     kit = db.Column(db.String(255), nullable=True)
     sources = db.Column(db.Text, nullable=True)
+    # For sessions built from the season plan: a fingerprint of each part as
+    # the plan last wrote it ({'blocks': ..., 'title': ...}), so building
+    # again keeps a coach's edits (app/utils/season_sessions.py)
+    plan_snapshot = db.Column(db.JSON, nullable=True)
 
     __table_args__ = (
         db.UniqueConstraint('team_organization_id', 'external_id',

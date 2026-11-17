@@ -1,7 +1,7 @@
 {% extends "season_plan/_layout.html" %}
 
 {% block sp_styles %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/season_plan__sessions.css') }}?v=1">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/season_plan__sessions.css') }}?v=2">
 {% endblock %}
 
 {% block sp_content %}
@@ -10,7 +10,7 @@
     <div class="sp-label">{{ plan.season }}</div>
     <h1>Sessions from the plan</h1>
     <p>Each week's timed tables become sessions: the joint session table makes a joint session, and a split sessions table (a column per squad{% if plan.squads %}: {{ plan.squads|join(', ') }}{% endif %}) makes a session for each squad. Every row becomes an activity.
-      Once built, editing a week here or re-importing the plan updates its sessions, so the plan is the only place you edit them.</p>
+      Once built, editing a week here or re-importing the plan updates its sessions. A coach's changes to a session in the session planner are kept: if the plan later changes the same thing, the session is listed here so you can choose which to keep.</p>
   </div>
 </div>
 
@@ -61,6 +61,23 @@
 {% if report.warnings %}
 <div class="alert alert-warning">{% for w in report.warnings %}<div>{{ w }}</div>{% endfor %}</div>
 {% endif %}
+{% if report.conflicts %}
+<div class="sp-card sp-conflicts">
+  <h3 class="h6 mb-1"><i class="bi bi-arrow-left-right" aria-hidden="true"></i> Changed in the session and in the plan</h3>
+  <p class="sp-muted small mb-2">A coach edited these sessions, and the plan has changed the same thing since. The session's version is kept until you choose.</p>
+  {% for c in report.conflicts %}
+  <div class="sp-conflict">
+    <div><a href="{{ url_for('session.detail', session_id=c.session_id) }}"><b>{{ c.title }}</b></a>
+      <span class="sp-muted small">· Week {{ c.week }} · {{ c.parts|join(', ') }}</span></div>
+    <form method="post" action="{{ url_for('season_plan.settle_session', session_id=c.session_id) }}" class="d-flex gap-2 m-0">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn btn-sm btn-outline-secondary" name="choice" value="session">Keep the session's</button>
+      <button class="btn btn-sm btn-outline-primary" name="choice" value="plan">Use the plan's</button>
+    </form>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
 {% if report.removed %}
 <div class="alert alert-info"><b>No longer in the plan, so building removes:</b>{% for r in report.removed %}<div>{{ r }}</div>{% endfor %}</div>
 {% endif %}
@@ -77,7 +94,7 @@
         <td>{% if r.status != 'created' %}<a href="{{ url_for('session.detail', session_id=r.session_id) }}">{{ r.title }}</a>{% else %}{{ r.title }}{% endif %}</td>
         <td class="text-nowrap">{{ r.date.strftime('%a %-d %b') if r.date else '—' }}</td>
         <td>{{ r.activities }}</td>
-        <td><span class="sp-status sp-status-{{ r.status }}">{{ {'created': 'Create', 'updated': 'Update', 'unchanged': 'Up to date'}[r.status] }}</span></td>
+        <td><span class="sp-status sp-status-{{ r.status }}">{{ {'created': 'Create', 'updated': 'Update', 'unchanged': 'Up to date', 'kept': 'Coach edits kept', 'conflict': 'Changed in both'}.get(r.status, r.status) }}</span></td>
       </tr>
       {% else %}
       <tr><td colspan="5" class="sp-muted">No week has a session table yet.</td></tr>

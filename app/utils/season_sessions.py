@@ -28,14 +28,16 @@ so players' answers for that date stay with it. The schedule keeps the date,
 time and place; the plan's training days and times are only used for weeks
 no schedule covers.
 """
+import hashlib
+import json
 import re
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 
 from app import db
 from app.models.drill import SavedDrill
-from app.models.session import SessionPlan
-from app.utils.season_import import _apply, _sync_components
+from app.models.session import SessionComponent, SessionPlan
+from app.utils.season_import import _apply
 from app.utils.season_plan_import import clean_cell, parse_tables, squad_name
 
 WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -241,12 +243,19 @@ class BuildReport:
     skipped: list = field(default_factory=list)  # (week number, why)
     removed: list = field(default_factory=list)
     warnings: list = field(default_factory=list)
+    # Sessions where a coach's edit and the plan's change touch the same
+    # part: {'week', 'squad', 'session_id', 'title', 'parts': [labels]}
+    conflicts: list = field(default_factory=list)
 
     def count(self, status):
         return sum(1 for r in self.rows if r['status'] == status)
 
     def summary(self):
         parts = [f'{self.count(s)} {s}' for s in ('created', 'updated', 'unchanged') if self.count(s)]
+        if self.count('kept'):
+            parts.append(f'{self.count("kept")} with coaches\' edits kept')
+        if self.conflicts:
+            parts.append(f'{len(self.conflicts)} to check')
         if self.removed:
             parts.append(f'{len(self.removed)} removed')
         return ', '.join(parts) or 'nothing to build'
@@ -256,6 +265,8 @@ class BuildReport:
         out += [f'  {r["status"]:>9}  {r["title"]}' for r in self.rows if r['status'] != 'unchanged']
         out += [f'  removed  {line}' for line in self.removed]
         out += [f'  warning: {line}' for line in self.warnings]
+        out += [f'  changed in both: {c["title"]} ({", ".join(c["parts"])}); kept the session\'s'
+                for c in self.conflicts]
         return '\n'.join(out)
 
 
@@ -457,6 +468,140 @@ PLAN_KEYS = ('season', 'phase_number', 'phase_name', 'block', 'week_number', 'we
              'aim', 'learning_points', 'notes', 'focus_area')
 
 
+# ── Keeping coaches' edits ─────────────────────────────────────────────────
+#
+# Each session built from the plan remembers a fingerprint of each part as
+# the plan last wrote it (SessionPlan.plan_snapshot). Building again compares
+# three things for each part: the session now, the snapshot and the plan now.
+#
+#   session = snapshot          the plan's change (if any) is written
+#   session != snapshot         a coach changed it: kept
+#     ... and the plan changed  it too: kept, and reported as a conflict
+#
+# Week, phase, block, season and squad always follow the plan.
+
+PARTS = {
+    'title': ('title',),
+    'focus': ('focus_area',),
+    'aim': ('aim',),
+    'learning_points': ('learning_points',),
+    'notes': ('notes',),
+    'when': WHEN_KEYS,
+    'blocks': None,
+}
+PART_LABELS = {'title': 'title', 'focus': 'focus', 'aim': 'aim', 'learning_points': 'learning points',
+               'notes': 'notes', 'when': 'date, time and place', 'blocks': 'activities'}
+ALWAYS_KEYS = ('season', 'phase_number', 'phase_name', 'block', 'week_number', 'week_commencing', 'squad')
+BLOCK_KEYS = ('title', 'description', 'coach_cue', 'duration_minutes', 'component_type', 'focus_area', 'notes')
+
+
+def _fingerprint(value):
+    raw = json.dumps(value, default=str, sort_keys=True, separators=(',', ':'))
+    return hashlib.sha1(raw.encode()).hexdigest()[:16]
+
+
+def _session_blocks(session):
+    return [[getattr(c, k) for k in BLOCK_KEYS] + [c.drill_id]
+            for c in session.components.order_by(SessionComponent.order, SessionComponent.id)]
+
+
+def _wanted_blocks(components, drill_ids):
+    return [[c[k] for k in BLOCK_KEYS] + [drill_ids.get(c.get('drill_external_id'))] for c in components]
+
+
+def _parts_now(session):
+    out = {part: [getattr(session, k) for k in keys] for part, keys in PARTS.items() if keys}
+    out['blocks'] = _session_blocks(session)
+    return out
+
+
+def _parts_wanted(values, components, drill_ids):
+    out = {part: [values.get(k) for k in keys] for part, keys in PARTS.items() if keys}
+    out['blocks'] = _wanted_blocks(components, drill_ids)
+    return out
+
+
+def _apply_blocks(session, components, drill_ids):
+    """Make the session's blocks match, updating them in place by position
+    so playbook links on them survive."""
+    from app.models.playbook import Play
+    existing = session.components.order_by(SessionComponent.order, SessionComponent.id).all()
+    for i, c in enumerate(components):
+        block = existing[i] if i < len(existing) else None
+        if block is None:
+            block = SessionComponent(session_id=session.id, team_organization_id=session.team_organization_id)
+            db.session.add(block)
+        for k in BLOCK_KEYS:
+            setattr(block, k, c[k])
+        block.drill_id = drill_ids.get(c.get('drill_external_id'))
+        block.order = i + 1
+    gone = existing[len(components):]
+    if gone:
+        assoc = Play.play_session_component
+        db.session.execute(assoc.delete().where(assoc.c.component_id.in_([b.id for b in gone])))
+        for b in gone:
+            db.session.delete(b)
+
+
+def _apply_part(session, part, values, components, drill_ids):
+    if part == 'blocks':
+        _apply_blocks(session, components, drill_ids)
+    else:
+        for k in PARTS[part]:
+            setattr(session, k, values.get(k))
+
+
+def reconcile(session, values, components, drill_ids, is_new=False, choose=None):
+    """Bring a built session in step with the plan, part by part, keeping
+    coaches' edits. `choose` settles conflicts: 'plan' writes the plan's
+    version, 'session' keeps the session's and stops asking. Returns
+    (status, conflicting part names): status is 'created', 'updated',
+    'unchanged' or 'kept' (only coaches' edits differ from the plan)."""
+    snapshot = dict(session.plan_snapshot or {})
+    first_time = session.plan_snapshot is None and not is_new
+    now = {} if is_new else _parts_now(session)
+    wanted = _parts_wanted(values, components, drill_ids)
+    changed, kept, conflicts = False, False, []
+    for part in PARTS:
+        if part == 'when' and session.schedule_id:
+            continue  # the training schedule says when and where
+        new = _fingerprint(wanted[part])
+        if is_new:
+            _apply_part(session, part, values, components, drill_ids)
+            snapshot[part] = new
+            continue
+        current, before = _fingerprint(now[part]), snapshot.get(part)
+        if current == new:
+            snapshot[part] = new
+        elif before is None and not first_time:
+            # A part the plan hasn't written before: write it
+            _apply_part(session, part, values, components, drill_ids)
+            snapshot[part], changed = new, True
+        elif current == before:
+            _apply_part(session, part, values, components, drill_ids)
+            snapshot[part], changed = new, True
+        elif before == new:
+            kept = True  # a coach changed it; the plan hasn't since
+        elif choose == 'plan':
+            _apply_part(session, part, values, components, drill_ids)
+            snapshot[part], changed = new, True
+        elif choose == 'session':
+            snapshot[part], kept = new, True
+        else:
+            # Changed in the session and in the plan (or, for a session built
+            # before the plan kept track, simply different): keep the session's
+            conflicts.append(part)
+            kept = True
+    for k in ALWAYS_KEYS:
+        if getattr(session, k) != values.get(k):
+            setattr(session, k, values.get(k))
+            changed = True
+    session.plan_snapshot = snapshot
+    if is_new:
+        return 'created', []
+    return ('updated' if changed else 'kept' if kept or conflicts else 'unchanged'), conflicts
+
+
 def _scheduled_date(team_id, week, squad):
     """An unplanned training-schedule date in this week for this squad
     ('joint' or a plan squad name)."""
@@ -489,9 +634,11 @@ def _has_people(session):
     return session.attendances.count() > 0 or session.rsvps.count() > 0
 
 
-def build_sessions(plan, weeks=None, dry_run=False, commit=True):
+def build_sessions(plan, weeks=None, dry_run=False, commit=True, choose=None):
     """Create or update the sessions for `weeks` (default: every week).
-    With every week, sessions the plan no longer has are removed too."""
+    With every week, sessions the plan no longer has are removed too.
+    Coaches' edits to a session are kept (see reconcile); `choose` maps a
+    session's external_id to 'plan' or 'session' to settle a conflict."""
     team_id = plan.team_organization_id
     report = BuildReport(dry_run=dry_run)
     drills, prefixable = _drill_lookup(team_id)
@@ -517,30 +664,30 @@ def build_sessions(plan, weeks=None, dry_run=False, commit=True):
                 wanted_ids.add(ext)
                 session = existing.pop(ext, None)
                 values = item['values']
-                if session is None:
+                for c in item['components']:
+                    c['drill_external_id'] = (match_drill(c['title'], set(drills), prefixable)
+                                              if c['component_type'] not in UNLINKED_TYPES else None)
+                is_new = session is None
+                if is_new:
                     session = _scheduled_date(team_id, week, item['squad'])
                     if session is not None:
                         # Fill in the schedule's date; it keeps its own when and where
                         session.external_id = ext
                         session.is_published = True
                         _apply(session, {k: v for k, v in values.items() if k not in WHEN_KEYS})
-                        status = 'created'
                     else:
                         session = SessionPlan(team_organization_id=team_id, external_id=ext)
                         _apply(session, values)
                         session.squads = _squads_for(team_id, item['squad'])
                         db.session.add(session)
-                        status = 'created'
                     db.session.flush()
-                else:
-                    if session.schedule_id:
-                        values = {k: v for k, v in values.items() if k not in WHEN_KEYS}
-                    status = 'updated' if _apply(session, values) else 'unchanged'
-                for c in item['components']:
-                    c['drill_external_id'] = (match_drill(c['title'], set(drills), prefixable)
-                                              if c['component_type'] not in UNLINKED_TYPES else None)
-                if _sync_components(session, item['components'], drills, team_id) and status == 'unchanged':
-                    status = 'updated'
+                status, conflicts = reconcile(session, values, item['components'], drills, is_new=is_new,
+                                              choose=(choose or {}).get(ext))
+                if conflicts:
+                    status = 'conflict'
+                    report.conflicts.append({'week': week.week_number, 'squad': item['squad'],
+                                             'session_id': session.id, 'title': session.title,
+                                             'parts': [PART_LABELS[p] for p in conflicts]})
                 if item['squad'] == 'joint':
                     joint_by_week[week.week_number] = session
                 report.rows.append({'week': week.week_number, 'squad': item['squad'],
