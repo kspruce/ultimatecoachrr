@@ -33,14 +33,6 @@ def _own_player(team_id):
     return current_user.player_for(team_id) if team_id else None
 
 
-def _safe_back(target):
-    """Where to go after switching: back to the page they were on (same
-    site only), else home."""
-    if target and target.startswith('/') and not target.startswith('//'):
-        return target
-    return url_for('main.index')
-
-
 @bp.route('/', methods=['GET'])
 @login_required
 def choose():
@@ -89,4 +81,5 @@ def start():
 def stop():
     session.pop(PLAYER_VIEW_KEY, None)
     flash('Back to your own view.', 'success')
-    return redirect(_safe_back(request.form.get('next')))
+    # Back to the dashboard: the page they were on was the player's version
+    return redirect(url_for('main.index'))
