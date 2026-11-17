@@ -10,7 +10,7 @@
 {%- endmacro %}
 
 {% block styles %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/session_list.css') }}?v=2">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/session_list.css') }}?v=3">
 {% endblock %}
 
 {% block content %}
@@ -66,72 +66,160 @@
 <p class="sl-empty">No upcoming sessions scheduled.</p>
 {% endif %}
 
-{# ── Every session, with filters that apply as you pick them ── #}
+{# ── Every session, a week at a time ───────────────────── #}
+{% macro week_label(w) -%}
+{%- if not w.start %}No date
+{%- else %}{% set n = (w.start - this_monday).days // 7 -%}
+{%- if n == 0 %}This week{% elif n == 1 %}Next week{% elif n == -1 %}Last week
+{%- else %}w/c {{ w.start.day }} {{ w.start.strftime('%b') }}{% if w.start.year != today.year %} {{ w.start.year }}{% endif %}{% endif %}
+{%- endif %}
+{%- endmacro %}
+{% set need_labels = {'plan': 'No plan yet', 'draft': 'Not published', 'register': 'Register not taken'} %}
+{% set keep = request.args.to_dict() %}
+
 <div class="sl-list-head">
   <h2 class="sl-title mb-0">All sessions</h2>
-  {% if filters_on %}<a href="{{ url_for('session.index') }}" class="sl-clear"><i class="bi bi-x-lg" aria-hidden="true"></i> Clear {{ filters_on }} filter{{ '' if filters_on == 1 else 's' }}</a>{% endif %}
+  {% if filters_on %}<a href="{{ url_for('session.index', show=show) }}" class="sl-clear"><i class="bi bi-x-lg" aria-hidden="true"></i> Clear {{ filters_on }} filter{{ '' if filters_on == 1 else 's' }}</a>{% endif %}
 </div>
-<form method="get" action="{{ url_for('session.index') }}" class="sl-filters" id="sessionFilters">
-  {{ form.focus_area(class="form-select form-select-sm", **{'aria-label': 'Focus area'}) }}
-  {{ form.date_range(class="form-select form-select-sm", **{'aria-label': 'Date range'}) }}
-  {{ form.session_type(class="form-select form-select-sm", **{'aria-label': 'Session type'}) }}
-  {{ form.squad(class="form-select form-select-sm", **{'aria-label': 'Squad'}) }}
-  {% if form.season.choices|length > 1 %}
-  {{ form.season(class="form-select form-select-sm", **{'aria-label': 'Season plan'}) }}
-  {{ form.phase(class="form-select form-select-sm", **{'aria-label': 'Phase'}) }}
-  {{ form.block(class="form-select form-select-sm", **{'aria-label': 'Block'}) }}
+
+{% if coach_todo and (coach_todo.plan or coach_todo.draft or coach_todo.register) %}
+<div class="sl-todo" role="note">
+  <span class="sl-todo-title">Two weeks either side of today</span>
+  {% if coach_todo.plan %}<a href="{{ url_for('session.index', show='upcoming', needs='plan') }}"><b>{{ coach_todo.plan }}</b> without a plan</a>{% endif %}
+  {% if coach_todo.draft %}<a href="{{ url_for('session.index', show='upcoming', needs='draft') }}"><b>{{ coach_todo.draft }}</b> not published</a>{% endif %}
+  {% if coach_todo.register %}<a href="{{ url_for('session.index', show='past', needs='register') }}"><b>{{ coach_todo.register }}</b> register{{ '' if coach_todo.register == 1 else 's' }} to take</a>{% endif %}
+</div>
+{% endif %}
+
+<nav class="sl-tabs" aria-label="Which sessions">
+  {% for value, label in show_choices %}
+  {% set args = dict(keep, show=value) %}
+  <a href="{{ url_for('session.index', **args) }}" class="{{ 'active' if show == value }}"{% if show == value %} aria-current="page"{% endif %}>{{ label }} <span>{{ when_counts[value] }}</span></a>
+  {% endfor %}
+</nav>
+
+<form method="get" action="{{ url_for('session.index') }}" class="sl-filters" id="sessionFilters" role="search">
+  <input type="hidden" name="show" value="{{ show }}">
+  <div class="sl-search">
+    <i class="bi bi-search" aria-hidden="true"></i>
+    {{ form.q(class="form-control form-control-sm", placeholder="Search titles, focus, blocks, places", type="search", **{'aria-label': 'Search sessions'}) }}
+  </div>
+  {% if current_user.is_coach %}
+  {{ form.needs(class="form-select form-select-sm", **{'aria-label': 'What sessions still need'}) }}
   {% endif %}
+  {{ form.squad(class="form-select form-select-sm", **{'aria-label': 'Squad'}) }}
+  {% set more_on = [form.focus_area.data, form.session_type.data, form.season.data, form.phase.data, form.block.data]|select|list|length %}
+  <details class="sl-more"{{ ' open' if more_on }}>
+    <summary>More filters{% if more_on %} ({{ more_on }}){% endif %}</summary>
+    <div class="sl-more-body">
+      {{ form.focus_area(class="form-select form-select-sm", **{'aria-label': 'Focus area'}) }}
+      {{ form.session_type(class="form-select form-select-sm", **{'aria-label': 'Session type'}) }}
+      {% if form.season.choices|length > 1 %}
+      {{ form.season(class="form-select form-select-sm", **{'aria-label': 'Season plan'}) }}
+      {{ form.phase(class="form-select form-select-sm", **{'aria-label': 'Phase'}) }}
+      {{ form.block(class="form-select form-select-sm", **{'aria-label': 'Block'}) }}
+      {% endif %}
+    </div>
+  </details>
   <noscript><button type="submit" class="btn btn-sm btn-primary">Apply</button></noscript>
 </form>
 
-{% if sessions %}
-<div class="sl-list">
-  {% for session in sessions %}
-  <div class="sl-row{{ ' is-past' if session.date and session.date < today }}">
-    <div class="sl-date">
-      {% if session.date %}<b>{{ session.date.day }}</b><span>{{ session.date.strftime('%b') }}{% if session.date.year != today.year %} {{ session.date.strftime('%y') }}{% endif %}</span>
-      {% elif session.week_commencing %}<span>w/c</span><b>{{ session.week_commencing.day }}</b><span>{{ session.week_commencing.strftime('%b') }}</span>
-      {% else %}<span>No date</span>{% endif %}
-    </div>
-    <div class="sl-main">
-      <a class="sl-name" href="{{ url_for('session.detail', session_id=session.id) }}">{{ session.title }}</a>
-      <div class="sl-sub">
-        <span class="sl-type sl-type-{{ session_type_colour(session.session_type) }}"
-              title="{{ session.session_type_display }} #{{ session_type_numbers.get(session.id, '?') }}">{{ session.session_type_display }} #{{ session_type_numbers.get(session.id, '?') }}</span>
-        {% if session.focus_area %}<span>{{ session.focus_area }}</span>{% endif %}
-        {% if session.start_time %}<span>{{ times(session) }}</span>{% endif %}
-        {% if session.location %}<span>{{ session.location }}</span>{% endif %}
-        {% if session.season %}<span>{{ session.season }}{% if session.week_number %} · Week {{ session.week_number }}{% endif %}</span>{% endif %}
-        {% if session.squad %}<span class="sl-squad">{{ session.squad }}</span>{% endif %}
+{% if weeks %}
+<div class="sl-weeks-bar" data-show="{{ show }}">
+  <span class="text-muted small">{{ sessions|length }} session{{ '' if sessions|length == 1 else 's' }} in {{ weeks|length }} week{{ '' if weeks|length == 1 else 's' }}</span>
+  {% if weeks|length > 4 %}
+  <span class="sl-fold">
+    <button type="button" class="btn btn-sm btn-link js-fold" data-open="1">Open all</button>
+    <button type="button" class="btn btn-sm btn-link js-fold" data-open="0">Fold all</button>
+  </span>
+  <label class="visually-hidden" for="jumpToWeek">Go to week</label>
+  <select class="form-select form-select-sm sl-jump" id="jumpToWeek">
+    <option value="">Go to week…</option>
+    {% for w in weeks %}
+    {% set number, phase_name, block_name = w.plan_info() %}
+    <option value="{{ w.anchor }}">{{ week_label(w) }}{% if number %} · Week {{ number }}{% endif %}{% if block_name %} · {{ block_name }}{% endif %}</option>
+    {% endfor %}
+  </select>
+  {% endif %}
+</div>
+
+{% for w in weeks %}
+{% set number, phase_name, block_name = w.plan_info() %}
+<details class="sl-week{{ ' is-current' if w.start == this_monday }}{{ ' is-past' if w.start and w.start < this_monday }}" id="{{ w.anchor }}"{{ ' open' if w.open }}>
+  <summary>
+    <span class="sl-week-when">{{ week_label(w) }}{% if w.start and (w.start - this_monday).days|abs <= 7 %} <small>{{ w.start.day }} {{ w.start.strftime('%b') }}</small>{% endif %}</span>
+    <span class="sl-week-plan">
+      {% if number %}<span>Week {{ number }}</span>{% endif %}
+      {% if phase_name %}<span>{{ phase_name }}</span>{% endif %}
+      {% if block_name %}<span>{{ block_name }}</span>{% endif %}
+    </span>
+    <span class="sl-week-count">
+      {% if w.need_count %}<span class="sl-need" title="{{ w.need_count }} thing{{ '' if w.need_count == 1 else 's' }} to do this week"><i class="bi bi-exclamation-circle" aria-hidden="true"></i> {{ w.need_count }}</span>{% endif %}
+      {{ w.sessions|length }} session{{ '' if w.sessions|length == 1 else 's' }}
+    </span>
+  </summary>
+  <div class="sl-list">
+    {% for session in w.sessions %}
+    {% set needs = session_needs.get(session.id, []) %}
+    <div class="sl-row{{ ' is-past' if session.date and session.date < today }}{{ ' is-today' if session.date == today }}{{ ' is-cancelled' if session.is_cancelled }}">
+      <div class="sl-date">
+        {% if session.date %}<span>{{ session.date.strftime('%a') }}</span><b>{{ session.date.day }}</b><span>{{ session.date.strftime('%b') }}</span>
+        {% elif session.week_commencing %}<span>w/c</span><b>{{ session.week_commencing.day }}</b><span>{{ session.week_commencing.strftime('%b') }}</span>
+        {% else %}<span>No date</span>{% endif %}
+      </div>
+      <div class="sl-main">
+        <a class="sl-name" href="{{ url_for('session.detail', session_id=session.id) }}">{{ session.title }}</a>
+        {% if session.is_cancelled %}<span class="sl-flag sl-flag-cancelled">Cancelled</span>{% endif %}
+        <div class="sl-sub">
+          {% if session.start_time %}<span>{{ times(session) }}</span>{% endif %}
+          {% if session.squad %}<span class="sl-squad">{{ session.squad }}</span>{% endif %}
+          {% if session.focus_area %}<span>{{ session.focus_area }}</span>{% endif %}
+          {% if session.location %}<span>{{ session.location }}</span>{% endif %}
+          <span class="sl-type sl-type-{{ session_type_colour(session.session_type) }}"
+                title="{{ session.session_type_display }} #{{ session_type_numbers.get(session.id, '?') }}">{{ session.session_type_display }} #{{ session_type_numbers.get(session.id, '?') }}</span>
+        </div>
+        {% if needs %}
+        <div class="sl-needs">
+          {% for n in needs %}
+          {% if n == 'register' %}<a class="sl-flag sl-flag-{{ n }}" href="{{ url_for('session.attendance', session_id=session.id) }}">{{ need_labels[n] }}</a>
+          {% else %}<a class="sl-flag sl-flag-{{ n }}" href="{{ url_for('session.detail', session_id=session.id) }}">{{ need_labels[n] }}</a>{% endif %}
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+      <div class="sl-nums">
+        <span title="Parts in the plan"><i class="bi bi-list-check" aria-hidden="true"></i> {{ components.get(session.id, 0) }}</span>
+        <span title="Players who attended"><i class="bi bi-people" aria-hidden="true"></i> {{ attended.get(session.id, 0) }}</span>
+      </div>
+      <div class="sl-row-actions">
+        {% if current_user.is_coach and session.date and session.date <= today %}
+        <a href="{{ url_for('feedback.quick_capture', session_id=session.id) }}" class="btn btn-sm btn-outline-secondary"
+           title="Quick feedback" aria-label="Quick feedback for {{ session.title }}"><i class="bi bi-chat-square-text" aria-hidden="true"></i></a>
+        {% endif %}
+        {% if current_user.is_admin %}
+        <a href="{{ url_for('session.edit_session', session_id=session.id) }}" class="btn btn-sm btn-outline-secondary"
+           title="Edit" aria-label="Edit {{ session.title }}"><i class="bi bi-pencil" aria-hidden="true"></i></a>
+        <button type="button" class="btn btn-sm btn-outline-danger js-delete-session"
+                data-url="{{ url_for('session.delete_session', session_id=session.id) }}"
+                data-title="{{ session.title }}" data-components="{{ components.get(session.id, 0) }}"
+                data-attendance="{{ register_rows.get(session.id, 0) }}"
+                title="Delete" aria-label="Delete {{ session.title }}"><i class="bi bi-trash" aria-hidden="true"></i></button>
+        {% endif %}
       </div>
     </div>
-    <div class="sl-nums">
-      <span title="Parts in the plan"><i class="bi bi-list-check" aria-hidden="true"></i> {{ session.component_count }}</span>
-      <span title="Players who attended"><i class="bi bi-people" aria-hidden="true"></i> {{ session.attendance_count }}</span>
-    </div>
-    <div class="sl-row-actions">
-      {% if current_user.is_coach and session.date and session.date <= today %}
-      <a href="{{ url_for('feedback.quick_capture', session_id=session.id) }}" class="btn btn-sm btn-outline-secondary"
-         title="Quick feedback" aria-label="Quick feedback for {{ session.title }}"><i class="bi bi-chat-square-text" aria-hidden="true"></i></a>
-      {% endif %}
-      {% if current_user.is_admin %}
-      <a href="{{ url_for('session.edit_session', session_id=session.id) }}" class="btn btn-sm btn-outline-secondary"
-         title="Edit" aria-label="Edit {{ session.title }}"><i class="bi bi-pencil" aria-hidden="true"></i></a>
-      <button type="button" class="btn btn-sm btn-outline-danger js-delete-session"
-              data-url="{{ url_for('session.delete_session', session_id=session.id) }}"
-              data-title="{{ session.title }}" data-components="{{ session.component_count }}"
-              data-attendance="{{ session.attendance_count }}"
-              title="Delete" aria-label="Delete {{ session.title }}"><i class="bi bi-trash" aria-hidden="true"></i></button>
-      {% endif %}
-    </div>
+    {% endfor %}
   </div>
-  {% endfor %}
-</div>
+</details>
+{% endfor %}
 {% else %}
-<p class="sl-empty">No sessions found.
-  {% if filters_on %}<a href="{{ url_for('session.index') }}">Clear the filters</a> to see them all.
-  {% elif current_user.is_admin %}<a href="{{ url_for('session.add_session') }}">Add a session</a> to get started.
-  {% else %}Your coaches will add them here.{% endif %}
+<p class="sl-empty">
+  {% if filters_on %}No sessions match. <a href="{{ url_for('session.index', show=show) }}">Clear the filters</a> to see them all.
+  {% elif show == 'upcoming' and when_counts['past'] %}Nothing coming up. <a href="{{ url_for('session.index', show='past') }}">See past sessions</a>.
+  {% elif show == 'past' and when_counts['upcoming'] %}No past sessions yet. <a href="{{ url_for('session.index') }}">See what's coming up</a>.
+  {% else %}No sessions found.
+    {% if current_user.is_admin %}<a href="{{ url_for('session.add_session') }}">Add a session</a> to get started.
+    {% else %}Your coaches will add them here.{% endif %}
+  {% endif %}
   {% with guide_key='sessions' %}{% include 'partials/guide_link.html' %}{% endwith %}
 </p>
 {% endif %}
@@ -164,5 +252,5 @@
 
 {% block scripts %}
 {{ super() }}
-<script src="{{ url_for('static', filename='js/session_list.js') }}?v=1"></script>
+<script src="{{ url_for('static', filename='js/session_list.js') }}?v=2"></script>
 {% endblock %}

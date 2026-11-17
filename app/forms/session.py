@@ -119,12 +119,12 @@ class AttendanceForm(FlaskForm):
 
 class SessionFilterForm(FlaskForm):
     focus_area = SelectField('Focus Area', validators=[Optional()])
-    date_range = SelectField('Date Range', choices=[
-        ('all', 'All Time'),
-        ('past_week', 'Past Week'),
-        ('past_month', 'Past Month'),
-        ('past_year', 'Past Year')
-    ], validators=[Optional()])
+    # Which way from today: coming up, past or all dates (choices in app.utils.session_list)
+    show = SelectField('Show', choices=[('upcoming', 'Coming up'), ('past', 'Past'), ('all', 'All dates')],
+                       default='upcoming', validators=[Optional()])
+    q = StringField('Search', validators=[Optional()])
+    # Coaches only: what a session still needs (choices filled in the route)
+    needs = SelectField('Needs', choices=[('', 'Any status')], default='', validators=[Optional()])
     submit = SubmitField('Filter')
     # Add session type filter field
     session_type = SelectField(

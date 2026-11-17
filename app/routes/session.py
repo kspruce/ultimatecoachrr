@@ -62,36 +62,30 @@ def legacy_session_action_url(action, legacy_id):
 @bp.route('/')
 @login_required
 def index():
-    form = SessionFilterForm()
-    
-    # Get filter parameters
-    focus_area = request.args.get('focus_area', '')
-    date_range = request.args.get('date_range', 'all')
-    session_type = request.args.get('session_type', '')
-    
-    # Set form values from query parameters
-    if focus_area:
-        form.focus_area.data = focus_area
-    if date_range:
-        form.date_range.data = date_range
-    if session_type:
-        form.session_type.data = session_type
-    
-    # Build query based on filters
-    query = SessionPlan.query.filter_by(team_organization_id=get_current_team_id())
-    
-    if focus_area:
-        query = query.filter(SessionPlan.focus_area == focus_area)
-    
-    if session_type:
-        query = query.filter(SessionPlan.session_type == session_type)
+    from app.utils import session_list as sl
 
-    # Season plan filters (season / phase / block / squad)
+    team_id = get_current_team_id()
+    today = datetime.now().date()
+    form = SessionFilterForm()
+    is_coach = current_user.is_coach
+
+    # Filters
+    focus_area = request.args.get('focus_area', '')
+    session_type = request.args.get('session_type', '')
     season = request.args.get('season', '')
     phase = request.args.get('phase', '')
     block = request.args.get('block', '')
     squad = request.args.get('squad', '')
-    team_plans = SessionPlan.query.filter_by(team_organization_id=get_current_team_id())
+    q = (request.args.get('q') or '').strip()[:100]
+    # A season plan reads best from its first week; otherwise open on what's next
+    show = request.args.get('show') or ('all' if season else 'upcoming')
+    if show not in {value for value, _ in sl.SHOW_CHOICES}:
+        show = 'upcoming'
+    needs_filter = request.args.get('needs', '') if is_coach else ''
+    if needs_filter not in {value for value, _ in sl.NEEDS_CHOICES}:
+        needs_filter = ''
+
+    team_plans = SessionPlan.query.filter_by(team_organization_id=team_id)
 
     def distinct_values(*columns):
         rows = team_plans.with_entities(*columns).filter(columns[0].isnot(None)).distinct().all()
@@ -103,8 +97,16 @@ def index():
         for n, name in distinct_values(SessionPlan.phase_number, SessionPlan.phase_name)]
     form.block.choices = [('', 'All Blocks')] + [(b, b) for (b,) in distinct_values(SessionPlan.block)]
     form.squad.choices = [('', 'All Squads')] + list(SessionPlan.SQUAD_CHOICES)
+    form.needs.choices = list(sl.NEEDS_CHOICES)
+    form.focus_area.data, form.session_type.data, form.show.data = focus_area, session_type, show
     form.season.data, form.phase.data, form.block.data, form.squad.data = season, phase, block, squad
+    form.needs.data, form.q.data = needs_filter, q
 
+    query = SessionPlan.query.filter_by(team_organization_id=team_id)
+    if focus_area:
+        query = query.filter(SessionPlan.focus_area == focus_area)
+    if session_type:
+        query = query.filter(SessionPlan.session_type == session_type)
     if season:
         query = query.filter(SessionPlan.season == season)
     else:
@@ -115,54 +117,40 @@ def index():
         query = query.filter(SessionPlan.block == block)
     if squad in {value for value, _ in SessionPlan.SQUAD_CHOICES}:
         query = _filter_by_squad(query, squad)
-    
-    if date_range != 'all':
-        today = datetime.now().date()
-        if date_range == 'past_week':
-            start_date = today - timedelta(days=7)
-        elif date_range == 'past_month':
-            start_date = today - timedelta(days=30)
-        elif date_range == 'past_year':
-            start_date = today - timedelta(days=365)
-        
-        query = query.filter(SessionPlan.date >= start_date)
-    
-    # Get sessions and sort by date (newest first); a season's plans in week order
-    if season:
-        sessions = query.order_by(SessionPlan.week_number.asc(), SessionPlan.squad.asc(),
-                                  SessionPlan.id.asc()).all()
-    else:
-        sessions = query.order_by(SessionPlan.date.desc()).all()
+    if q:
+        like = '%' + q.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_') + '%'
+        query = query.filter(db.or_(*(column.ilike(like, escape='\\') for column in (
+            SessionPlan.title, SessionPlan.focus_area, SessionPlan.block, SessionPlan.phase_name,
+            SessionPlan.location))))
+    # How many in each direction, for the Coming up / Past counts
+    when_counts = {value: sl.filter_when(query, value, today).count() for value, _ in sl.SHOW_CHOICES}
+    sessions = sl.order_for(sl.filter_when(query, show, today), show).all()
 
-    # Build per-type sequential numbers (ascending by date, so earliest = #1)
-    # First collect ALL sessions for the team ordered oldest-first to assign numbers
-    all_sessions_ordered = SessionPlan.query.filter_by(
-        team_organization_id=get_current_team_id()
-    ).order_by(SessionPlan.date.asc(), SessionPlan.id.asc()).all()
-    type_counters = {}
-    session_type_numbers = {}
-    for s in all_sessions_ordered:
-        stype = s.session_type or 'invited_training'
+    components, attended, register_rows = sl.counts_for(sessions)
+    session_needs = {s.id: sl.needs(s, components.get(s.id), register_rows.get(s.id), today)
+                     for s in sessions} if is_coach else {}
+    if needs_filter:
+        sessions = [s for s in sessions
+                    if (session_needs[s.id] if needs_filter == 'any' else needs_filter in session_needs[s.id])]
+    weeks = sl.group_by_week(sessions, today, show)
+    for w in weeks:
+        w.need_count = sum(len(session_needs.get(s.id, ())) for s in w.sessions)
+
+    # Per-type sequential numbers, oldest first (the earliest is #1)
+    session_type_numbers, type_counters = {}, {}
+    for sid, stype in (SessionPlan.query.filter_by(team_organization_id=team_id)
+                       .with_entities(SessionPlan.id, SessionPlan.session_type)
+                       .order_by(SessionPlan.date.asc(), SessionPlan.id.asc())):
+        stype = stype or 'invited_training'
         type_counters[stype] = type_counters.get(stype, 0) + 1
-        session_type_numbers[s.id] = type_counters[stype]
+        session_type_numbers[sid] = type_counters[stype]
 
-    # Get upcoming sessions (future dates)
     upcoming_sessions = SessionPlan.query.filter(
-        SessionPlan.date >= datetime.now().date(),
-        SessionPlan.team_organization_id == get_current_team_id()
-    ).order_by(SessionPlan.date).limit(5).all()
-
-    # Build a set of session IDs that the current user has already RSVPed for
-    user_rsvped_sessions = set()
-    if current_user.is_authenticated and current_user.player:
-        from app.models.session import SessionRSVP
-        existing_rsvps = SessionRSVP.query.filter_by(
-            player_id=current_user.player.id
-        ).all()
-        user_rsvped_sessions = {r.session_id for r in existing_rsvps}
+        SessionPlan.date >= today,
+        SessionPlan.team_organization_id == team_id
+    ).order_by(SessionPlan.date, SessionPlan.start_time).limit(5).all()
 
     # Who's said what for each upcoming session, and this player's own answer
-    from app.models.session import SessionRSVP
     upcoming_ids = [s.id for s in upcoming_sessions]
     rsvp_counts = {sid: {'attending': 0, 'maybe': 0, 'not_attending': 0} for sid in upcoming_ids}
     my_answers = {}
@@ -174,21 +162,48 @@ def index():
             if r.player_id == my_player_id:
                 my_answers[r.session_id] = r.status
 
-    filters_on = sum(1 for v in (focus_area, session_type, season, phase, block, squad) if v) \
-        + (1 if date_range != 'all' else 0)
+    filters_on = sum(1 for v in (focus_area, session_type, season, phase, block, squad, q, needs_filter) if v)
+    # What needs doing in the next fortnight, across everything (not just the filtered list)
+    coach_todo = _coach_todo(team_id, today) if is_coach else None
 
     return render_template(
         'session/index.html',
         sessions=sessions,
+        weeks=weeks,
+        show=show,
+        show_choices=sl.SHOW_CHOICES,
+        when_counts=when_counts,
         upcoming_sessions=upcoming_sessions,
         form=form,
         session_type_numbers=session_type_numbers,
-        user_rsvped_sessions=user_rsvped_sessions,
+        components=components,
+        attended=attended,
+        register_rows=register_rows,
+        session_needs=session_needs,
+        coach_todo=coach_todo,
         rsvp_counts=rsvp_counts,
         my_answers=my_answers,
         filters_on=filters_on,
-        today=datetime.now().date(),
+        today=today,
+        this_monday=sl.monday(today),
     )
+
+
+def _coach_todo(team_id, today):
+    """{need: count} for this club season's sessions from the last fortnight
+    to the next one: plans to write or publish, registers to take."""
+    from app.utils import session_list as sl
+    recent = scope_sessions(SessionPlan.query.filter(
+        SessionPlan.team_organization_id == team_id,
+        SessionPlan.date >= today - timedelta(days=14),
+        SessionPlan.date <= today + timedelta(days=14))).all()
+    components, _, register_rows = sl.counts_for(recent)
+    todo = {'plan': 0, 'draft': 0, 'register': 0}
+    for s in recent:
+        for need in sl.needs(s, components.get(s.id), register_rows.get(s.id), today):
+            todo[need] += 1
+    return todo
+
 
 @bp.route('/add', methods=['GET', 'POST'])
 @login_required

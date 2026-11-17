@@ -225,3 +225,13 @@ untouched; Apply skips non-empty weeks unless overwrite is ticked.
 
 Steps 0–3 together are enough to plan 2028 comfortably. Step 4 is for new
 teams. Step 5 can wait until a few clubs have templates worth sharing.
+
+## Done alongside: browsing a season of sessions
+
+The sessions list (Training → Sessions) now copes with a whole season built
+from the plan. It opens on what's coming up, groups sessions by week (with
+the plan's week, phase and block), folds all but the nearest weeks, and has
+search and a "Go to week" picker. Coaches also see what each session still
+needs: no plan yet, not published, or register not taken. Details are in
+[SESSIONS.md](SESSIONS.md). Step 3's grid can link each week to
+`/sessions/?show=all#week-<monday>`.
