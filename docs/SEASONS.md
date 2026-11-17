@@ -1,6 +1,8 @@
 # Seasons and squads
 
-A club runs one season per calendar year ("2026"). Each season keeps its own
+A club runs one season a year: a calendar year ("2026") by default, or
+across new year ("2027/28", October to September, say) once its dates are
+set that way. Each season keeps its own
 games, tournaments, sessions and roster, so starting a new season never
 deletes anything.
 
@@ -29,6 +31,16 @@ Team settings → **Seasons & squads** → **Start <year> season**:
 
 ## Editing seasons
 
+**Season dates.** Changing a season's dates moves every game, tournament
+and session dated inside them into it (a tournament's games follow the
+tournament). A season the new dates overlap is shortened to make room; one
+they cover completely, or one left with nothing in it, is removed, unless
+it's the current season or has a roster, in which case the change is
+refused. New seasons, whether started from **Start new season** or made
+automatically for a date no season covers, start on the same day as the
+latest season and run a full year, so a club that sets its season to
+October to September stays that way.
+
 Every season, past ones included, stays editable: its dates, its roster
 (squad, shirt, position, status: active, injured or left) and which season
 is current. A season can be deleted only when it has no games, tournaments
@@ -52,7 +64,9 @@ games and tournaments; they just no longer have a squad.
   `season_id` on `game`, `tournament` and `session_plan`, `squad_id` on
   `game` and `tournament`. The `Tournament.season` text label is kept in
   step for older code.
-- Logic: `app/utils/season.py`. Use `scope_games()`, `scope_tournaments()`,
+- Logic: `app/utils/season.py`. `change_dates()` sets a season's dates and
+  re-files rows with `refile()`; `shaped_dates()` gives a new season's
+  dates (tests: `tests/test_season_dates.py`). Use `scope_games()`, `scope_tournaments()`,
   `scope_sessions()` and `season_players()` to follow the season switcher.
 - `Player.active` always means "on the current season's roster and hasn't
   left", so existing `active=True` queries offer this season's roster.

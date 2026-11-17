@@ -11,7 +11,7 @@ left", so every player picker that lists active players offers this
 season's roster without knowing about seasons.
 """
 import re
-from datetime import date
+from datetime import date, timedelta
 
 from flask import g, has_request_context, request, session as flask_session
 from sqlalchemy import event, inspect
@@ -122,6 +122,146 @@ def season_for_date(team_id, day, seasons=None):
             or next((s for s in seasons if s.year == day.year), None))
 
 
+def season_shape(seasons):
+    """The season new ones are modelled on: the latest, as that's the one a
+    club most recently set up (the current one can still be last year's
+    shape while next season is already set to run October to September)."""
+    seasons = [s for s in seasons if s.start_date and s.end_date]
+    return max(seasons, key=lambda s: s.start_date, default=None)
+
+
+def shaped_dates(year, seasons):
+    """Dates for a new `year` season: shaped like the club's others, and
+    trimmed so they don't overlap any of them."""
+    start, end = Season.default_dates(year, like=season_shape(seasons))
+    for other in seasons:
+        if other.year == year or not other.start_date:
+            continue
+        if other.start_date <= start <= other.end_date:
+            start = other.end_date + timedelta(days=1)
+        if other.start_date <= end <= other.end_date:
+            end = other.start_date - timedelta(days=1)
+    if start > end:  # squeezed out entirely: fall back to the plain year
+        start, end = Season.default_dates(year)
+    return start, end
+
+
+class SeasonDatesError(ValueError):
+    pass
+
+
+def _rows_in(season_id):
+    from app.models.game import Game
+    from app.models.session import SessionPlan
+    from app.models.tournament import Tournament
+    return any(m.query.filter_by(season_id=season_id).first() for m in (Game, Tournament, SessionPlan))
+
+
+def change_dates(season, start, end):
+    """Give `season` new dates, then put every game, tournament and
+    session in the season its date falls in.
+
+    A season the new dates overlap is trimmed to make room; one they cover
+    completely is removed, as is a trimmed one left with nothing in it,
+    provided it isn't current and has no roster. Returns
+    {'moved': {'games': n, 'tournaments': n, 'sessions': n},
+     'trimmed': [names], 'removed': [names]}. Raises SeasonDatesError when
+    the dates would swallow a season that has to stay. The caller commits."""
+    if not start or not end or start > end:
+        raise SeasonDatesError('Give a start date on or before the end date.')
+    team_id = season.team_organization_id
+    others = Season.query.filter(Season.team_organization_id == team_id, Season.id != season.id).all()
+    trimmed, covered = [], []
+    for other in others:
+        if other.end_date < start or other.start_date > end:
+            continue
+        if start <= other.start_date and other.end_date <= end:
+            if other.is_current or other.roster.first() is not None:
+                raise SeasonDatesError(
+                    f'Those dates cover the whole {other.name} season, which '
+                    f'{"is the current season" if other.is_current else "has its own roster"}. '
+                    f'Change its dates first, or pick dates that leave some of it.')
+            covered.append(other)
+        elif other.start_date < start:
+            if other.end_date > end:
+                raise SeasonDatesError(f'Those dates fall inside the {other.name} season. '
+                                       f'Change its dates first.')
+            other.end_date = start - timedelta(days=1)
+            trimmed.append(other)
+        else:
+            other.start_date = end + timedelta(days=1)
+            trimmed.append(other)
+    season.start_date, season.end_date = start, end
+    db.session.flush()
+
+    moved = refile(team_id)
+    removed = []
+    for other in covered + trimmed:
+        if other in covered or (not other.is_current and other.roster.first() is None
+                                and not _rows_in(other.id)):
+            if _rows_in(other.id):  # undated rows left behind: keep them with this season
+                _move_rows(other.id, season)
+            removed.append(other.name)
+            db.session.delete(other)
+    trimmed_names = [o.name for o in trimmed if o.name not in removed]
+    db.session.flush()
+    forget_cached()
+    return {'moved': moved, 'trimmed': trimmed_names, 'removed': removed}
+
+
+def _move_rows(from_id, season):
+    from app.models.game import Game
+    from app.models.session import SessionPlan
+    from app.models.tournament import Tournament
+    for model in (Game, SessionPlan):
+        model.query.filter_by(season_id=from_id).update({'season_id': season.id}, synchronize_session=False)
+    for t in Tournament.query.filter_by(season_id=from_id):
+        t.season_id, t.season = season.id, season.name
+
+
+def refile(team_id):
+    """Put each dated game, tournament and session in the season whose
+    dates contain it (a tournament's games follow the tournament). Rows no
+    season covers, and undated ones, stay where they are. Returns how many
+    of each moved."""
+    from app.models.game import Game
+    from app.models.session import SessionPlan
+    from app.models.tournament import Tournament
+
+    seasons = Season.query.filter_by(team_organization_id=team_id).all()
+    by_id = {s.id: s for s in seasons}
+
+    def covering(day):
+        return next((s for s in seasons if s.contains(day)), None)
+
+    moved = {'games': 0, 'tournaments': 0, 'sessions': 0}
+    for t in Tournament.query.filter(Tournament.team_organization_id == team_id,
+                                     Tournament.start_date.isnot(None)):
+        target = covering(t.start_date)
+        if target is not None and target.id != t.season_id:
+            t.season_id = target.id
+            moved['tournaments'] += 1
+        if t.season_id in by_id:
+            t.season = by_id[t.season_id].name
+    db.session.flush()
+    for game in Game.query.filter(Game.team_organization_id == team_id):
+        if game.tournament is not None:
+            target = by_id.get(game.tournament.season_id)
+        else:
+            target = covering(game.date)
+        if target is not None and target.id != game.season_id:
+            game.season_id = target.id
+            moved['games'] += 1
+    for s in SessionPlan.query.filter(SessionPlan.team_organization_id == team_id,
+                                      SessionPlan.date.isnot(None)):
+        target = covering(s.date)
+        if target is not None and target.id != s.season_id:
+            s.season_id = target.id
+            moved['sessions'] += 1
+    db.session.flush()
+    return moved
+
+
 def assign_unseasoned(team_id):
     """Put the team's games, tournaments and sessions that have no season
     into one: by date, then the tournament's season, then the current one."""
@@ -221,7 +361,8 @@ def set_current(season):
 def get_or_create_season(team_id, year, start_date=None, end_date=None):
     season = Season.query.filter_by(team_organization_id=team_id, year=year).first()
     if season is None:
-        default_start, default_end = Season.default_dates(year)
+        others = Season.query.filter_by(team_organization_id=team_id).all()
+        default_start, default_end = shaped_dates(year, others)
         season = Season(team_organization_id=team_id, year=year,
                         start_date=start_date or default_start, end_date=end_date or default_end)
         db.session.add(season)
@@ -541,13 +682,21 @@ def _season_for_row(session, obj, seasons, made):
         day = obj.date
     if day is None:
         return current
-    found = season_for_date(obj.team_organization_id, day, seasons)
-    if found is None:
-        start, end = Season.default_dates(day.year)
-        found = Season(team_organization_id=obj.team_organization_id, year=day.year,
-                       start_date=start, end_date=end, is_current=False)
-        session.add(found)
-        made[(obj.team_organization_id, day.year)] = found
+    found = next((s for s in seasons if s.contains(day)), None)
+    if found is not None:
+        return found
+    # No season covers the date: make the one it belongs in, the same shape
+    # as the club's others (so October-to-September clubs stay that way)
+    like = season_shape(seasons)
+    year = like.year_for(day) if like is not None else day.year
+    existing = next((s for s in seasons if s.year == year), None)
+    if existing is not None:
+        return existing
+    start, end = shaped_dates(year, seasons)
+    found = Season(team_organization_id=obj.team_organization_id, year=year,
+                   start_date=start, end_date=end, is_current=False)
+    session.add(found)
+    made[(obj.team_organization_id, year)] = found
     return found
 
 

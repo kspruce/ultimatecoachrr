@@ -8,13 +8,13 @@
   <div>
     <div class="uc-page-header">
       <div>
-        <h1>Start the {{ year }} season</h1>
+        <h1>Start the {{ label }} season</h1>
         <p>Nothing is deleted: {% if previous %}{{ previous.name }}'s{% else %}earlier{% endif %} games, stats and roster stay and can be picked from the season menu. Untick anyone who isn't carrying on; they keep their account and history.</p>
       </div>
     </div>
 
     {% if existing %}
-    <div class="alert alert-info">There is already a {{ year }} season{% if existing.is_current %} and it's current{% endif %}. Saving this updates its roster and makes it current.</div>
+    <div class="alert alert-info">There is already a {{ label }} season{% if existing.is_current %} and it's current{% endif %}. Saving this updates its roster and makes it current.</div>
     {% endif %}
 
     <form method="post">
@@ -28,7 +28,7 @@
           <div><label class="form-label" for="end_date">Ends</label>
             <input class="form-control" type="date" id="end_date" name="end_date" value="{{ (existing.end_date if existing else end_date).isoformat() }}" required></div>
         </div>
-        <p class="hint mt-2 mb-0">Games, tournaments and sessions dated in this range go into the {{ year }} season.</p>
+        <p class="hint mt-2 mb-0">Games, tournaments and sessions dated in this range go into the {{ label }} season.</p>
       </div>
 
       <div class="fs-card">
@@ -72,7 +72,7 @@
 
       <div class="d-flex justify-content-end gap-2">
         <a class="btn btn-outline-secondary" href="{{ url_for('seasons.index') }}">Cancel</a>
-        <button class="btn btn-primary" type="submit"><i class="bi bi-arrow-right-circle me-1"></i> Start {{ year }} season</button>
+        <button class="btn btn-primary" type="submit"><i class="bi bi-arrow-right-circle me-1"></i> Start {{ label }} season</button>
       </div>
     </form>
   </div>

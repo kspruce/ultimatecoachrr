@@ -8,7 +8,7 @@ squad that season, with that season's shirt number and position. Nothing is
 deleted when a new season starts: last season's games, tournaments,
 sessions and roster stay as they were.
 """
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from app import db
 
@@ -28,6 +28,14 @@ class Squad(db.Model):
 
     def __repr__(self):
         return f'<Squad {self.name}>'
+
+
+def _same_day(day, year):
+    """`day`'s month and day in another year (29 February -> 28th)."""
+    try:
+        return day.replace(year=year)
+    except ValueError:
+        return day.replace(year=year, day=28)
 
 
 class Season(db.Model):
@@ -54,14 +62,29 @@ class Season(db.Model):
 
     @property
     def name(self):
+        """'2026' for a calendar-year season, '2027/28' for one that runs
+        across new year (October to September, say)."""
+        if self.start_date and self.end_date and self.end_date.year > self.start_date.year:
+            return f'{self.start_date.year}/{self.end_date.year % 100:02d}'
         return str(self.year)
 
     def contains(self, day):
         return day is not None and self.start_date <= day <= self.end_date
 
     @staticmethod
-    def default_dates(year):
-        return date(year, 1, 1), date(year, 12, 31)
+    def default_dates(year, like=None):
+        """A year's season dates: 1 January to 31 December, or the same
+        start day as `like` (another season) and running a full year, so a
+        club whose seasons run October to September keeps doing so."""
+        if like is None or (like.start_date.month, like.start_date.day) == (1, 1):
+            return date(year, 1, 1), date(year, 12, 31)
+        start = _same_day(like.start_date, year)
+        return start, _same_day(like.start_date, year + 1) - timedelta(days=1)
+
+    def year_for(self, day):
+        """The season year a date would belong to in seasons shaped like
+        this one: 2027 for February 2028 when seasons start in October."""
+        return day.year if day >= _same_day(self.start_date, day.year) else day.year - 1
 
     def __repr__(self):
         return f'<Season {self.year}>'
