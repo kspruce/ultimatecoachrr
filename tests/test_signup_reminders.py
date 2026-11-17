@@ -264,3 +264,36 @@ def test_reserved_numbers_are_not_offered_to_new_players(app, herd):
     reservation = ReservedNumber.query.one()
     coach.post(f'/team/numbers/reserve/{reservation.id}/release')
     assert ReservedNumber.query.count() == 0
+
+
+def test_numbers_stored_as_text_are_converted(app, herd):
+    """A database where an old migration never turned jersey_number into a
+    whole number gave back "12", and the Numbers page called every number
+    free. Migration b8d0f2a4c6e8 converts the column wherever it's text."""
+    import importlib.util
+    import os
+    import re
+    from app.models.player import Player
+    path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                        'migrations', 'versions', 'b8d0f2a4c6e8_jersey_number_integer.py')
+    spec = importlib.util.spec_from_file_location('jersey_migration', path)
+    migration = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(migration)
+
+    ana, ben, cat = herd['players']
+    postgres = db.engine.dialect.name == 'postgresql'
+    if postgres:  # how the live database had it
+        db.session.execute(db.text('ALTER TABLE player ALTER COLUMN jersey_number TYPE varchar(10)'))
+        db.session.execute(db.text("UPDATE player SET jersey_number = CASE id WHEN :a THEN '12' "
+                                   "WHEN :b THEN ' 7 ' ELSE 'A1' END"), {'a': ana, 'b': ben})
+        db.session.commit()
+    with db.engine.begin() as connection:
+        cleared = migration.jersey_number_to_integer(connection)
+    db.session.expire_all()
+    if postgres:
+        assert cleared == {'player': 1}
+        assert [db.session.get(Player, p).jersey_number for p in (ana, ben, cat)] == [12, 7, None]
+        page = login(app, herd['coach']).get('/team/numbers').get_data(as_text=True)
+        assert re.search(r'98 of 100 free', page)
+    else:
+        assert cleared == {}  # SQLite doesn't enforce column types: nothing to do
