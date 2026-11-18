@@ -58,6 +58,24 @@
   </div>
 </form>
 
+{% if draftable_weeks %}
+<div class="sp-card">
+  <h3 class="h6 mb-1"><i class="bi bi-file-earmark-plus" aria-hidden="true"></i> Plan ahead in the session planner</h3>
+  <p class="sp-muted small mb-2">{{ draftable_weeks|length }} week{{ '' if draftable_weeks|length == 1 else 's' }} with a theme {{ 'has' if draftable_weeks|length == 1 else 'have' }} no session notes yet (week{{ '' if draftable_weeks|length == 1 else 's' }} {% for w in draftable_weeks[:12] %}{{ w.week_number }}{{ ', ' if not loop.last }}{% endfor %}{% if draftable_weeks|length > 12 %}…{% endif %}). Create a draft joint session for each, then plan them in the session planner: the notes follow. Drafts stay hidden from players until you publish them.</p>
+  <form method="post" action="{{ url_for('season_plan.create_draft_sessions') }}" class="d-flex flex-wrap align-items-end gap-2 m-0">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div>
+      <label class="form-label sp-label" for="template_id">Start each from</label>
+      <select class="form-select form-select-sm" id="template_id" name="template_id">
+        <option value="">The standard session shape</option>
+        {% for t in session_templates %}<option value="{{ t.id }}">{{ t.name }} ({{ t.total_minutes }} min)</option>{% endfor %}
+      </select>
+    </div>
+    <button class="btn btn-sm btn-primary" type="submit">Create draft sessions</button>
+  </form>
+</div>
+{% endif %}
+
 {% if report.warnings %}
 <div class="alert alert-warning">{% for w in report.warnings %}<div>{{ w }}</div>{% endfor %}</div>
 {% endif %}

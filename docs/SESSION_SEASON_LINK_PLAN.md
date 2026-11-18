@@ -190,7 +190,11 @@ it out of its week). Not done from step C: the planner's session notes and
 learning points don't write back (they stay on the session, protected by
 step A), and the "1s session deleted, build again?" notice on the week.
 
-Next: step D (draft sessions for every week from a button; schedule dates
-taking over drafts). The sessions list rework (commit "Sessions
+Done too: step D (Create draft sessions, a button on Sessions and on each
+week; schedule dates take over the plan's session for their week,
+`app/utils/season_drafts.py`). Drafts are joint sessions only: a week that
+needs squad sessions gets its split table on the week, as before.
+
+All four steps of this plan are built. The sessions list rework (commit "Sessions
 list: browse a whole season a week at a time") is already done on this
 branch.

@@ -252,7 +252,9 @@ def week(number):
         # Which of them were changed both in the session and in the plan
         preview = build_sessions(plan, weeks=[wk], dry_run=True)
         conflicts = {c['session_id']: c['parts'] for c in preview.conflicts}
+    from app.utils.season_drafts import draftable
     return render_template('season_plan/week.html', plan=plan, week=wk, prev_wk=prev_wk,
+                           can_draft=current_user.is_coach and not built and draftable(wk),
                            programme=programme, programme_weeks=programme_week(programme, wk.week_commencing),
                            next_wk=next_wk, show_notes=can_see(plan, 'session_notes'),
                            classroom=cards,
@@ -385,8 +387,36 @@ def sessions():
                 return redirect(url_for('season_plan.sessions'))
     # A dry run shows what building would do (and undoes any unsaved settings)
     report = build_sessions(plan, dry_run=True)
+    from app.models.schedule import SessionTemplate
+    from app.utils.season_drafts import draftable
+    templates = (SessionTemplate.query.filter_by(team_organization_id=plan.team_organization_id)
+                 .order_by(SessionTemplate.name).all())
     return render_template('season_plan/sessions.html', plan=plan, form=form, report=report,
-                           weekdays=WEEKDAYS, pages=visible_pages(plan)), status
+                           weekdays=WEEKDAYS, pages=visible_pages(plan), session_templates=templates,
+                           draftable_weeks=[w for w in plan.weeks if draftable(w)]), status
+
+
+@bp.route('/sessions/drafts', methods=['POST'])
+@coach_required
+def create_draft_sessions():
+    """Draft sessions for weeks with a theme but no session notes: one
+    week (from its page) or all of them (from Sessions)."""
+    from app.utils.season_drafts import create_drafts
+    plan = _plan_or_404()
+    number = request.form.get('week', type=int)
+    weeks = [_week_or_404(plan, number)] if number else None
+    filled, report = create_drafts(plan, weeks=weeks, template_id=request.form.get('template_id', type=int))
+    db.session.commit()
+    if not filled:
+        flash('No weeks to fill: every week with a theme already has session notes.', 'info')
+    else:
+        made = report.count('created') if report else 0
+        flash(f'Draft sessions made for {len(filled)} week{"s" if len(filled) != 1 else ""} '
+              f'({made} session{"s" if made != 1 else ""}). Players see them once you publish them '
+              f'from the session planner.', 'success')
+    if number:
+        return redirect(url_for('season_plan.week', number=number))
+    return redirect(url_for('season_plan.sessions'))
 
 
 @bp.route('/sessions/<int:session_id>/settle', methods=['POST'])

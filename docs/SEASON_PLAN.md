@@ -98,6 +98,21 @@ with a message. Deleting a built session offers to take it out of its week
 too; otherwise building the week again brings it back. Tests:
 `tests/test_session_writeback.py`.
 
+**Draft sessions.** Season plan > Sessions > *Create draft sessions* (or
+*Create a draft session* on a week's page) fills every week that has a
+theme or block but no session notes and isn't a break: it writes a joint
+session table into the week's notes, from the standard session shape
+(warm-up, skill, game, scrimmage, close; the skill row carries the week's
+theme) or one of the team's saved session templates, and builds it. The
+sessions start unpublished, so coaches can plan weeks ahead in the planner
+before players see anything. When a training schedule later makes a date
+in a week that already has a plan session for the same squads (the joint
+session for a schedule for everyone, a squad's session for a one-squad
+schedule), the date takes that session over instead of making a second
+one: the schedule sets the date, time and place, and the plan's title,
+activities and notes stay (`plan_session_for` in `app/utils/schedules.py`).
+Code: `app/utils/season_drafts.py`; tests: `tests/test_season_drafts.py`.
+
 `app/utils/session_outline.py` reads a week's session notes as structure
 (the joint and split tables and the learning points, everything else kept
 as written) and writes them back; untouched parts come back exactly as they

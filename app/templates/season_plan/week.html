@@ -83,6 +83,17 @@
 </div>
 {% endif %}
 
+{% if can_draft %}
+<div class="sp-card">
+  <form method="post" action="{{ url_for('season_plan.create_draft_sessions') }}" class="d-flex flex-wrap align-items-center justify-content-between gap-2 m-0">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="week" value="{{ week.week_number }}">
+    <span class="sp-muted">No session for this week yet. Start a draft from the standard session shape and plan it in the session planner.</span>
+    <button class="btn btn-sm btn-primary" type="submit"><i class="bi bi-plus-lg" aria-hidden="true"></i> Create a draft session</button>
+  </form>
+</div>
+{% endif %}
+
 {% if show_notes %}
   {% if week.session_detail_md %}
   <div class="sp-card">

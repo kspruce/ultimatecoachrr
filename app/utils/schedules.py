@@ -84,6 +84,39 @@ def _follow(session, schedule):
     return changed
 
 
+def plan_session_for(schedule, day):
+    """A session built from the season plan in `day`'s week, for the same
+    squads as the schedule, that no schedule has yet: the joint session for
+    a schedule for everyone (no squad, or several), a squad's session for a
+    one-squad schedule."""
+    monday = day - timedelta(days=day.weekday())
+    candidates = SessionPlan.query.filter(
+        SessionPlan.team_organization_id == schedule.team_organization_id,
+        SessionPlan.schedule_id.is_(None), SessionPlan.external_id.like('plan-%'),
+        SessionPlan.status != SessionPlan.STATUS_CANCELLED,
+        db.func.coalesce(SessionPlan.date, SessionPlan.week_commencing) >= monday,
+        db.func.coalesce(SessionPlan.date, SessionPlan.week_commencing) <= monday + timedelta(days=6),
+    ).order_by(SessionPlan.id).all()
+    wanted = {s.id for s in schedule.squads}
+    for session in candidates:
+        if len(wanted) != 1:
+            if session.external_id.endswith('-joint'):
+                return session
+        elif {s.id for s in session.squads} == wanted:
+            return session
+    return None
+
+
+def take_over(session, schedule, day):
+    """A plan session becomes this schedule's date: the schedule says when
+    and where; the plan's title, activities and notes stay."""
+    session.schedule_id = schedule.id
+    session.date = day
+    session.start_time, session.end_time = schedule.start_time, schedule.end_time
+    session.location = schedule.location
+    session.session_type = schedule.session_type or 'invited_training'
+
+
 def new_session(schedule, day):
     session = SessionPlan(team_organization_id=schedule.team_organization_id, schedule_id=schedule.id,
                           date=day, is_published=False)
@@ -101,6 +134,13 @@ def sync_schedule(schedule, today=None):
         existing.setdefault(s.date, s)
 
     for day in sorted(wanted - set(existing)):
+        session = plan_session_for(schedule, day)
+        if session is not None:
+            # The season plan already has this week's session for these
+            # squads: the date takes it over rather than making a second one
+            take_over(session, schedule, day)
+            report.updated.append(session)
+            continue
         session = new_session(schedule, day)
         db.session.add(session)
         report.created.append(session)

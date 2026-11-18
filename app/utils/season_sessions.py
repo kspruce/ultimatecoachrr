@@ -634,11 +634,12 @@ def _has_people(session):
     return session.attendances.count() > 0 or session.rsvps.count() > 0
 
 
-def build_sessions(plan, weeks=None, dry_run=False, commit=True, choose=None):
+def build_sessions(plan, weeks=None, dry_run=False, commit=True, choose=None, draft=False):
     """Create or update the sessions for `weeks` (default: every week).
     With every week, sessions the plan no longer has are removed too.
     Coaches' edits to a session are kept (see reconcile); `choose` maps a
-    session's external_id to 'plan' or 'session' to settle a conflict."""
+    session's external_id to 'plan' or 'session' to settle a conflict.
+    `draft`: sessions made now start unpublished."""
     team_id = plan.team_organization_id
     report = BuildReport(dry_run=dry_run)
     drills, prefixable = _drill_lookup(team_id)
@@ -673,10 +674,11 @@ def build_sessions(plan, weeks=None, dry_run=False, commit=True, choose=None):
                     if session is not None:
                         # Fill in the schedule's date; it keeps its own when and where
                         session.external_id = ext
-                        session.is_published = True
+                        session.is_published = not draft
                         _apply(session, {k: v for k, v in values.items() if k not in WHEN_KEYS})
                     else:
-                        session = SessionPlan(team_organization_id=team_id, external_id=ext)
+                        session = SessionPlan(team_organization_id=team_id, external_id=ext,
+                                              is_published=not draft)
                         _apply(session, values)
                         session.squads = _squads_for(team_id, item['squad'])
                         db.session.add(session)
