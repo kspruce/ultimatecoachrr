@@ -57,6 +57,13 @@ document.addEventListener('DOMContentLoaded', function () {
       var warning = document.getElementById('deleteSessionWarning');
       warning.hidden = !parts.length;
       warning.textContent = parts.length ? 'This will also delete ' + parts.join(' and ') + '.' : '';
+      // Built from the season plan: offer to take it out of its week too
+      var fromPlan = document.getElementById('deleteFromPlan');
+      if (fromPlan) {
+        fromPlan.hidden = !button.dataset.week;
+        document.getElementById('removeFromPlan').disabled = !button.dataset.week;
+        document.getElementById('deleteFromPlanWeek').textContent = button.dataset.week || '';
+      }
       modal.show();
     });
   });

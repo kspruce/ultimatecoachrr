@@ -19,7 +19,7 @@ from app import db, login
 from app.models.season_plan import (
     SeasonPlan, SeasonPhase, SeasonWeek, SeasonPage, ClassroomSession, ClassroomResource,
 )
-from app.models.session import SessionPlan
+from app.models.session import SessionComponent, SessionPlan
 from app.models.team_settings import TeamSettings
 from app.utils.media_embed import embed_url, is_web_url
 from app.utils.season_sessions import WEEKDAYS, build_sessions, sync_week, week_sessions
@@ -242,13 +242,25 @@ def week(number):
     cards = classroom_cards(plan, wk.classroom_sessions, _now()) if can_see(plan, 'classroom') else []
     from app.routes.season_plan_year import programme_week
     programme = wk.phase.programme if wk.phase and wk.phase.programme and not wk.phase.programme.archived else None
+    built = week_sessions(plan, wk)
+    # Each session's activities, for anyone allowed to see its plan
+    from app.utils.rsvp import plan_visible
+    session_cards = [{'session': s, 'blocks': s.components.order_by(SessionComponent.order).all()
+                      if plan_visible(s, current_user) else None} for s in built]
+    conflicts = {}
+    if current_user.is_coach and built and plan.sessions_built_at:
+        # Which of them were changed both in the session and in the plan
+        preview = build_sessions(plan, weeks=[wk], dry_run=True)
+        conflicts = {c['session_id']: c['parts'] for c in preview.conflicts}
+    from app.utils.season_drafts import draftable
     return render_template('season_plan/week.html', plan=plan, week=wk, prev_wk=prev_wk,
+                           can_draft=current_user.is_coach and not built and draftable(wk),
                            programme=programme, programme_weeks=programme_week(programme, wk.week_commencing),
                            next_wk=next_wk, show_notes=can_see(plan, 'session_notes'),
                            classroom=cards,
                            show_phase=can_see(plan, 'phases'), classroom_page=classroom_page,
                            current=plan.week_for(date.today()), pages=visible_pages(plan),
-                           built_sessions=week_sessions(plan, wk))
+                           built_sessions=built, session_cards=session_cards, conflicts=conflicts)
 
 
 @bp.route('/week/<int:number>/edit', methods=['GET', 'POST'])
@@ -265,7 +277,7 @@ def edit_week(number):
             limit = getattr(SeasonWeek, name).type.length
             if limit and len(value) > limit:
                 flash(f'{name.replace("_", " ").capitalize()} must be at most {limit} characters.', 'danger')
-                return render_template('season_plan/edit_week.html', plan=plan, week=wk,
+                return render_template('season_plan/edit_week.html', plan=plan, week=wk, week_sessions=week_sessions,
                                        session_plans=session_plans, pages=visible_pages(plan)), 400
             setattr(wk, name, value or None)
         for i, (key, _) in enumerate(plan.theme_columns):
@@ -281,9 +293,12 @@ def edit_week(number):
             flash(f'Sessions for week {wk.week_number}: {report.summary()}.', 'info')
         for warning in report.warnings if report else []:
             flash(warning, 'warning')
+        for c in report.conflicts if report else []:
+            flash(f'{c["title"]}: the {", ".join(c["parts"])} were changed in the session too, so the '
+                  f'session\'s version was kept. Choose which to keep under Sessions.', 'warning')
         return redirect(url_for('season_plan.week', number=wk.week_number))
 
-    return render_template('season_plan/edit_week.html', plan=plan, week=wk,
+    return render_template('season_plan/edit_week.html', plan=plan, week=wk, week_sessions=week_sessions,
                            session_plans=session_plans, pages=visible_pages(plan))
 
 
@@ -372,8 +387,55 @@ def sessions():
                 return redirect(url_for('season_plan.sessions'))
     # A dry run shows what building would do (and undoes any unsaved settings)
     report = build_sessions(plan, dry_run=True)
+    from app.models.schedule import SessionTemplate
+    from app.utils.season_drafts import draftable
+    templates = (SessionTemplate.query.filter_by(team_organization_id=plan.team_organization_id)
+                 .order_by(SessionTemplate.name).all())
     return render_template('season_plan/sessions.html', plan=plan, form=form, report=report,
-                           weekdays=WEEKDAYS, pages=visible_pages(plan)), status
+                           weekdays=WEEKDAYS, pages=visible_pages(plan), session_templates=templates,
+                           draftable_weeks=[w for w in plan.weeks if draftable(w)]), status
+
+
+@bp.route('/sessions/drafts', methods=['POST'])
+@coach_required
+def create_draft_sessions():
+    """Draft sessions for weeks with a theme but no session notes: one
+    week (from its page) or all of them (from Sessions)."""
+    from app.utils.season_drafts import create_drafts
+    plan = _plan_or_404()
+    number = request.form.get('week', type=int)
+    weeks = [_week_or_404(plan, number)] if number else None
+    filled, report = create_drafts(plan, weeks=weeks, template_id=request.form.get('template_id', type=int))
+    db.session.commit()
+    if not filled:
+        flash('No weeks to fill: every week with a theme already has session notes.', 'info')
+    else:
+        made = report.count('created') if report else 0
+        flash(f'Draft sessions made for {len(filled)} week{"s" if len(filled) != 1 else ""} '
+              f'({made} session{"s" if made != 1 else ""}). Players see them once you publish them '
+              f'from the session planner.', 'success')
+    if number:
+        return redirect(url_for('season_plan.week', number=number))
+    return redirect(url_for('season_plan.sessions'))
+
+
+@bp.route('/sessions/<int:session_id>/settle', methods=['POST'])
+@coach_required
+def settle_session(session_id):
+    """A session changed both in the session and in the plan: use the
+    plan's version, or keep the session's and stop asking."""
+    plan = _plan_or_404()
+    session = SessionPlan.query.filter_by(id=session_id, team_organization_id=plan.team_organization_id).first()
+    choice = request.form.get('choice')
+    if session is None or not session.external_id or choice not in ('plan', 'session'):
+        abort(404)
+    wk = _week_or_404(plan, session.week_number or 0)
+    report = build_sessions(plan, weeks=[wk], choose={session.external_id: choice})
+    flash(f'{session.title}: ' + ("now matches the plan." if choice == 'plan'
+                                  else "kept as it is. The plan won't ask again until it changes."), 'success')
+    for warning in report.warnings:
+        flash(warning, 'warning')
+    return redirect(request.form.get('next') or url_for('season_plan.sessions'))
 
 
 # --------------------------------------------------------------------------

@@ -181,7 +181,20 @@ A suggested combined order:
 
 ## Where to pick up
 
-Nothing in this plan is built yet. Start with step 0 of the 2028 plan (the
-notes renderer), then step A here. The sessions list rework (commit "Sessions
+Done: step 0 of the 2028 plan (`app/utils/session_outline.py`), step A
+(coaches' edits kept, conflicts listed under Season plan > Sessions), step B
+(the week page shows its sessions with Edit in planner; the planner shows
+the week) and step C (planner saves write the activities back into the
+week's notes, `app/utils/season_writeback.py`; deleting a session can take
+it out of its week). Not done from step C: the planner's session notes and
+learning points don't write back (they stay on the session, protected by
+step A), and the "1s session deleted, build again?" notice on the week.
+
+Done too: step D (Create draft sessions, a button on Sessions and on each
+week; schedule dates take over the plan's session for their week,
+`app/utils/season_drafts.py`). Drafts are joint sessions only: a week that
+needs squad sessions gets its split table on the week, as before.
+
+All four steps of this plan are built. The sessions list rework (commit "Sessions
 list: browse a whole season a week at a time") is already done on this
 branch.

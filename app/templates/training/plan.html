@@ -104,11 +104,20 @@
       {% if week %}
       <div class="tr-card">
         <h3>Season plan · week {{ week.week_number }}</h3>
+        {% if week.phase %}<div class="small tr-muted">Phase {{ week.phase.number }}: {{ week.phase.name }}</div>{% endif %}
         {% if week.block %}<div><b>{{ week.block }}</b></div>{% endif %}
         {% for label, theme in week.themes() %}
         <div class="small"><b>{{ label }}:</b> {{ theme }}</div>
         {% endfor %}
         {% if session.aim %}<div class="small mt-1"><b>Aim:</b> {{ session.aim }}</div>{% endif %}
+        {% if session.learning_points %}
+        <div class="small mt-1"><b>Learning points</b></div>
+        <ol class="small ps-3 mb-0">{% for p in session.learning_points %}<li>{{ p }}</li>{% endfor %}</ol>
+        {% endif %}
+        {% if session.external_id and session.external_id.startswith('plan-') %}
+        <p class="small tr-muted mt-2 mb-1">Linked to week {{ week.week_number }}: saving here updates its session notes too.</p>
+        {% endif %}
+        {% if season_plan_nav() %}<a class="small" href="{{ url_for('season_plan.week', number=week.week_number) }}">Open week {{ week.week_number }}</a>{% endif %}
       </div>
       {% endif %}
 
@@ -187,4 +196,4 @@
 } | tojson }}</script>
 {% endblock %}
 
-{% block scripts %}<script src="{{ url_for('static', filename='js/session_builder.js') }}"></script>{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/session_builder.js') }}?v=2"></script>{% endblock %}

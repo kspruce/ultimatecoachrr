@@ -1,7 +1,7 @@
 {% extends "season_plan/_layout.html" %}
 
 {% block sp_styles %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/season_plan__sessions.css') }}?v=1">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/season_plan__sessions.css') }}?v=2">
 {% endblock %}
 
 {% block sp_content %}
@@ -10,7 +10,7 @@
     <div class="sp-label">{{ plan.season }}</div>
     <h1>Sessions from the plan</h1>
     <p>Each week's timed tables become sessions: the joint session table makes a joint session, and a split sessions table (a column per squad{% if plan.squads %}: {{ plan.squads|join(', ') }}{% endif %}) makes a session for each squad. Every row becomes an activity.
-      Once built, editing a week here or re-importing the plan updates its sessions, so the plan is the only place you edit them.</p>
+      Once built, editing a week here or re-importing the plan updates its sessions. A coach's changes to a session in the session planner are kept: if the plan later changes the same thing, the session is listed here so you can choose which to keep.</p>
   </div>
 </div>
 
@@ -58,8 +58,43 @@
   </div>
 </form>
 
+{% if draftable_weeks %}
+<div class="sp-card">
+  <h3 class="h6 mb-1"><i class="bi bi-file-earmark-plus" aria-hidden="true"></i> Plan ahead in the session planner</h3>
+  <p class="sp-muted small mb-2">{{ draftable_weeks|length }} week{{ '' if draftable_weeks|length == 1 else 's' }} with a theme {{ 'has' if draftable_weeks|length == 1 else 'have' }} no session notes yet (week{{ '' if draftable_weeks|length == 1 else 's' }} {% for w in draftable_weeks[:12] %}{{ w.week_number }}{{ ', ' if not loop.last }}{% endfor %}{% if draftable_weeks|length > 12 %}…{% endif %}). Create a draft joint session for each, then plan them in the session planner: the notes follow. Drafts stay hidden from players until you publish them.</p>
+  <form method="post" action="{{ url_for('season_plan.create_draft_sessions') }}" class="d-flex flex-wrap align-items-end gap-2 m-0">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div>
+      <label class="form-label sp-label" for="template_id">Start each from</label>
+      <select class="form-select form-select-sm" id="template_id" name="template_id">
+        <option value="">The standard session shape</option>
+        {% for t in session_templates %}<option value="{{ t.id }}">{{ t.name }} ({{ t.total_minutes }} min)</option>{% endfor %}
+      </select>
+    </div>
+    <button class="btn btn-sm btn-primary" type="submit">Create draft sessions</button>
+  </form>
+</div>
+{% endif %}
+
 {% if report.warnings %}
 <div class="alert alert-warning">{% for w in report.warnings %}<div>{{ w }}</div>{% endfor %}</div>
+{% endif %}
+{% if report.conflicts %}
+<div class="sp-card sp-conflicts">
+  <h3 class="h6 mb-1"><i class="bi bi-arrow-left-right" aria-hidden="true"></i> Changed in the session and in the plan</h3>
+  <p class="sp-muted small mb-2">A coach edited these sessions, and the plan has changed the same thing since. The session's version is kept until you choose.</p>
+  {% for c in report.conflicts %}
+  <div class="sp-conflict">
+    <div><a href="{{ url_for('session.detail', session_id=c.session_id) }}"><b>{{ c.title }}</b></a>
+      <span class="sp-muted small">· Week {{ c.week }} · {{ c.parts|join(', ') }}</span></div>
+    <form method="post" action="{{ url_for('season_plan.settle_session', session_id=c.session_id) }}" class="d-flex gap-2 m-0">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn btn-sm btn-outline-secondary" name="choice" value="session">Keep the session's</button>
+      <button class="btn btn-sm btn-outline-primary" name="choice" value="plan">Use the plan's</button>
+    </form>
+  </div>
+  {% endfor %}
+</div>
 {% endif %}
 {% if report.removed %}
 <div class="alert alert-info"><b>No longer in the plan, so building removes:</b>{% for r in report.removed %}<div>{{ r }}</div>{% endfor %}</div>
@@ -77,7 +112,7 @@
         <td>{% if r.status != 'created' %}<a href="{{ url_for('session.detail', session_id=r.session_id) }}">{{ r.title }}</a>{% else %}{{ r.title }}{% endif %}</td>
         <td class="text-nowrap">{{ r.date.strftime('%a %-d %b') if r.date else '—' }}</td>
         <td>{{ r.activities }}</td>
-        <td><span class="sp-status sp-status-{{ r.status }}">{{ {'created': 'Create', 'updated': 'Update', 'unchanged': 'Up to date'}[r.status] }}</span></td>
+        <td><span class="sp-status sp-status-{{ r.status }}">{{ {'created': 'Create', 'updated': 'Update', 'unchanged': 'Up to date', 'kept': 'Coach edits kept', 'conflict': 'Changed in both'}.get(r.status, r.status) }}</span></td>
       </tr>
       {% else %}
       <tr><td colspan="5" class="sp-muted">No week has a session table yet.</td></tr>

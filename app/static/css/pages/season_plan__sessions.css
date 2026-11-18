@@ -6,3 +6,8 @@
 .sp-status-updated { background: #fff3cd; color: #7a5a00; }
 .sp-status-unchanged { color: var(--ink-3); }
 .sp-table-wrap { overflow-x: auto; }
+
+.sp-status-kept { background: var(--sunken); color: var(--ink-2); }
+.sp-status-conflict { background: var(--warn-soft); color: var(--warn); }
+.sp-conflicts { border-left: 4px solid var(--warn); }
+.sp-conflict { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem; padding: .5rem 0; border-top: 1px solid var(--rule); }
