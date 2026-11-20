@@ -1,0 +1,141 @@
+{% extends "season_plan/_layout.html" %}
+{% from "season_plan/_themes.html" import badges %}
+
+{% block sp_styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/season_plan__board.css') }}?v=1">
+{% endblock %}
+
+{% macro cell(c, row) %}
+{%- set s = c.session -%}
+{%- if c.status in ('planned', 'draft', 'empty') -%}
+<a class="sb-chip sb-{{ c.status }}" href="{{ url_for('training.plan', session_id=s.id) }}"
+   title="{{ s.title }}: open in the session planner">
+  <span class="sb-chip-status">{{ c.label }}</span>
+  <span class="sb-chip-meta">{% if s.date %}{{ s.date.strftime('%a %-d') }}{% endif %}{% if c.activities %} · {{ c.activities }} {{ 'activity' if c.activities == 1 else 'activities' }}{% endif %}{% if c.minutes %} · {{ c.minutes }}′{% endif %}</span>
+</a>
+{%- elif c.status == 'conflict' -%}
+<a class="sb-chip sb-conflict" href="{{ url_for('season_plan.sessions') }}" title="{{ c.conflict_parts|join(', ') }} changed in the session and in the plan: choose which to keep">
+  <span class="sb-chip-status">{{ c.label }}</span>
+  <span class="sb-chip-meta">{{ c.conflict_parts|join(', ') }}</span>
+</a>
+{%- elif c.status == 'cancelled' -%}
+<a class="sb-chip sb-cancelled" href="{{ url_for('session.detail', session_id=s.id) }}"><span class="sb-chip-status">{{ c.label }}</span></a>
+{%- elif c.status == 'not_built' -%}
+<a class="sb-chip sb-not_built" href="{{ url_for('season_plan.sessions') }}" title="The week's notes have this session: build it under Sessions">
+  <span class="sb-chip-status">{{ c.label }}</span><span class="sb-chip-meta">Build under Sessions</span>
+</a>
+{%- elif c.status == 'needed' -%}
+  {%- if c.key == 'joint' and draftable(row.week) -%}
+  <form method="post" action="{{ url_for('season_plan.create_draft_sessions') }}" class="m-0">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="week" value="{{ row.week.week_number }}">
+    <input type="hidden" name="next" value="board">
+    <button type="submit" class="sb-chip sb-needed" title="Create a draft from the standard session shape">
+      <span class="sb-chip-status">{{ c.label }}</span><span class="sb-chip-meta"><i class="bi bi-plus" aria-hidden="true"></i> Start a draft</span>
+    </button>
+  </form>
+  {%- else -%}
+  <a class="sb-chip sb-needed" href="{{ url_for('season_plan.edit_week', number=row.week.week_number) }}" title="Add this session to the week's notes">
+    <span class="sb-chip-status">{{ c.label }}</span><span class="sb-chip-meta">Add to the week</span>
+  </a>
+  {%- endif -%}
+{%- else -%}
+<span class="sb-none" aria-label="Nothing planned">–</span>
+{%- endif -%}
+{% endmacro %}
+
+{% block sp_content %}
+<div class="uc-page-header">
+  <div>
+    <div class="sp-label">{{ plan.season }}</div>
+    <h1>Season board</h1>
+    <p>Every week's themes, and how far each of its sessions has been planned. Open a session to plan it in the session planner.</p>
+  </div>
+</div>
+
+{% set planned = totals.get('planned', 0) %}
+{% set drafts = totals.get('draft', 0) %}
+{% set todo = totals.get('needed', 0) + totals.get('not_built', 0) + totals.get('empty', 0) %}
+{% set both = totals.get('conflict', 0) %}
+<div class="sb-tiles">
+  <div class="sb-tile sb-tile-planned"><b>{{ planned }}</b><span>Planned</span></div>
+  <a class="sb-tile sb-tile-draft" href="{{ url_for('season_plan.board', show='drafts') }}"><b>{{ drafts }}</b><span>Drafts</span></a>
+  <a class="sb-tile sb-tile-todo" href="{{ url_for('season_plan.board', show='attention') }}"><b>{{ todo }}</b><span>Still to plan</span></a>
+  {% if both %}<a class="sb-tile sb-tile-conflict" href="{{ url_for('season_plan.sessions') }}"><b>{{ both }}</b><span>Changed in both</span></a>{% endif %}
+</div>
+
+<div class="sb-controls">
+  <nav class="sb-tabs" aria-label="Which weeks">
+    {% for value, label in [('all', 'All weeks'), ('attention', 'Needs attention'), ('drafts', 'Drafts')] %}
+    <a href="{{ url_for('season_plan.board', show=value) }}" class="{{ 'active' if show == value }}"{% if show == value %} aria-current="page"{% endif %}>{{ label }}</a>
+    {% endfor %}
+  </nav>
+  {% if current and show == 'all' %}<a class="btn btn-sm btn-outline-primary" href="#board-week-{{ current.week_number }}">This week</a>{% endif %}
+  <ul class="sb-legend" aria-label="Key">
+    <li><span class="sb-dot sb-planned"></span>Planned</li>
+    <li><span class="sb-dot sb-draft"></span>Draft</li>
+    <li><span class="sb-dot sb-needed"></span>Still to plan</li>
+    {% if both %}<li><span class="sb-dot sb-conflict"></span>Changed in both</li>{% endif %}
+  </ul>
+</div>
+
+{% if not rows %}
+<div class="sp-card"><p class="m-0 sp-muted">{% if show == 'attention' %}Nothing needs attention: every week's sessions are planned.{% elif show == 'drafts' %}No drafts: every planned session is published.{% else %}This plan has no weeks yet.{% endif %}</p></div>
+{% else %}
+<div class="sb-wrap">
+  <table class="sb-table">
+    <thead>
+      <tr>
+        <th scope="col">Week</th>
+        <th scope="col">Block</th>
+        <th scope="col">Themes</th>
+        {% for key, label in columns %}<th scope="col">{{ label }}{% if key == 'joint' %} session{% endif %}</th>{% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% set ns = namespace(phase=-1) %}
+      {% for row in rows %}
+      {% set w = row.week %}
+      {% set ph = w.phase %}
+      {% set colour = ph.colour if ph and ph.colour else 'var(--rule-strong)' %}
+      {% if (ph.id if ph else 0) != ns.phase %}
+      {% set ns.phase = ph.id if ph else 0 %}
+      <tr class="sb-phase" style="--phase: {{ colour }}">
+        <th colspan="{{ 3 + columns|length }}" scope="rowgroup">
+          {% if ph %}<span class="sp-badge sp-badge-phase">{{ ph.number }}</span> {{ ph.name }}
+          <span class="sb-phase-meta">Weeks {{ ph.start_week }}–{{ ph.end_week }}{% if ph.aim %} · {{ ph.aim }}{% endif %}</span>
+          {% else %}Outside any phase{% endif %}
+        </th>
+      </tr>
+      {% endif %}
+      <tr id="board-week-{{ w.week_number }}" style="--phase: {{ colour }}"
+          class="sb-week{{ ' is-current' if row.is_current }}{{ ' is-past' if row.is_past }}{{ ' is-break' if w.is_break }}">
+        <th scope="row" class="sb-when">
+          <a href="{{ url_for('season_plan.week', number=w.week_number) }}">Week {{ w.week_number }}</a>
+          {% if w.week_commencing %}<span>{{ w.week_commencing.strftime('%-d %b') }}</span>{% endif %}
+          <div>{{ badges(w, current) }}</div>
+        </th>
+        <td class="sb-block" data-label="Block">{{ w.block or '' }}</td>
+        <td class="sb-themes" data-label="Themes">
+          {% if w.joint_theme %}<div>{{ w.joint_theme }}</div>{% endif %}
+          {% for key, label in plan.theme_columns[1:] %}{% set t = w.theme_for(key) %}{% if t %}<div class="sb-squad-theme"><b>{{ label }}:</b> {{ t }}</div>{% endif %}{% endfor %}
+        </td>
+        {% for c in row.cells %}
+        <td class="sb-cell" data-label="{{ columns[loop.index0][1] }}{{ ' session' if c.key == 'joint' }}">{{ cell(c, row) }}</td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<script>
+  // Open on this week rather than week 1
+  (function () {
+    if (location.hash) return;
+    var row = document.querySelector('.sb-week.is-current');
+    if (row && row.previousElementSibling) row.scrollIntoView({block: 'center'});
+  })();
+</script>
+{% endblock %}

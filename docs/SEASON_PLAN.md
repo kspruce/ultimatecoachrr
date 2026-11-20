@@ -98,6 +98,20 @@ with a message. Deleting a built session offers to take it out of its week
 too; otherwise building the week again brings it back. Tests:
 `tests/test_session_writeback.py`.
 
+**Season board** (Season plan > Season board, coaches;
+`/season-plan/board`): the whole season in one grid. Weeks are grouped under
+their phase (in its colour), each with its block and themes, and a column
+for each session: the joint session, then one per squad. Each cell says how
+far that session has got: *Planned* (published, with activities), *Draft*,
+*No activities*, *Not built yet* (the week's notes have it), *Needs
+planning* (the week has a theme for it but no session), *Changed in both*,
+or *Cancelled*; a break, an event, or a squad with no theme that week
+expects nothing. A session's cell opens it in the session planner; *Needs
+planning* starts a draft (joint) or opens Edit week (a squad). Totals at the
+top, filters for *Needs attention* and *Drafts*, past weeks dimmed, and the
+page opens on this week. On phones each week is a card. Code:
+`app/utils/season_board.py`; tests: `tests/test_season_board.py`.
+
 **Draft sessions.** Season plan > Sessions > *Create draft sessions* (or
 *Create a draft session* on a week's page) fills every week that has a
 theme or block but no session notes and isn't a break: it writes a joint

@@ -8,6 +8,7 @@
     <h1>Week by week</h1>
     <p>Every week's block, themes, classroom session and off-pitch work.</p>
   </div>
+  {% if current_user.is_coach %}<a class="btn btn-sm btn-outline-primary" href="{{ url_for('season_plan.board') }}"><i class="bi bi-grid-3x3-gap"></i> Season board: what's planned</a>{% endif %}
 </div>
 
 <form method="get" class="sp-filters">
