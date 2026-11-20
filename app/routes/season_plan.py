@@ -221,6 +221,29 @@ def weeks():
                            link_classroom=can_see(plan, 'classroom'))
 
 
+@bp.route('/board')
+@coach_required
+def board():
+    """The whole season in one grid: each week's phase, block and themes,
+    and how far each of its sessions has been planned."""
+    from app.utils.season_board import NEEDS_WORK, STATUS_LABELS, build_board
+    from app.utils.season_drafts import draftable
+    plan = _plan_or_404()
+    data = build_board(plan, _today())
+    show = request.args.get('show', 'all')
+    rows = data['rows']
+    if show == 'attention':
+        rows = [r for r in rows if r.needs_work]
+    elif show == 'drafts':
+        rows = [r for r in rows if r.has_drafts]
+    else:
+        show = 'all'
+    return render_template('season_plan/board.html', plan=plan, pages=visible_pages(plan), rows=rows,
+                           columns=data['columns'], totals=data['totals'], current=data['current'], show=show,
+                           all_rows=data['rows'], status_labels=STATUS_LABELS, needs_work=NEEDS_WORK,
+                           draftable=draftable)
+
+
 def _week_or_404(plan, number):
     week = SeasonWeek.query.filter_by(plan_id=plan.id, week_number=number,
                                       team_organization_id=plan.team_organization_id).first()
@@ -414,6 +437,8 @@ def create_draft_sessions():
         flash(f'Draft sessions made for {len(filled)} week{"s" if len(filled) != 1 else ""} '
               f'({made} session{"s" if made != 1 else ""}). Players see them once you publish them '
               f'from the session planner.', 'success')
+    if request.form.get('next') == 'board':
+        return redirect(url_for('season_plan.board', _anchor=f'board-week-{number}' if number else None))
     if number:
         return redirect(url_for('season_plan.week', number=number))
     return redirect(url_for('season_plan.sessions'))
